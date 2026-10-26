@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.idea/
+.pytest_cache/
+workspace/
+runs/
+logs/
+_tmp_extract/
