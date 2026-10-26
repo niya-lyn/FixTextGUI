@@ -1,0 +1,757 @@
+{
+  "roundtrip": [],
+  "counts": [
+    {
+      "file": "1.自定义词库.php",
+      "var": "dePrefixPattern",
+      "php_count": null,
+      "py_count": null,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "dieci",
+      "php_count": null,
+      "py_count": null,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "excludedRegexes",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "excludedWords",
+      "php_count": 9,
+      "py_count": 9,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "extraMap",
+      "php_count": 9567,
+      "py_count": 9567,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "extraPreprocessMap",
+      "php_count": 32,
+      "py_count": 32,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "extraRegexMap",
+      "php_count": 17,
+      "py_count": 17,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "normalMap",
+      "php_count": 71968,
+      "py_count": 71968,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "postFixMap",
+      "php_count": 445,
+      "py_count": 445,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "preprocessMap",
+      "php_count": 226,
+      "py_count": 226,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "puncts",
+      "php_count": null,
+      "py_count": null,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "punctuationMap",
+      "php_count": 1,
+      "py_count": 1,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "regexMap",
+      "php_count": 39,
+      "py_count": 39,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "strictMap",
+      "php_count": 1736,
+      "py_count": 1736,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "strictRegexMap",
+      "php_count": 10,
+      "py_count": 10,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库【旧式、通假写法】.php",
+      "var": "oldStyleMap",
+      "php_count": 1018,
+      "py_count": 1018,
+      "match": true
+    },
+    {
+      "file": "1.自定义词库【旧式、通假写法】.php",
+      "var": "regexMap",
+      "php_count": 1,
+      "py_count": 1,
+      "match": true
+    },
+    {
+      "file": "2.繁转简词库.php",
+      "var": "radicalsSupplementMap",
+      "php_count": 215,
+      "py_count": 215,
+      "match": true
+    },
+    {
+      "file": "2.繁转简词库.php",
+      "var": "t2sMap",
+      "php_count": 3140,
+      "py_count": 3140,
+      "match": true
+    },
+    {
+      "file": "2.繁转简词库.php",
+      "var": "t2sRadicalMap",
+      "php_count": 849,
+      "py_count": 849,
+      "match": true
+    },
+    {
+      "file": "3.txtFormat 词库.php",
+      "var": "txtFormatMap",
+      "php_count": 86909,
+      "py_count": 86909,
+      "match": true
+    },
+    {
+      "file": "4.的地得词库.php",
+      "var": "accurateDddMap",
+      "php_count": 2418,
+      "py_count": 2418,
+      "match": true
+    },
+    {
+      "file": "4.的地得词库.php",
+      "var": "dddMap",
+      "php_count": 11077,
+      "py_count": 11077,
+      "match": true
+    },
+    {
+      "file": "4.的地得词库.php",
+      "var": "dei2deMap",
+      "php_count": 607,
+      "py_count": 607,
+      "match": true
+    },
+    {
+      "file": "5.临时校对表.php",
+      "var": "regexMap",
+      "php_count": 1,
+      "py_count": 1,
+      "match": true
+    },
+    {
+      "file": "5.临时校对表.php",
+      "var": "tempMap",
+      "php_count": 1,
+      "py_count": 1,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customDddMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customExtraMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customExtraPreprocessMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customNormalMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customOldStyleMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customPreprocessMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customShengpiziMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customT2sMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customT2sRadicalMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "6.用户扩展词库.php",
+      "var": "customTxtFormatMap",
+      "php_count": 0,
+      "py_count": 0,
+      "match": true
+    },
+    {
+      "file": "7.生僻字词库.php",
+      "var": "shengpiziMap",
+      "php_count": 17260,
+      "py_count": 17260,
+      "match": true
+    },
+    {
+      "file": "7.生僻字词库【扩展区】.php",
+      "var": "cjkExtMap",
+      "php_count": 14719,
+      "py_count": 14719,
+      "match": true
+    },
+    {
+      "file": "7.生僻字词库【扩展区】.php",
+      "var": "cjkRecoverMap",
+      "php_count": 643,
+      "py_count": 643,
+      "match": true
+    }
+  ],
+  "structure": [
+    {
+      "file": "1.自定义词库.php",
+      "var": "extraMap",
+      "entries": 9567,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "extraPreprocessMap",
+      "entries": 32,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "extraRegexMap",
+      "entries": 17,
+      "non_word_entries": 17,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "normalMap",
+      "entries": 71968,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "postFixMap",
+      "entries": 445,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "preprocessMap",
+      "entries": 226,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "punctuationMap",
+      "entries": 1,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "regexMap",
+      "entries": 39,
+      "non_word_entries": 39,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "strictMap",
+      "entries": 1736,
+      "non_word_entries": 0,
+      "bad_types": 1
+    },
+    {
+      "file": "1.自定义词库.php",
+      "var": "strictRegexMap",
+      "entries": 10,
+      "non_word_entries": 10,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库【旧式、通假写法】.php",
+      "var": "oldStyleMap",
+      "entries": 1018,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "1.自定义词库【旧式、通假写法】.php",
+      "var": "regexMap",
+      "entries": 1,
+      "non_word_entries": 1,
+      "bad_types": 0
+    },
+    {
+      "file": "2.繁转简词库.php",
+      "var": "radicalsSupplementMap",
+      "entries": 215,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "2.繁转简词库.php",
+      "var": "t2sMap",
+      "entries": 3140,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "2.繁转简词库.php",
+      "var": "t2sRadicalMap",
+      "entries": 849,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "3.txtFormat 词库.php",
+      "var": "txtFormatMap",
+      "entries": 86909,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "4.的地得词库.php",
+      "var": "accurateDddMap",
+      "entries": 2418,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "4.的地得词库.php",
+      "var": "dddMap",
+      "entries": 11077,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "4.的地得词库.php",
+      "var": "dei2deMap",
+      "entries": 607,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "5.临时校对表.php",
+      "var": "regexMap",
+      "entries": 1,
+      "non_word_entries": 1,
+      "bad_types": 0
+    },
+    {
+      "file": "5.临时校对表.php",
+      "var": "tempMap",
+      "entries": 1,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "7.生僻字词库.php",
+      "var": "shengpiziMap",
+      "entries": 17260,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "7.生僻字词库【扩展区】.php",
+      "var": "cjkExtMap",
+      "entries": 14719,
+      "non_word_entries": 0,
+      "bad_types": 0
+    },
+    {
+      "file": "7.生僻字词库【扩展区】.php",
+      "var": "cjkRecoverMap",
+      "entries": 643,
+      "non_word_entries": 0,
+      "bad_types": 0
+    }
+  ],
+  "flatten": [
+    {
+      "var": "1.自定义词库.php__extraMap",
+      "raw": 9567,
+      "php_flat": 19390,
+      "py_flat": 19390,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库.php__extraPreprocessMap",
+      "raw": 32,
+      "php_flat": 32,
+      "py_flat": 32,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库.php__extraRegexMap",
+      "raw": 17,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库.php__normalMap",
+      "raw": 71968,
+      "php_flat": 131692,
+      "py_flat": 131692,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库.php__postFixMap",
+      "raw": 445,
+      "php_flat": 1296,
+      "py_flat": 1296,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库.php__preprocessMap",
+      "raw": 226,
+      "php_flat": 7938,
+      "py_flat": 7938,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库.php__punctuationMap",
+      "raw": 1,
+      "php_flat": 1,
+      "py_flat": 1,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库.php__regexMap",
+      "raw": 39,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库.php__strictMap",
+      "raw": 1736,
+      "php_flat": 3795,
+      "py_flat": 3795,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库.php__strictRegexMap",
+      "raw": 10,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库_旧式、通假写法_.php__oldStyleMap",
+      "raw": 1018,
+      "php_flat": 1102,
+      "py_flat": 1102,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "1.自定义词库_旧式、通假写法_.php__regexMap",
+      "raw": 1,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "2.繁转简词库.php__radicalsSupplementMap",
+      "raw": 215,
+      "php_flat": 215,
+      "py_flat": 215,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "2.繁转简词库.php__t2sMap",
+      "raw": 3140,
+      "php_flat": 3141,
+      "py_flat": 3141,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "2.繁转简词库.php__t2sRadicalMap",
+      "raw": 849,
+      "php_flat": 892,
+      "py_flat": 892,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "3.txtFormat 词库.php__txtFormatMap",
+      "raw": 86909,
+      "php_flat": 86917,
+      "py_flat": 86917,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "4.的地得词库.php__accurateDddMap",
+      "raw": 2418,
+      "php_flat": 3377,
+      "py_flat": 3377,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "4.的地得词库.php__dddMap",
+      "raw": 11077,
+      "php_flat": 11238,
+      "py_flat": 11238,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "4.的地得词库.php__dei2deMap",
+      "raw": 607,
+      "php_flat": 607,
+      "py_flat": 607,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "5.临时校对表.php__regexMap",
+      "raw": 1,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "5.临时校对表.php__tempMap",
+      "raw": 1,
+      "php_flat": 1,
+      "py_flat": 1,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customDddMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customExtraMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customExtraPreprocessMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customNormalMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customOldStyleMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customPreprocessMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customShengpiziMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customT2sMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customT2sRadicalMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "6.用户扩展词库.php__customTxtFormatMap",
+      "raw": 0,
+      "php_flat": 0,
+      "py_flat": 0,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "7.生僻字词库.php__shengpiziMap",
+      "raw": 17260,
+      "php_flat": 17260,
+      "py_flat": 17260,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "7.生僻字词库_扩展区_.php__cjkExtMap",
+      "raw": 14719,
+      "php_flat": 14719,
+      "py_flat": 14719,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    },
+    {
+      "var": "7.生僻字词库_扩展区_.php__cjkRecoverMap",
+      "raw": 643,
+      "php_flat": 643,
+      "py_flat": 643,
+      "php_err": null,
+      "py_err": null,
+      "verdict": "FULL_MATCH"
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,142 @@
+/* 编辑器样式，主要改这几个就好了
+可以直接把“黑体”改成你要的字体，其他都可以无视
+不支持调整行高，可以自己用工具或者让 AI 写脚本改一个 ttf 或 otf 字体文件
+把行高调大，生成新的字体名称后填到这里就能生效 */
+CustomPlainTextEdit {
+  font-family: "Consolas-Slim", "FZYouSongJ GBK", "MiSans L3", "黑体";
+  font-size: 12pt;
+  color: #000000;
+  background-color: #C7EDCC;
+}
+/* 背景色值参考：https://www.qulaba.com/1053.html，PS：是“豆沙绿”，不是“绿豆沙”hhhh */
+
+QPushButton#smart_scroll_button {
+  background-color: transparent;
+  border: none;
+  padding: 0px;
+  margin: 0;
+}
+
+QPushButton#smart_scroll_button:hover {
+  background-color: #E0E0E0;
+  border-radius: 4px;
+  padding: 0px;
+  margin: 0;
+}
+
+QPushButton#prev_match_button {
+  font-family: "黑体";
+  font-size: 9pt;
+}
+
+QPushButton#next_match_button {
+  font-family: "黑体";
+  font-size: 9pt;
+}
+
+QPushButton#replace_next_button,
+QPushButton#undo_last_replace_button,
+QPushButton#merge_selected_lines_button,
+QPushButton#extend_current_matches_button,
+QPushButton#revert_diff_button {
+  min-width: 30px;
+  max-width: 30px;
+  min-height: 30px;
+  max-height: 30px;
+}
+
+QPushButton#replace_next_button {
+  background-color: #37777f;
+  color: #FFFFFF;
+}
+
+QPushButton#replace_next_button:hover {
+  background-color: #518890;
+}
+
+QPushButton#replace_next_button:pressed {
+  background-color: #577579;
+}
+
+QPushButton#revert_diff_button {
+  background-color: #ad4343;
+  color: #FFFFFF;
+}
+
+QPushButton#revert_diff_button:hover {
+  background-color: #bc5555;
+}
+
+QPushButton#revert_diff_button:pressed {
+  background-color: #983c3c;
+}
+
+CustomPlainTextEdit QToolTip {
+  color: maroon;
+  background-color: #FCFCE3;
+  border: 2px solid black;
+  font-family: "Consolas-Slim", "FZYouSongJ GBK", "黑体";
+  font-size: 11pt;
+}
+
+FloatingTagEditor {
+  border: 1px solid #0078D7;
+  background-color: #FAFAFA;
+  border-radius: 4px;
+}
+
+FloatingTagEditor QPushButton#btn_confirm,
+FloatingTagEditor QPushButton#btn_remove,
+FloatingTagEditor QPushButton#btn_close {
+  min-width: 38px;
+  max-height: 18px;
+  padding: 2px 4px;
+  font-size: 12px;
+  border-radius: 4px;
+  color: #ffffff;
+}
+
+FloatingTagEditor QPushButton#btn_confirm {
+  background-color: #059669;
+  border: 1px solid #059669;
+}
+
+FloatingTagEditor QPushButton#btn_confirm:hover {
+  background-color: #10b981;
+  border-color: #10b981;
+}
+
+FloatingTagEditor QPushButton#btn_confirm:pressed {
+  background-color: #047857;
+  border-color: #047857;
+}
+
+FloatingTagEditor QPushButton#btn_remove {
+  background-color: #9C213C;
+  border: 1px solid #9C213C;
+}
+
+FloatingTagEditor QPushButton#btn_remove:hover {
+  background-color: #C03856;
+  border-color: #C03856;
+}
+
+FloatingTagEditor QPushButton#btn_remove:pressed {
+  background-color: #941833;
+  border-color: #941833;
+}
+
+FloatingTagEditor QPushButton#btn_close {
+  background-color: #6b7280;
+  border: 1px solid #6b7280;
+}
+
+FloatingTagEditor QPushButton#btn_close:hover {
+  background-color: #9ca3af;
+  border-color: #9ca3af;
+}
+
+FloatingTagEditor QPushButton#btn_close:pressed {
+  background-color: #4b5563;
+  border-color: #4b5563;
+}

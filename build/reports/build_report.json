@@ -1,0 +1,249 @@
+{
+  "cleaned_flatten_check": {
+    "total_vars": 34,
+    "full_match": 34,
+    "mismatch": 0,
+    "details": [
+      {
+        "var": "1.自定义词库.php__punctuationMap",
+        "php_flat": 1,
+        "py_flat": 1,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库.php__preprocessMap",
+        "php_flat": 7938,
+        "py_flat": 7938,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库.php__extraPreprocessMap",
+        "php_flat": 32,
+        "py_flat": 32,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库.php__normalMap",
+        "php_flat": 131692,
+        "py_flat": 131692,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库.php__extraMap",
+        "php_flat": 19390,
+        "py_flat": 19390,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库.php__strictMap",
+        "php_flat": 3794,
+        "py_flat": 3794,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库.php__regexMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库.php__extraRegexMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库.php__strictRegexMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库.php__postFixMap",
+        "php_flat": 1296,
+        "py_flat": 1296,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库_旧式、通假写法_.php__oldStyleMap",
+        "php_flat": 1102,
+        "py_flat": 1102,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "1.自定义词库_旧式、通假写法_.php__regexMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "2.繁转简词库.php__t2sMap",
+        "php_flat": 3141,
+        "py_flat": 3141,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "2.繁转简词库.php__t2sRadicalMap",
+        "php_flat": 892,
+        "py_flat": 892,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "2.繁转简词库.php__radicalsSupplementMap",
+        "php_flat": 215,
+        "py_flat": 215,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "3.txtFormat 词库.php__txtFormatMap",
+        "php_flat": 86917,
+        "py_flat": 86917,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "4.的地得词库.php__dddMap",
+        "php_flat": 11238,
+        "py_flat": 11238,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "4.的地得词库.php__dei2deMap",
+        "php_flat": 607,
+        "py_flat": 607,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "4.的地得词库.php__accurateDddMap",
+        "php_flat": 3377,
+        "py_flat": 3377,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "5.临时校对表.php__tempMap",
+        "php_flat": 1,
+        "py_flat": 1,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "5.临时校对表.php__regexMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customPreprocessMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customExtraPreprocessMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customNormalMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customExtraMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customOldStyleMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customT2sMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customT2sRadicalMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customTxtFormatMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customDddMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "6.用户扩展词库.php__customShengpiziMap",
+        "php_flat": 0,
+        "py_flat": 0,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "7.生僻字词库.php__shengpiziMap",
+        "php_flat": 17260,
+        "py_flat": 17260,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "7.生僻字词库_扩展区_.php__cjkExtMap",
+        "php_flat": 14719,
+        "py_flat": 14719,
+        "verdict": "FULL_MATCH"
+      },
+      {
+        "var": "7.生僻字词库_扩展区_.php__cjkRecoverMap",
+        "php_flat": 643,
+        "py_flat": 643,
+        "verdict": "FULL_MATCH"
+      }
+    ]
+  },
+  "rules": {
+    "baseline_total": 304256,
+    "cleaned_total": 304255,
+    "delta": -1,
+    "removed_by_cleaning": [
+      {
+        "before": "{处理“悬殊”的问题}",
+        "after": "差距太大",
+        "count": 1
+      }
+    ],
+    "added_by_cleaning": [],
+    "missing_base_vars": [],
+    "missing_clean_vars": [],
+    "per_var": {
+      "1.自定义词库.php::punctuationMap": 1,
+      "1.自定义词库.php::preprocessMap": 7938,
+      "1.自定义词库.php::extraPreprocessMap": 32,
+      "1.自定义词库.php::normalMap": 131692,
+      "1.自定义词库.php::extraMap": 19390,
+      "1.自定义词库.php::strictMap": 3794,
+      "1.自定义词库.php::postFixMap": 1296,
+      "1.自定义词库_旧式、通假写法_.php::oldStyleMap": 1102,
+      "2.繁转简词库.php::t2sMap": 3141,
+      "2.繁转简词库.php::t2sRadicalMap": 892,
+      "2.繁转简词库.php::radicalsSupplementMap": 215,
+      "3.txtFormat 词库.php::txtFormatMap": 86917,
+      "4.的地得词库.php::dddMap": 11238,
+      "4.的地得词库.php::dei2deMap": 607,
+      "4.的地得词库.php::accurateDddMap": 3377,
+      "5.临时校对表.php::tempMap": 1,
+      "7.生僻字词库.php::shengpiziMap": 17260,
+      "7.生僻字词库_扩展区_.php::cjkExtMap": 14719,
+      "7.生僻字词库_扩展区_.php::cjkRecoverMap": 643
+    }
+  }
+}

@@ -1,0 +1,24 @@
+QLabel#current_selection_label {
+  font-weight: bold;
+}
+
+QPushButton#prev_search_button {
+  font-weight: bold;
+}
+
+QPushButton#next_search_button {
+  font-weight: bold;
+}
+
+QPushButton#search_button {
+  background-color: #0d5899;
+  color: #ffffff;
+}
+
+QPushButton#search_button:hover {
+  background-color: #106cbd;
+}
+
+#search_hint_label {
+  color: #AAAAAA;
+}

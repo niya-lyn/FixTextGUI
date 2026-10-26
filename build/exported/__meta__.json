@@ -1,0 +1,351 @@
+{
+    "1.自定义词库.php": {
+        "variables": {
+            "dePrefixPattern": {
+                "type": "string",
+                "strlen": 6287,
+                "mb_len": 2859,
+                "exported": true
+            },
+            "dieci": {
+                "type": "string",
+                "strlen": 494,
+                "mb_len": 170,
+                "exported": true
+            },
+            "excludedRegexes": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "excludedWords": {
+                "type": "array",
+                "count": 9,
+                "is_list": true,
+                "exported": true
+            },
+            "extraMap": {
+                "type": "array",
+                "count": 9567,
+                "is_list": true,
+                "exported": true
+            },
+            "extraPreprocessMap": {
+                "type": "array",
+                "count": 32,
+                "is_list": true,
+                "exported": true
+            },
+            "extraRegexMap": {
+                "type": "array",
+                "count": 17,
+                "is_list": true,
+                "exported": true
+            },
+            "normalMap": {
+                "type": "array",
+                "count": 71968,
+                "is_list": true,
+                "exported": true
+            },
+            "postFixMap": {
+                "type": "array",
+                "count": 445,
+                "is_list": true,
+                "exported": true
+            },
+            "preprocessMap": {
+                "type": "array",
+                "count": 226,
+                "is_list": true,
+                "exported": true
+            },
+            "puncts": {
+                "type": "string",
+                "strlen": 47,
+                "mb_len": 19,
+                "exported": true
+            },
+            "punctuationMap": {
+                "type": "array",
+                "count": 1,
+                "is_list": true,
+                "exported": true
+            },
+            "regexMap": {
+                "type": "array",
+                "count": 39,
+                "is_list": true,
+                "exported": true
+            },
+            "strictMap": {
+                "type": "array",
+                "count": 1736,
+                "is_list": true,
+                "exported": true
+            },
+            "strictRegexMap": {
+                "type": "array",
+                "count": 10,
+                "is_list": true,
+                "exported": true
+            }
+        },
+        "errors": [],
+        "closures": []
+    },
+    "1.自定义词库【旧式、通假写法】.php": {
+        "variables": {
+            "oldStyleMap": {
+                "type": "array",
+                "count": 1018,
+                "is_list": true,
+                "exported": true
+            },
+            "regexMap": {
+                "type": "array",
+                "count": 1,
+                "is_list": true,
+                "exported": true
+            }
+        },
+        "errors": [],
+        "closures": []
+    },
+    "2.繁转简词库.php": {
+        "variables": {
+            "radicalsSupplementMap": {
+                "type": "array",
+                "count": 215,
+                "is_list": true,
+                "exported": true
+            },
+            "t2sMap": {
+                "type": "array",
+                "count": 3140,
+                "is_list": true,
+                "exported": true
+            },
+            "t2sRadicalMap": {
+                "type": "array",
+                "count": 849,
+                "is_list": true,
+                "exported": true
+            }
+        },
+        "errors": [],
+        "closures": []
+    },
+    "3.txtFormat 词库.php": {
+        "variables": {
+            "txtFormatMap": {
+                "type": "array",
+                "count": 86909,
+                "is_list": true,
+                "exported": true
+            }
+        },
+        "errors": [],
+        "closures": []
+    },
+    "4.的地得词库.php": {
+        "variables": {
+            "accurateDddMap": {
+                "type": "array",
+                "count": 2418,
+                "is_list": true,
+                "exported": true
+            },
+            "dddMap": {
+                "type": "array",
+                "count": 11077,
+                "is_list": true,
+                "exported": true
+            },
+            "dei2deMap": {
+                "type": "array",
+                "count": 607,
+                "is_list": true,
+                "exported": true
+            }
+        },
+        "errors": [],
+        "closures": []
+    },
+    "5.临时校对表.php": {
+        "variables": {
+            "regexMap": {
+                "type": "array",
+                "count": 1,
+                "is_list": true,
+                "exported": true
+            },
+            "tempMap": {
+                "type": "array",
+                "count": 1,
+                "is_list": true,
+                "exported": true
+            }
+        },
+        "errors": [],
+        "closures": []
+    },
+    "6.用户扩展词库.php": {
+        "variables": {
+            "customDddMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "customExtraMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "customExtraPreprocessMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "customNormalMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "customOldStyleMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "customPreprocessMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "customShengpiziMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "customT2sMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "customT2sRadicalMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            },
+            "customTxtFormatMap": {
+                "type": "array",
+                "count": 0,
+                "is_list": true,
+                "exported": true
+            }
+        },
+        "errors": [],
+        "closures": []
+    },
+    "7.生僻字词库.php": {
+        "variables": {
+            "shengpiziMap": {
+                "type": "array",
+                "count": 17260,
+                "is_list": true,
+                "exported": true
+            }
+        },
+        "errors": [],
+        "closures": []
+    },
+    "7.生僻字词库【扩展区】.php": {
+        "variables": {
+            "cjkExtMap": {
+                "type": "array",
+                "count": 14719,
+                "is_list": true,
+                "exported": true
+            },
+            "cjkRecoverMap": {
+                "type": "array",
+                "count": 643,
+                "is_list": true,
+                "exported": true
+            }
+        },
+        "errors": [],
+        "closures": []
+    },
+    "书籍专有替换词库/天之下.php": {
+        "variables": [],
+        "errors": [],
+        "closures": [],
+        "return": {
+            "type": "array",
+            "count": 1,
+            "is_list": false
+        }
+    },
+    "书籍专有替换词库/铁鹤书.php": {
+        "variables": [],
+        "errors": [],
+        "closures": [],
+        "return": {
+            "type": "array",
+            "count": 1,
+            "is_list": false
+        }
+    },
+    "../config/map.php": {
+        "variables": [],
+        "errors": [],
+        "closures": [],
+        "return": {
+            "type": "array",
+            "count": 5,
+            "is_list": false
+        }
+    },
+    "../config/general.php": {
+        "variables": [],
+        "errors": [],
+        "closures": [
+            {
+                "unit": "__return__",
+                "path": "$[noteBrandProcessors][moonreader]",
+                "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/src/config/general.php",
+                "line": 1086
+            },
+            {
+                "unit": "__return__",
+                "path": "$[noteBrandProcessors][calibre]",
+                "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/src/config/general.php",
+                "line": 1095
+            },
+            {
+                "unit": "__return__",
+                "path": "$[noteBrandProcessors][weread]",
+                "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/src/config/general.php",
+                "line": 1102
+            }
+        ],
+        "return": {
+            "type": "array",
+            "count": 8,
+            "is_list": false
+        },
+        "return_degraded": true,
+        "return_error": "含 3 处 Closure，json_encode 会静默降级为 {}，已拒绝导出"
+    }
+}

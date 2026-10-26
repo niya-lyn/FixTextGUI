@@ -1,0 +1,23 @@
+QLabel#char_count_label {
+  color: green;
+}
+
+#theme_switch,
+#text_editor_style_button,
+#ln_switch,
+#patch_search_button {
+  background-color: transparent;
+  border: none;
+  padding: 0px;
+  font-size: 8pt;
+  border-bottom: 1px solid blue;
+  color: blue;
+}
+
+#theme_switch:hover,
+#text_editor_style_button:hover,
+#ln_switch:hover,
+#patch_search_button:hover {
+  border-bottom: 1px solid gray;
+  color: gray;
+}

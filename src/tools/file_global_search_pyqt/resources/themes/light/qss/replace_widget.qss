@@ -1,0 +1,57 @@
+QPushButton#replace_selection_button {
+  color: #B127C6;
+}
+
+QPushButton#replace_all_button {
+  color: #DC3545;
+}
+
+#history_panel {
+  border-radius: 4px;
+  border: 1px solid #AAAAAA;
+  background-color: palette(window);
+}
+
+/* 搜索记录标题 */
+QLabel#label {
+  margin: 12px 3px 6px 3px;
+  font-weight: bold;
+}
+
+DraggableHistoryListWidget#search_history_list {
+  border: 1px solid #CCCCCC;
+  border-radius: 3px;
+}
+
+DraggableHistoryListWidget#search_history_list::item:hover {
+  background-color: #e5e7ff;
+}
+
+DraggableHistoryListWidget#search_history_list::item:selected {
+  background-color: #0078D7;
+  color: white;
+}
+
+/* 替换记录标题 */
+QLabel#label_2 {
+  margin: 6px 3px;
+  font-weight: bold;
+}
+
+QCheckBox#replace_shortcuts_checkbox {
+  margin-right: 10px;
+}
+
+DraggableHistoryListWidget#replace_history_list {
+  border: 1px solid #CCCCCC;
+  border-radius: 3px;
+}
+
+DraggableHistoryListWidget#replace_history_list::item:hover {
+  background-color: #e5e7ff;
+}
+
+DraggableHistoryListWidget#replace_history_list::item:selected {
+  background-color: #0078D7;
+  color: white;
+}

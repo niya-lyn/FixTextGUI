@@ -1,0 +1,77 @@
+{
+  "rules": [
+    {
+      "pattern": "\\(\\?#.*?\\)",
+      "style": {
+        "color": "darkGreen",
+        "italic": true
+      }
+    },
+    {
+      "pattern": "\\\\(?:[^\\dDwWsSbBAZzGpxucE0-7]|\\\\[0-7]{1,3}|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|c[A-Za-z])",
+      "style": {
+        "color": "darkGray"
+      }
+    },
+    {
+      "pattern": "\\\\[dDwWsSbBAZzGpP]",
+      "style": {
+        "color": "magenta",
+        "font-weight": 75
+      }
+    },
+    {
+      "pattern": "[\\(\\)]",
+      "style": {
+        "color": "blue"
+      }
+    },
+    {
+      "pattern": "\\(\\?(:|=|!|<[=!]|P?<[^>]+>|&[^>]+>|R\\d*|R&[^>]+>|[gimnsx-]+:[^)]*\\))",
+      "style": {
+        "color": "darkCyan",
+        "font-weight": 75
+      }
+    },
+    {
+      "pattern": "\\[(\\^?)(\\\\.|[^\\\\\\]])*\\]",
+      "style": {
+        "color": "#a26608"
+      }
+    },
+    {
+      "pattern": "[\\*\\+\\?](?:\\?|\\+)?",
+      "style": {
+        "color": "red",
+        "font-weight": 75
+      }
+    },
+    {
+      "pattern": "\\{\\d+(?:,\\d*)?\\}\\??",
+      "style": {
+        "color": "red",
+        "font-weight": 75
+      }
+    },
+    {
+      "pattern": "[\\^\\$]",
+      "style": {
+        "color": "darkYellow",
+        "font-weight": 75
+      }
+    },
+    {
+      "pattern": "\\|",
+      "style": {
+        "color": "darkRed",
+        "font-weight": 75
+      }
+    },
+    {
+      "pattern": "\\.",
+      "style": {
+        "color": "darkMagenta"
+      }
+    }
+  ]
+}

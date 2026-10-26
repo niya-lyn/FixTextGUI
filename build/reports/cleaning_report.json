@@ -1,0 +1,41 @@
+{
+    "rule": "before 数组中的 'mark' 键 → 提升为词条级 'mark' 字段，并从 before 移除该键",
+    "scope": "13 个词库文件中的全部词条型 *Map 变量",
+    "cleaned_word_count": 1,
+    "cleaned_var_count": 1,
+    "cleaned_vars": {
+        "1.自定义词库.php__strictMap": 1
+    },
+    "records": [
+        {
+            "file": "1.自定义词库.php",
+            "var": "strictMap",
+            "key": "1.自定义词库.php__strictMap",
+            "word_index": 14,
+            "auto_wrapped": true,
+            "mark_value": "{处理“悬殊”的问题}",
+            "before_before": [
+                "悬殊太大",
+                "过于悬殊",
+                "很悬殊",
+                "非常悬殊",
+                "十分悬殊",
+                "{处理“悬殊”的问题}"
+            ],
+            "before_after": [
+                "悬殊太大",
+                "过于悬殊",
+                "很悬殊",
+                "非常悬殊",
+                "十分悬殊"
+            ],
+            "word_mark_before": null,
+            "word_mark_after": "{处理“悬殊”的问题}",
+            "conflict": false,
+            "bogus_rule_removed": {
+                "before": "{处理“悬殊”的问题}",
+                "after": "差距太大"
+            }
+        }
+    ]
+}

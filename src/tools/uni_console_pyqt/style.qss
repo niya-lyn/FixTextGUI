@@ -1,0 +1,188 @@
+QMainWindow,
+QDialog {
+  background-color: #2C2F40;
+  color: #e1e1e1;
+}
+
+QWidget {
+  background-color: #2C2F40;
+  color: #e1e1e1;
+}
+
+QPushButton {
+  background-color: #595C5F;
+  color: #e1e1e1;
+  border: 1px solid #727593;
+  padding: 5px 10px;
+  border-radius: 3px;
+}
+
+QPushButton:hover {
+  background-color: #6C757D;
+}
+
+QPushButton:pressed {
+  background-color: #4a4d50;
+}
+
+QLineEdit {
+  color: #bfc7d5;
+  background-color: #2C2F3B;
+  border: 1px solid #727593;
+  padding: 2px;
+}
+
+QLabel {
+  color: #e1e1e1;
+}
+
+QTextEdit {
+  background-color: #1e1e1e;
+  color: #d4d4d4;
+  border: 1px solid #727593;
+}
+
+QTreeWidget {
+  background-color: #202331;
+  alternate-background-color: #2C2F3B;
+  color: #e1e1e1;
+  border: 1px solid #727593;
+  outline: none;
+  show-decoration-selected: 1;
+}
+
+QTreeWidget::item:selected:active,
+QTreeWidget::item:selected:!active {  /* !active 代表控件失去焦点时 */
+  background-color: #0078D7;
+  color: #FFFFFF;
+}
+
+/* 失去焦点时，左侧 branch 区域也强制保持选中颜色 */
+QTreeWidget::branch:selected:!active,
+QTreeWidget::branch:selected:active {
+  background-color: #0078D7;
+}
+
+QTreeWidget::item {
+  padding: 8px;
+}
+
+QTreeWidget::item:hover {
+  background-color: #6C757D;
+}
+
+QTreeWidget::item:selected {
+  background-color: #0078D7;
+  color: #FFFFFF;
+}
+
+QTreeWidget::item:has-children {
+  background-color: #464c5f;
+  /* 父节点固定颜色，不参与交替 */
+  font-weight: bold;
+}
+
+QTreeWidget::item:has-children:hover {
+  background-color: #5a5f7a;
+  border: none;
+  outline: none;
+}
+
+QTreeWidget::branch:has-children:closed {
+  image: url(right.png);
+}
+
+QTreeWidget::branch:has-children:open {
+  image: url(down.png);
+}
+
+QTreeWidget::branch:has-children:closed:hover,
+QTreeWidget::branch:has-children:closed:selected {
+  image: url(right.png);
+}
+
+QTreeWidget::branch:has-children:open:hover,
+QTreeWidget::branch:has-children:open:selected {
+  image: url(down.png);
+}
+
+QTreeWidget::branch:has-children {
+  background-color: #464c5f;
+}
+
+QTreeWidget::branch:has-children:hover {
+  background-color: #5a5f7a;
+}
+
+QTreeWidget::branch:hover {
+  background-color: #6C757D;
+}
+
+QScrollBar:vertical {
+  background: #2C2F3B;
+  width: 14px;
+  margin: 0;
+}
+
+QScrollBar::handle:vertical {
+  background: #464c5f;
+  min-height: 20px;
+  border-radius: 3px;
+}
+
+QScrollBar::handle:vertical:hover {
+  background: #6C757D;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+  height: 0px;
+  background: none;
+}
+
+QScrollBar:horizontal {
+  background: #2C2F3B;
+  height: 14px;
+  margin: 0;
+}
+
+QScrollBar::handle:horizontal {
+  background: #464c5f;
+  min-width: 20px;
+  border-radius: 3px;
+}
+
+QScrollBar::handle:horizontal:hover {
+  background: #6C757D;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+  width: 0px;
+  background: none;
+}
+
+QMenu {
+  background-color: #2C2F3B;
+  color: #e1e1e1;
+  border: 1px solid #727593;
+}
+
+QMenu::item {
+  padding: 5px 20px;
+}
+
+QMenu::item:selected {
+  background-color: #0078D7;
+  color: #FFFFFF;
+}
+
+QMenu::item:disabled {
+  color: #777;
+}
+
+QMenu::separator {
+  height: 1px;
+  background: #5c5c5c;
+  margin: 3px 0;
+}

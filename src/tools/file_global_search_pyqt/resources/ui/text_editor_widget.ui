@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+  <class>TextEditorWidget</class>
+  <widget class="QWidget" name="TextEditorWidget">
+    <layout class="QHBoxLayout" name="textEditAndButtonLayout">
+      <property name="leftMargin">
+        <number>2</number>
+      </property>
+      <property name="rightMargin">
+        <number>5</number>
+      </property>
+      <property name="topMargin">
+        <number>5</number>
+      </property>
+      <property name="bottomMargin">
+        <number>5</number>
+      </property>
+      <property name="spacing">
+        <number>1</number>
+      </property>
+      <item>
+        <layout class="QVBoxLayout" name="verticalButtonLayout">
+          <property name="rightMargin">
+            <number>5</number>
+          </property>
+          <property name="spacing">
+            <number>2</number>
+          </property>
+          <item>
+            <spacer name="verticalSpacerTop">
+              <property name="orientation">
+                <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+                <enum>QSizePolicy::Expanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+                <size>
+                  <width>20</width>
+                  <height>0</height>
+                </size>
+              </property>
+            </spacer>
+          </item>
+          <item>
+            <widget class="QPushButton" name="merge_selected_lines_button">
+              <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                </sizepolicy>
+              </property>
+              <property name="fixedSize">
+                <size>
+                  <width>30</width>
+                  <height>30</height>
+                </size>
+              </property>
+              <property name="font">
+                <font>
+                  <family>黑体</family>
+                  <pointsize>10</pointsize>
+                  <bold>true</bold>
+                </font>
+              </property>
+              <property name="toolTip">
+                <string>快捷键：Alt+G，合并多行文本，【右键】点击可以撤销操作&#10;请先将鼠标定位到需要合并的行内部，或者框选多个需要合并的行再操作</string>
+              </property>
+              <property name="text">
+                <string>合</string>
+              </property>
+            </widget>
+          </item>
+          <item>
+            <widget class="QPushButton" name="extend_current_matches_button">
+              <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                </sizepolicy>
+              </property>
+              <property name="fixedSize">
+                <size>
+                  <width>30</width>
+                  <height>30</height>
+                </size>
+              </property>
+              <property name="font">
+                <font>
+                  <family>黑体</family>
+                  <pointsize>10</pointsize>
+                  <bold>true</bold>
+                </font>
+              </property>
+              <property name="toolTip">
+                <string>快捷键：Alt+Shift+G，实时扩展/预览匹配项的上下文，【右键】点击可以撤销操作&#10;请先将鼠标定位到需要扩展的匹配项内部，或者框选多个需要扩展的匹配项后再操作</string>
+              </property>
+              <property name="text">
+                <string>扩</string>
+              </property>
+            </widget>
+          </item>
+          <item>
+            <spacer name="verticalSpacerTopMiddle">
+              <property name="orientation">
+                <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+                <size>
+                  <width>20</width>
+                  <height>15</height>
+                </size>
+              </property>
+            </spacer>
+          </item>
+          <item>
+            <widget class="QPushButton" name="prev_match_button">
+              <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                </sizepolicy>
+              </property>
+              <property name="fixedSize">
+                <size>
+                  <width>30</width>
+                  <height>30</height>
+                </size>
+              </property>
+              <property name="font">
+                <font>
+                  <family>黑体</family>
+                  <pointsize>9</pointsize>
+                </font>
+              </property>
+              <property name="toolTip">
+                <string>快捷键：Alt+F2 或 Alt+D，上一个匹配</string>
+              </property>
+              <property name="text">
+                <string>▲</string>
+              </property>
+            </widget>
+          </item>
+          <item alignment="Qt::AlignCenter">
+            <widget class="QPushButton" name="smart_scroll_button">
+              <property name="minimumSize">
+                <size>
+                  <width>18</width>
+                  <height>18</height>
+                </size>
+              </property>
+              <property name="maximumSize">
+                <size>
+                  <width>18</width>
+                  <height>18</height>
+                </size>
+              </property>
+              <property name="checkable">
+                <bool>true</bool>
+              </property>
+              <property name="checked">
+                <bool>true</bool>
+              </property>
+            </widget>
+          </item>
+          <item>
+            <widget class="QPushButton" name="next_match_button">
+              <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                </sizepolicy>
+              </property>
+              <property name="fixedSize">
+                <size>
+                  <width>30</width>
+                  <height>30</height>
+                </size>
+              </property>
+              <property name="font">
+                <font>
+                  <family>黑体</family>
+                  <pointsize>9</pointsize>
+                </font>
+              </property>
+              <property name="toolTip">
+                <string>快捷键：Alt+F3 或 Alt+F，下一个匹配</string>
+              </property>
+              <property name="text">
+                <string>▼</string>
+              </property>
+            </widget>
+          </item>
+          <item>
+            <spacer name="verticalSpacerMiddle">
+              <property name="orientation">
+                <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+                <enum>QSizePolicy::Fixed</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+                <size>
+                  <width>20</width>
+                  <height>15</height>
+                </size>
+              </property>
+            </spacer>
+          </item>
+          <item>
+            <widget class="QPushButton" name="replace_next_button">
+              <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                </sizepolicy>
+              </property>
+              <property name="fixedSize">
+                <size>
+                  <width>30</width>
+                  <height>30</height>
+                </size>
+              </property>
+              <property name="font">
+                <font>
+                  <family>黑体</family>
+                  <pointsize>10</pointsize>
+                  <bold>true</bold>
+                </font>
+              </property>
+              <property name="toolTip">
+                <string>快捷键：F3 或 Alt+Shift+F，替换当前并查找下一个，【右键】点击可以撤销操作&#10;请先将鼠标定位到需要修改的项前面</string>
+              </property>
+              <property name="text">
+                <string>改</string>
+              </property>
+            </widget>
+          </item>
+          <item>
+            <widget class="QPushButton" name="undo_last_replace_button">
+              <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                </sizepolicy>
+              </property>
+              <property name="fixedSize">
+                <size>
+                  <width>30</width>
+                  <height>30</height>
+                </size>
+              </property>
+              <property name="font">
+                <font>
+                  <family>黑体</family>
+                  <pointsize>10</pointsize>
+                  <bold>true</bold>
+                </font>
+              </property>
+              <property name="toolTip">
+                <string>快捷键：F2 或 Alt+Shift+D，撤销上一次替换</string>
+              </property>
+              <property name="text">
+                <string>撤</string>
+              </property>
+            </widget>
+          </item>
+          <item>
+            <widget class="QPushButton" name="revert_diff_button">
+              <property name="visible">
+                <bool>false</bool>
+              </property>
+              <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                </sizepolicy>
+              </property>
+              <property name="fixedSize">
+                <size>
+                  <width>30</width>
+                  <height>30</height>
+                </size>
+              </property>
+              <property name="font">
+                <font>
+                  <family>黑体</family>
+                  <pointsize>10</pointsize>
+                  <bold>true</bold>
+                </font>
+              </property>
+              <property name="toolTip">
+                <string>快捷键：F5 或 Alt+V，批量还原选区中的差异项变更，【右键】点击可以撤销操作&#10;可框选多个需要还原的差异项后再操作</string>
+              </property>
+              <property name="text">
+                <string>还</string>
+              </property>
+            </widget>
+          </item>
+          <item>
+            <spacer name="verticalSpacerBottom">
+              <property name="orientation">
+                <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+                <enum>QSizePolicy::Expanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+                <size>
+                  <width>20</width>
+                  <height>0</height>
+                </size>
+              </property>
+            </spacer>
+          </item>
+        </layout>
+      </item>
+      <item>
+        <widget class="CustomPlainTextEdit" name="text_edit">
+          <property name="cursorWidth">
+            <number>4</number>
+          </property>
+        </widget>
+      </item>
+    </layout>
+  </widget>
+  <customwidgets>
+    <customwidget>
+      <class>CustomPlainTextEdit</class>
+      <extends>QPlainTextEdit</extends>
+      <header>widgets.custom.custom_plain_text_edit</header>
+    </customwidget>
+  </customwidgets>
+  <resources />
+  <connections />
+</ui>

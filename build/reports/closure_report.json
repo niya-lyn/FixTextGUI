@@ -1,0 +1,1687 @@
+{
+    "scanned_root": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src",
+    "dict_scope_files": 16,
+    "all_scope_files": 513,
+    "dict_scope_closures": 6,
+    "all_scope_closures": 273,
+    "alarm_raised": true,
+    "alarm_log": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../build/logs/closure_alarm.log",
+    "dict_scope_hits": [
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/maps/手动检索规则表.php",
+            "line": 611,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { return str_replace(\"额\", \"呃\", $matches[1]); }, 'mark' => \"{额->呃}\", ], ["
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/maps/手动检索规则表.php",
+            "line": 618,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { return str_replace(\"恩\", \"嗯\", $matches[1]); }, 'mark' => \"{恩->嗯}\", ], ["
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/maps/手动检索规则表.php",
+            "line": 1245,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { if ( !( // 防止误伤 $matches[1] == \"十\" && $matches[3] == \"十\" || $matches"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/config/general.php",
+            "line": 1086,
+            "kind": "anonymous_function",
+            "snippet": "function (array &$matches) { foreach ($matches as &$match) { if (preg_match('/(.*?)( \\(.*\\))/ums', $match[1], $ret)"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/config/general.php",
+            "line": 1095,
+            "kind": "anonymous_function",
+            "snippet": "function (array &$matches) { foreach ($matches as &$match) { $match[1] = preg_replace('/#+ .*/um', '', $match"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/config/general.php",
+            "line": 1102,
+            "kind": "anonymous_function",
+            "snippet": "function (array &$matches) { foreach ($matches as &$match) { if (str_contains($match[0], '发表想法')) {"
+        }
+    ],
+    "all_scope_hits": [
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 47,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->option->changeTextFormat = true, ], [ 'desc' => '<primary>排版文本</primary>（<primary>去除所有的空行和缩进</primary>，可简单套上 <p> 标签，用于比较不同格式的文本）'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 51,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->indentationAndHtmlTagOptions(), ], [ 'desc' => '转换文本的<primary>【编码及换行符】</primary>（仅支持 UTF-8 编码和 GB2312 中文编码，仅支持 LF 和 CRLF 换行符）'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 55,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->encodingOptions(), ], [ 'desc' => '<primary>【提取 epub 中的文本】</primary>，整体合并后转换为 txt（转出来的 txt 将按照第一项的论坛格式自动排版）'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 59,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->extractTextFromHtmlOptions(), ], [ 'desc' => '规范部分常见<primary>【标点符号】</primary>，把英文标点转为中文标点，可更改【连续多行引号】的使用形式'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 63,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->punctuationOptions(), ], [ 'desc' => '统一更改文本中的引号形式（在<primary>【弯引号】</primary> “”‘’ 和<primary>【直角引号】</primary>「」『』 间进行转换）'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 67,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->quotationTypeOptions(), ], [ 'desc' => '在文本的首尾添加<primary>【个人校对信息】</primary>（请先打开配置文件更改 username 参数）'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 71,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->option->addOpInfo = true, ], [ 'desc' => '（请务必使用 BC 检查）转换文本中的<primary>【英文大小写】</primary>（首字母大写、全改成小写、全改成大写）'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 75,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->changeCaseOptions(), ], [ 'desc' => '（请务必使用 BC 检查）将文本中的<primary>【阿拉伯数字转为中文数字】</primary>',"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 79,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->option->arabicToChineseNum = true, ], [ 'desc' => '（请务必使用 BC 检查）移除正文中的<primary>【中文字符之间的空格】</primary>'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 83,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->option->rmSpacesBetweenChnChars = true, ], [ 'desc' => '将 books 和 booksBak 中的书籍文件<primary>【按标点强制分行】</primary>'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 87,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->splitByPunctuationsOptions(), ], [ 'desc' => '在中文字符和英文字母、数字之间<primary>【添加空格】</primary>，使之符合排版规范'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 91,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->option->paranoidTextSpacing = true, ], [ 'desc' => '处理自定义<primary>【分级标题】</primary>', 'action' => fn() => $this"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 95,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->option->formatHeadings = true, ], [ 'desc' => '对<primary>【极特殊字符】</primary>（如部分 Emoji 表情和生僻字）进行转义或还原'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Command/Formatting.php",
+            "line": 99,
+            "kind": "arrow_function",
+            "snippet": "fn() => $this->processSpecialCharsOptions(), ], ]; // 获取用户选择的索引 $actionDescs = array_column($actionOptions, 'desc'); $actionIndex = Interact"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Diff/Extractor.php",
+            "line": 39,
+            "kind": "anonymous_function",
+            "snippet": "function ($bookFixDir, $bookFixFile) { $this->printFinished = false; $bookName = Util::getFilename($bookFixFile); $bookFixFile = $bookFixDir ."
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Diff/Extractor.php",
+            "line": 215,
+            "kind": "anonymous_function",
+            "snippet": "function ($bookDir, $bookFile) { $bookName = Util::getFilename($bookFile); $bookFile = $bookDir . \"/\" . $bookFile; $bookBakFile"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Diff/Extractor.php",
+            "line": 294,
+            "kind": "arrow_function",
+            "snippet": "fn($v) => $v > $replaceCountThreshold); $reportTotalCount = array_sum($reportArr); arsort($reportArr); $patchFilename = Util::getFilename($patchFile"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/DuplTextFinder.php",
+            "line": 147,
+            "kind": "arrow_function",
+            "snippet": "fn($a, $b) => $a['行号'][0]['实际行号'] <=> $b['行号'][0]['实际行号'], '字数多的往后放' => fn"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/DuplTextFinder.php",
+            "line": 148,
+            "kind": "arrow_function",
+            "snippet": "fn($a, $b) => [mb_strlen($a['内容']), $a['次数']] <=> [mb_strlen($b['内容']), $b["
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/DuplTextFinder.php",
+            "line": 149,
+            "kind": "arrow_function",
+            "snippet": "fn($a, $b) => [$a['次数'], mb_strlen($a['内容'])] <=> [$b['次数'], mb_strlen($b['内容'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/DuplTextFinder.php",
+            "line": 284,
+            "kind": "anonymous_function",
+            "snippet": "function ($a, $b) { return $b['次数'] <=> $a['次数']; }); $finalResult = []; $seenLineNums"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/EpubFixer.php",
+            "line": 24,
+            "kind": "anonymous_function",
+            "snippet": "function ($dir, $files) { $this->filesToWalk = $this->extractEpubs($dir, EPUB_EXTRACT_PREFIX); }); $this->setInWalkFunc(function ($bookDir"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/EpubFixer.php",
+            "line": 28,
+            "kind": "anonymous_function",
+            "snippet": "function ($bookDir, $epubDir) { file_put_contents(EPUB_LIST_LOG, $epubDir . PHP_EOL, FILE_APPEND); }); $this->walkFiles($bookDir); }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/EpubFixer.php",
+            "line": 76,
+            "kind": "anonymous_function",
+            "snippet": "function ($dir, $files) { $this->filesToWalk = $this->extractEpubs($dir, EPUB_MERGE_PREFIX); $this->printDir = false; $this->printFinished"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/EpubFixer.php",
+            "line": 82,
+            "kind": "anonymous_function",
+            "snippet": "function ($bookDir, $epubDir) { $dirnameArr = explode('/', $epubDir); $epubFilename = $dirnameArr[array_key_last($dirnameArr)]; if ("
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/EpubFixer.php",
+            "line": 142,
+            "kind": "anonymous_function",
+            "snippet": "function ($logDir, $files) { $this->filesToWalk = Util::globOnlyFiles('*.log'); $this->printDir = false; $this->printFinished ="
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/EpubFixer.php",
+            "line": 148,
+            "kind": "anonymous_function",
+            "snippet": "function ($logDir, $log) { $logInfo = json_decode(file_get_contents($log), true); $extractedBookDir = $logInfo['extractedBookDir']; $mergedFilePath ="
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/EpubFixer.php",
+            "line": 196,
+            "kind": "anonymous_function",
+            "snippet": "function ($bookDir, $files) { $this->filesToWalk = Util::globOnlyFiles('*.epub'); }); $this->setInWalkFunc(function ($bookDir, $bookEpub"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/EpubFixer.php",
+            "line": 200,
+            "kind": "anonymous_function",
+            "snippet": "function ($bookDir, $bookEpub) { $destDir = 'tempDest'; !is_dir($destDir) && mkdir($destDir); (new DeDrmWriter)->doDeDrm("
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 80,
+            "kind": "anonymous_function",
+            "snippet": "function ($dir, $file) { $this->processFile($file); }); $this->walkFiles($bookDir); if ($shouldProcessBooksBak) { // 某些操作需要同步处理 booksBak"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 361,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { $firstChar = mb_substr($matches[1], 0, 1); if (in_array($firstChar, ['章', '卷'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 475,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) use ($config) { $lines = explode(\"\\n\", $matches[2]); $isHtmlFile = $this->isHtmlFile; foreach"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 556,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) use ($mode) { switch ($mode) { case 1: return ucfirst($matches[1]); case"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 593,
+            "kind": "anonymous_function",
+            "snippet": "function ($word) use ($assertionPattern) { // 移除断言结构，例如将 '(?<=\\d)iPhone' 变为 'iPhone'，以便创建正确的查找键 $cleanedWord = preg_replace"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 598,
+            "kind": "anonymous_function",
+            "snippet": "function ($word) use ($assertionPattern) { // 同样移除值中的断言，保留原始大小写，用于替换 return preg_replace($assertionPattern, '', $word);"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 607,
+            "kind": "arrow_function",
+            "snippet": "fn($m) => $fixedMap[strtolower($m[1])] ?? $m[1], $content ); } /** * 根据单词列表构建一个复杂的正则表达式 * 这个正则能处理普通单词和以【.&-】等特殊字符开头的单词的不同边界要求 * * @param array $words 单词列表 * @return string|null 返回构建好的正则表达式字符串，如果列表为空则返回 null */"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 622,
+            "kind": "arrow_function",
+            "snippet": "fn($a, $b) => strlen($b) - strlen($a)); $specialPrefixWords = []; $normalWords = [];"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 666,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { // 不转换 007 等以 0 开头的编号 if (str_starts_with($matches[1], 0) && mb_strlen($matches[1]) > 1) {"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Formatting/FileProcessor.php",
+            "line": 674,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { // 补充一些被上面那条排除的“第××” return NumberConverter::arabicToChnNum($matches[1]); }, ],"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/ManualSearch/BookMapManager.php",
+            "line": 18,
+            "kind": "arrow_function",
+            "snippet": "fn($v) => !in_array($v['mark'], $origMarks)); $patterns = array_values($patterns); } public function mergeMarksToBookMap(array"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/ManualSearch/BookMapManager.php",
+            "line": 44,
+            "kind": "arrow_function",
+            "snippet": "fn($v) => trim($v, ' \",'), $origMarks); } protected function getBookMapContent(string $file): ?string { $bookName"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/ManualSearch/ManualSearcher.php",
+            "line": 243,
+            "kind": "arrow_function",
+            "snippet": "fn($v) => $v !== ''); $selectKeys = array_values($selectKeys); } else { $selectKeys = [$part];"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/ManualSearch/PatternFormatter.php",
+            "line": 17,
+            "kind": "arrow_function",
+            "snippet": "fn($line) => $this->formatLine($line, $selectKey), $lines )); } protected function buildPatternInfoList(array $usefulPatterns): array"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/ManualSearch/PatternMatcher.php",
+            "line": 57,
+            "kind": "arrow_function",
+            "snippet": "fn($a, $b) => $a['count'] <=> $b['count']), // 按颜色分组 2 => usort($usefulPatterns, fn($a,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/ManualSearch/PatternMatcher.php",
+            "line": 59,
+            "kind": "arrow_function",
+            "snippet": "fn($a, $b) => [$a['color'], $a['count']] <=> [$b['color'], $b['count']]),"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Map.php",
+            "line": 150,
+            "kind": "anonymous_function",
+            "snippet": "function ($var) use ($excludedSet) { // 保留一个元素，当且仅当： // 1. 它没有 'mark' 键 // 2. 或者，它的 'mark' 键的值不存在于排除集合中"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Map.php",
+            "line": 281,
+            "kind": "arrow_function",
+            "snippet": "fn($a, $b) => strlen($b['before']) <=> strlen($a['before'])); } // 移除一些特定规则 // 若自定义词库文件中有设置排除项则优先使用，否则使用单独的书籍词库文件中的"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 149,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualAddStarSeparator($note, $word), fn(&$note, $word) => $this->manualAddEllipsisSeparator($note,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 150,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualAddEllipsisSeparator($note, $word), fn(&$note, $word) => $this->manualMergeLines($note,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 151,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualMergeLines($note, $word), fn(&$note, $word) => $this->manualRmEndcharMergeLines($note,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 152,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualRmEndcharMergeLines($note, $word), // 2. 内容转换 fn(&$note, $word) => $this->manualProcessSimpleFixedCombos($note"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 155,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualProcessSimpleFixedCombos($note, $word), fn(&$note, $word) => $this->manualProcessLocators($note,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 156,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualProcessLocators($note, $word), fn(&$note, $word) => $this->manualRemoveRQuotation($note,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 157,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualRemoveRQuotation($note, $word), fn(&$note, $word) => $this->manualConvertQuotation($note,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 158,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualConvertQuotation($note, $word), fn(&$note, $word) => $this->manualRemoveRepetition($note,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 159,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualRemoveRepetition($note, $word), fn(&$note, $word) => $this->manualArabicToChnNum($note,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 160,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualArabicToChnNum($note, $word), fn(&$note, $word) => $this->manualChnToArabicNum($note,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 161,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualChnToArabicNum($note, $word), // 3. @ 操作符转换 fn(&$note, $word) => $this->manualProcessNoteConverter($note"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 164,
+            "kind": "arrow_function",
+            "snippet": "fn(&$note, $word) => $this->manualProcessNoteConverter($note, $word), ]; } /** * 移除已处理的规则 */ protected function removeProcessedWords(array $words,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 581,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { return NumberConverter::arabicToChnNum($matches[0]) ?: $matches[0]; }, $source); // 特殊处理“二”字 $newText"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 588,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { return str_replace('二', '两', $matches[0]); }, $newText ); $note['after'] ="
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Note/NoteConverter.php",
+            "line": 611,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { return NumberConverter::chnToArabicNum($matches[0]) ?: $matches[0]; }, $source); return true;"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Quotation/QuotationChecker.php",
+            "line": 58,
+            "kind": "anonymous_function",
+            "snippet": "function ($bookDir, $file) { $this->ctx->filename = $file; $this->ctx->filepath = $bookDir . '/' . $file;"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Quotation/QuotationFixer.php",
+            "line": 192,
+            "kind": "anonymous_function",
+            "snippet": "function ($v) { if (!str_contains($v, '/um')) { $v = str_replace(\"/\", \"\\/\", $v); return"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/Quotation/QuotationFixer.php",
+            "line": 237,
+            "kind": "anonymous_function",
+            "snippet": "function ($v) use ($searches, $replaces) { foreach ($searches as $mk => $mv) { $v = preg_replace($mv"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/TextFixer.php",
+            "line": 147,
+            "kind": "anonymous_function",
+            "snippet": "function ($bookDir, $files) { $this->setBookDir($bookDir); if ($files != $this->bookFiles) { // 每进入一个目录，就递增 dirIndex 索引值，重新生成 map"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/TextFixer.php",
+            "line": 162,
+            "kind": "anonymous_function",
+            "snippet": "function ($bookDir, $file) { // 修正当前目录内所有文本文件 $this->bookFile = $file; $this->bookName = Util::getFilename($this->bookFile, true);"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/TextFixer.php",
+            "line": 275,
+            "kind": "anonymous_function",
+            "snippet": "function ($word) use ($validKeywords) { if (!is_string($word['after'])) { return true; } // 前后值相等的防误伤词条也需要使用"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/ZhuyinProcessor.php",
+            "line": 201,
+            "kind": "anonymous_function",
+            "snippet": "function ($char) { return preg_quote($char, '/'); // 使用 '/' 作为分隔符 }, $targetChars); // 构建正则表达式，例如 /字1|字2|字3/u $pattern = '/'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/ZhuyinProcessor.php",
+            "line": 212,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) use ($pinyinMappings, &$replacedFlags) { $char = $matches[0]; // 匹配到的单个字符 // 检查该字符是否存在于替换列表，并且尚未被替换"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Service/ZhuyinProcessor.php",
+            "line": 251,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { $chars = $matches[1]; $annotation = $matches[2]; // 分割汉字和对应的注音 $charParts = mb_str_split($chars"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Util/ChapterAnalyzer.php",
+            "line": 87,
+            "kind": "anonymous_function",
+            "snippet": "function ($a, $b) { return $a['offset'] <=> $b['offset']; }); return self::processMatches($text, $mixedMatches"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Util/NumberConverter.php",
+            "line": 99,
+            "kind": "anonymous_function",
+            "snippet": "function ($section) use ($chnNumChar, $chnUnitChar) { $chnStr = ''; // 节内的位置 $unitPos = 0; $zero = true;"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Util/Util.php",
+            "line": 695,
+            "kind": "anonymous_function",
+            "snippet": "function ($v) { return \"索引-{$v}\"; }, range(0, count($arr) - 1)); return"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Util/Util.php",
+            "line": 749,
+            "kind": "anonymous_function",
+            "snippet": "function ($a, $b) use ($sortByPrefix, $prefixLen) { if ($sortByPrefix) { // 按指定前缀排序（如标点） // 适用于为【指定前缀】扩展新的类型"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Util/Util.php",
+            "line": 797,
+            "kind": "anonymous_function",
+            "snippet": "function ($a, $b) use ($sortBySuffix, $suffixLen) { if ($sortBySuffix) { // 按指定后缀排序（如标点） // 适用于为【指定后缀】扩展新的类型"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Util/Util.php",
+            "line": 838,
+            "kind": "anonymous_function",
+            "snippet": "function ($a, $b) { return strlen($a['after']) <=> strlen($b['after']); }); if ($print"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Util/Util.php",
+            "line": 920,
+            "kind": "arrow_function",
+            "snippet": "fn($v) => $v > 1); if ($onlyReturnKeys) { return array_keys($duplicates); } else { return $duplicates"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Util/Util.php",
+            "line": 1251,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { $emojiStr = $matches[0]; $result = ''; // 将匹配到的字符串安全地分割成单个 Unicode 字符数组 $chars = preg_split"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/app/Util/Util.php",
+            "line": 1275,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { $unicodeCodesStr = $matches[1]; $unicodeCodes = explode(' ', $unicodeCodesStr); $chars = []; foreach"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/bootstrap.php",
+            "line": 27,
+            "kind": "anonymous_function",
+            "snippet": "function () { if (Util::isFromGUI()) { // 从 gui 界面调用时，强制输出颜色代码 Color::setForceColor(true); } $command = Util::getArgvByIndex(1"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/bootstrap.php",
+            "line": 39,
+            "kind": "anonymous_function",
+            "snippet": "function () { echo PHP_EOL; $command = Util::getArgvByIndex(1); if ($command) { Show::writeWithNL(\"!!!!!!! 结束执行命令：【{$command"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/bootstrap.php",
+            "line": 50,
+            "kind": "anonymous_function",
+            "snippet": "function ($severity, $message, $file, $line) { if (!(error_reporting() & $severity)) { return false; // 如果错误被抑制了（比如用了 @），则不处理"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/config/general.php",
+            "line": 1086,
+            "kind": "anonymous_function",
+            "snippet": "function (array &$matches) { foreach ($matches as &$match) { if (preg_match('/(.*?)( \\(.*\\))/ums', $match[1], $ret)"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/config/general.php",
+            "line": 1095,
+            "kind": "anonymous_function",
+            "snippet": "function (array &$matches) { foreach ($matches as &$match) { $match[1] = preg_replace('/#+ .*/um', '', $match"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/config/general.php",
+            "line": 1102,
+            "kind": "anonymous_function",
+            "snippet": "function (array &$matches) { foreach ($matches as &$match) { if (str_contains($match[0], '发表想法')) {"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/maps/手动检索规则表.php",
+            "line": 611,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { return str_replace(\"额\", \"呃\", $matches[1]); }, 'mark' => \"{额->呃}\", ], ["
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/maps/手动检索规则表.php",
+            "line": 618,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { return str_replace(\"恩\", \"嗯\", $matches[1]); }, 'mark' => \"{恩->嗯}\", ], ["
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/maps/手动检索规则表.php",
+            "line": 1245,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { if ( !( // 防止误伤 $matches[1] == \"十\" && $matches[3] == \"十\" || $matches"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/scripts/regex_searcher.php",
+            "line": 8,
+            "kind": "anonymous_function",
+            "snippet": "function ($severity, $message, $file, $line) { throw new ErrorException($message, 0, $severity, $file, $line); }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/scripts/词条删除.php",
+            "line": 48,
+            "kind": "anonymous_function",
+            "snippet": "function ($v) { return strlen(trim($v)) > 0; } ); $input = array_values(array_map('trim', $input"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/scripts/词条合并.php",
+            "line": 193,
+            "kind": "anonymous_function",
+            "snippet": "function ($a, $b) { if (str_contains($a, \"原已有词条\")) { return -1; } if (str_contains($b,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/scripts/词条查重.php",
+            "line": 57,
+            "kind": "anonymous_function",
+            "snippet": "function ($value) use ($duplicatesSet) { $mark = $value['mark'] ?? \"\"; $after = $value['after'] . $mark"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/composer/ClassLoader.php",
+            "line": 575,
+            "kind": "anonymous_function",
+            "snippet": "function($file) { include $file; }, null, null); } }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/composer/autoload_real.php",
+            "line": 37,
+            "kind": "anonymous_function",
+            "snippet": "function ($fileIdentifier, $file) { if (empty($GLOBALS['__composer_autoload_files'][$fileIdentifier])) { $GLOBALS['__composer_autoload_files'][$fileIdentifier] = true;"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/composer/autoload_static.php",
+            "line": 77,
+            "kind": "anonymous_function",
+            "snippet": "function () use ($loader) { $loader->prefixLengthsPsr4 = ComposerStaticInit471f73847c24ebac3ff1512648ccc153::$prefixLengthsPsr4; $loader->prefixDirsPsr4 = ComposerStaticInit471f73847c24ebac3ff1512648ccc153"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/examples/Command/TestCommand.php",
+            "line": 30,
+            "kind": "anonymous_function",
+            "snippet": "function ($fs, $out): void { $out->println('hello, this is an sub command of test.'); }, [ 'desc' => 'sub command of test command' ]), ];"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/examples/Controller/HomeController.php",
+            "line": 91,
+            "kind": "anonymous_function",
+            "snippet": "function ($fs) { vdump(__METHOD__, $fs->getOpts()); }, [ 'name' => 'sub2', 'desc' => 'an sub command in group controller',"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/examples/Controller/InteractController.php",
+            "line": 88,
+            "kind": "anonymous_function",
+            "snippet": "function ($val, &$err) { if (!preg_match('/^\\w{2,}$/', $val)) { $err = 'Your input must match /^\\w{2,}$/'; return false; }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/examples/Controller/InteractController.php",
+            "line": 114,
+            "kind": "anonymous_function",
+            "snippet": "function ($val) { if (!preg_match('/^\\w{2,}$/', $val)) { Show::error('Your input must match /^\\w{2,}$/'); return false; }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/examples/Controller/ProcessController.php",
+            "line": 86,
+            "kind": "anonymous_function",
+            "snippet": "function ($pid): void { echo \"print in process $pid\"; sleep(5); }); if ($ret === false) {"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/examples/Controller/ProcessController.php",
+            "line": 103,
+            "kind": "anonymous_function",
+            "snippet": "function ($pid): void { $this->output->info(\"will running background by new process: $pid\"); }); if ($ret === 0) {"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/examples/commands.php",
+            "line": 25,
+            "kind": "anonymous_function",
+            "snippet": "function (Input $in, Output $out): void { $cmd = $in->getCommand(); $out->info('hello, this is a test command: ' . $cmd);"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/examples/demo/spinner.php",
+            "line": 27,
+            "kind": "anonymous_function",
+            "snippet": "function () use ($chars, $index): void { while (1) { printf(\"\\x0D\\x1B[2K %s handling ...\", $chars[$index]); if"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/AbstractApplication.php",
+            "line": 202,
+            "kind": "anonymous_function",
+            "snippet": "function (): void { $this->showHelpInfo(); $this->stop(); }); // parse options $this->logf(Console::VERB_DEBUG, 'init - begin parse global options'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/AbstractApplication.php",
+            "line": 455,
+            "kind": "anonymous_function",
+            "snippet": "function (): void { if ($e = error_get_last()) { $this->handleError($e['type'], $e['message'],"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/AbstractApplication.php",
+            "line": 545,
+            "kind": "anonymous_function",
+            "snippet": "function () use ($out): void { $out->colored(\"\\nQuit by CTRL+C\"); exit(0); }); } $prefix ="
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/AbstractApplication.php",
+            "line": 563,
+            "kind": "anonymous_function",
+            "snippet": "function (): void { $this->showHelpInfo(); // $this->stop(); not exit }); while (true) { $line = Interact::readln(\""
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Annotate/DocblockRules.php",
+            "line": 79,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $docTags = []): self { return new self($docTags); } /** * Class constructor. * * @param array $docTags */ public function __construct(array"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/BuiltIn/PharController.php",
+            "line": 132,
+            "kind": "anonymous_function",
+            "snippet": "function ($error): void { $this->writeln(\"<warning>$error</warning>\"); }); $cpr->on(PharCompiler::ON_MESSAGE, function ($msg"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/BuiltIn/PharController.php",
+            "line": 135,
+            "kind": "anonymous_function",
+            "snippet": "function ($msg): void { $this->output->colored('> ' . $msg); }); $output->colored('Collect Pack files', 'comment');"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/BuiltIn/PharController.php",
+            "line": 198,
+            "kind": "anonymous_function",
+            "snippet": "function (string $path): void { $this->writeln(\" <info>+</info> $path\"); }); $cpr->on(PharCompiler::ON_SKIP, function ("
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/BuiltIn/PharController.php",
+            "line": 202,
+            "kind": "anonymous_function",
+            "snippet": "function (string $path, bool $isFile): void { $mark = $isFile ? '[F]' : '[D]'; $this->writeln(\" <red>-</red> $path"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/BuiltIn/PharController.php",
+            "line": 208,
+            "kind": "anonymous_function",
+            "snippet": "function () use ($counter): void { $counter->send(1); }); $cpr->on(PharCompiler::ON_COLLECTED, function ("
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/BuiltIn/PharController.php",
+            "line": 211,
+            "kind": "anonymous_function",
+            "snippet": "function () use ($counter): void { $counter->send(-1); $this->writeln(''); }); } }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/ErrorHandler.php",
+            "line": 50,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $config = []): self { return new self($config); } /** * Class constructor. * * @param array $config */ public function __construct(array"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/Formatter/JSONPretty.php",
+            "line": 168,
+            "kind": "anonymous_function",
+            "snippet": "function ($m) use ($keyTag) { return ColorTag::wrap($m[0], $keyTag); }, $key); } // has end ',' clear it."
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/Interact/Checkbox.php",
+            "line": 63,
+            "kind": "anonymous_function",
+            "snippet": "function ($val) use ($options) { return $val !== 'q' && isset($options[$val]); }; beginChoice: $r"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/Interact/IShell.php",
+            "line": 122,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $options = []): self { return new self($options); } /** * Quick create and start run an shell * * @param callable $handler * @param array $options * - title * - prefix * * @throws Throwable */"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/Interact/IShell.php",
+            "line": 157,
+            "kind": "anonymous_function",
+            "snippet": "function (): void { Show::colored(\"\\nQuit by CTRL+C\"); exit(0); }); } return $this->hasPcntl; } protected"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/Interact/IShell.php",
+            "line": 354,
+            "kind": "anonymous_function",
+            "snippet": "function (string $line) { if ($line === '') { throw new InvalidArgumentException('input is empty!'); } return $line; }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/Interact/IShell.php",
+            "line": 367,
+            "kind": "anonymous_function",
+            "snippet": "function (Throwable $e): void { Console::write('<error>ERROR:</error> ' . $e->getMessage(), false); }; } /** * @param string $format * @param mixed ...$args */"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/Interact/ValuesCollector.php",
+            "line": 37,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $propDefinitions = []): self { return new self($propDefinitions); } /** * Class constructor. * * @param array $propDefinitions */ public"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/MessageFormatter.php",
+            "line": 46,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $config = []): self { return new static($config); } /** * Formatter constructor. * * @param array $config */ public function __construct("
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/PharCompiler.php",
+            "line": 773,
+            "kind": "anonymous_function",
+            "snippet": "function (SplFileInfo $file) { $name = $file->getFilename(); $path = File::pathFormat($file->getPathname(), false);"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Component/Router.php",
+            "line": 316,
+            "kind": "anonymous_function",
+            "snippet": "function match(string $name): array { $sep = $this->delimiter; $name = trim($name, $sep); // resolve alias $realName"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Contract/RouterInterface.php",
+            "line": 67,
+            "kind": "anonymous_function",
+            "snippet": "function match(string $name): array; }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Controller.php",
+            "line": 471,
+            "kind": "anonymous_function",
+            "snippet": "function (string $text) { return $this->parseCommentsVars($text); }); $fs->setHelpRenderer(function (): void { $this->"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Controller.php",
+            "line": 474,
+            "kind": "anonymous_function",
+            "snippet": "function (): void { $this->logf(Console::VERB_DEBUG, 'show subcommand help by input flags: -h, --help'); $this->showHelp(); }); // old mode: options and arguments at method annotations"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Decorate/FormatOutputAwareTrait.php",
+            "line": 45,
+            "kind": "anonymous_function",
+            "snippet": "function echo(...$args): void { echo count($args) > 1 ? implode(' ', $args) : $args[0]"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Exception/PromptException.php",
+            "line": 27,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $msg, int $code = 0): self { return new self($msg, $code); } }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Handler/AbstractHandler.php",
+            "line": 272,
+            "kind": "arrow_function",
+            "snippet": "fn(string $text): string => $this->parseCommentsVars($text)); $this->flags->setHelpRenderer(function (): void { $name ="
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Handler/AbstractHandler.php",
+            "line": 273,
+            "kind": "anonymous_function",
+            "snippet": "function (): void { $name = $this->getRealName(); $this->logf(Console::VERB_DEBUG, \"cmd: $name - show help by input flags: -h, --help\"); $this->"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Handler/AbstractHandler.php",
+            "line": 386,
+            "kind": "anonymous_function",
+            "snippet": "function (): void { $this->execute($this->input, $this->output); }); // if create co fail if ($cid < 0)"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Handler/CommandWrapper.php",
+            "line": 46,
+            "kind": "anonymous_function",
+            "snippet": "function new(callable $handleFn, array $config = []): self { return (new self())->withConfig($config)->setCallable"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/PhpDevServe.php",
+            "line": 102,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $serveAddr, string $docRoot = '', string $entryFile = ''): self { return new self($serveAddr,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/ProgressBar.php",
+            "line": 314,
+            "kind": "anonymous_function",
+            "snippet": "function ($matches) { if ($formatter = $this->getParser($matches[1])) { $text = $formatter($this, $this->output"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/ProgressBar.php",
+            "line": 583,
+            "kind": "anonymous_function",
+            "snippet": "function (self $bar) { $barWidth = $bar->getBarWidth(); $completeBars = (int)floor($bar->getMaxSteps() > 0 ?"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/ProgressBar.php",
+            "line": 596,
+            "kind": "anonymous_function",
+            "snippet": "function (self $bar) { return Format::howLongAgo(time() - $bar->getStartTime()); }, 'remaining' => static function"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/ProgressBar.php",
+            "line": 599,
+            "kind": "anonymous_function",
+            "snippet": "function (self $bar) { if (!$bar->getMaxSteps()) { throw new LogicException('Unable to display the remaining time if the maximum number of steps is not set.');"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/ProgressBar.php",
+            "line": 613,
+            "kind": "anonymous_function",
+            "snippet": "function (self $bar) { if (!$bar->getMaxSteps()) { return 0; // throw new \\LogicException('Unable to display the estimated time if the maximum number of steps is not set.');"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/ProgressBar.php",
+            "line": 627,
+            "kind": "anonymous_function",
+            "snippet": "function () { return Format::memory(memory_get_usage(true)); }, 'current' => static function (self $bar) { return"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/ProgressBar.php",
+            "line": 630,
+            "kind": "anonymous_function",
+            "snippet": "function (self $bar) { return Str::pad($bar->getProgress(), $bar->getStepWidth(), ' ', STR_PAD_LEFT); },"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/ProgressBar.php",
+            "line": 633,
+            "kind": "anonymous_function",
+            "snippet": "function (self $bar) { return $bar->getMaxSteps(); }, 'percent' => static function (self $bar) { return"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/src/Util/ProgressBar.php",
+            "line": 636,
+            "kind": "anonymous_function",
+            "snippet": "function (self $bar) { return floor($bar->getPercent() * 100); }, ]; } /* * @return array */ // private static function defaultFormats()"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/test/ApplicationTest.php",
+            "line": 63,
+            "kind": "anonymous_function",
+            "snippet": "function () { return 0; }); $router = $app->getRouter(); self::assertTrue($router->isCommand('test'));"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/test/ApplicationTest.php",
+            "line": 111,
+            "kind": "anonymous_function",
+            "snippet": "function () { return 'hello'; }); $ret = $app->run(false); self::assertSame('hello', $ret); }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/test/ApplicationTest.php",
+            "line": 201,
+            "kind": "anonymous_function",
+            "snippet": "function (Application $app): void { $this->assertEquals('Tests', $app->getName()); }); $app->addCommand('test1', TestCommand"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/test/TestCommand.php",
+            "line": 31,
+            "kind": "anonymous_function",
+            "snippet": "function () { return 'at TestCommand::sub1'; })->withConfig([ 'name' => 'sub1', 'desc' => 'desc for sub1 in test1', ]), ];"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/inhere/console/test/bootstrap.php",
+            "line": 15,
+            "kind": "anonymous_function",
+            "snippet": "function ($class): void { $file = null; if (str_starts_with($class, 'Inhere\\Console\\Examples\\\\')) { $path = str_replace('\\\\',"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/CliApp.php",
+            "line": 81,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $name, string $desc = ''): self { return new self($name, $desc); } /** * Class constructor. * * @param string $name * @param string $desc */"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Color.php",
+            "line": 369,
+            "kind": "anonymous_function",
+            "snippet": "function ($style) { return !strpos($style, '_'); }); } /** * reset color config */ public static function resetConfig(): void"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Color/Alert.php",
+            "line": 49,
+            "kind": "anonymous_function",
+            "snippet": "function global(): self { if (!self::$global) { self::$global = new self(); } return self"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Color/Alert.php",
+            "line": 63,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $style = 'info'): self { return new self($style); } /** * Alert constructor. * * @param string $style */ public function __construct(string"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Color/ColorTag.php",
+            "line": 140,
+            "kind": "anonymous_function",
+            "snippet": "function (array $match) use ($recursive) { $colorCode = ''; $tagName = $match[1]; if (isset(Color::"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Color/Prompt.php",
+            "line": 40,
+            "kind": "anonymous_function",
+            "snippet": "function global(): self { if (!self::$global) { self::$global = new self(); } return self"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Color/Prompt.php",
+            "line": 54,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $style = 'info'): self { return new self($style); } /** * Prompt constructor. * * @param string $style */ public function __construct(string"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Helper/FlagHelper.php",
+            "line": 31,
+            "kind": "anonymous_function",
+            "snippet": "function (string $name) { return (strlen($name) > 1 ? '--' : '-') . $name; }, $names"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Style.php",
+            "line": 98,
+            "kind": "anonymous_function",
+            "snippet": "function global(): self { if (!self::$instance) { self::$instance = new self(); } return self"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Traits/WriteMessageTrait.php",
+            "line": 48,
+            "kind": "anonymous_function",
+            "snippet": "function echo(...$args): void { echo count($args) > 1 ? implode(' ', $args) : $args[0]"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Traits/WriteMessageTrait.php",
+            "line": 140,
+            "kind": "anonymous_function",
+            "snippet": "function print(array|string $message, bool $quit = false, array $opts = []): int { return self::write"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Util/Keyboard.php",
+            "line": 27,
+            "kind": "anonymous_function",
+            "snippet": "function global(): self { if (!self::$global) { self::$global = new self; } return self::$global"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/src/Util/Keyboard.php",
+            "line": 39,
+            "kind": "anonymous_function",
+            "snippet": "function new(): self { return new self; } }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/cli-utils/test/bootstrap.php",
+            "line": 14,
+            "kind": "anonymous_function",
+            "snippet": "function ($class): void { $file = null; if (str_starts_with($class, 'Toolkit\\Cli\\Example\\\\')) { $path = str_replace('\\\\',"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/fsutil/src/Extra/FileTreeBuilder.php",
+            "line": 177,
+            "kind": "anonymous_function",
+            "snippet": "function (string $oldFile) use ($options): bool { if ($options['include']) { return File::isInclude($oldFile, $options"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/fsutil/src/Extra/FileTreeBuilder.php",
+            "line": 183,
+            "kind": "anonymous_function",
+            "snippet": "function (string $oldFile, string $newFile): bool { $this->printMsgf('- copy file %s -> %s', $oldFile, $newFile); return !$this->dryRun;"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/fsutil/src/Extra/FileTreeBuilder.php",
+            "line": 187,
+            "kind": "anonymous_function",
+            "snippet": "function (string $newFile) use ($options) { if ($patterns = $options['renderOn']) { $this->renderOnMatch($newFile, $patterns)"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/fsutil/src/Extra/FileTreeBuilder.php",
+            "line": 297,
+            "kind": "anonymous_function",
+            "snippet": "function (self $ftb) use ($files) { $ftb->files($files); }); } /** * Quick make multi dir * * @param string ...$dirs * * @return $this */"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/fsutil/src/FileSystem.php",
+            "line": 195,
+            "kind": "anonymous_function",
+            "snippet": "function ($path) { if ($path === '.' || $path === './') { return ''; } return trim(str_starts_with"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/fsutil/src/Traits/DirOperateTrait.php",
+            "line": 52,
+            "kind": "anonymous_function",
+            "snippet": "function (SplFileInfo $f) { $name = $f->getFilename(); // Skip hidden files and directories. if (str_starts_with($name, '.')) { return false"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/fsutil/test/bootstrap.php",
+            "line": 16,
+            "kind": "anonymous_function",
+            "snippet": "function ($class) use ($npMap) { foreach ($npMap as $np => $dir) { $file = $dir . str_replace("
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/CliApp.php",
+            "line": 131,
+            "kind": "anonymous_function",
+            "snippet": "function global(): self { if (!self::$global) { self::$global = new self(); } return self"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/Flag/AbstractFlag.php",
+            "line": 110,
+            "kind": "anonymous_function",
+            "snippet": "function new( string $name, string $desc = '', string $type = 'string', bool $required = false, mixed $default"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/Flag/Option.php",
+            "line": 164,
+            "kind": "anonymous_function",
+            "snippet": "function (string $name) { return (strlen($name) > 1 ? '--' : '-') . $name; }, $longs"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/FlagUtil.php",
+            "line": 40,
+            "kind": "anonymous_function",
+            "snippet": "function (string $name) { return (strlen($name) > 1 ? '--' : '-') . $name; }, $names"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/Helper/ValueCollector.php",
+            "line": 23,
+            "kind": "anonymous_function",
+            "snippet": "function new(): self { return new self(); } /** * @param FlagsParser $fs */ public function collect(FlagsParser $fs): void {"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/Validator/EmptyValidator.php",
+            "line": 24,
+            "kind": "anonymous_function",
+            "snippet": "function new(): self { return new static(); } /** * @param mixed $value * @param string $name * * @return bool */ public function checkInput(mixed $value"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/Validator/EnumValidator.php",
+            "line": 32,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $enums): self { return new static($enums); } /** * @param string $str * @param string $sep * * @return static */ public static function"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/Validator/LenValidator.php",
+            "line": 41,
+            "kind": "anonymous_function",
+            "snippet": "function new(?int $min = null, ?int $max = null): self { return new static($min, $max)"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/Validator/MultiValidator.php",
+            "line": 29,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $validators): self { return new self($validators); } /** * Class constructor. * * @param array $validators */ public function __construct"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/Validator/NameValidator.php",
+            "line": 29,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $regex = self::DEFAULT_REGEX): parent { return new self($regex); } /** * Class constructor. * * @param string $regex */ public function"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/src/Validator/RegexValidator.php",
+            "line": 35,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $regex): self { return new static($regex); } /** * Class constructor. * * @param string $regex */ public function __construct(string $regex"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/Cases/RuleParser.php",
+            "line": 21,
+            "kind": "anonymous_function",
+            "snippet": "function new(): self { return new self(); } /** * @param array|string $rule * @param string $name * @param int $index * @param bool $isOption * * @return array */"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/CliAppTest.php",
+            "line": 28,
+            "kind": "arrow_function",
+            "snippet": "fn () => $buf->set('key', 'in test1')); $app->addCommands([ 'test2' => [ 'desc' => 'desc for test2 command', 'handler'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/CliAppTest.php",
+            "line": 33,
+            "kind": "anonymous_function",
+            "snippet": "function () use ($buf): void { $buf->set('key', 'in test2'); }, 'options' => [ 'opt1' =>"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 26,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $this->doCheckBasic($fs); }); } private function doCheckBasic(FlagsParser $fs): void"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 75,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $this->bindingOptsAndArgs($fs); $this->doTestGetOptAndGetArg($fs); }); } private function doTestGetOptAndGetArg"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 93,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->getMustOpt('str-opt'); }, $fs); $this->assertSame(InvalidArgumentException::class, get_class($e"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 101,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->getMustArg('str-arg'); }, $fs); $this->assertSame(InvalidArgumentException::class, get_class($e"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 111,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->addOpt('a', '', 'an string opt'); $fs->addArg('num', 'an int arg', 'int');"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 129,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $this->doCheckStopOnTwoHl($fs); }); } private function doCheckStopOnTwoHl(FlagsParser $fs): void"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 162,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $this->runStopOnFirstArg($fs); }); } private function runStopOnFirstArg(FlagsParser $fs): void"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 213,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $this->runSkipOnUndefined_false($fs); }); $this->runTestsWithParsers(function (FlagsParser $fs): void"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 217,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $this->runSkipOnUndefined_true($fs); }); } private function runSkipOnUndefined_false(FlagsParser $fs): void"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 262,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $this->bindingOptsAndArgs($fs); $this->renderFlagsHelp($fs); }); } public function testRenderHelp_showTypeOnHelp_false"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 270,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->setShowTypeOnHelp(false); $this->bindingOptsAndArgs($fs); $this->renderFlagsHelp($fs); });"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 293,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->addOptsByRules([ '--name' => 'an string', 'name' => 'an string', ]); },"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 302,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->addArgsByRules([ 'name' => 'an string', ]); $fs->addArg('name', 'an string');"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 322,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->addOpt('', '', 'an desc'); }, $fs); $this->assertSame(FlagException::"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 330,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->addOpt('name=+', '', 'an desc'); }, $fs); $this->assertSame(FlagException::"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 338,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->addOpt('name', '', 'an desc', 'invalid'); }, $fs); $this->assertSame"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 356,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->addArg('name=+', 'an desc'); }, $fs); $this->assertSame(FlagException::class,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 364,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->addArg('name', 'an desc', 'invalid'); }, $fs); $this->assertSame(FlagException::"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 405,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->setOpt('not-exist-opt', '22'); }, $fs); $this->assertSame(FlagException::class,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/FlagsParserTest.php",
+            "line": 412,
+            "kind": "anonymous_function",
+            "snippet": "function (FlagsParser $fs): void { $fs->setArg('not-exist-arg', '22'); }, $fs); $this->assertSame(FlagException::class,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/pflag/test/bootstrap.php",
+            "line": 19,
+            "kind": "anonymous_function",
+            "snippet": "function ($class) use ($npMap): void { foreach ($npMap as $np => $dir) { $file = $dir ."
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Arr/ArrBuffer.php",
+            "line": 32,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $first = ''): ArrBuffer { return new self($first); } /** * constructor. * * @param string $content */ public function __construct(string"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Arr/ArrayHelper.php",
+            "line": 53,
+            "kind": "anonymous_function",
+            "snippet": "function (&$value): void { $value = trim($value); }); return $data; } /** * get key Max Width * * ```php * $data = [ * 'key1' => 'value1', * 'key2-test' => 'value2', * ] * ``` * * @param array $data * @param bool $excludeInt * * @return int */"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Arr/ArrayHelper.php",
+            "line": 174,
+            "kind": "anonymous_function",
+            "snippet": "function ($results, $array) { return static::collapse(array_map(static function ($parent) use ($array) { return array_map(static"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Arr/ArrayHelper.php",
+            "line": 175,
+            "kind": "anonymous_function",
+            "snippet": "function ($parent) use ($array) { return array_map(static function ($item) use ($parent) { return array_merge($parent,"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Arr/ArrayHelper.php",
+            "line": 176,
+            "kind": "anonymous_function",
+            "snippet": "function ($item) use ($parent) { return array_merge($parent, [$item]); }, $array); }, $results))"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Arr/ArrayHelper.php",
+            "line": 261,
+            "kind": "anonymous_function",
+            "snippet": "function ($result, $item) use ($depth) { if (is_object($item) && method_exists($item, 'toArray')) { $item"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Helper/Assert.php",
+            "line": 56,
+            "kind": "anonymous_function",
+            "snippet": "function empty(mixed $value, string $errMsg = '', bool $isPrefix = false): void { if (!empty($value)"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Obj/AbstractMap.php",
+            "line": 25,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $data = []): static { return new static($data); } /** * Configurable constructor. * * @param array $config */ public function __construct"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Obj/DataObject.php",
+            "line": 31,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $data = []): static { return new static($data); } /** * @param string $json * * @return static */ public static function fromJson"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Obj/ObjectBox.php",
+            "line": 128,
+            "kind": "anonymous_function",
+            "snippet": "function global(): self { if (!self::$global) { self::$global = new self(); } return self"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Obj/Traits/AutoConfigTrait.php",
+            "line": 51,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $config = []): static { return new static($config); } /** * Class constructor. * * @param array $config */ public function __construct(array"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Obj/Traits/ObjectPoolTrait.php",
+            "line": 65,
+            "kind": "anonymous_function",
+            "snippet": "function use(string $class, Closure $handler): mixed { $obj = self::get($class); $ret = $handler($obj);"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Obj/Traits/QuickInitTrait.php",
+            "line": 25,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $config = []): static { return new static($config); } /** * from JSON string * * @param ?string $json * * @return static */ public"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Obj/Traits/SingletonTrait.php",
+            "line": 24,
+            "kind": "anonymous_function",
+            "snippet": "function new(): static { return Obj::singleton(static::class); } /** * Get singleton instance of the class. * * @return static */ public static function instance"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Std/Collection.php",
+            "line": 42,
+            "kind": "anonymous_function",
+            "snippet": "function new(array $data = []): static { return new static($data); } /** * Create new collection * * @param array $data */ public function __construct(array"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Str/StrBuffer.php",
+            "line": 38,
+            "kind": "anonymous_function",
+            "snippet": "function global(string $str = ''): self { if (!self::$global) { self::$global = new self($str"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Str/StrBuffer.php",
+            "line": 52,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $str = ''): self { return new self($str); } /** * Class constructor. * * @param string $str */ public function __construct(string"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Str/StrValue.php",
+            "line": 31,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $str): self { return new self($str); } /** * @param string $str * * @return self */ public static function newTrim(string $str)"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Str/StringHelper.php",
+            "line": 314,
+            "kind": "anonymous_function",
+            "snippet": "function (array $match) use ($vars, $mustVar) { if ($var = trim($match[1])) { $value ="
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Str/Traits/StringCaseHelperTrait.php",
+            "line": 202,
+            "kind": "arrow_function",
+            "snippet": "fn ($c) => strtoupper($c[1]), $str); } /** * string to camel case * * @param string $name * @param bool $upFirst * @param string $sep eg: -_/ * * @return string */"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Str/Traits/StringCheckHelperTrait.php",
+            "line": 519,
+            "kind": "anonymous_function",
+            "snippet": "function match(string $value, string $rule): bool { $validate = [ 'require' => '/\\S+/', 'email' => '/^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$/',"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/Optional.php",
+            "line": 52,
+            "kind": "anonymous_function",
+            "snippet": "function empty(): self { if (!self::$empty) { self::$empty = new self(null); } return"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/Optional.php",
+            "line": 267,
+            "kind": "anonymous_function",
+            "snippet": "function or(callable $supplier): self { if ($this->isPresent()) { return $this; } $new = $supplier()"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/PhpDotEnv.php",
+            "line": 66,
+            "kind": "anonymous_function",
+            "snippet": "function global(): self { if (!self::$global) { self::$global = new self(''); } return"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/Pipeline.php",
+            "line": 40,
+            "kind": "arrow_function",
+            "snippet": "fn ($payload) => $this->invokeStage($payload)); } $this->stages->attach($stage); return $this; } /** * {@inheritdoc} */ public"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/Pipeline.php",
+            "line": 75,
+            "kind": "anonymous_function",
+            "snippet": "function ($payload) { return $this->invokeStage($payload); }); } return $payload; } }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/Stream/DataStream.php",
+            "line": 46,
+            "kind": "anonymous_function",
+            "snippet": "function new(array|Traversable $data): static { return new static($data); } /** * @return self */ public static function empty():"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/Stream/DataStream.php",
+            "line": 54,
+            "kind": "anonymous_function",
+            "snippet": "function empty(): self { if (!self::$emptyObj) { self::$emptyObj = new static(); } return self"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/Stream/DataStream.php",
+            "line": 93,
+            "kind": "anonymous_function",
+            "snippet": "function ($a, $b) { if ($a === $b) { return 0; } return $a > $b ?"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/Stream/DataStream.php",
+            "line": 102,
+            "kind": "anonymous_function",
+            "snippet": "function ($a, $b) { if ($a === $b) { return 0; } return $a > $b ?"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/Stream/DataStream.php",
+            "line": 522,
+            "kind": "anonymous_function",
+            "snippet": "function forEach(callable $handler): void { foreach ($this as $item) { $handler($item); } } /** * @param callable(array|mixed, int|string): array $func * @param array $arr * * @return array */"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/src/Util/UUID.php",
+            "line": 126,
+            "kind": "anonymous_function",
+            "snippet": "function new(int $ver = 1, ?string $node = null, ?string $ns = null): self { return"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 35,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::notEmpty($val)); $this->assertException($e, 'Expected a non-empty value'); } $tests = [ true, ];"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 43,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::notEmpty($val)); $this->assertException($e, 'NO ERROR', -1); } } public function testAssert_bool"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 50,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isFalse(false)); $this->assertException($e, 'NO ERROR', -1); $e = $this->tryCatchRun(fn"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 53,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isFalse(true)); $this->assertException($e, 'Expected a false value'); $e = $this->tryCatchRun(fn ()"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 55,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isFalse(true, 'custom error')); $this->assertException($e, 'custom error'); $e = $this->tryCatchRun(fn"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 58,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isTrue(true)); $this->assertException($e, 'NO ERROR', -1); $e = $this->tryCatchRun(fn"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 61,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isTrue(false)); $this->assertException($e, 'Expected a true value'); $e = $this->tryCatchRun(fn ()"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 63,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isTrue(false, 'custom error')); $this->assertException($e, 'custom error'); } public function testAssert_FS():"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 69,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isFile(__DIR__ . '/AssertTest.php')); $this->assertException($e, 'NO ERROR', -1); $e = $this"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 72,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isFile('./not-exists.file')); $this->assertException($e, 'No such file: ./not-exists.file'); $e = $this->tryCatchRun(fn ()"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 75,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isDir(__DIR__)); $this->assertException($e, 'NO ERROR', -1); $e = $this->tryCatchRun(fn"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 78,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isDir('./not-exists')); $this->assertException($e, 'No such dir: ./not-exists'); $e = $this->tryCatchRun(fn ()"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 81,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isResource('invalid')); $this->assertException($e, 'Excepted an resource'); $e = $this->tryCatchRun(fn ()"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Helper/AssertTest.php",
+            "line": 84,
+            "kind": "arrow_function",
+            "snippet": "fn () => Assert::isResource(STDOUT)); $this->assertException($e, 'NO ERROR', -1); } }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Std/PipeFiltersTest.php",
+            "line": 30,
+            "kind": "anonymous_function",
+            "snippet": "function($val) { return strtoupper(substr($val, 0, 3)); }])); } public function testApplyStringRules():"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Util/OptionalTest.php",
+            "line": 30,
+            "kind": "arrow_function",
+            "snippet": "fn ($val) => $val > 25)->orElse(25); $this->assertEquals(25, $val); $o = Optional::nullable("
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Util/OptionalTest.php",
+            "line": 35,
+            "kind": "arrow_function",
+            "snippet": "fn () => 25)); } public function testOptional_stream(): void { $o = Optional::nullable([23, '56'"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Util/OptionalTest.php",
+            "line": 43,
+            "kind": "arrow_function",
+            "snippet": "fn ($val) => (int)$val)->toArray(); $this->assertEquals([23, 56, 78], $list); $this->assertEquals("
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Util/OptionalTest.php",
+            "line": 54,
+            "kind": "arrow_function",
+            "snippet": "fn () => $o->get()); $this->assertException($e, 'No value present'); $val = $o->or(fn () =>"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Util/OptionalTest.php",
+            "line": 57,
+            "kind": "arrow_function",
+            "snippet": "fn () => Optional::of(23))->get(); $this->assertEquals(23, $val); $val = $o->or(fn"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Util/OptionalTest.php",
+            "line": 60,
+            "kind": "arrow_function",
+            "snippet": "fn () => Optional::of('abc'))->get(); $this->assertEquals('abc', $val); } }"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/Util/Stream/DataStreamTest.php",
+            "line": 95,
+            "kind": "anonymous_function",
+            "snippet": "function (array $item) { return $item; }); vdump($ds->toArray(), $new->toArray()); $this->assertNotEmpty("
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/stdlib/test/bootstrap.php",
+            "line": 13,
+            "kind": "anonymous_function",
+            "snippet": "function ($class): void { $file = ''; if (str_starts_with($class, 'Toolkit\\Stdlib\\Example\\\\')) { $path = str_replace('\\\\',"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/example/proc-tasks.php",
+            "line": 11,
+            "kind": "anonymous_function",
+            "snippet": "function (array $task, array $ctx) { $pid = $ctx['pid']; println(\"worker#{$ctx['id']} [PID:$pid] - handle task, task data\","
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/example/proc-tasks.php",
+            "line": 16,
+            "kind": "arrow_function",
+            "snippet": "fn($pid, $num) => println(\"master [PID:$pid] - Will create task process, number:\", $num)) ->onWorkersCreated(fn($pid, $info) => println(\"master [PID:"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/example/proc-tasks.php",
+            "line": 17,
+            "kind": "arrow_function",
+            "snippet": "fn($pid, $info) => println(\"master [PID:$pid] - All task process started,\", 'Workers info', $info)) ->onWorkerStart(fn($pid, $id) => println"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/example/proc-tasks.php",
+            "line": 18,
+            "kind": "arrow_function",
+            "snippet": "fn($pid, $id) => println(\"worker#$id started, pid is\", $pid)) ->onWorkerExit(fn($pid, $id) => println(\"worker#"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/example/proc-tasks.php",
+            "line": 19,
+            "kind": "arrow_function",
+            "snippet": "fn($pid, $id) => println(\"worker#$id exited, pid is\", $pid)) ->onCompleted(fn($pid) => println(\"master [PID:$pid] - all workers exited, tasks run completed\""
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/example/proc-tasks.php",
+            "line": 20,
+            "kind": "arrow_function",
+            "snippet": "fn($pid) => println(\"master [PID:$pid] - all workers exited, tasks run completed\")) ->setTasks([ ['task1'], // one task ['task2'], ['task3'], ["
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/src/Cmd/CmdBuilder.php",
+            "line": 36,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $bin = '', string $workDir = ''): self { return new static($bin, $workDir);"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/src/Proc/PcntlFunc.php",
+            "line": 247,
+            "kind": "anonymous_function",
+            "snippet": "function () use ($onStart) { $onStart(); exit(0); }, $onForkError, $id); // log $pidAry[$info["
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/src/Proc/ProcTasks.php",
+            "line": 228,
+            "kind": "arrow_function",
+            "snippet": "fn(int $pid, int $eCode, int $status) => $this->handleWorkerExit($pid, $eCode, $status)); // call hooks if ($fn"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/src/Proc/ProcTasks.php",
+            "line": 261,
+            "kind": "arrow_function",
+            "snippet": "fn(int $wPid, int $id) => $this->doRunTasks($jobs, $wPid, $id), null, $id); // log $pidAry[$info"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/src/Proc/ProcWrapper.php",
+            "line": 107,
+            "kind": "anonymous_function",
+            "snippet": "function new(string $command = '', array $descriptors = []): static { return new static($command, $descriptors);"
+        },
+        {
+            "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/toolchain/../src/vendor/toolkit/sys-utils/test/bootstrap.php",
+            "line": 14,
+            "kind": "anonymous_function",
+            "snippet": "function ($class) { $file = null; if (str_starts_with($class, 'Toolkit\\Sys\\Example\\\\')) { $path = str_replace('\\\\', '/',"
+        }
+    ]
+}

@@ -1,0 +1,42 @@
+{
+  "main_search_color": {
+    "background": "yellow",
+    "color": "black"
+  },
+  "cur_search_color": {
+    "background": "#934bf0",
+    "color": "white"
+  },
+  "pinned_list_item_color": {
+    "background": "#FFF8E1",
+    "color": "#B0523D"
+  },
+  "new_chars_color": {
+    "background": "#86EEA5",
+    "color": "default"
+  },
+  "new_lines_color": {
+    "background": "#e3ece4",
+    "color": "#000000"
+  },
+  "cur_line_color": {
+    "background": "#186b23",
+    "color": "default"
+  },
+  "normal_line_number_color": {
+    "background": "default",
+    "color": "#0956f1"
+  },
+  "matched_line_number_color": {
+    "background": "default",
+    "color": "#f43434"
+  },
+  "new_line_number_color": {
+    "background": "default",
+    "color": "#1a8037"
+  },
+  "progress_line_number_color": {
+    "background": "default",
+    "color": "#616161"
+  }
+}

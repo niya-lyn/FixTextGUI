@@ -1,0 +1,452 @@
+{
+  "product": "FixText 正式 JSON 词库（v1，T0.2）",
+  "generated_by": "FixText_T0.2 迁移工具链 run_migration.sh",
+  "structure": {
+    "cleaned/": "清洗后的词库原始变量（PHP 权威），每个文件一个变量一个 JSON",
+    "flat/": "清洗后按 Map.php 语义展开的词条（PHP 权威）",
+    "rules/": "合并后的替换规则：before.json / after.json / rules_full.json / rules_meta.json",
+    "manual/": "手动检索正则规则表（扩展单元 B，含闭包标注）",
+    "index.json": "本清单"
+  },
+  "units": {
+    "1.自定义词库.php__punctuationMap": {
+      "raw_count": 1,
+      "flat_count": 1,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库.php__preprocessMap": {
+      "raw_count": 226,
+      "flat_count": 7938,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库.php__extraPreprocessMap": {
+      "raw_count": 32,
+      "flat_count": 32,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库.php__normalMap": {
+      "raw_count": 71968,
+      "flat_count": 131692,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库.php__extraMap": {
+      "raw_count": 9567,
+      "flat_count": 19390,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库.php__strictMap": {
+      "raw_count": 1736,
+      "flat_count": 3794,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库.php__regexMap": {
+      "raw_count": 39,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库.php__extraRegexMap": {
+      "raw_count": 17,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库.php__strictRegexMap": {
+      "raw_count": 10,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库.php__postFixMap": {
+      "raw_count": 445,
+      "flat_count": 1296,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库_旧式、通假写法_.php__oldStyleMap": {
+      "raw_count": 1018,
+      "flat_count": 1102,
+      "cleaned": true,
+      "type": "array"
+    },
+    "1.自定义词库_旧式、通假写法_.php__regexMap": {
+      "raw_count": 1,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "2.繁转简词库.php__t2sMap": {
+      "raw_count": 3140,
+      "flat_count": 3141,
+      "cleaned": true,
+      "type": "array"
+    },
+    "2.繁转简词库.php__t2sRadicalMap": {
+      "raw_count": 849,
+      "flat_count": 892,
+      "cleaned": true,
+      "type": "array"
+    },
+    "2.繁转简词库.php__radicalsSupplementMap": {
+      "raw_count": 215,
+      "flat_count": 215,
+      "cleaned": true,
+      "type": "array"
+    },
+    "3.txtFormat 词库.php__txtFormatMap": {
+      "raw_count": 86909,
+      "flat_count": 86917,
+      "cleaned": true,
+      "type": "array"
+    },
+    "4.的地得词库.php__dddMap": {
+      "raw_count": 11077,
+      "flat_count": 11238,
+      "cleaned": true,
+      "type": "array"
+    },
+    "4.的地得词库.php__dei2deMap": {
+      "raw_count": 607,
+      "flat_count": 607,
+      "cleaned": true,
+      "type": "array"
+    },
+    "4.的地得词库.php__accurateDddMap": {
+      "raw_count": 2418,
+      "flat_count": 3377,
+      "cleaned": true,
+      "type": "array"
+    },
+    "5.临时校对表.php__tempMap": {
+      "raw_count": 1,
+      "flat_count": 1,
+      "cleaned": true,
+      "type": "array"
+    },
+    "5.临时校对表.php__regexMap": {
+      "raw_count": 1,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customPreprocessMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customExtraPreprocessMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customNormalMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customExtraMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customOldStyleMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customT2sMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customT2sRadicalMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customTxtFormatMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customDddMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "6.用户扩展词库.php__customShengpiziMap": {
+      "raw_count": 0,
+      "flat_count": 0,
+      "cleaned": true,
+      "type": "array"
+    },
+    "7.生僻字词库.php__shengpiziMap": {
+      "raw_count": 17260,
+      "flat_count": 17260,
+      "cleaned": true,
+      "type": "array"
+    },
+    "7.生僻字词库_扩展区_.php__cjkExtMap": {
+      "raw_count": 14719,
+      "flat_count": 14719,
+      "cleaned": true,
+      "type": "array"
+    },
+    "7.生僻字词库_扩展区_.php__cjkRecoverMap": {
+      "raw_count": 643,
+      "flat_count": 643,
+      "cleaned": true,
+      "type": "array"
+    }
+  },
+  "baseline_meta": {
+    "1.自定义词库.php": {
+      "variables": [
+        "dePrefixPattern",
+        "dieci",
+        "excludedRegexes",
+        "excludedWords",
+        "extraMap",
+        "extraPreprocessMap",
+        "extraRegexMap",
+        "normalMap",
+        "postFixMap",
+        "preprocessMap",
+        "puncts",
+        "punctuationMap",
+        "regexMap",
+        "strictMap",
+        "strictRegexMap"
+      ],
+      "return": null,
+      "closures": []
+    },
+    "1.自定义词库【旧式、通假写法】.php": {
+      "variables": [
+        "oldStyleMap",
+        "regexMap"
+      ],
+      "return": null,
+      "closures": []
+    },
+    "2.繁转简词库.php": {
+      "variables": [
+        "radicalsSupplementMap",
+        "t2sMap",
+        "t2sRadicalMap"
+      ],
+      "return": null,
+      "closures": []
+    },
+    "3.txtFormat 词库.php": {
+      "variables": [
+        "txtFormatMap"
+      ],
+      "return": null,
+      "closures": []
+    },
+    "4.的地得词库.php": {
+      "variables": [
+        "accurateDddMap",
+        "dddMap",
+        "dei2deMap"
+      ],
+      "return": null,
+      "closures": []
+    },
+    "5.临时校对表.php": {
+      "variables": [
+        "regexMap",
+        "tempMap"
+      ],
+      "return": null,
+      "closures": []
+    },
+    "6.用户扩展词库.php": {
+      "variables": [
+        "customDddMap",
+        "customExtraMap",
+        "customExtraPreprocessMap",
+        "customNormalMap",
+        "customOldStyleMap",
+        "customPreprocessMap",
+        "customShengpiziMap",
+        "customT2sMap",
+        "customT2sRadicalMap",
+        "customTxtFormatMap"
+      ],
+      "return": null,
+      "closures": []
+    },
+    "7.生僻字词库.php": {
+      "variables": [
+        "shengpiziMap"
+      ],
+      "return": null,
+      "closures": []
+    },
+    "7.生僻字词库【扩展区】.php": {
+      "variables": [
+        "cjkExtMap",
+        "cjkRecoverMap"
+      ],
+      "return": null,
+      "closures": []
+    },
+    "书籍专有替换词库/天之下.php": {
+      "variables": [],
+      "return": "array",
+      "closures": []
+    },
+    "书籍专有替换词库/铁鹤书.php": {
+      "variables": [],
+      "return": "array",
+      "closures": []
+    },
+    "../config/map.php": {
+      "variables": [],
+      "return": "array",
+      "closures": []
+    },
+    "../config/general.php": {
+      "variables": [],
+      "return": "array",
+      "closures": [
+        {
+          "unit": "__return__",
+          "path": "$[noteBrandProcessors][moonreader]",
+          "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/src/config/general.php",
+          "line": 1086
+        },
+        {
+          "unit": "__return__",
+          "path": "$[noteBrandProcessors][calibre]",
+          "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/src/config/general.php",
+          "line": 1095
+        },
+        {
+          "unit": "__return__",
+          "path": "$[noteBrandProcessors][weread]",
+          "file": "/home/gem/.aily/workdir/task_7700845140750978320/artifacts/package/FixText_T0.2_词库迁移_v1/src/config/general.php",
+          "line": 1102
+        }
+      ]
+    }
+  },
+  "word_vars": {
+    "1.自定义词库.php::punctuationMap": 1,
+    "1.自定义词库.php::preprocessMap": 7938,
+    "1.自定义词库.php::extraPreprocessMap": 32,
+    "1.自定义词库.php::normalMap": 131692,
+    "1.自定义词库.php::extraMap": 19390,
+    "1.自定义词库.php::strictMap": 3794,
+    "1.自定义词库.php::postFixMap": 1296,
+    "1.自定义词库_旧式、通假写法_.php::oldStyleMap": 1102,
+    "2.繁转简词库.php::t2sMap": 3141,
+    "2.繁转简词库.php::t2sRadicalMap": 892,
+    "2.繁转简词库.php::radicalsSupplementMap": 215,
+    "3.txtFormat 词库.php::txtFormatMap": 86917,
+    "4.的地得词库.php::dddMap": 11238,
+    "4.的地得词库.php::dei2deMap": 607,
+    "4.的地得词库.php::accurateDddMap": 3377,
+    "5.临时校对表.php::tempMap": 1,
+    "7.生僻字词库.php::shengpiziMap": 17260,
+    "7.生僻字词库_扩展区_.php::cjkExtMap": 14719,
+    "7.生僻字词库_扩展区_.php::cjkRecoverMap": 643
+  },
+  "rules_meta": {
+    "total_rules": 304255,
+    "unique_before": 243535,
+    "per_var": {
+      "1.自定义词库.php::punctuationMap": 1,
+      "1.自定义词库.php::preprocessMap": 7938,
+      "1.自定义词库.php::extraPreprocessMap": 32,
+      "1.自定义词库.php::normalMap": 131692,
+      "1.自定义词库.php::extraMap": 19390,
+      "1.自定义词库.php::strictMap": 3794,
+      "1.自定义词库.php::postFixMap": 1296,
+      "1.自定义词库_旧式、通假写法_.php::oldStyleMap": 1102,
+      "2.繁转简词库.php::t2sMap": 3141,
+      "2.繁转简词库.php::t2sRadicalMap": 892,
+      "2.繁转简词库.php::radicalsSupplementMap": 215,
+      "3.txtFormat 词库.php::txtFormatMap": 86917,
+      "4.的地得词库.php::dddMap": 11238,
+      "4.的地得词库.php::dei2deMap": 607,
+      "4.的地得词库.php::accurateDddMap": 3377,
+      "5.临时校对表.php::tempMap": 1,
+      "7.生僻字词库.php::shengpiziMap": 17260,
+      "7.生僻字词库_扩展区_.php::cjkExtMap": 14719,
+      "7.生僻字词库_扩展区_.php::cjkRecoverMap": 643
+    },
+    "before_byte_len_dist_top": {
+      "3": 20735,
+      "4": 15398,
+      "5": 33,
+      "6": 21864,
+      "7": 200,
+      "8": 35,
+      "9": 59076,
+      "10": 223,
+      "11": 8,
+      "12": 119482
+    },
+    "max_before_bytes": 73,
+    "min_before_bytes": 3,
+    "baseline_total_rules": 304256,
+    "removed_by_cleaning": [
+      {
+        "before": "{处理“悬殊”的问题}",
+        "after": "差距太大",
+        "count": 1
+      }
+    ],
+    "added_by_cleaning": [],
+    "merge_vars": 19
+  },
+  "manual_rules": {
+    "file": "maps/手动检索规则表.php",
+    "total_rules": 205,
+    "closure_rules": 3,
+    "rules": [
+      {
+        "rule_index": 99,
+        "source_line": 611,
+        "search": "(?<=[“‘，。…？！；、<　]|<p>|\">)(额{1,})(?=[～~”，。？！…那这你我他她它])",
+        "mark": "{额->呃}",
+        "color": null,
+        "action": "迁移为 JSON 时不可表达；由引擎侧重写为等价逻辑并单独测试（排期 3.5 门禁 a）"
+      },
+      {
+        "rule_index": 100,
+        "source_line": 618,
+        "search": "(?<=[“‘，。…？！；、<　]|<p>|\">)(恩{1,})(?=[～~”，。？！…那这你我他她它])",
+        "mark": "{恩->嗯}",
+        "color": null,
+        "action": "迁移为 JSON 时不可表达；由引擎侧重写为等价逻辑并单独测试（排期 3.5 门禁 a）"
+      },
+      {
+        "rule_index": 204,
+        "source_line": 1245,
+        "search": "(.)(?<![第]|[位介]于|排[名在]|处[在于]|[一二三四五六七八九十两]、)(一、两|两、三|一、二|二、三|三、四|三、五|四、五|五、六|五、七|六、七|七、八|八、九)(?![、]|年级|顺位|名次|等级)(.)",
+        "mark": "{移除概数之中的顿号}",
+        "color": "Blue",
+        "action": "迁移为 JSON 时不可表达；由引擎侧重写为等价逻辑并单独测试（排期 3.5 门禁 a）"
+      }
+    ]
+  }
+}

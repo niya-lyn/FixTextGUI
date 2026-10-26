@@ -1,0 +1,33 @@
+QLabel#line {
+  color: #AAAAAA;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+QLabel#context_line_type_hint {
+  font-size: 8pt;
+  color: #AAAAAA;
+}
+
+QPushButton#link_values_button {
+  background-color: transparent;
+  border: none;
+  padding: 0px;
+}
+
+QPushButton#link_values_button:hover {
+  background-color: #4E4E4E;
+  border-radius: 4px;
+  padding: 0px;
+}
+
+#context_lines_container QPushButton {
+  border: none;
+  background-color: transparent;
+  padding: 4px;
+  text-align: right;
+}
+
+#context_lines_container QPushButton:hover {
+  background-color: #4E4E4E;
+}

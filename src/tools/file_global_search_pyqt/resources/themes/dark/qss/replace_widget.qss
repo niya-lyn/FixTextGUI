@@ -1,0 +1,50 @@
+QPushButton#replace_selection_button {
+  background-color: #8f43c1;
+  color: #FFFFFF;
+}
+
+QPushButton#replace_selection_button:hover {
+  background-color: #a55dd5;
+}
+
+QPushButton#replace_all_button {
+  background-color: #FFC107;
+  color: black;
+}
+
+QPushButton#replace_all_button:hover {
+  background-color: #FFE69C;
+  color: #803e08;
+}
+
+#history_panel {
+  border-radius: 4px;
+  border: 1px solid #555555;
+  background-color: #2C2F40;
+}
+
+/* 搜索记录标题 */
+QLabel#label {
+  margin: 12px 3px 6px 3px;
+  font-weight: bold;
+}
+
+DraggableHistoryListWidget#search_history_list {
+  border: 1px solid #555555;
+  border-radius: 3px;
+}
+
+/* 替换记录标题 */
+QLabel#label_2 {
+  margin: 6px 3px;
+  font-weight: bold;
+}
+
+QCheckBox#replace_shortcuts_checkbox {
+  margin-right: 10px;
+}
+
+DraggableHistoryListWidget#replace_history_list {
+  border: 1px solid #555555;
+  border-radius: 3px;
+}

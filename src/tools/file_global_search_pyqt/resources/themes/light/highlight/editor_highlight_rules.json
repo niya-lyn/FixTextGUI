@@ -1,0 +1,143 @@
+{
+  "rules": [
+    {
+      "pattern": "^【搜索耗时.*?】|【匹配行：.*?】",
+      "style": {
+        "color": "#0956f1"
+      }
+    },
+    {
+      "pattern": "※+（[上下]文省略）※+",
+      "style": {
+        "color": "#889A8E",
+        "italic": true,
+        "font-size": 10
+      }
+    },
+    {
+      "pattern": "\\[匹配：.*?\\].*",
+      "style": {
+        "color": "#702f20"
+      },
+      "mark": "高亮匹配行字符"
+    },
+    {
+      "pattern": "【匹配项：.*?】|【章节名：.*】",
+      "style": {
+        "background": "#37777f",
+        "color": "#FFFFFF",
+        "font-size": 10
+      }
+    },
+    {
+      "pattern": "【章节行】.*",
+      "style": {
+        "background": "yellow",
+        "color": "black"
+      }
+    },
+    {
+      "pattern": "【乱序行.*?】.*|乱序行：\\d+",
+      "style": {
+        "background": "#FEE2E2",
+        "color": "#991B1B"
+      }
+    },
+    {
+      "pattern": "【字数行】.*",
+      "style": {
+        "color": "#1a8037"
+      }
+    },
+    {
+      "pattern": "(?<=长度：)█*┃",
+      "style": {
+        "background": "#3182CE",
+        "color": "#3182CE",
+        "font-size": 4
+      }
+    },
+    {
+      "pattern": "(?<=┃)█*",
+      "style": {
+        "background": "#A0AEC0",
+        "color": "#A0AEC0",
+        "font-size": 4
+      }
+    },
+    {
+      "pattern": "　字数：.*?（字数最多）.*",
+      "style": {
+        "background": "#2D3748",
+        "color": "#FBD38D"
+      }
+    },
+    {
+      "pattern": "　字数：.*?（字数过少）.*",
+      "style": {
+        "background": "#C53030",
+        "color": "#FFF5F5"
+      }
+    },
+    {
+      "pattern": "　字数：.*?（特殊章节）.*",
+      "style": {
+        "background": "#6B46C1",
+        "color": "#FAF5FF"
+      }
+    },
+    {
+      "pattern": "<［d:.*?］>",
+      "style": {
+        "background": "#d53131",
+        "color": "#FFF5F5"
+      },
+      "mark": "【差异展示】红色表示删除"
+    },
+    {
+      "pattern": "<［a:.*?］>",
+      "style": {
+        "background": "#30916e",
+        "color": "#fff"
+      },
+      "mark": "【差异展示】绿色表示新增"
+    },
+    {
+      "pattern": "<［o:.*?］>",
+      "style": {
+        "background": "#88898F",
+        "color": "#F9FAFB",
+        "font-size": 11
+      },
+      "mark": "【差异展示】旧字符置灰并缩小"
+    },
+    {
+      "pattern": "<［n:.*?］>",
+      "style": {
+        "background": "yellow",
+        "color": "black"
+      },
+      "mark": "【差异展示】黄色表示替换后的新内容"
+    },
+    {
+      "pattern": "(?<!］>)<［n:(?![新旧]内容).*?］>",
+      "style": {
+        "background": "#0073ee",
+        "color": "#ffffff",
+        "underline": {
+          "color": "red"
+        }
+      },
+      "mark": "【差异展示】蓝色表示对黄色新内容的改动，可能是修改或还原成旧内容"
+    },
+    {
+      "pattern": "(?<=［)[daon]:|<［|］>",
+      "style": {
+        "color": "transparent",
+        "font-size": 1,
+        "letter-spacing": -0.8
+      },
+      "mark": "【差异展示】标签字号改小"
+    }
+  ]
+}

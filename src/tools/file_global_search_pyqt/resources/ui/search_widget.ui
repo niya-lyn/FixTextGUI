@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+  <class>SearchWidget</class>
+  <widget class="QWidget" name="SearchWidget">
+    <property name="sizePolicy">
+      <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+      </sizepolicy>
+    </property>
+    <layout class="QHBoxLayout" name="searchLayout">
+      <property name="margin" stdset="0">
+        <number>5</number>
+      </property>
+      <item>
+        <spacer name="horizontalSpacer_3">
+          <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeType">
+            <enum>QSizePolicy::Expanding</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+            <size>
+              <width>0</width>
+              <height>0</height>
+            </size>
+          </property>
+        </spacer>
+      </item>
+      <item>
+        <widget class="QLabel" name="current_selection_label">
+          <property name="text">
+            <string>当前选择（1/1）：</string>
+          </property>
+        </widget>
+      </item>
+      <item>
+        <widget class="CustomComboBox" name="desc_combo_box">
+          <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+            <size>
+              <width>350</width>
+              <height>32</height>
+            </size>
+          </property>
+          <property name="maximumSize">
+            <size>
+              <width>350</width>
+              <height>16777215</height>
+            </size>
+          </property>
+          <property name="editable">
+            <bool>true</bool>
+          </property>
+          <property name="maxVisibleItems">
+            <number>20</number>
+          </property>
+        </widget>
+      </item>
+      <item>
+        <widget class="QPlainTextEdit" name="search_input">
+          <property name="minimumSize">
+            <size>
+              <width>220</width>
+              <height>32</height>
+            </size>
+          </property>
+          <property name="maximumSize">
+            <size>
+              <width>220</width>
+              <height>32</height>
+            </size>
+          </property>
+        </widget>
+      </item>
+      <item>
+        <widget class="QPushButton" name="reload_search_button">
+          <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+            </sizepolicy>
+          </property>
+          <property name="fixedSize">
+            <size>
+              <width>30</width>
+              <height>30</height>
+            </size>
+          </property>
+          <property name="toolTip">
+            <string>如对配置文件有修改，点此刷新规则列表&#10;也可将搜索条件重置为当前规则的初始值</string>
+          </property>
+          <property name="icon">
+            <iconset>
+              <normaloff>:/light/icons/refresh.png</normaloff>
+            </iconset>
+          </property>
+        </widget>
+      </item>
+      <item>
+        <widget class="QPushButton" name="prev_search_button">
+          <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+            </sizepolicy>
+          </property>
+          <property name="fixedSize">
+            <size>
+              <width>30</width>
+              <height>30</height>
+            </size>
+          </property>
+          <property name="toolTip">
+            <string>上一规则</string>
+          </property>
+          <property name="text">
+            <string>↑</string>
+          </property>
+        </widget>
+      </item>
+      <item>
+        <widget class="QPushButton" name="next_search_button">
+          <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+            </sizepolicy>
+          </property>
+          <property name="fixedSize">
+            <size>
+              <width>30</width>
+              <height>30</height>
+            </size>
+          </property>
+          <property name="toolTip">
+            <string>下一规则</string>
+          </property>
+          <property name="text">
+            <string>↓</string>
+          </property>
+        </widget>
+      </item>
+      <item>
+        <widget class="QPushButton" name="search_button">
+          <property name="sizePolicy">
+            <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+            </sizepolicy>
+          </property>
+          <property name="minimumSize">
+            <size>
+              <width>100</width>
+              <height>22</height>
+            </size>
+          </property>
+          <property name="maximumSize">
+            <size>
+              <width>100</width>
+              <height>16777215</height>
+            </size>
+          </property>
+          <property name="text">
+            <string>搜索文件</string>
+          </property>
+          <property name="toolTip">
+            <string notr="true">每次都会【在文件中】搜索，生成新的结果&#10;如需【在文本框中】对现有结果二次搜索&#10;按 Ctrl+F 快捷键，使用【搜索文本框】</string>
+          </property>
+        </widget>
+      </item>
+    </layout>
+  </widget>
+  <customwidgets>
+    <customwidget>
+      <class>CustomComboBox</class>
+      <extends>QComboBox</extends>
+      <header>widgets.custom.custom_combo_box</header>
+    </customwidget>
+  </customwidgets>
+  <resources />
+  <connections />
+</ui>
