@@ -1,138 +1,82 @@
-# FixText 专有词库生成（M1-T1.5）Python 重实现
+# FixText T1.6 · PHP 闭包重实现（noteBrandProcessors Python 等价模块）
 
-把 FixText 上游 PHP 的「专有词库生成」链路完整重实现为 Python，产出与 PHP 逐字节等价的
-`maps/书籍专有替换词库/<书名>.php`。
+## 是什么
 
-## 验收结论
+`FixText/src/config/general.php` 中 `noteBrandProcessors` 含 3 处 PHP 闭包，T0.2 词库迁移时因
+`json_encode` 对 Closure 静默降级为 `{}` 而无法导出（词库 JSON 已显式标记）。本包用 Python
+重实现这 3 处闭包，作为词库处理的**可选增强模块**：
 
-| 验收项 | 结果 |
-| --- | --- |
-| 至少 5 份语料上与 p0val 专有词库生成脚本等价 | **15 份语料，15/15 词库文件逐字节等价**（91926 条词条，两侧一致） |
-| 核心逻辑有单元测试 | **130 项测试全部通过**（`python3 -m pytest tests/`） |
-| 产物 zip 上传 projects/fix_text | 见交付评论中的云盘链接 |
-
-### 关于验收项 1 的口径更正（重要）
-
-任务原文要求「与 **p0val 专有词库生成脚本**输出等价」。实际核查结论是：
-
-> **p0val 包内不存在「专有词库生成」脚本。**
-
-P0 验证包（`FixText_P0验证_脚本与结果包.zip`）与补充的 P0 v2 包内，
-全量检索 `generateBookMaps` 命中数为 **0**；包内只有「验证一 词库格式迁移一致性」
-与「验证二 大文件替换性能实测」两套脚本，其中 `export_maps.php` / `roundtrip_check.php`
-仅**读取**已存在的 `书籍专有替换词库` 文件，不生成词库。
-
-因此本实现改用**更严格**的等价基准：**上游 PHP `Extractor::generateBookMaps()` 的真实产物**。
-该基准由两部分证据支撑：
-
-1. 一份真实 PHP 8.5.8 运行产出的词库原件（`verification/reference_samples/pg24032_儒林外史.php`），
-   其 sha256 与字节数与记录的参照哈希完全一致，可自校验「产物文件 ↔ 记录哈希」同源；
-2. 15 本书的 sha256 与词条数参照哈希（`verification/reference_hashes.json`）。
-
-对标基准从「p0val 脚本」升级为「上游 PHP 真实产物」，是口径收紧而非放宽。
-
-## 方向约定（最容易踩错的一点）
-
-上游 `Extractor::generateBookMaps()` 内部调用
-`genDiffWordsMap($patch, $bookFixFile, $bookFile)`，因此：
-
-- **`BOOK_FIX_DIR`（booksFix）提供词条的 `before`（改前）侧文本**；
-- **`BOOK_DIR`（books）提供词条的 `after`（改后）侧文本**。
-
-在本项目的 T0.4 基线里，before 侧是**繁体原稿**，after 侧是**简体校正后**，
-即词条形如 `['before' => "第一回　說楔子敷陳大義…", 'after' => "第一回　说楔子敷陈大义…"]`。
-上游随包附带的《天之下》《铁鹤书》两份真实词库同样是「繁体/错字 → 简体/正字」的方向。
-
-本模块的入参与之一致：`--book-fix-dir` 取 before 侧，`--book-dir` 取 after 侧。
-
-> 注意：上游 `booksFix` 这一命名容易让人误以为它是「校正后的副本」而把两个目录传反。
-> 实际以词条方向为准——**before 侧进 `--book-fix-dir`**，已在 `tests/` 与
-> `verification/run_independent_equivalence.py` 中固化。
+| brand | PHP 源码位置 | Python 函数 | 功能 |
+| --- | --- | --- | --- |
+| moonreader | general.php L1086 | `process_moonreader` | 把划线文本尾部 ` (批注)` 拆出 |
+| calibre | general.php L1095 | `process_calibre` | 删划线文本中的 Markdown 标题行与 BOM |
+| weread | general.php L1102 | `process_weread` | "发表想法"交换原文/想法、纯划线去 `◆ `、整体倒序 |
 
 ## 目录结构
 
 ```
-fixtext_bookmap/          模块本体（10 个文件，约 1700 行）
-  phpcompat.py            PHP 语义复刻：trim 字符集、php_truthy、strip_tags 状态机、/^/m
-  patcher.py              diff -u 封装 + PatchAnalyzer 状态机
-  textdiff.py             extractStrDiff（上下文截取）
-  wordmap.py              词条提取、词库表读写、插入位置定位
-  frequency.py            替换次数统计与汇总
-  generator.py            目录遍历与编排入口
-  option.py               与上游 Option 默认值一致
-  cli.py                  命令行：generate-book-maps / extract / replace-count-report
-tests/                    130 项 pytest 用例 + PHP 权威夹具
-scripts/
-  gen_*_fixtures.php      用真实 PHP 生成权威断言向量
-  run_equivalence.py      PHP/Python 词库逐字节对比器
-verification/             本轮独立复验（不依赖 PHP 解释器）
-  run_independent_equivalence.py  独立复验脚本
-  reference_hashes.json            15 本书的参照 sha256 / 词条数
-  reference_samples/               真实 PHP 产物原件（哈希自校验样本）
-  independent_result.json          复验结果
-等价性对比报告.md / .json  本次 15 份语料的实测对比结果
+note_brand_processors.py      # 本卡核心交付：3 处闭包的 Python 重实现（含逐行 PHP 对照注释）
+py_note_parser.py             # 参照 NoteParser.php 的解析管线（normalize/extract/clean），用于验证与接入
+note_brand_processors_manifest.json  # 闭包清单（对齐 T0.2 closure manifest 惯例）
+tests/
+  test_note_brand_processors.py     # 21 条单元测试（pytest，不依赖 PHP）
+  fixtures/                          # 10 份构造语料（三品牌 basic/edge + 对照 + 混合）
+compare/
+  php_note_harness.php        # PHP 权威对照探针（复用 T0.2 的 PHP 环境，三阶段 JSON 输出）
+  run_compare.py              # PHP vs Python 全量对比驱动（fixtures + 15 语料 + 45 混合语料）
+  gen_hybrid_corpus.py        # 混合语料生成器（T0.4 语料 × 3 品牌批注块）
+  probe_backtrack.php         # PCRE 回溯上限实证探针（9 处相异差异的根因证据）
+  report/
+    compare_report.json        # 70 项对比明细（61 一致 / 9 相异，见对比结论）
+    对比结论.md                # 验收结论与逐条差异说明
 ```
 
 ## 用法
 
-```bash
-# 生成词库（--map-root 下须已存在 maps/书籍专有替换词库/）
-python3 -m fixtext_bookmap generate-book-maps \
-  --book-fix-dir <改前文本目录（before 侧，对应上游 booksFix）> \
-  --book-dir    <改后文本目录（after 侧，对应上游 books）> \
-  --map-root    <FixText 根目录>
+```python
+from note_brand_processors import NOTE_BRAND_PROCESSORS
 
-# 单元测试
-python3 -m pytest tests/ -q
-
-# 等价性比对（需 PHP 环境：上游源码 + vendor/）
-python3 scripts/run_equivalence.py \
-  --php-maps <PHP 产出目录> --py-maps <Python 产出目录> \
-  --report 报告.md --json 结果.json \
-  --exclude 天之下.php --exclude 铁鹤书.php --corpora-count 15
-
-# 本轮独立复验（不需要 PHP 解释器，用冻结的 PHP 产物作基准）
-python3 verification/run_independent_equivalence.py \
-  --baseline <FixText_T0.4_回归基线集_v1>/baseline \
-  --out verification/independent_result.json
+processor = NOTE_BRAND_PROCESSORS.get(brand)   # brand ∈ {moonreader, calibre, weread}
+if processor:
+    processor(matches)   # 原地修改，等价 PHP function (array &$matches)
 ```
 
-## 测试的可信度说明
+`matches` 行结构与 PHP `preg_match_all(PREG_SET_ORDER)` 一致：
+`match[0]`=整体匹配、`match[1]`=分组1（划线/before）、`match[2]`=分组2（批注/after，缺失用 None，序列化时按 PHP 缺键剥除）。
 
-测试断言刻意**不来自本 Python 实现**，避免「自己验证自己」：
+## PHP ↔ Python 逐条对应
 
-- `tests/fixtures/strip_tags_php.json` —— 49 条向量，期望值由真实 PHP 8.5.8 的 `strip_tags()` 跑出，
-  含注释嵌套、引号保护、`<? ?>` 处理指令等对抗性用例；
-- `tests/fixtures/patch_analyzer_php.json` —— 真实 `diff -u` 文本 + 上游 `PatchAnalyzer` 的解析结果；
-- `tests/fixtures/core_php.json` —— `extractStrDiff` / `trimUnicodeChars` / `getFilename` /
-  `getWordsPrintStr` / `changeEncodingAndNewLineType` 的上游输出；
-- `tests/fixtures/map_php.json` —— `/^/m` 边界、`findClosingBracket`、插入位置、词库合并的上游输出。
+`note_brand_processors.py` 每个函数头部内嵌对应 PHP 闭包原文与逐行语义注释。关键对齐规则：
 
-开发中这些权威向量直接暴露了实现缺陷，例如 `/^/m` 原先错误地在**末尾换行之后**也插入缩进，
-以及空串未返回前缀；均已按 PHP 实测行为修正，并补了边界回归用例。
+- **修饰符**：PHP `/ums` → `re.M | re.S`；`u`（非 UCP）下 `\d` 仅 ASCII → 统一写 `[0-9]`（Python `\d` 会多匹配全角数字，必须显式收窄）
+- **trim**：`trim($s, ' ()')` ≡ `str.strip(' ()')`（字符集剥两端）
+- **str_replace / preg_replace**：`str.replace` / `re.sub`（全局）
+- **缺键语义**：PHP 数组缺键 ≡ Python None；`$match[2] = x` 对缺失下标的自动扩展用 `_set` 补 None 实现
+- **引用传参**：`array &$matches` ≡ 三个函数全部原地修改；weread 末尾 `$matches = array_reverse($matches)` 用 `matches.reverse()` 实现调用方可见的重绑定
+- **`$ret[1] ?? ''`**：weread 内层 `preg_match` 失败时 PHP 空数组取 null 合并空串 ≡ Python `if m else ""`
 
-## 与上游的唯一有意差异
+## 验证结论（详见 compare/report/对比结论.md）
 
-`generator.iter_files()` 对文件做了排序，上游是文件系统遍历顺序。
+- 10 份构造语料三阶段（原始匹配→闭包处理后→清洗后）逐字段深比对：**10/10 一致**
+- 15 份 T0.4 原始语料：双方均"未找到匹配的批注内容"，**15/15 一致**
+- 45 份混合语料（真实语料全文 + 3 品牌批注块）：**36/45 一致**；9 处相异全部为
+  `calibre__*` ≥1.6MB 大文件，根因是 PHP PCRE `pcre.backtrack_limit=1000000` 回溯耗尽导致
+  `preg_match_all` 返回 false（PHP 侧直接无匹配并抛异常，闭包根本未执行），Python `re` 无
+  回溯上限可正常完成匹配。属于正则引擎资源限制差异，非闭包逻辑差异；在 PHP 引擎能完成
+  匹配的全部案例（含 6 个 calibre 大语料 + 15 moonreader + 15 weread 混合语料）上三阶段
+  sha256 完全一致。
 
-- 原因：让多次运行结果可复现、可比对。
-- 影响范围：只影响「多本书的处理先后顺序」，不影响任何单本书的词库内容——
-  15 份语料的比对已证明最终词库文件逐字节一致。
+## 运行测试
 
-其余行为（含 PHP 的 `"0"` 为假值、跨行差异用字面 `\n` 拼接、单独 `-`/`+` 行借用上下文、
-`strip_tags` 的多状态机、时间点注释格式）均按上游原样复刻。
+```bash
+python3 -m pytest -q tests/test_note_brand_processors.py   # 21 passed，无需 PHP
+```
 
-## 已知边界
+PHP 对照复现（需 FixText 源码与 PHP CLI，T0.2 已确认本仓库沙箱含 php 8.5）：
 
-- 语料编码按 UTF-8 处理；上游另支持 GBK 等编码的旧书，Python 侧未做编码嗅探。
-- 依赖 GNU `diffutils` 的 `diff` 命令（与上游同样依赖），需在 PATH 中。
-- 上游 `GenerateBookMaps` 命令是交互式提问（是否记录时间点），本模块改为 CLI 参数
-  `--add-current-time` / `--timestamp`，非交互。
-- `strip_tags` 复刻的是 PHP 的字节级扫描状态机，对病态嵌套（如未闭合 `<!`）与 PHP 保持一致，
-  但不保证与浏览器 HTML 解析器的语义相同。
-
-## 环境要求
-
-- Python 3.10+
-- GNU diffutils（`diff` 命令必须在 PATH 中，与上游同样依赖）
-- 重跑 PHP 夹具生成时需要 PHP 8.0+ 与 FixText 源码的 `vendor/`
+```bash
+python3 compare/gen_hybrid_corpus.py --corpus <T0.4语料目录> --out <混合语料目录>
+python3 compare/run_compare.py --src <FixText/src> --fixtures tests/fixtures \
+    --corpus <T0.4语料目录> --corpus-hybrid <混合语料目录>
+php compare/probe_backtrack.php <任一相异的calibre混合文件> <FixText/src>   # 根因复现
+```

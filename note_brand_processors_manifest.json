@@ -1,0 +1,45 @@
+{
+  "card": "M1-T1.6 PHP 闭包重实现",
+  "module": "note_brand_processors.py",
+  "generated_at": "2026-10-26",
+  "source": {
+    "file": "FixText/src/config/general.php",
+    "config_key": "noteBrandProcessors",
+    "closure_count": 3
+  },
+  "alignment_with_T0.2_manifest": {
+    "replace_kind": "php_closure",
+    "note": "对齐 T0.2 词库迁移 manual_rules_closure_manifest.json 惯例：T0.2 只标记不可导出，本卡补齐 Python 实现"
+  },
+  "closures": [
+    {
+      "brand": "moonreader",
+      "php_line": 1086,
+      "php_signature": "function (array &$matches)",
+      "python_function": "process_moonreader",
+      "status": "reimplemented",
+      "behavior": "划线文本尾部 ' (批注)' 拆分：分组1=首个 ' (' 前，分组2=至最后一个 ')' 后按 ' ()' trim"
+    },
+    {
+      "brand": "calibre",
+      "php_line": 1095,
+      "php_signature": "function (array &$matches)",
+      "python_function": "process_calibre",
+      "status": "reimplemented",
+      "behavior": "分组1 删除所有 '#+ ' 至行尾片段（不跨行）并删除 U+FEFF"
+    },
+    {
+      "brand": "weread",
+      "php_line": 1102,
+      "php_signature": "function (array &$matches)",
+      "python_function": "process_weread",
+      "status": "reimplemented",
+      "behavior": "含'发表想法'行交换 分组1=原文/分组2=想法（失败时均 ''）；纯划线行 分组1=整体匹配去 '◆ '；末尾整体倒序"
+    }
+  ],
+  "verification": {
+    "unit_tests": "tests/test_note_brand_processors.py（21 用例，pytest，21 passed）",
+    "php_authoritative_compare": "compare/report/compare_report.json（70 项：61 一致 / 9 相异，相异均系 PCRE 回溯上限所致，闭包逻辑无差异）",
+    "php_env": "php 8.5 CLI（T0.2 迁移脚本同一持久化环境）"
+  }
+}
