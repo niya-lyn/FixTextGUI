@@ -1,9 +1,0 @@
-{
-    "total": 43,
-    "ok": 42,
-    "fail": 1,
-    "diffs": [
-        "../config/general.php::__return__"
-    ],
-    "missing": []
-}

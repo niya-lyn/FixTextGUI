@@ -1,0 +1,68 @@
+{
+  "kind": "real_user_uploaded_novels",
+  "origin": "飞书云盘 projects/fix_text（folder_token BEbTfOYPglJKhVdiKOHcKCuqnXd）",
+  "note": "原文逐字节复制，不改写 / 不截断 / 不补足；无外网下载",
+  "books": [
+    {
+      "bytes": 1603888,
+      "chars": 548142,
+      "lines": 18184,
+      "chapters": 230,
+      "replacement_chars": 0,
+      "key": "guimie",
+      "title": "鬼灭之刃：我的眼睛能看到弹幕",
+      "file": "corpus_guimie.txt",
+      "cloud_file": "鬼灭之刃：我的眼睛能看到弹幕 作者：陆要芝麻粒.txt",
+      "cloud_file_token": "TyKfbfpKaoXmGqxA8EicoOuKnDg",
+      "sha256": "9ac4e4890b0ea2710ef3eda198fe619451a992d25803422c823980581dbb0eab",
+      "MiB": 1.53
+    },
+    {
+      "bytes": 12064584,
+      "chars": 4140321,
+      "lines": 135162,
+      "chapters": 771,
+      "replacement_chars": 0,
+      "key": "quhun",
+      "title": "雀魂：开局国士无双",
+      "file": "corpus_quhun.txt",
+      "cloud_file": "雀魂：开局国士无双 作者：玄汐蓝.txt",
+      "cloud_file_token": "U97xbrR4bo7mo5xQgX4clWLDnmh",
+      "sha256": "adf029fd6626c32aafe5d448b74ebf13946fa13a581a4bb1877b302aa5c2db82",
+      "MiB": 11.51
+    },
+    {
+      "bytes": 23482620,
+      "chars": 8095626,
+      "lines": 268551,
+      "chapters": 1639,
+      "replacement_chars": 0,
+      "key": "fanpai",
+      "title": "反派少爷只想过佛系生活",
+      "file": "corpus_fanpai.txt",
+      "cloud_file": "反派少爷只想过佛系生活 作者：人之下.txt",
+      "cloud_file_token": "Hr23bsrK4o63OixCV2ucIbEFn94",
+      "sha256": "42a92e777976bae9335454044c18335c4c6301fb42c4f6c628469c76e5dd5f91",
+      "MiB": 22.39
+    },
+    {
+      "bytes": 20971524,
+      "chars": 7234445,
+      "lines": 240632,
+      "chapters": 1465,
+      "replacement_chars": 0,
+      "slice_target_bytes": 20971520,
+      "slice_actual_bytes": 20971524,
+      "slice_at_least_target": true,
+      "slice_source_offset_start": 0,
+      "slice_source_offset_end": 20971523,
+      "slice_rule": "读前 20 MiB 后向前延伸到下一个换行符（含），保证 ≥20 MiB 且落在完整行边界",
+      "source": "corpus_fanpai.txt",
+      "sha256": "1a09ad9acb1354632af04a14362e3659990839b3238199bb67f36475c7970e10",
+      "key": "slice20mb",
+      "title": "corpus_fanpai.txt 前 20 MiB 切片",
+      "file": "corpus_20mb_slice.txt",
+      "MiB": 20.0
+    }
+  ]
+}

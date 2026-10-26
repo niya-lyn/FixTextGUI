@@ -1,0 +1,509 @@
+{
+  "generated_at": "2026-10-26T15:04:39+08:00",
+  "count": 2,
+  "env": {
+    "cpu_cores": 1,
+    "python": "3.11.13"
+  },
+  "build": {
+    "go_version": "go version go1.22.8 linux/amd64",
+    "imports": [
+      "encoding/json",
+      "fmt",
+      "os",
+      "strconv",
+      "strings"
+    ],
+    "host": {
+      "ok": true,
+      "target": "linux-amd64",
+      "output": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/src/fixtext/engine/go_src/bin/replace_by_go-linux-amd64",
+      "seconds": 0.183,
+      "command": [
+        "/usr/local/go/bin/go",
+        "build",
+        "-p",
+        "1",
+        "-trimpath",
+        "-o",
+        "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/src/fixtext/engine/go_src/bin/replace_by_go-linux-amd64",
+        "replace_by_go.go"
+      ],
+      "stdout_tail": "",
+      "stderr_tail": "",
+      "size_bytes": 2646016,
+      "env": {
+        "GOPROXY": "off",
+        "GOTOOLCHAIN": "local",
+        "CGO_ENABLED": "0",
+        "GOWORK": "off",
+        "GOFLAGS": "-mod=mod"
+      },
+      "parallelism": "-p 1",
+      "device": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/src/fixtext/engine/go_src/bin/replace_by_go-linux-amd64"
+    },
+    "windows": {
+      "ok": true,
+      "target": "windows-amd64",
+      "output": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/src/fixtext/engine/go_src/bin/replace_by_go-windows-amd64.exe",
+      "seconds": 0.142,
+      "command": [
+        "/usr/local/go/bin/go",
+        "build",
+        "-p",
+        "1",
+        "-trimpath",
+        "-o",
+        "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/src/fixtext/engine/go_src/bin/replace_by_go-windows-amd64.exe",
+        "replace_by_go.go"
+      ],
+      "stdout_tail": "",
+      "stderr_tail": "",
+      "size_bytes": 2763776,
+      "pe_signature": "4d5a",
+      "is_pe": true
+    }
+  },
+  "rules": {
+    "source": "T0.2 build/dictionary/rules/before.json + after.json",
+    "count": 304255,
+    "unique_before": 243535,
+    "before_sha256": "e961f82e3cbb41499b41301e04e7a7df7b11e189060064b6edd5af8e881e2c26",
+    "after_sha256": "7dd53ae6fd7770c2362b0a7d893ecf03bc5bba7062f9a0cd2bb07797a76a6131"
+  },
+  "equivalence": {
+    "total": 4,
+    "identical": 4,
+    "all_identical": true,
+    "corpora": [
+      {
+        "key": "slice20mb",
+        "title": "反派少爷只想过佛系生活 · 20MB 切片",
+        "source_file": "corpus_fanpai.txt 前 20 MiB 切片",
+        "corpus_file": "corpus_20mb_slice.txt",
+        "corpus_bytes": 20971524,
+        "corpus_MiB": 20.0,
+        "corpus_sha256": "1a09ad9acb1354632af04a14362e3659990839b3238199bb67f36475c7970e10",
+        "direct": {
+          "path": "direct",
+          "exit_code": 0,
+          "seconds": 3.144,
+          "stdout": "✓ 替换完成，共执行 2 次替换",
+          "stderr": "",
+          "output_bytes": 20978928,
+          "sha256": "e21e6baabd067705a62de29c3f8508fea129561b5f5f30f1448a008e6f6cce0a"
+        },
+        "client_file": {
+          "path": "client-file",
+          "seconds": 2.824,
+          "overhead_breakdown": {
+            "staging_rules_and_text_plus_process": 2.824
+          },
+          "ok": true,
+          "output_bytes": 20978928,
+          "sha256": "e21e6baabd067705a62de29c3f8508fea129561b5f5f30f1448a008e6f6cce0a",
+          "engine_reported_count": 2,
+          "engine_seconds": 2.193,
+          "changed": true
+        },
+        "client_memory": {
+          "path": "client-memory",
+          "seconds": 2.38,
+          "overhead_breakdown": {
+            "staging_rules_and_text_plus_process": 2.38
+          },
+          "ok": true,
+          "output_bytes": 20978928,
+          "sha256": "e21e6baabd067705a62de29c3f8508fea129561b5f5f30f1448a008e6f6cce0a",
+          "engine_reported_count": 2,
+          "engine_seconds": 2.204,
+          "changed": true
+        },
+        "compare_file_vs_direct": {
+          "bytes_a": 20978928,
+          "bytes_b": 20978928,
+          "sha256_a": "e21e6baabd067705a62de29c3f8508fea129561b5f5f30f1448a008e6f6cce0a",
+          "sha256_b": "e21e6baabd067705a62de29c3f8508fea129561b5f5f30f1448a008e6f6cce0a",
+          "identical": true
+        },
+        "compare_memory_vs_direct": {
+          "bytes_a": 20978928,
+          "bytes_b": 20978928,
+          "sha256_a": "e21e6baabd067705a62de29c3f8508fea129561b5f5f30f1448a008e6f6cce0a",
+          "sha256_b": "e21e6baabd067705a62de29c3f8508fea129561b5f5f30f1448a008e6f6cce0a",
+          "identical": true
+        },
+        "identical": true
+      },
+      {
+        "key": "fanpai",
+        "title": "反派少爷只想过佛系生活",
+        "source_file": "反派少爷只想过佛系生活 作者：人之下.txt",
+        "corpus_file": "corpus_fanpai.txt",
+        "corpus_bytes": 23482620,
+        "corpus_MiB": 22.39,
+        "corpus_sha256": "42a92e777976bae9335454044c18335c4c6301fb42c4f6c628469c76e5dd5f91",
+        "direct": {
+          "path": "direct",
+          "exit_code": 0,
+          "seconds": 3.138,
+          "stdout": "✓ 替换完成，共执行 2 次替换",
+          "stderr": "",
+          "output_bytes": 23489049,
+          "sha256": "9270a88ef2864a5ec3e8ae6a4006b7d77137411237822bfedff91dd8a3a4c9be"
+        },
+        "client_file": {
+          "path": "client-file",
+          "seconds": 3.246,
+          "overhead_breakdown": {
+            "staging_rules_and_text_plus_process": 3.246
+          },
+          "ok": true,
+          "output_bytes": 23489049,
+          "sha256": "9270a88ef2864a5ec3e8ae6a4006b7d77137411237822bfedff91dd8a3a4c9be",
+          "engine_reported_count": 2,
+          "engine_seconds": 2.553,
+          "changed": true
+        },
+        "client_memory": {
+          "path": "client-memory",
+          "seconds": 2.597,
+          "overhead_breakdown": {
+            "staging_rules_and_text_plus_process": 2.597
+          },
+          "ok": true,
+          "output_bytes": 23489049,
+          "sha256": "9270a88ef2864a5ec3e8ae6a4006b7d77137411237822bfedff91dd8a3a4c9be",
+          "engine_reported_count": 2,
+          "engine_seconds": 2.403,
+          "changed": true
+        },
+        "compare_file_vs_direct": {
+          "bytes_a": 23489049,
+          "bytes_b": 23489049,
+          "sha256_a": "9270a88ef2864a5ec3e8ae6a4006b7d77137411237822bfedff91dd8a3a4c9be",
+          "sha256_b": "9270a88ef2864a5ec3e8ae6a4006b7d77137411237822bfedff91dd8a3a4c9be",
+          "identical": true
+        },
+        "compare_memory_vs_direct": {
+          "bytes_a": 23489049,
+          "bytes_b": 23489049,
+          "sha256_a": "9270a88ef2864a5ec3e8ae6a4006b7d77137411237822bfedff91dd8a3a4c9be",
+          "sha256_b": "9270a88ef2864a5ec3e8ae6a4006b7d77137411237822bfedff91dd8a3a4c9be",
+          "identical": true
+        },
+        "identical": true
+      },
+      {
+        "key": "quhun",
+        "title": "雀魂：开局国士无双",
+        "source_file": "雀魂：开局国士无双 作者：玄汐蓝.txt",
+        "corpus_file": "corpus_quhun.txt",
+        "corpus_bytes": 12064584,
+        "corpus_MiB": 11.51,
+        "corpus_sha256": "adf029fd6626c32aafe5d448b74ebf13946fa13a581a4bb1877b302aa5c2db82",
+        "direct": {
+          "path": "direct",
+          "exit_code": 0,
+          "seconds": 2.184,
+          "stdout": "✓ 替换完成，共执行 2 次替换",
+          "stderr": "",
+          "output_bytes": 12101048,
+          "sha256": "b67a9f2e1926b05f13620b7fa7f753f2617ff9d9e5baae76ff6df76edb43db8e"
+        },
+        "client_file": {
+          "path": "client-file",
+          "seconds": 1.866,
+          "overhead_breakdown": {
+            "staging_rules_and_text_plus_process": 1.866
+          },
+          "ok": true,
+          "output_bytes": 12101048,
+          "sha256": "b67a9f2e1926b05f13620b7fa7f753f2617ff9d9e5baae76ff6df76edb43db8e",
+          "engine_reported_count": 2,
+          "engine_seconds": 1.563,
+          "changed": true
+        },
+        "client_memory": {
+          "path": "client-memory",
+          "seconds": 1.704,
+          "overhead_breakdown": {
+            "staging_rules_and_text_plus_process": 1.704
+          },
+          "ok": true,
+          "output_bytes": 12101048,
+          "sha256": "b67a9f2e1926b05f13620b7fa7f753f2617ff9d9e5baae76ff6df76edb43db8e",
+          "engine_reported_count": 2,
+          "engine_seconds": 1.57,
+          "changed": true
+        },
+        "compare_file_vs_direct": {
+          "bytes_a": 12101048,
+          "bytes_b": 12101048,
+          "sha256_a": "b67a9f2e1926b05f13620b7fa7f753f2617ff9d9e5baae76ff6df76edb43db8e",
+          "sha256_b": "b67a9f2e1926b05f13620b7fa7f753f2617ff9d9e5baae76ff6df76edb43db8e",
+          "identical": true
+        },
+        "compare_memory_vs_direct": {
+          "bytes_a": 12101048,
+          "bytes_b": 12101048,
+          "sha256_a": "b67a9f2e1926b05f13620b7fa7f753f2617ff9d9e5baae76ff6df76edb43db8e",
+          "sha256_b": "b67a9f2e1926b05f13620b7fa7f753f2617ff9d9e5baae76ff6df76edb43db8e",
+          "identical": true
+        },
+        "identical": true
+      },
+      {
+        "key": "guimie",
+        "title": "鬼灭之刃：我的眼睛能看到弹幕",
+        "source_file": "鬼灭之刃：我的眼睛能看到弹幕 作者：陆要芝麻粒.txt",
+        "corpus_file": "corpus_guimie.txt",
+        "corpus_bytes": 1603888,
+        "corpus_MiB": 1.53,
+        "corpus_sha256": "9ac4e4890b0ea2710ef3eda198fe619451a992d25803422c823980581dbb0eab",
+        "direct": {
+          "path": "direct",
+          "exit_code": 0,
+          "seconds": 0.786,
+          "stdout": "✓ 替换完成，共执行 2 次替换",
+          "stderr": "",
+          "output_bytes": 1608996,
+          "sha256": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0"
+        },
+        "client_file": {
+          "path": "client-file",
+          "seconds": 0.851,
+          "overhead_breakdown": {
+            "staging_rules_and_text_plus_process": 0.851
+          },
+          "ok": true,
+          "output_bytes": 1608996,
+          "sha256": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+          "engine_reported_count": 2,
+          "engine_seconds": 0.682,
+          "changed": true
+        },
+        "client_memory": {
+          "path": "client-memory",
+          "seconds": 0.792,
+          "overhead_breakdown": {
+            "staging_rules_and_text_plus_process": 0.792
+          },
+          "ok": true,
+          "output_bytes": 1608996,
+          "sha256": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+          "engine_reported_count": 2,
+          "engine_seconds": 0.701,
+          "changed": true
+        },
+        "compare_file_vs_direct": {
+          "bytes_a": 1608996,
+          "bytes_b": 1608996,
+          "sha256_a": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+          "sha256_b": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+          "identical": true
+        },
+        "compare_memory_vs_direct": {
+          "bytes_a": 1608996,
+          "bytes_b": 1608996,
+          "sha256_a": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+          "sha256_b": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+          "identical": true
+        },
+        "identical": true
+      }
+    ]
+  },
+  "errors": {
+    "total": 11,
+    "matched": 11,
+    "all_matched": true,
+    "cases": [
+      {
+        "case": "control-small-file-success",
+        "expected_code": "NONE(成功)",
+        "actual_code": "NONE(成功)",
+        "matched": true,
+        "error": null
+      },
+      {
+        "case": "engine-missing",
+        "expected_code": "E1001",
+        "actual_code": "E1001",
+        "matched": true,
+        "error": {
+          "code": "E1001",
+          "name": "ENGINE_MISSING",
+          "message": "引擎可执行文件不存在: /tmp/fixtext-no-such-engine-binary",
+          "remedy": "先执行 python -m fixtext.engine.builder 离线构建，或用 engine_path 指向已有二进制",
+          "detail": {
+            "engine_path": "/tmp/fixtext-no-such-engine-binary",
+            "hint": "python -m fixtext.engine.builder 可离线构建"
+          }
+        }
+      },
+      {
+        "case": "engine-not-executable-no-x-bit",
+        "expected_code": "E1002",
+        "actual_code": "E1002",
+        "matched": true,
+        "error": {
+          "code": "E1002",
+          "name": "ENGINE_NOT_EXECUTABLE",
+          "message": "引擎文件缺少执行位: fake_engine_noexec",
+          "remedy": "检查 chmod +x、目标平台是否与当前主机一致（Windows 二进制不能在 Linux 上直接跑）",
+          "detail": {
+            "engine_path": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/fake_engine_noexec",
+            "mode": "0o100644"
+          }
+        },
+        "fixture": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/fake_engine_noexec",
+        "mode": "0o100644"
+      },
+      {
+        "case": "engine-not-executable-bad-format",
+        "expected_code": "E1002",
+        "actual_code": "E1002",
+        "matched": true,
+        "error": {
+          "code": "E1002",
+          "name": "ENGINE_NOT_EXECUTABLE",
+          "message": "启动引擎失败: FileNotFoundError: [Errno 2] No such file or directory: '/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/fake_engine_badformat'",
+          "remedy": "检查 chmod +x、目标平台是否与当前主机一致（Windows 二进制不能在 Linux 上直接跑）",
+          "detail": {
+            "engine_path": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/fake_engine_badformat",
+            "os_error": "[Errno 2] No such file or directory: '/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/fake_engine_badformat'"
+          }
+        },
+        "fixture": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/fake_engine_badformat",
+        "mode": "0o100755"
+      },
+      {
+        "case": "engine-timeout",
+        "expected_code": "E1003",
+        "actual_code": "E1003",
+        "matched": true,
+        "error": {
+          "code": "E1003",
+          "name": "ENGINE_TIMEOUT",
+          "message": "引擎调用超时（0.6s），子进程已被强制终止",
+          "remedy": "调大 timeout_s，或确认当前为 1 核环境、大文件两趟替换预期耗时",
+          "detail": {
+            "timeout_s": 0.6,
+            "engine_path": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/src/fixtext/engine/go_src/bin/replace_by_go-linux-amd64",
+            "command": [
+              "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/src/fixtext/engine/go_src/bin/replace_by_go-linux-amd64",
+              "/tmp/fixtext-engine-kxx3owfz/target.txt",
+              "/tmp/fixtext-engine-kxx3owfz/before.json",
+              "/tmp/fixtext-engine-kxx3owfz/after.json",
+              "2"
+            ],
+            "stdout_tail": "",
+            "stderr_tail": ""
+          }
+        },
+        "timeout_s": 0.6,
+        "observed_wall_s": 0.715,
+        "corpus": "corpus_fanpai.txt"
+      },
+      {
+        "case": "rules-length-mismatch",
+        "expected_code": "E2203",
+        "actual_code": "E2203",
+        "matched": true,
+        "error": {
+          "code": "E2203",
+          "name": "RULES_LENGTH_MISMATCH",
+          "message": "规则数量不匹配: 替换前=2, 替换后=1",
+          "remedy": "回到 T0.2 词库链路重新导出，逐条对齐 before/after",
+          "detail": {
+            "before": 2,
+            "after": 1,
+            "source": "memory"
+          }
+        }
+      },
+      {
+        "case": "rules-empty",
+        "expected_code": "E2204",
+        "actual_code": "E2204",
+        "matched": true,
+        "error": {
+          "code": "E2204",
+          "name": "RULES_EMPTY",
+          "message": "替换规则为空",
+          "remedy": "至少提供一条规则；空规则集不构成一次有意义的替换",
+          "detail": {
+            "source": "memory"
+          }
+        }
+      },
+      {
+        "case": "input-missing",
+        "expected_code": "E2101",
+        "actual_code": "E2101",
+        "matched": true,
+        "error": {
+          "code": "E2101",
+          "name": "INPUT_MISSING",
+          "message": "待替换文件不存在: no-such-corpus.txt",
+          "remedy": "检查路径拼写",
+          "detail": {
+            "path": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/no-such-corpus.txt"
+          }
+        }
+      },
+      {
+        "case": "argument-invalid-count-zero",
+        "expected_code": "E2301",
+        "actual_code": "E2301",
+        "matched": true,
+        "error": {
+          "code": "E2301",
+          "name": "ARGUMENT_INVALID",
+          "message": "替换次数必须为正整数，当前: 0",
+          "remedy": "count 必须是正整数，与 Go 引擎 parseArgs 的校验保持一致",
+          "detail": {
+            "count": 0
+          }
+        }
+      },
+      {
+        "case": "output-write-failed",
+        "expected_code": "E2401",
+        "actual_code": "E2401",
+        "matched": true,
+        "error": {
+          "code": "E2401",
+          "name": "OUTPUT_WRITE_FAILED",
+          "message": "结果落盘失败: NotADirectoryError",
+          "remedy": "检查输出目录是否存在、可写，磁盘是否已满",
+          "detail": {
+            "path": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/output_blocker/sub/out.txt",
+            "os_error": "[Errno 20] Not a directory: '/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/output_blocker/sub'"
+          }
+        },
+        "blocker": "/home/gem/.aily/workdir/task_7700860388757212173/artifacts/fixtext/.work/output_blocker"
+      },
+      {
+        "case": "rules-invalid-json-direct-subprocess",
+        "expected_code": "E2202",
+        "actual_code": "E2202",
+        "matched": true,
+        "error": {
+          "exit_code": 1,
+          "stderr": "错误: 加载规则失败: 读取替换前规则: JSON 解析失败: invalid character 'b' looking for beginning of object key string",
+          "note": "绕过 RuleSet 静态校验，直接让 Go 引擎读到坏 JSON"
+        }
+      }
+    ]
+  },
+  "checks": {
+    "build_host_ok": true,
+    "build_windows_pe": true,
+    "equivalence_all_identical": true,
+    "equivalence_has_20mb": true,
+    "errors_all_matched": true
+  },
+  "pass": true
+}
