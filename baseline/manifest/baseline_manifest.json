@@ -3,18 +3,18 @@
   "generator": "baseline/scripts/run_baseline.py --build",
   "replace_count": 2,
   "rules": {
-    "before_sha256": "932271d6e483d504aec0f331977f0c375c4365d0dd8a02942c96f053a15a7f0a",
-    "after_sha256": "b8cefff85f464283a6a1aab5b7ebac578359e84106b0ea23a3693e2106f9c09e",
+    "before_sha256": "e961f82e3cbb41499b41301e04e7a7df7b11e189060064b6edd5af8e881e2c26",
+    "after_sha256": "7dd53ae6fd7770c2362b0a7d893ecf03bc5bba7062f9a0cd2bb07797a76a6131",
     "meta": {
-      "total_rules": 304256,
-      "unique_before": 243536,
+      "total_rules": 304255,
+      "unique_before": 243535,
       "per_var": {
         "1.自定义词库.php::punctuationMap": 1,
         "1.自定义词库.php::preprocessMap": 7938,
         "1.自定义词库.php::extraPreprocessMap": 32,
         "1.自定义词库.php::normalMap": 131692,
         "1.自定义词库.php::extraMap": 19390,
-        "1.自定义词库.php::strictMap": 3795,
+        "1.自定义词库.php::strictMap": 3794,
         "1.自定义词库.php::postFixMap": 1296,
         "1.自定义词库_旧式、通假写法_.php::oldStyleMap": 1102,
         "2.繁转简词库.php::t2sMap": 3141,
@@ -42,7 +42,17 @@
         "12": 119482
       },
       "max_before_bytes": 73,
-      "min_before_bytes": 3
+      "min_before_bytes": 3,
+      "baseline_total_rules": 304256,
+      "removed_by_cleaning": [
+        {
+          "before": "{处理“悬殊”的问题}",
+          "after": "差距太大",
+          "count": 1
+        }
+      ],
+      "added_by_cleaning": [],
+      "merge_vars": 19
     }
   },
   "items": [

@@ -1,0 +1,407 @@
+[
+  {
+    "file": "novel_fanpai_ch001-060.txt",
+    "old": {
+      "sha": "bf2ec3c716da2bf184144a68a517f70abc92081d4ddfb03ddd3895556e4a4244",
+      "bytes": 435785,
+      "replacements": 2348,
+      "distinct": 302,
+      "rules_total_unique": 243536,
+      "hits": [
+        1253,
+        1095
+      ]
+    },
+    "new": {
+      "sha": "bf2ec3c716da2bf184144a68a517f70abc92081d4ddfb03ddd3895556e4a4244",
+      "bytes": 435785,
+      "replacements": 2348,
+      "distinct": 302,
+      "rules_total_unique": 243535,
+      "hits": [
+        1253,
+        1095
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "novel_guimie_full.txt",
+    "old": {
+      "sha": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+      "bytes": 1608996,
+      "replacements": 9865,
+      "distinct": 1346,
+      "rules_total_unique": 243536,
+      "hits": [
+        5554,
+        4311
+      ]
+    },
+    "new": {
+      "sha": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+      "bytes": 1608996,
+      "replacements": 9865,
+      "distinct": 1346,
+      "rules_total_unique": 243535,
+      "hits": [
+        5554,
+        4311
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "novel_quehun_ch001-060.txt",
+    "old": {
+      "sha": "6caf38174b09b5873f4c1c927addcda81111b2f510c168244f83db4a54f8094c",
+      "bytes": 503146,
+      "replacements": 2236,
+      "distinct": 315,
+      "rules_total_unique": 243536,
+      "hits": [
+        1211,
+        1025
+      ]
+    },
+    "new": {
+      "sha": "6caf38174b09b5873f4c1c927addcda81111b2f510c168244f83db4a54f8094c",
+      "bytes": 503146,
+      "replacements": 2236,
+      "distinct": 315,
+      "rules_total_unique": 243535,
+      "hits": [
+        1211,
+        1025
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg23863_水滸傳.txt",
+    "old": {
+      "sha": "8fa7729e7b0829ce1dba38b328dcfd97a3cb7df7de0b38568642720a91d04be9",
+      "bytes": 1629674,
+      "replacements": 137251,
+      "distinct": 2328,
+      "rules_total_unique": 243536,
+      "hits": [
+        132990,
+        4261
+      ]
+    },
+    "new": {
+      "sha": "8fa7729e7b0829ce1dba38b328dcfd97a3cb7df7de0b38568642720a91d04be9",
+      "bytes": 1629674,
+      "replacements": 137251,
+      "distinct": 2328,
+      "rules_total_unique": 243535,
+      "hits": [
+        132990,
+        4261
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg23910_封神演義.txt",
+    "old": {
+      "sha": "c5b267327ec9b1ccec3eff2bfceb798974206d6eabaae1f5146d63dd5192fa9f",
+      "bytes": 1851344,
+      "replacements": 150097,
+      "distinct": 2414,
+      "rules_total_unique": 243536,
+      "hits": [
+        144790,
+        5307
+      ]
+    },
+    "new": {
+      "sha": "c5b267327ec9b1ccec3eff2bfceb798974206d6eabaae1f5146d63dd5192fa9f",
+      "bytes": 1851344,
+      "replacements": 150097,
+      "distinct": 2414,
+      "rules_total_unique": 243535,
+      "hits": [
+        144790,
+        5307
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg23950_三國志演義.txt",
+    "old": {
+      "sha": "ea5686aa6cf42c76338556ee6c86db27117efd64cb266c0dcc970eab4071bb16",
+      "bytes": 1857827,
+      "replacements": 149032,
+      "distinct": 2222,
+      "rules_total_unique": 243536,
+      "hits": [
+        145640,
+        3392
+      ]
+    },
+    "new": {
+      "sha": "ea5686aa6cf42c76338556ee6c86db27117efd64cb266c0dcc970eab4071bb16",
+      "bytes": 1857827,
+      "replacements": 149032,
+      "distinct": 2222,
+      "rules_total_unique": 243535,
+      "hits": [
+        145640,
+        3392
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg23962_西遊記.txt",
+    "old": {
+      "sha": "4e2e582aa11ee24aca64884dc7124e38891c7da482bbb7712f9c9815e7e846b9",
+      "bytes": 2250868,
+      "replacements": 173449,
+      "distinct": 3053,
+      "rules_total_unique": 243536,
+      "hits": [
+        168052,
+        5397
+      ]
+    },
+    "new": {
+      "sha": "4e2e582aa11ee24aca64884dc7124e38891c7da482bbb7712f9c9815e7e846b9",
+      "bytes": 2250868,
+      "replacements": 173449,
+      "distinct": 3053,
+      "rules_total_unique": 243535,
+      "hits": [
+        168052,
+        5397
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg24032_儒林外史.txt",
+    "old": {
+      "sha": "d039136d51bfdee78e193e0c7f0fdd6be2648bea5f9e0f875ddb0a2fce344ab8",
+      "bytes": 834380,
+      "replacements": 59717,
+      "distinct": 1887,
+      "rules_total_unique": 243536,
+      "hits": [
+        57594,
+        2123
+      ]
+    },
+    "new": {
+      "sha": "d039136d51bfdee78e193e0c7f0fdd6be2648bea5f9e0f875ddb0a2fce344ab8",
+      "bytes": 834380,
+      "replacements": 59717,
+      "distinct": 1887,
+      "rules_total_unique": 243535,
+      "hits": [
+        57594,
+        2123
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg24141_警世通言.txt",
+    "old": {
+      "sha": "906f4622597fab153f8c7b5e39e0cbfde351c01023e1dda0cd16128cb4b4f47d",
+      "bytes": 1158508,
+      "replacements": 92444,
+      "distinct": 2581,
+      "rules_total_unique": 243536,
+      "hits": [
+        90086,
+        2358
+      ]
+    },
+    "new": {
+      "sha": "906f4622597fab153f8c7b5e39e0cbfde351c01023e1dda0cd16128cb4b4f47d",
+      "bytes": 1158508,
+      "replacements": 92444,
+      "distinct": 2581,
+      "rules_total_unique": 243535,
+      "hits": [
+        90086,
+        2358
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg24226_史記.txt",
+    "old": {
+      "sha": "a60bdcd1b612d6afdd6b5682114bd6c6739ede719b63733c754934dab68781b0",
+      "bytes": 2065998,
+      "replacements": 147952,
+      "distinct": 2738,
+      "rules_total_unique": 243536,
+      "hits": [
+        142251,
+        5701
+      ]
+    },
+    "new": {
+      "sha": "a60bdcd1b612d6afdd6b5682114bd6c6739ede719b63733c754934dab68781b0",
+      "bytes": 2065998,
+      "replacements": 147952,
+      "distinct": 2738,
+      "rules_total_unique": 243535,
+      "hits": [
+        142251,
+        5701
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg24230_今古奇觀.txt",
+    "old": {
+      "sha": "e04dd510ac7bb973813117d639423a02431f05c65d58a6af694092cdff767985",
+      "bytes": 2867142,
+      "replacements": 227207,
+      "distinct": 3578,
+      "rules_total_unique": 243536,
+      "hits": [
+        220390,
+        6817
+      ]
+    },
+    "new": {
+      "sha": "e04dd510ac7bb973813117d639423a02431f05c65d58a6af694092cdff767985",
+      "bytes": 2867142,
+      "replacements": 227207,
+      "distinct": 3578,
+      "rules_total_unique": 243535,
+      "hits": [
+        220390,
+        6817
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg24264_紅樓夢.txt",
+    "old": {
+      "sha": "ff5cb694e61f7628f584aab6e1bc0dd7ebd3a1fb58ef20bb20959d699779ba37",
+      "bytes": 2617699,
+      "replacements": 193641,
+      "distinct": 3470,
+      "rules_total_unique": 243536,
+      "hits": [
+        186368,
+        7273
+      ]
+    },
+    "new": {
+      "sha": "ff5cb694e61f7628f584aab6e1bc0dd7ebd3a1fb58ef20bb20959d699779ba37",
+      "bytes": 2617699,
+      "replacements": 193641,
+      "distinct": 3470,
+      "rules_total_unique": 243535,
+      "hits": [
+        186368,
+        7273
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg27166_呐喊.txt",
+    "old": {
+      "sha": "9140f761a1ed79f865a6a11ef3bdb1f735d75a7854b2888e9d45d413265310d3",
+      "bytes": 255935,
+      "replacements": 19027,
+      "distinct": 1450,
+      "rules_total_unique": 243536,
+      "hits": [
+        18236,
+        791
+      ]
+    },
+    "new": {
+      "sha": "9140f761a1ed79f865a6a11ef3bdb1f735d75a7854b2888e9d45d413265310d3",
+      "bytes": 255935,
+      "replacements": 19027,
+      "distinct": 1450,
+      "rules_total_unique": 243535,
+      "hits": [
+        18236,
+        791
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg51828_聊齋志異.txt",
+    "old": {
+      "sha": "641f2b2c192c2620eaf0f8417476a4ead1f1336882ebca8a75f20d049fea3525",
+      "bytes": 1480190,
+      "replacements": 105849,
+      "distinct": 2632,
+      "rules_total_unique": 243536,
+      "hits": [
+        102943,
+        2906
+      ]
+    },
+    "new": {
+      "sha": "641f2b2c192c2620eaf0f8417476a4ead1f1336882ebca8a75f20d049fea3525",
+      "bytes": 1480190,
+      "replacements": 105849,
+      "distinct": 2632,
+      "rules_total_unique": 243535,
+      "hits": [
+        102943,
+        2906
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  },
+  {
+    "file": "pg52200_金瓶梅.txt",
+    "old": {
+      "sha": "1dfa6d8ced101224299d28103841a9848fa2bf12b6ab9e592451890277c87599",
+      "bytes": 2291020,
+      "replacements": 196361,
+      "distinct": 3063,
+      "rules_total_unique": 243536,
+      "hits": [
+        191453,
+        4908
+      ]
+    },
+    "new": {
+      "sha": "1dfa6d8ced101224299d28103841a9848fa2bf12b6ab9e592451890277c87599",
+      "bytes": 2291020,
+      "replacements": 196361,
+      "distinct": 3063,
+      "rules_total_unique": 243535,
+      "hits": [
+        191453,
+        4908
+      ]
+    },
+    "same": true,
+    "delta_repl": 0
+  }
+]

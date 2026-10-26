@@ -1,13 +1,13 @@
 {
-  "total_rules": 304256,
-  "unique_before": 243536,
+  "total_rules": 304255,
+  "unique_before": 243535,
   "per_var": {
     "1.自定义词库.php::punctuationMap": 1,
     "1.自定义词库.php::preprocessMap": 7938,
     "1.自定义词库.php::extraPreprocessMap": 32,
     "1.自定义词库.php::normalMap": 131692,
     "1.自定义词库.php::extraMap": 19390,
-    "1.自定义词库.php::strictMap": 3795,
+    "1.自定义词库.php::strictMap": 3794,
     "1.自定义词库.php::postFixMap": 1296,
     "1.自定义词库_旧式、通假写法_.php::oldStyleMap": 1102,
     "2.繁转简词库.php::t2sMap": 3141,
@@ -35,5 +35,15 @@
     "12": 119482
   },
   "max_before_bytes": 73,
-  "min_before_bytes": 3
+  "min_before_bytes": 3,
+  "baseline_total_rules": 304256,
+  "removed_by_cleaning": [
+    {
+      "before": "{处理“悬殊”的问题}",
+      "after": "差距太大",
+      "count": 1
+    }
+  ],
+  "added_by_cleaning": [],
+  "merge_vars": 19
 }

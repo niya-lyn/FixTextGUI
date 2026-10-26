@@ -1,67 +1,72 @@
-# FixText T0.4b · 回归基线集 v1
+# FixText M1-T1.0 · 回归基线重冻结（304,255 口径）
 
-FixText（PHP/Go 简繁校正工具）的回归基线集：固定 15 个中文语料 + 上游全量规则集，冻结 PHP / Go 两个后端的校正输出与替换计数，提供一键重跑比对脚本，并已并入 T0.1 工程骨架的 CI 结构（作为 baseline 阶段）。
+> M1 引擎闭环首张卡。按排期文档附录 C 第五条裁定，V1 唯一生产基准为 T0.2 清洗后的 **304,255** 条词库；T0.4 交付时的 304,256 条口径仅作历史对照。
+
+## 本卡做了什么
+
+用 T0.4 回归基线集自带的 `run_baseline.py`，把规则集换成 T0.2 迁移产物（304,255 条），重跑 15 个语料并重新冻结基线，再与旧冻结结果逐字节对比。
+
+| 验收项 | 结果 |
+|---|---|
+| 15/15 语料以 304,255 口径重跑 | **PASS**，`--build` 与 `--check` 均 exit 0 |
+| 重冻结基线落盘 | **PASS**，`expected/go` 15 + `expected/php` 15 + `manifest/baseline_manifest.json` |
+| 与旧基线逐字节差异 | **0 条** |
+| strictMap 伪规则是否真实命中 | **否**，完整串与 `{处理` 前缀在 15 语料中命中 0 次 |
+| 总替换次数 | 1,666,476（与旧基线相同） |
+| 命中规则并集 | 10,898 条（与旧基线相同，差集两侧均空） |
 
 ## 目录结构
 
 ```
-FixText_T0.4_回归基线集_v1/
+FixText_M1T1.0_回归基线重冻结_304255_v1/
 ├── README.md                     本文件
-├── baseline/                     基线集本体
-│   ├── corpus/                    15 个语料文件 + corpus_manifest.json（23.3 MB 总量）
-│   ├── expected/                  冻结的引擎输出（go/ 与 php/ 各 15 个，逐字节一致）
-│   ├── manifest/baseline_manifest.json   冻结清单（每文件 sha256、输出哈希、替换计数）
-│   ├── rules/                     全量规则集 before/after JSON + rules_meta.json（P0 同源）
-│   ├── scripts/                   一键脚本与引擎复刻
-│   │   ├── build_corpus.py        语料构建（从云盘原件确定性生成，含章节切片逻辑）
-│   │   ├── run_baseline.py        ★ 一键重跑比对 / 冻结
-│   │   ├── php_strtr.php          PHP 后端复刻（replaceByPHP 语义：reverse+combine+strtr×2）
-│   │   ├── verify_upstream_equivalence.php   上游一致性深度验证（A 规则 / B PHP后端 / C 直连配置）
-│   │   └── go/                    Go 源码（replace_by_go 逐字复制上游 + count_hits 计数器）
-│   │       └── *.bin              预编译 linux/amd64 二进制（无 Go 工具链时的后备）
-│   └── docs/                     三份说明文档（见下）
-└── T01_patch/                     并入 T0.1 CI 的补丁（patch.diff + 修改后文件）
-    ├── patch.diff                 对 T0.1 骨架三处改动的 unified diff
-    ├── scripts/ci.py              增加 baseline 阶段（支持 SKIP）
-    ├── scripts/ci_baseline.py     baseline 阶段入口（缺工具链时退出码 77 → CI 显示 [SKIP]）
-    └── .github/workflows/ci.yml   矩阵任务 + 独立 baseline 任务（ubuntu-latest）
+├── run.sh                        一键复现入口（比对 / 重冻结 / 与旧基线对比）
+├── baseline/                     基线集本体（304,255 口径）
+│   ├── corpus/                   15 个语料 + corpus_manifest.json（23,328,299 B，与 T0.4 同源）
+│   ├── expected/                 重冻结输出（go/ 与 php/ 各 15 个，逐字节相同）
+│   ├── manifest/                 baseline_manifest.json（新冻结清单）
+│   ├── rules/                    ★ 304,255 条规则（T0.2 清洗后，本卡唯一变更）
+│   ├── scripts/                  引擎复刻与一键脚本（沿用 T0.4 原件）
+│   └── docs/                     语料说明 / 基线方法论（含 §七 口径变更记录）/ 自验记录（历史留痕）
+├── rules_source/                 规则集来源证据
+│   ├── T0.2_迁移报告.md
+│   ├── T0.2_cleaning_report.json 清洗原始记录（含 bogus_rule_removed）
+│   └── rules_meta_304255.json
+├── reports/                      ★ 本轮全部验证留痕
+│   ├── 重冻结对比报告.md         结论 + 逐文件对比表 + 归因 + 边界
+│   ├── rule_diff.json            规则集逐条差异（仅 1 条）
+│   ├── pseudo_rule_hit_check.json 伪规则在 15 语料的命中检索
+│   ├── ab_result.json            仅换规则集的 A/B 对拍
+│   ├── build_304255.json         --build 原始结果
+│   ├── check_304255.json         --check 原始结果
+│   └── union.json                命中规则并集（新旧口径各 10,898 条，采用 count_hits 语义导出）
+└── T01_patch/                    并入 T0.1 CI 的补丁（沿用 T0.4 原件，未改）
 ```
 
-## 文档
-
-- `baseline/docs/01_语料构成说明.md` — 12 本公版书 + 3 部真实小说的选取理由、文件名、大小、云盘出处路径与替换密度统计
-- `baseline/docs/02_基线方法论.md` — 冻结对象、规则集来源与口径、三条生产执行路径等价性论证、计数方法、CI 集成方式
-- `baseline/docs/03_自验记录.md` — 逐项验收留痕：冻结/比对/确定性/上游一致性/CI 的真实命令输出
-
-## 快速开始
+## 一键复现
 
 ```bash
-# 一键重跑比对（约 1 分钟，15/15 通过则退出码 0）
-python3 baseline/scripts/run_baseline.py
+chmod +x run.sh
 
-# 重新冻结基线（语料或规则更新后；会重写 expected/ 与 manifest/）
-python3 baseline/scripts/run_baseline.py --build
-
-# 上游一致性深度验证（可选，需上游 FixText 源码解压目录）
-php baseline/scripts/verify_upstream_equivalence.php /path/to/FixText/src ./baseline
+./run.sh                                  # 验收比对：重跑 15 语料比对冻结输出（约 60s，PASS=exit 0）
+./run.sh --build                          # 重新冻结 expected/ 与 manifest/
+./run.sh --verify-vs-old <旧基线目录>      # 与旧 304,256 冻结输出逐字节对比
 ```
 
-依赖：PHP ≥ 8（CLI）、Python ≥ 3.8；Go 工具链可选（无则自动使用随包预编译 linux/amd64 二进制，其他平台请用 `go build` 自行编译 `baseline/scripts/go/{replace_by_go,count_hits}`）。
+依赖：PHP ≥ 8（CLI）、Python ≥ 3.8；Go 工具链可选（缺失时用随包预编译 linux/amd64 二进制，`run.sh` 会自动补执行位）。
 
-## 并入 T0.1 CI
+## 与 T0.4 原包的差异
 
-将 `T01_patch/patch.diff` 应用到 T0.1 骨架仓库（或将 `T01_patch/scripts/`、`T01_patch/.github/workflows/ci.yml` 覆盖对应文件），把本包 `baseline/` 目录放到仓库根：
+| 文件 | 变化 |
+|---|---|
+| `baseline/rules/before.json` `after.json` `rules_meta.json` | 换成 T0.2 产物（304,256 → 304,255，shas 见对比报告） |
+| `baseline/expected/go/*` `expected/php/*` | 重冻结（内容与旧版逐字节相同） |
+| `baseline/manifest/baseline_manifest.json` | 重生成（规则 shas 与 meta 更新，计数不变） |
+| `baseline/docs/02_基线方法论.md` | 口径改为 304,255，新增 §七 口径变更记录 |
+| `baseline/docs/03_自验记录.md` | 加口径提示，原 T0.4b 留痕保留不改写 |
+| `baseline/docs/01_语料构成说明.md`、`README.md` | 规则条数改为 304,255 |
+| `baseline/corpus/` `baseline/scripts/` `T01_patch/` | **未改**，与 T0.4 原件一致 |
 
-```bash
-git apply patch.diff
-python3 scripts/ci.py          # baseline 阶段自动纳入
-python3 scripts/ci_baseline.py # 单独跑 baseline 阶段
-```
+## 详细结论
 
-GitHub Actions 中 ubuntu-latest 会真实执行基线比对，Windows 矩阵项自动 SKIP。
-
-## 基线口径（一览）
-
-- 语料 15 个 / 23,328,299 字节；规则 304,256 条（19 个 `*Map` 变量全量口径，与 P0 报告同源）
-- 生产语义复刻：`doReplace` count=2 两轮替换（`singleReplace=false`）
-- 冻结输出：Go 与 PHP 后端全部 15 文件逐字节一致；总替换 1,666,476 次
+见 `reports/重冻结对比报告.md`。

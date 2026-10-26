@@ -1,0 +1,48 @@
+{
+  "method": "复用随包 count_hits 的完全相同匹配语义（最长匹配、重复键先出现者生效、非重叠、count=2），导出每个语料的全部命中 before 键后取并集",
+  "old_304256": {
+    "union_distinct_rules": 10898,
+    "total_replacements": 1666476,
+    "per_file_distinct": {
+      "novel_fanpai_ch001-060.txt": 302,
+      "novel_guimie_full.txt": 1346,
+      "novel_quehun_ch001-060.txt": 315,
+      "pg23863_水滸傳.txt": 2328,
+      "pg23910_封神演義.txt": 2414,
+      "pg23950_三國志演義.txt": 2222,
+      "pg23962_西遊記.txt": 3053,
+      "pg24032_儒林外史.txt": 1887,
+      "pg24141_警世通言.txt": 2581,
+      "pg24226_史記.txt": 2738,
+      "pg24230_今古奇觀.txt": 3578,
+      "pg24264_紅樓夢.txt": 3470,
+      "pg27166_呐喊.txt": 1450,
+      "pg51828_聊齋志異.txt": 2632,
+      "pg52200_金瓶梅.txt": 3063
+    }
+  },
+  "new_304255": {
+    "union_distinct_rules": 10898,
+    "total_replacements": 1666476,
+    "per_file_distinct": {
+      "novel_fanpai_ch001-060.txt": 302,
+      "novel_guimie_full.txt": 1346,
+      "novel_quehun_ch001-060.txt": 315,
+      "pg23863_水滸傳.txt": 2328,
+      "pg23910_封神演義.txt": 2414,
+      "pg23950_三國志演義.txt": 2222,
+      "pg23962_西遊記.txt": 3053,
+      "pg24032_儒林外史.txt": 1887,
+      "pg24141_警世通言.txt": 2581,
+      "pg24226_史記.txt": 2738,
+      "pg24230_今古奇觀.txt": 3578,
+      "pg24264_紅樓夢.txt": 3470,
+      "pg27166_呐喊.txt": 1450,
+      "pg51828_聊齋志異.txt": 2632,
+      "pg52200_金瓶梅.txt": 3063
+    }
+  },
+  "only_in_old": [],
+  "only_in_new": [],
+  "conclusion": "两个口径的命中规则并集完全相等（10,898 条），差集两侧均为空；伪规则在语料中从未命中"
+}

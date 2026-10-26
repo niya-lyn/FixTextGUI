@@ -1,0 +1,1171 @@
+{
+  "summary": {
+    "mode": "build",
+    "replace_count": 2,
+    "corpus_files": 15,
+    "elapsed_s": 65.5,
+    "go_tool": "随包预编译二进制（linux/amd64）",
+    "frozen_items": 15,
+    "total_replacements": 1666476,
+    "php_equals_go_all": true,
+    "count_replay_all": true,
+    "verdict": "PASS"
+  },
+  "items": [
+    {
+      "file": "novel_fanpai_ch001-060.txt",
+      "corpus_sha256": "5e94e48983ceff53a72b7220f8e780962eda2a9354b5447044786faaafd3e826",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "bf2ec3c716da2bf184144a68a517f70abc92081d4ddfb03ddd3895556e4a4244",
+        "bytes": 435785
+      },
+      "php": {
+        "sha256": "bf2ec3c716da2bf184144a68a517f70abc92081d4ddfb03ddd3895556e4a4244",
+        "bytes": 435785
+      },
+      "counts": {
+        "replacements": 2348,
+        "distinct_rules": 302,
+        "hits_per_pass": [
+          1253,
+          1095
+        ],
+        "in_bytes": 435581,
+        "out_bytes": 435785
+      },
+      "top_rules": [
+        {
+          "before": "教授的",
+          "after": "教授的",
+          "hits": 124
+        },
+        {
+          "before": "一年级",
+          "after": "一年级",
+          "hits": 106
+        },
+        {
+          "before": "变得",
+          "after": "变得",
+          "hits": 102
+        },
+        {
+          "before": "觉得",
+          "after": "觉得",
+          "hits": 78
+        },
+        {
+          "before": "获得",
+          "after": "获得",
+          "hits": 68
+        },
+        {
+          "before": "真的",
+          "after": "真的",
+          "hits": 66
+        },
+        {
+          "before": "一只",
+          "after": "一只",
+          "hits": 64
+        },
+        {
+          "before": "有的",
+          "after": "有的",
+          "hits": 64
+        },
+        {
+          "before": "得",
+          "after": "的",
+          "hits": 58
+        },
+        {
+          "before": "最后的",
+          "after": "最后的",
+          "hits": 56
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "novel_guimie_full.txt",
+      "corpus_sha256": "9ac4e4890b0ea2710ef3eda198fe619451a992d25803422c823980581dbb0eab",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+        "bytes": 1608996
+      },
+      "php": {
+        "sha256": "369e24dc2d3ea270da4fb7a838fc64c23372cf630c03b62b7799020e1cb5f2f0",
+        "bytes": 1608996
+      },
+      "counts": {
+        "replacements": 9865,
+        "distinct_rules": 1346,
+        "hits_per_pass": [
+          5554,
+          4311
+        ],
+        "in_bytes": 1603888,
+        "out_bytes": 1608996
+      },
+      "top_rules": [
+        {
+          "before": "真的",
+          "after": "真的",
+          "hits": 614
+        },
+        {
+          "before": "觉得",
+          "after": "觉得",
+          "hits": 467
+        },
+        {
+          "before": "这样的",
+          "after": "这样的",
+          "hits": 394
+        },
+        {
+          "before": "一只",
+          "after": "一只",
+          "hits": 352
+        },
+        {
+          "before": "得",
+          "after": "的",
+          "hits": 282
+        },
+        {
+          "before": "有的",
+          "after": "有的",
+          "hits": 242
+        },
+        {
+          "before": "辻",
+          "after": "辻[shí]",
+          "hits": 234
+        },
+        {
+          "before": "变得",
+          "after": "变得",
+          "hits": 172
+        },
+        {
+          "before": "小的",
+          "after": "小的",
+          "hits": 172
+        },
+        {
+          "before": "很快",
+          "after": "很快",
+          "hits": 153
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "novel_quehun_ch001-060.txt",
+      "corpus_sha256": "45dae1b75df3b7edd097507e8f624563e51dccf46247a51decd0993345ac6984",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "6caf38174b09b5873f4c1c927addcda81111b2f510c168244f83db4a54f8094c",
+        "bytes": 503146
+      },
+      "php": {
+        "sha256": "6caf38174b09b5873f4c1c927addcda81111b2f510c168244f83db4a54f8094c",
+        "bytes": 503146
+      },
+      "counts": {
+        "replacements": 2236,
+        "distinct_rules": 315,
+        "hits_per_pass": [
+          1211,
+          1025
+        ],
+        "in_bytes": 502800,
+        "out_bytes": 503146
+      },
+      "top_rules": [
+        {
+          "before": "真的",
+          "after": "真的",
+          "hits": 120
+        },
+        {
+          "before": "觉得",
+          "after": "觉得",
+          "hits": 114
+        },
+        {
+          "before": "变得",
+          "after": "变得",
+          "hits": 92
+        },
+        {
+          "before": "很快",
+          "after": "很快",
+          "hits": 82
+        },
+        {
+          "before": "得",
+          "after": "的",
+          "hits": 73
+        },
+        {
+          "before": "發",
+          "after": "发",
+          "hits": 61
+        },
+        {
+          "before": "局面",
+          "after": "局面",
+          "hits": 58
+        },
+        {
+          "before": "这样的",
+          "after": "这样的",
+          "hits": 58
+        },
+        {
+          "before": "喰",
+          "after": "喰[cān]",
+          "hits": 56
+        },
+        {
+          "before": "最后的",
+          "after": "最后的",
+          "hits": 56
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg23863_水滸傳.txt",
+      "corpus_sha256": "7ff239f3875bc99eb63ff5a072d1bbe8f3558cecb283e12702fbf29d0108138d",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "8fa7729e7b0829ce1dba38b328dcfd97a3cb7df7de0b38568642720a91d04be9",
+        "bytes": 1629674
+      },
+      "php": {
+        "sha256": "8fa7729e7b0829ce1dba38b328dcfd97a3cb7df7de0b38568642720a91d04be9",
+        "bytes": 1629674
+      },
+      "counts": {
+        "replacements": 137251,
+        "distinct_rules": 2328,
+        "hits_per_pass": [
+          132990,
+          4261
+        ],
+        "in_bytes": 1595340,
+        "out_bytes": 1629674
+      },
+      "top_rules": [
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 6830
+        },
+        {
+          "before": "個",
+          "after": "个",
+          "hits": 4814
+        },
+        {
+          "before": "裏",
+          "after": "里",
+          "hits": 3802
+        },
+        {
+          "before": "這",
+          "after": "这",
+          "hits": 3145
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 2805
+        },
+        {
+          "before": "得",
+          "after": "的",
+          "hits": 2522
+        },
+        {
+          "before": "說",
+          "after": "说",
+          "hits": 2519
+        },
+        {
+          "before": "兩",
+          "after": "两",
+          "hits": 2376
+        },
+        {
+          "before": "時",
+          "after": "时",
+          "hits": 2192
+        },
+        {
+          "before": "頭",
+          "after": "头",
+          "hits": 2078
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg23910_封神演義.txt",
+      "corpus_sha256": "ebb6e7e3a3070ad4506e175a2706954e6a628e4369958ec5e575843f5a4cbf64",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "c5b267327ec9b1ccec3eff2bfceb798974206d6eabaae1f5146d63dd5192fa9f",
+        "bytes": 1851344
+      },
+      "php": {
+        "sha256": "c5b267327ec9b1ccec3eff2bfceb798974206d6eabaae1f5146d63dd5192fa9f",
+        "bytes": 1851344
+      },
+      "counts": {
+        "replacements": 150097,
+        "distinct_rules": 2414,
+        "hits_per_pass": [
+          144790,
+          5307
+        ],
+        "in_bytes": 1797417,
+        "out_bytes": 1851344
+      },
+      "top_rules": [
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 5095
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 4025
+        },
+        {
+          "before": "將",
+          "after": "将",
+          "hits": 3789
+        },
+        {
+          "before": "馬",
+          "after": "马",
+          "hits": 2017
+        },
+        {
+          "before": "為",
+          "after": "为",
+          "hits": 1990
+        },
+        {
+          "before": "說",
+          "after": "说",
+          "hits": 1898
+        },
+        {
+          "before": "無",
+          "after": "无",
+          "hits": 1821
+        },
+        {
+          "before": "哪吒",
+          "after": "哪吒",
+          "hits": 1792
+        },
+        {
+          "before": "師",
+          "after": "师",
+          "hits": 1680
+        },
+        {
+          "before": "黃",
+          "after": "黄",
+          "hits": 1576
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg23950_三國志演義.txt",
+      "corpus_sha256": "cbd24f76abe2318b32617cd9660b3ad2f2c91ad8416a97d76724ec6cb082bd2b",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "ea5686aa6cf42c76338556ee6c86db27117efd64cb266c0dcc970eab4071bb16",
+        "bytes": 1857827
+      },
+      "php": {
+        "sha256": "ea5686aa6cf42c76338556ee6c86db27117efd64cb266c0dcc970eab4071bb16",
+        "bytes": 1857827
+      },
+      "counts": {
+        "replacements": 149032,
+        "distinct_rules": 2222,
+        "hits_per_pass": [
+          145640,
+          3392
+        ],
+        "in_bytes": 1822633,
+        "out_bytes": 1857827
+      },
+      "top_rules": [
+        {
+          "before": "軍",
+          "after": "军",
+          "hits": 4881
+        },
+        {
+          "before": "馬",
+          "after": "马",
+          "hits": 3903
+        },
+        {
+          "before": "將",
+          "after": "将",
+          "hits": 3782
+        },
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 3276
+        },
+        {
+          "before": "為",
+          "after": "为",
+          "hits": 2647
+        },
+        {
+          "before": "於",
+          "after": "于",
+          "hits": 2591
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 2576
+        },
+        {
+          "before": "後",
+          "after": "后",
+          "hits": 1966
+        },
+        {
+          "before": "與",
+          "after": "与",
+          "hits": 1865
+        },
+        {
+          "before": "張",
+          "after": "张",
+          "hits": 1862
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg23962_西遊記.txt",
+      "corpus_sha256": "15dd0ac29cd7763fc974ee9972afb6b92fe061612b199558dae401a730aca74d",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "4e2e582aa11ee24aca64884dc7124e38891c7da482bbb7712f9c9815e7e846b9",
+        "bytes": 2250868
+      },
+      "php": {
+        "sha256": "4e2e582aa11ee24aca64884dc7124e38891c7da482bbb7712f9c9815e7e846b9",
+        "bytes": 2250868
+      },
+      "counts": {
+        "replacements": 173449,
+        "distinct_rules": 3053,
+        "hits_per_pass": [
+          168052,
+          5397
+        ],
+        "in_bytes": 2217064,
+        "out_bytes": 2250868
+      },
+      "top_rules": [
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 5995
+        },
+        {
+          "before": "個",
+          "after": "个",
+          "hits": 5701
+        },
+        {
+          "before": "這",
+          "after": "这",
+          "hits": 3802
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 3424
+        },
+        {
+          "before": "師",
+          "after": "师",
+          "hits": 2624
+        },
+        {
+          "before": "得",
+          "after": "的",
+          "hits": 2589
+        },
+        {
+          "before": "裏",
+          "after": "里",
+          "hits": 2506
+        },
+        {
+          "before": "說",
+          "after": "说",
+          "hits": 2325
+        },
+        {
+          "before": "與",
+          "after": "与",
+          "hits": 2239
+        },
+        {
+          "before": "頭",
+          "after": "头",
+          "hits": 2144
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg24032_儒林外史.txt",
+      "corpus_sha256": "105ed3641212240e8a06f80174208441242a1c23c911e0aabef51b9a1643e6d8",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "d039136d51bfdee78e193e0c7f0fdd6be2648bea5f9e0f875ddb0a2fce344ab8",
+        "bytes": 834380
+      },
+      "php": {
+        "sha256": "d039136d51bfdee78e193e0c7f0fdd6be2648bea5f9e0f875ddb0a2fce344ab8",
+        "bytes": 834380
+      },
+      "counts": {
+        "replacements": 59717,
+        "distinct_rules": 1887,
+        "hits_per_pass": [
+          57594,
+          2123
+        ],
+        "in_bytes": 831859,
+        "out_bytes": 834380
+      },
+      "top_rules": [
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 3646
+        },
+        {
+          "before": "這",
+          "after": "这",
+          "hits": 2554
+        },
+        {
+          "before": "個",
+          "after": "个",
+          "hits": 2530
+        },
+        {
+          "before": "說",
+          "after": "说",
+          "hits": 1716
+        },
+        {
+          "before": "兩",
+          "after": "两",
+          "hits": 1239
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 1143
+        },
+        {
+          "before": "爺",
+          "after": "爷",
+          "hits": 1129
+        },
+        {
+          "before": "門",
+          "after": "门",
+          "hits": 906
+        },
+        {
+          "before": "過",
+          "after": "过",
+          "hits": 863
+        },
+        {
+          "before": "進",
+          "after": "进",
+          "hits": 795
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg24141_警世通言.txt",
+      "corpus_sha256": "f31be596a2427c450f74a98fc04133fd7cd75fd89b2b3b62f0010e7527cc2602",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "906f4622597fab153f8c7b5e39e0cbfde351c01023e1dda0cd16128cb4b4f47d",
+        "bytes": 1158508
+      },
+      "php": {
+        "sha256": "906f4622597fab153f8c7b5e39e0cbfde351c01023e1dda0cd16128cb4b4f47d",
+        "bytes": 1158508
+      },
+      "counts": {
+        "replacements": 92444,
+        "distinct_rules": 2581,
+        "hits_per_pass": [
+          90086,
+          2358
+        ],
+        "in_bytes": 1152728,
+        "out_bytes": 1158508
+      },
+      "top_rules": [
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 2795
+        },
+        {
+          "before": "個",
+          "after": "个",
+          "hits": 2048
+        },
+        {
+          "before": "說",
+          "after": "说",
+          "hits": 1919
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 1915
+        },
+        {
+          "before": "得",
+          "after": "的",
+          "hits": 1548
+        },
+        {
+          "before": "時",
+          "after": "时",
+          "hits": 1369
+        },
+        {
+          "before": "這",
+          "after": "这",
+          "hits": 1265
+        },
+        {
+          "before": "與",
+          "after": "与",
+          "hits": 1189
+        },
+        {
+          "before": "兒",
+          "after": "儿",
+          "hits": 1092
+        },
+        {
+          "before": "為",
+          "after": "为",
+          "hits": 1049
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg24226_史記.txt",
+      "corpus_sha256": "b46e64630ccf6d3723d2efd889c86a5d336f2206e25ad96229970e7afe99a7fa",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "a60bdcd1b612d6afdd6b5682114bd6c6739ede719b63733c754934dab68781b0",
+        "bytes": 2065998
+      },
+      "php": {
+        "sha256": "a60bdcd1b612d6afdd6b5682114bd6c6739ede719b63733c754934dab68781b0",
+        "bytes": 2065998
+      },
+      "counts": {
+        "replacements": 147952,
+        "distinct_rules": 2738,
+        "hits_per_pass": [
+          142251,
+          5701
+        ],
+        "in_bytes": 1932709,
+        "out_bytes": 2065998
+      },
+      "top_rules": [
+        {
+          "before": "為",
+          "after": "为",
+          "hits": 7377
+        },
+        {
+          "before": "於",
+          "after": "于",
+          "hits": 5115
+        },
+        {
+          "before": "與",
+          "after": "与",
+          "hits": 2703
+        },
+        {
+          "before": "將",
+          "after": "将",
+          "hits": 2459
+        },
+        {
+          "before": "齊",
+          "after": "齐",
+          "hits": 2281
+        },
+        {
+          "before": "國",
+          "after": "国",
+          "hits": 2157
+        },
+        {
+          "before": "軍",
+          "after": "军",
+          "hits": 2047
+        },
+        {
+          "before": "無",
+          "after": "无",
+          "hits": 1965
+        },
+        {
+          "before": "後",
+          "after": "后",
+          "hits": 1813
+        },
+        {
+          "before": "趙",
+          "after": "赵",
+          "hits": 1768
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg24230_今古奇觀.txt",
+      "corpus_sha256": "c85e4402bd4c15e29b262c9899f9ffebbc41035cd917d08ab3a1f8f523374938",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "e04dd510ac7bb973813117d639423a02431f05c65d58a6af694092cdff767985",
+        "bytes": 2867142
+      },
+      "php": {
+        "sha256": "e04dd510ac7bb973813117d639423a02431f05c65d58a6af694092cdff767985",
+        "bytes": 2867142
+      },
+      "counts": {
+        "replacements": 227207,
+        "distinct_rules": 3578,
+        "hits_per_pass": [
+          220390,
+          6817
+        ],
+        "in_bytes": 2845642,
+        "out_bytes": 2867142
+      },
+      "top_rules": [
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 8488
+        },
+        {
+          "before": "個",
+          "after": "个",
+          "hits": 6037
+        },
+        {
+          "before": "說",
+          "after": "说",
+          "hits": 5326
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 4924
+        },
+        {
+          "before": "得",
+          "after": "的",
+          "hits": 4720
+        },
+        {
+          "before": "這",
+          "after": "这",
+          "hits": 4630
+        },
+        {
+          "before": "與",
+          "after": "与",
+          "hits": 3298
+        },
+        {
+          "before": "時",
+          "after": "时",
+          "hits": 3272
+        },
+        {
+          "before": "兒",
+          "after": "儿",
+          "hits": 3186
+        },
+        {
+          "before": "裡",
+          "after": "里",
+          "hits": 2829
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg24264_紅樓夢.txt",
+      "corpus_sha256": "6164c43cb8fe60f4dca81a1cec900eef472ebe175208e2b8c2ae44db2f643200",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "ff5cb694e61f7628f584aab6e1bc0dd7ebd3a1fb58ef20bb20959d699779ba37",
+        "bytes": 2617699
+      },
+      "php": {
+        "sha256": "ff5cb694e61f7628f584aab6e1bc0dd7ebd3a1fb58ef20bb20959d699779ba37",
+        "bytes": 2617699
+      },
+      "counts": {
+        "replacements": 193641,
+        "distinct_rules": 3470,
+        "hits_per_pass": [
+          186368,
+          7273
+        ],
+        "in_bytes": 2615301,
+        "out_bytes": 2617699
+      },
+      "top_rules": [
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 11336
+        },
+        {
+          "before": "說",
+          "after": "说",
+          "hits": 9624
+        },
+        {
+          "before": "這",
+          "after": "这",
+          "hits": 7737
+        },
+        {
+          "before": "寶",
+          "after": "宝",
+          "hits": 5751
+        },
+        {
+          "before": "個",
+          "after": "个",
+          "hits": 5627
+        },
+        {
+          "before": "賈",
+          "after": "贾",
+          "hits": 5157
+        },
+        {
+          "before": "們",
+          "after": "们",
+          "hits": 4850
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 4757
+        },
+        {
+          "before": "頭",
+          "after": "头",
+          "hits": 3365
+        },
+        {
+          "before": "過",
+          "after": "过",
+          "hits": 2574
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg27166_呐喊.txt",
+      "corpus_sha256": "301d435287357720829495fd06d5147cb9f292c24a9941fe0952321c4d736842",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "9140f761a1ed79f865a6a11ef3bdb1f735d75a7854b2888e9d45d413265310d3",
+        "bytes": 255935
+      },
+      "php": {
+        "sha256": "9140f761a1ed79f865a6a11ef3bdb1f735d75a7854b2888e9d45d413265310d3",
+        "bytes": 255935
+      },
+      "counts": {
+        "replacements": 19027,
+        "distinct_rules": 1450,
+        "hits_per_pass": [
+          18236,
+          791
+        ],
+        "in_bytes": 255540,
+        "out_bytes": 255935
+      },
+      "top_rules": [
+        {
+          "before": "這",
+          "after": "这",
+          "hits": 668
+        },
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 622
+        },
+        {
+          "before": "說",
+          "after": "说",
+          "hits": 536
+        },
+        {
+          "before": "時",
+          "after": "时",
+          "hits": 371
+        },
+        {
+          "before": "個",
+          "after": "个",
+          "hits": 357
+        },
+        {
+          "before": "們",
+          "after": "们",
+          "hits": 337
+        },
+        {
+          "before": "沒",
+          "after": "没",
+          "hits": 306
+        },
+        {
+          "before": "麼",
+          "after": "么",
+          "hits": 303
+        },
+        {
+          "before": "為",
+          "after": "为",
+          "hits": 277
+        },
+        {
+          "before": "還",
+          "after": "还",
+          "hits": 243
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg51828_聊齋志異.txt",
+      "corpus_sha256": "9fe6a90f47c4f4cfe742258bc9822a492e8d57c12ef010540544e579baf6b98e",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "641f2b2c192c2620eaf0f8417476a4ead1f1336882ebca8a75f20d049fea3525",
+        "bytes": 1480190
+      },
+      "php": {
+        "sha256": "641f2b2c192c2620eaf0f8417476a4ead1f1336882ebca8a75f20d049fea3525",
+        "bytes": 1480190
+      },
+      "counts": {
+        "replacements": 105849,
+        "distinct_rules": 2632,
+        "hits_per_pass": [
+          102943,
+          2906
+        ],
+        "in_bytes": 1449436,
+        "out_bytes": 1480190
+      },
+      "top_rules": [
+        {
+          "before": "無",
+          "after": "无",
+          "hits": 2516
+        },
+        {
+          "before": "爲",
+          "after": "为",
+          "hits": 2052
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 1984
+        },
+        {
+          "before": "於",
+          "after": "于",
+          "hits": 1682
+        },
+        {
+          "before": "問",
+          "after": "问",
+          "hits": 1352
+        },
+        {
+          "before": "與",
+          "after": "与",
+          "hits": 1345
+        },
+        {
+          "before": "歸",
+          "after": "归",
+          "hits": 1338
+        },
+        {
+          "before": "則",
+          "after": "则",
+          "hits": 1313
+        },
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 1212
+        },
+        {
+          "before": "數",
+          "after": "数",
+          "hits": 1146
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    },
+    {
+      "file": "pg52200_金瓶梅.txt",
+      "corpus_sha256": "772bc8c7c85729c7b82d5a665a481a75bc8839a3d65f7ca331a05e2dc7c158d6",
+      "corpus_integrity": "OK",
+      "go": {
+        "sha256": "1dfa6d8ced101224299d28103841a9848fa2bf12b6ab9e592451890277c87599",
+        "bytes": 2291020
+      },
+      "php": {
+        "sha256": "1dfa6d8ced101224299d28103841a9848fa2bf12b6ab9e592451890277c87599",
+        "bytes": 2291020
+      },
+      "counts": {
+        "replacements": 196361,
+        "distinct_rules": 3063,
+        "hits_per_pass": [
+          191453,
+          4908
+        ],
+        "in_bytes": 2270361,
+        "out_bytes": 2291020
+      },
+      "top_rules": [
+        {
+          "before": "來",
+          "after": "来",
+          "hits": 10637
+        },
+        {
+          "before": "兒",
+          "after": "儿",
+          "hits": 9219
+        },
+        {
+          "before": "門",
+          "after": "门",
+          "hits": 6938
+        },
+        {
+          "before": "說",
+          "after": "说",
+          "hits": 6265
+        },
+        {
+          "before": "慶",
+          "after": "庆",
+          "hits": 4817
+        },
+        {
+          "before": "個",
+          "after": "个",
+          "hits": 4603
+        },
+        {
+          "before": "這",
+          "after": "这",
+          "hits": 4328
+        },
+        {
+          "before": "裡",
+          "after": "里",
+          "hits": 3638
+        },
+        {
+          "before": "見",
+          "after": "见",
+          "hits": 3539
+        },
+        {
+          "before": "兩",
+          "after": "两",
+          "hits": 3439
+        }
+      ],
+      "count_replay_matches_go": true,
+      "php_equals_go": true
+    }
+  ]
+}
