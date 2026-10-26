@@ -1,0 +1,339 @@
+[
+ {
+  "name": "trim_ascii",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "  正文第一行  \n\t第二行\t\n",
+  "expected": "　　正文第一行\n　　第二行\n"
+ },
+ {
+  "name": "trim_ideographic",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "　　全角缩进\n",
+  "expected": "　　全角缩进\n"
+ },
+ {
+  "name": "blank_lines",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "A\n\n\n\nB\n",
+  "expected": "　　A\n　　B\n"
+ },
+ {
+  "name": "whitespace_only_lines",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "A\n   \n\t\nB\n",
+  "expected": "　　A\n　　B\n"
+ },
+ {
+  "name": "crlf_input",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "A\r\nB\r\n",
+  "expected": "　　A\r\n　　B\n"
+ },
+ {
+  "name": "empty_input",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "",
+  "expected": "　　\n"
+ },
+ {
+  "name": "chapter_1",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "正文\n第一章 起点\n正文2\n",
+  "expected": "　　正文\n\n\n第一章 起点\n　　正文2\n"
+ },
+ {
+  "name": "chapter_2",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "正文\n第1章 起点\n正文2\n",
+  "expected": "　　正文\n\n\n第1章 起点\n　　正文2\n"
+ },
+ {
+  "name": "chapter_3",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "正文\n第十二回 某\n正文2\n",
+  "expected": "　　正文\n\n\n第十二回 某\n　　正文2\n"
+ },
+ {
+  "name": "chapter_4",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "正文\n楔子\n正文2\n",
+  "expected": "　　正文\n\n\n楔子\n　　正文2\n"
+ },
+ {
+  "name": "chapter_5",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "正文\n尾声\n正文2\n",
+  "expected": "　　正文\n\n\n尾声\n　　正文2\n"
+ },
+ {
+  "name": "chapter_6",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "正文\n番外篇\n正文2\n",
+  "expected": "　　正文\n\n\n番外篇\n　　正文2\n"
+ },
+ {
+  "name": "chapter_7",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "正文\n第一章：开端\n正文2\n",
+  "expected": "　　正文\n\n\n第一章：开端\n　　正文2\n"
+ },
+ {
+  "name": "chapter_with_space",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "前\n第一章  起点\n后\n",
+  "expected": "　　前\n\n\n第一章  起点\n　　后\n"
+ },
+ {
+  "name": "guan_mark",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "正文\n◎特殊章节\n正文2\n",
+  "expected": "　　正文\n\n\n◎特殊章节\n　　正文2\n"
+ },
+ {
+  "name": "guan_indented",
+  "options": {
+   "changeTextFormat": true
+  },
+  "input": "　　◎缩进的标记\n",
+  "expected": "◎缩进的标记\n"
+ },
+ {
+  "name": "headings_1",
+  "options": {
+   "formatHeadings": true
+  },
+  "input": "第一章 起点\n正文\n第二章 继续\n正文2\n",
+  "expected": "第一章 起点\n\n\n第0.0卷 ◎正文\n\n\n第二章 继续\n\n\n第0.0章 ◎正文2\n"
+ },
+ {
+  "name": "punct_ellipsis",
+  "options": {
+   "normalizePunctuations": true
+  },
+  "input": "他说。。。然后走了...她说：……好吧\n",
+  "expected": "他说……然后走了……她说：……好吧\n"
+ },
+ {
+  "name": "punct_english",
+  "options": {
+   "normalizePunctuations": true
+  },
+  "input": "Hello, world! Really?\n中文,中文。中文\n",
+  "expected": "Hello, world! Really?\n中文，中文。中文\n"
+ },
+ {
+  "name": "punct_fullwidth",
+  "options": {
+   "normalizePunctuations": true
+  },
+  "input": "０１２３４５６７８９ＡＢＣａｂｃ\n",
+  "expected": "0123456789ABCabc\n"
+ },
+ {
+  "name": "punct_colon",
+  "options": {
+   "normalizePunctuations": true
+  },
+  "input": "注释：1\n问题：2\n答案：3\n1:2\n123:4\n1.5:2\n",
+  "expected": "注释：1\n问题：2\n答案：3\n1∶2\n123∶4\n1.5∶2\n"
+ },
+ {
+  "name": "punct_paren",
+  "options": {
+   "normalizePunctuations": true
+  },
+  "input": "他说(你好)然后(世界)\n",
+  "expected": "他说（你好）然后（世界）\n"
+ },
+ {
+  "name": "punct_quotes",
+  "options": {
+   "normalizePunctuations": true
+  },
+  "input": "\"你好\" '世界' \"混合’\n",
+  "expected": "\"你好\" '世界' ”混合’\n"
+ },
+ {
+  "name": "punct_html_entity",
+  "options": {
+   "normalizePunctuations": true
+  },
+  "input": "a&nbsp;b&amp;c&lt;d&#65;e\n",
+  "expected": "a b&c<dAe\n"
+ },
+ {
+  "name": "punct_repeat",
+  "options": {
+   "normalizePunctuations": true
+  },
+  "input": "a！！b？？c？！d，，e、、f～～g\n",
+  "expected": "a！！b？？c？！d，e、f～～g\n"
+ },
+ {
+  "name": "quotation_1",
+  "options": {
+   "quotationType": 1
+  },
+  "input": "「你好」『世界』\n",
+  "expected": "“你好”‘世界’\n"
+ },
+ {
+  "name": "quotation_2",
+  "options": {
+   "quotationType": 2
+  },
+  "input": "“你好”‘世界’\n",
+  "expected": "「你好」『世界』\n"
+ },
+ {
+  "name": "consec_quote_1",
+  "options": {
+   "normalizePunctuations": true,
+   "consecutiveQuotationsType": 1
+  },
+  "input": "他说：“第一行\n第二行”结束\n",
+  "expected": "他说：“第一行\n“第二行”结束\n"
+ },
+ {
+  "name": "consec_quote_2",
+  "options": {
+   "normalizePunctuations": true,
+   "consecutiveQuotationsType": 2
+  },
+  "input": "他说：“第一行\n第二行”结束\n",
+  "expected": "他说：“第一行\n第二行”结束\n"
+ },
+ {
+  "name": "pangu_mixed",
+  "options": {
+   "paranoidTextSpacing": true
+  },
+  "input": "中文English混排\n",
+  "expected": "中文 English 混排\n"
+ },
+ {
+  "name": "pangu_number",
+  "options": {
+   "paranoidTextSpacing": true
+  },
+  "input": "第1章开始\n",
+  "expected": "第 1 章开始\n"
+ },
+ {
+  "name": "pangu_brackets",
+  "options": {
+   "paranoidTextSpacing": true
+  },
+  "input": "中文(abc)中文\n",
+  "expected": "中文 (abc) 中文\n"
+ },
+ {
+  "name": "pangu_hash",
+  "options": {
+   "paranoidTextSpacing": true
+  },
+  "input": "中文#tag中文\n",
+  "expected": "中文 #tag 中文\n"
+ },
+ {
+  "name": "pangu_operator",
+  "options": {
+   "paranoidTextSpacing": true
+  },
+  "input": "中文a+b中文\n",
+  "expected": "中文 a + b 中文\n"
+ },
+ {
+  "name": "rm_space_chn",
+  "options": {
+   "rmSpacesBetweenChnChars": true
+  },
+  "input": "中 文 混 排\n",
+  "expected": "中文混排\n"
+ },
+ {
+  "name": "rm_space_en",
+  "options": {
+   "rmSpacesBetweenChnChars": true
+  },
+  "input": "中文 abc 123 中文\n",
+  "expected": "中文abc 123中文\n"
+ },
+ {
+  "name": "rm_space_chapter",
+  "options": {
+   "rmSpacesBetweenChnChars": true
+  },
+  "input": "第一章 起点\n正文\n",
+  "expected": "第一章 起点\n正文\n"
+ },
+ {
+  "name": "html_tag_1",
+  "options": {
+   "changeTextFormat": true,
+   "addHtmlTag": 1
+  },
+  "input": "第一章\n正文\n\n※※※\n",
+  "expected": "<p>　　<title>第一章</title></p>\n<p>　　<title>正文</title></p>\n<p>　　<title>※※※</title></p>\n"
+ },
+ {
+  "name": "html_tag_2",
+  "options": {
+   "changeTextFormat": true,
+   "addHtmlTag": 2
+  },
+  "input": "<p>第一段</p>\n<p>第二段</p>\n",
+  "expected": "　　第一段\n　　第二段\n"
+ },
+ {
+  "name": "combo_1",
+  "options": {
+   "changeTextFormat": true,
+   "normalizePunctuations": true
+  },
+  "input": "  第一章 起点 \n\n他说：\"你好,世界\"。\n\n",
+  "expected": "第一章 起点\n　　他说：“你好，世界”。\n"
+ },
+ {
+  "name": "combo_all",
+  "options": {
+   "changeTextFormat": true,
+   "normalizePunctuations": true,
+   "quotationType": 1,
+   "paranoidTextSpacing": true,
+   "rmSpacesBetweenChnChars": true
+  },
+  "input": "  第一章 起点 \n\n他说：\"你好,世界\"。第1章。\n\n",
+  "expected": "第一章 起点\n　　他说：“你好，世界”。第 1 章。\n"
+ }
+]
