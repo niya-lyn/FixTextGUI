@@ -1,0 +1,66 @@
+{
+  "ok": true,
+  "merge": {
+    "epub": "paohuo.epub",
+    "text": "paohuo.txt",
+    "title": "炮火弧线",
+    "chapters": 788,
+    "spine_items": 788,
+    "skipped_spine_items": 0,
+    "ncx_entries": 787,
+    "text_bytes": 10470554,
+    "warnings": []
+  },
+  "restore": {
+    "source_epub": "paohuo.epub",
+    "template": "paohuo.epub",
+    "output": "paohuo_restored.epub",
+    "chapters_written": 788,
+    "chapters_changed": 0,
+    "entries_total": 795,
+    "changed_paths": [],
+    "warnings": []
+  },
+  "check": {
+    "path": "paohuo_restored.epub",
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "1 章正文为空：['titlepage.xhtml']"
+    ],
+    "stats": {
+      "title": "炮火弧线",
+      "spine_items": 788,
+      "content_items": 788,
+      "manifest_items": 792,
+      "ncx": true,
+      "spine_sha256": "36fdc91f81473f8e79b97d730b909ca2ba26ba8e99e9eb5ba736cf209a4d613b",
+      "duplicate_spine_paths": 0,
+      "warnings_from_parse": []
+    }
+  },
+  "content": {
+    "spine_order_equal": true,
+    "src_spine_count": 788,
+    "dst_spine_count": 788,
+    "order_diff": [],
+    "text_equal_chapters": 788,
+    "text_diff_chapters": [],
+    "missing_text_chapters": [],
+    "missing_files": [],
+    "compared_chapters": 788,
+    "total_src_text_chars": 2738063,
+    "total_dst_text_chars": 2738063,
+    "content_ok": true
+  },
+  "bytes": {
+    "src_entries": 795,
+    "dst_entries": 795,
+    "only_in_src": [],
+    "only_in_dst": [],
+    "identical_entries": 795,
+    "differing_entries": [],
+    "differing_count": 0,
+    "byte_identical": true
+  }
+}

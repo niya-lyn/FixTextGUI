@@ -1,0 +1,26 @@
+{
+ "paohuo": {
+  "both_opened": true,
+  "src_title": "炮火弧线",
+  "dst_title": "炮火弧线",
+  "src_spine": 788,
+  "dst_spine": 788,
+  "spine_order_equal": true,
+  "src_items": 792,
+  "dst_items": 792,
+  "src_toc_top": 787,
+  "dst_toc_top": 787
+ },
+ "wanjia": {
+  "both_opened": true,
+  "src_title": "我的玩家二周目",
+  "dst_title": "我的玩家二周目",
+  "src_spine": 442,
+  "dst_spine": 442,
+  "spine_order_equal": true,
+  "src_items": 456,
+  "dst_items": 456,
+  "src_toc_top": 3,
+  "dst_toc_top": 3
+ }
+}

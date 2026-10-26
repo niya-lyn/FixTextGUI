@@ -1,0 +1,80 @@
+{
+ "paohuo": {
+  "book": "炮火弧线",
+  "chapters": 788,
+  "spine_equals_string_sort": false,
+  "spine_equals_natural_sort": false,
+  "first_diffs_vs_string_sort": [
+   {
+    "pos": 0,
+    "spine": "titlepage.xhtml",
+    "sorted": "OEBPS/catalog.html"
+   },
+   {
+    "pos": 1,
+    "spine": "OEBPS/summary.html",
+    "sorted": "OEBPS/chapter1.html"
+   },
+   {
+    "pos": 2,
+    "spine": "OEBPS/catalog.html",
+    "sorted": "OEBPS/chapter10.html"
+   }
+  ],
+  "spine_head": [
+   "titlepage.xhtml",
+   "OEBPS/summary.html",
+   "OEBPS/catalog.html",
+   "OEBPS/chapter1.html"
+  ],
+  "string_sort_head": [
+   "OEBPS/catalog.html",
+   "OEBPS/chapter1.html",
+   "OEBPS/chapter10.html",
+   "OEBPS/chapter100.html"
+  ],
+  "ncx_consistent": true,
+  "ncx_notes": [
+   "spine 中另有 1 项不在 NCX（属前置页/附页，正常）"
+  ]
+ },
+ "wanjia": {
+  "book": "玩家二周目",
+  "chapters": 442,
+  "spine_equals_string_sort": false,
+  "spine_equals_natural_sort": false,
+  "first_diffs_vs_string_sort": [
+   {
+    "pos": 0,
+    "spine": "OEBPS/Text/cover.xhtml",
+    "sorted": "OEBPS/Text/Book01.xhtml"
+   },
+   {
+    "pos": 1,
+    "spine": "OEBPS/Text/copyright.xhtml",
+    "sorted": "OEBPS/Text/Book02.xhtml"
+   },
+   {
+    "pos": 2,
+    "spine": "OEBPS/Text/introduction.xhtml",
+    "sorted": "OEBPS/Text/Vol001.xhtml"
+   }
+  ],
+  "spine_head": [
+   "OEBPS/Text/cover.xhtml",
+   "OEBPS/Text/copyright.xhtml",
+   "OEBPS/Text/introduction.xhtml",
+   "OEBPS/Text/colophon.xhtml"
+  ],
+  "string_sort_head": [
+   "OEBPS/Text/Book01.xhtml",
+   "OEBPS/Text/Book02.xhtml",
+   "OEBPS/Text/Vol001.xhtml",
+   "OEBPS/Text/Vol002.xhtml"
+  ],
+  "ncx_consistent": true,
+  "ncx_notes": [
+   "spine 中另有 3 项不在 NCX（属前置页/附页，正常）"
+  ]
+ }
+}

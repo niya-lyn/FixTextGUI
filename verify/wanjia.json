@@ -1,0 +1,66 @@
+{
+  "ok": true,
+  "merge": {
+    "epub": "wanjia.epub",
+    "text": "wanjia.txt",
+    "title": "我的玩家二周目",
+    "chapters": 442,
+    "spine_items": 442,
+    "skipped_spine_items": 0,
+    "ncx_entries": 439,
+    "text_bytes": 3477531,
+    "warnings": []
+  },
+  "restore": {
+    "source_epub": "wanjia.epub",
+    "template": "wanjia.epub",
+    "output": "wanjia_restored.epub",
+    "chapters_written": 442,
+    "chapters_changed": 0,
+    "entries_total": 459,
+    "changed_paths": [],
+    "warnings": []
+  },
+  "check": {
+    "path": "wanjia_restored.epub",
+    "ok": true,
+    "errors": [],
+    "warnings": [
+      "5 章正文为空：['OEBPS/Text/cover.xhtml', 'OEBPS/Text/copyright.xhtml', 'OEBPS/Text/introduction.xhtml', 'OEBPS/Text/Book01.xhtml', 'OEBPS/Text/Book02.xhtml']"
+    ],
+    "stats": {
+      "title": "我的玩家二周目",
+      "spine_items": 442,
+      "content_items": 442,
+      "manifest_items": 456,
+      "ncx": true,
+      "spine_sha256": "c70147e4547adf690038af11b34aafa77607a3461e18cc83d488e25a0c79404f",
+      "duplicate_spine_paths": 0,
+      "warnings_from_parse": []
+    }
+  },
+  "content": {
+    "spine_order_equal": true,
+    "src_spine_count": 442,
+    "dst_spine_count": 442,
+    "order_diff": [],
+    "text_equal_chapters": 442,
+    "text_diff_chapters": [],
+    "missing_text_chapters": [],
+    "missing_files": [],
+    "compared_chapters": 442,
+    "total_src_text_chars": 991088,
+    "total_dst_text_chars": 991088,
+    "content_ok": true
+  },
+  "bytes": {
+    "src_entries": 459,
+    "dst_entries": 459,
+    "only_in_src": [],
+    "only_in_dst": [],
+    "identical_entries": 459,
+    "differing_entries": [],
+    "differing_count": 0,
+    "byte_identical": true
+  }
+}

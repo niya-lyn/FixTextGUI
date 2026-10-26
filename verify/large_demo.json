@@ -1,0 +1,61 @@
+{
+ "books": 4,
+ "total_source_chars": 2762575,
+ "merged_txt_bytes": 8033298,
+ "merged_chapters": 141,
+ "merge_seconds": 0.51,
+ "restore_seconds": 0.95,
+ "restore_chapters_written": 141,
+ "restore_chapters_changed": 0,
+ "all_ok": true,
+ "per_book": {
+  "jinpingmei": {
+   "book": "金瓶梅",
+   "chapters": 40,
+   "text_chars": 775416,
+   "check_ok": true,
+   "spine_order_equal": true,
+   "text_equal_chapters": 40,
+   "missing_text_chapters": 0,
+   "byte_identical": true,
+   "entries": 44,
+   "ok": true
+  },
+  "sanguo": {
+   "book": "三國志演義",
+   "chapters": 33,
+   "text_chars": 630406,
+   "check_ok": true,
+   "spine_order_equal": true,
+   "text_equal_chapters": 33,
+   "missing_text_chapters": 0,
+   "byte_identical": true,
+   "entries": 37,
+   "ok": true
+  },
+  "shuihu": {
+   "book": "水滸傳",
+   "chapters": 29,
+   "text_chars": 557070,
+   "check_ok": true,
+   "spine_order_equal": true,
+   "text_equal_chapters": 29,
+   "missing_text_chapters": 0,
+   "byte_identical": true,
+   "entries": 33,
+   "ok": true
+  },
+  "xiyouji": {
+   "book": "西遊記",
+   "chapters": 39,
+   "text_chars": 759290,
+   "check_ok": true,
+   "spine_order_equal": true,
+   "text_equal_chapters": 39,
+   "missing_text_chapters": 0,
+   "byte_identical": true,
+   "entries": 43,
+   "ok": true
+  }
+ }
+}
