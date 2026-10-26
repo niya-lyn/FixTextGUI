@@ -1,0 +1,330 @@
+{
+  "corpus_version": "v1",
+  "generator": "baseline/scripts/build_corpus.py",
+  "note": "全部语料来自飞书云盘 projects/fix_text，构建过程无任何外网下载。",
+  "total_bytes": 23328299,
+  "total_items": 15,
+  "items": [
+    {
+      "id": "pg24264",
+      "title": "紅樓夢",
+      "corpus_file": "pg24264_紅樓夢.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "24264",
+      "bytes": 2615301,
+      "chars": 906088,
+      "lines": 28409,
+      "sha256": "6164c43cb8fe60f4dca81a1cec900eef472ebe175208e2b8c2ae44db2f643200",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg24264 紅樓夢.txt",
+        "drive_token": "U7uIbZnnEorbGExGgkCcTgrYnhd",
+        "file_name": "pg24264 紅樓夢.txt",
+        "bytes": 2663455,
+        "sha256": "ff1526996bf4b81807651921a85e5c1c0f1d1d123c9fa4553057ba6a3ec72011"
+      }
+    },
+    {
+      "id": "pg23962",
+      "title": "西遊記",
+      "corpus_file": "pg23962_西遊記.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "23962",
+      "bytes": 2217064,
+      "chars": 758000,
+      "lines": 26944,
+      "sha256": "15dd0ac29cd7763fc974ee9972afb6b92fe061612b199558dae401a730aca74d",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg23962 西遊記.txt",
+        "drive_token": "GmVObTQnRoPxXux5oQMczguUnAd",
+        "file_name": "pg23962 西遊記.txt",
+        "bytes": 2264069,
+        "sha256": "af3c9e408c0c58595b666ed9981b6fa1e9343f4bbc78309b1cb0818c32fc1f58"
+      }
+    },
+    {
+      "id": "pg23950",
+      "title": "三國志演義",
+      "corpus_file": "pg23950_三國志演義.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "23950",
+      "bytes": 1822633,
+      "chars": 622115,
+      "lines": 21298,
+      "sha256": "cbd24f76abe2318b32617cd9660b3ad2f2c91ad8416a97d76724ec6cb082bd2b",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg23950 三國志演義.txt",
+        "drive_token": "GWqObCwBboMiSgxpLAdcUIjonqb",
+        "file_name": "pg23950 三國志演義.txt",
+        "bytes": 1863656,
+        "sha256": "ed422e10c16c19af7ca7b09ca0320012e60776b3d7cb054769b8f7d9a19aea7d"
+      }
+    },
+    {
+      "id": "pg23863",
+      "title": "水滸傳",
+      "corpus_file": "pg23863_水滸傳.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "23863",
+      "bytes": 1595340,
+      "chars": 544468,
+      "lines": 16905,
+      "sha256": "7ff239f3875bc99eb63ff5a072d1bbe8f3558cecb283e12702fbf29d0108138d",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg23863 水滸傳.txt",
+        "drive_token": "BriMbXxlnoCXBFxSEnkcKCSenFc",
+        "file_name": "pg23863 水滸傳.txt",
+        "bytes": 1632003,
+        "sha256": "9d5b723b57f462545d412593870e7f48157829777b9329350a29bc44fd654789"
+      }
+    },
+    {
+      "id": "pg23910",
+      "title": "封神演義",
+      "corpus_file": "pg23910_封神演義.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "23910",
+      "bytes": 1797417,
+      "chars": 601389,
+      "lines": 3130,
+      "sha256": "ebb6e7e3a3070ad4506e175a2706954e6a628e4369958ec5e575843f5a4cbf64",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg23910 封神演義.txt",
+        "drive_token": "KJB4bmhh6oWrrBxkODxc8lzWn0e",
+        "file_name": "pg23910 封神演義.txt",
+        "bytes": 1820341,
+        "sha256": "390430ad7210e038614a50fe6e435be1ebb378f86017e0ab9a29558564b064fc"
+      }
+    },
+    {
+      "id": "pg52200",
+      "title": "金瓶梅",
+      "corpus_file": "pg52200_金瓶梅.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "52200",
+      "bytes": 2270361,
+      "chars": 760943,
+      "lines": 5712,
+      "sha256": "772bc8c7c85729c7b82d5a665a481a75bc8839a3d65f7ca331a05e2dc7c158d6",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg52200 金瓶梅.txt",
+        "drive_token": "W1VZbY0UboYiL9x2uancHyoUn6a",
+        "file_name": "pg52200 金瓶梅.txt",
+        "bytes": 2295831,
+        "sha256": "85f80e529f7aa47f3ddbb0cb057c7c80f77b46d88216ba5015502b05fe5e2925"
+      }
+    },
+    {
+      "id": "pg24032",
+      "title": "儒林外史",
+      "corpus_file": "pg24032_儒林外史.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "24032",
+      "bytes": 831859,
+      "chars": 278681,
+      "lines": 2059,
+      "sha256": "105ed3641212240e8a06f80174208441242a1c23c911e0aabef51b9a1643e6d8",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg24032 儒林外史.txt",
+        "drive_token": "LmtQbQ91XoDun1xYBiqcLWPEnch",
+        "file_name": "pg24032 儒林外史.txt",
+        "bytes": 853632,
+        "sha256": "98a08c88b154cfef2e6a4436f124b1e29254839c04cf0bc4538ce1fc87610393"
+      }
+    },
+    {
+      "id": "pg24141",
+      "title": "警世通言",
+      "corpus_file": "pg24141_警世通言.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "24141",
+      "bytes": 1152728,
+      "chars": 387328,
+      "lines": 4397,
+      "sha256": "f31be596a2427c450f74a98fc04133fd7cd75fd89b2b3b62f0010e7527cc2602",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg24141 警世通言.txt",
+        "drive_token": "A6IBbVYNjoilpmx58JScpkOcnkV",
+        "file_name": "pg24141 警世通言.txt",
+        "bytes": 1176833,
+        "sha256": "ce0871bd42b1ac58eb8216daa59708488bfb14b1582ad0b6284c27dedfe60e4f"
+      }
+    },
+    {
+      "id": "pg51828",
+      "title": "聊齋志異",
+      "corpus_file": "pg51828_聊齋志異.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "51828",
+      "bytes": 1449436,
+      "chars": 487748,
+      "lines": 4586,
+      "sha256": "9fe6a90f47c4f4cfe742258bc9822a492e8d57c12ef010540544e579baf6b98e",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg51828 聊齋志異.txt",
+        "drive_token": "OuNvbHDaGoQmxixLB9DcMBTFndd",
+        "file_name": "pg51828 聊齋志異.txt",
+        "bytes": 1473790,
+        "sha256": "a904f03f4b4375a086fbea4708ea0019d1f7fd59408360ffad784c8a57537fa3"
+      }
+    },
+    {
+      "id": "pg24226",
+      "title": "史記",
+      "corpus_file": "pg24226_史記.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "24226",
+      "bytes": 1932709,
+      "chars": 661101,
+      "lines": 24689,
+      "sha256": "b46e64630ccf6d3723d2efd889c86a5d336f2206e25ad96229970e7afe99a7fa",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg24226 史記.txt",
+        "drive_token": "WPSAbohWool5QYxj3EHc9GmynEe",
+        "file_name": "pg24226 史記.txt",
+        "bytes": 1977089,
+        "sha256": "cbec9346843e2f7bb9eb548dd9f708597e3d9684bbab1037cb9c2dbea88754ed"
+      }
+    },
+    {
+      "id": "pg24230",
+      "title": "今古奇觀",
+      "corpus_file": "pg24230_今古奇觀.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "24230",
+      "bytes": 2845642,
+      "chars": 969518,
+      "lines": 31268,
+      "sha256": "c85e4402bd4c15e29b262c9899f9ffebbc41035cd917d08ab3a1f8f523374938",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg24230 今古奇觀.txt",
+        "drive_token": "Uc9Hbla2Eo6txCxDT86cUCfCnCe",
+        "file_name": "pg24230 今古奇觀.txt",
+        "bytes": 2896630,
+        "sha256": "89fe14ef72694d7c6bb7b18750e5ac3adb89fc7cdbb94a1abc424a5d5c4f515e"
+      }
+    },
+    {
+      "id": "pg27166",
+      "title": "呐喊",
+      "corpus_file": "pg27166_呐喊.txt",
+      "script": "繁体",
+      "kind": "gutenberg_public_domain",
+      "gutenberg_id": "27166",
+      "bytes": 255540,
+      "chars": 96967,
+      "lines": 5804,
+      "sha256": "301d435287357720829495fd06d5147cb9f292c24a9941fe0952321c4d736842",
+      "transform": "删除 Gutenberg 头尾标记行及其之前/之后内容；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/语料/pg27166 呐喊.txt",
+        "drive_token": "PhTpbogGjoEsGCxaIhGckcKEn3f",
+        "file_name": "pg27166 呐喊.txt",
+        "bytes": 281093,
+        "sha256": "ddf28d52eff750e9b62b53e065a16d666d27f7d468fd038a44bc887c4a429732"
+      }
+    },
+    {
+      "id": "novel_quehun",
+      "title": "雀魂：开局国士无双",
+      "corpus_file": "novel_quehun_ch001-060.txt",
+      "script": "简体",
+      "kind": "real_novel",
+      "gutenberg_id": null,
+      "bytes": 502800,
+      "chars": 172497,
+      "lines": 5352,
+      "sha256": "45dae1b75df3b7edd097507e8f624563e51dccf46247a51decd0993345ac6984",
+      "transform": "按「第N章」标记出现序取第 1-60 段（首段标题：第1章 麻雀）；CRLF→LF；裁掉首尾空行",
+      "chapter_range": [
+        1,
+        60
+      ],
+      "source": {
+        "drive_path": "projects/fix_text/txt/雀魂：开局国士无双 作者：玄汐蓝.txt",
+        "drive_token": "U97xbrR4bo7mo5xQgX4clWLDnmh",
+        "file_name": "雀魂：开局国士无双 作者：玄汐蓝.txt",
+        "bytes": 12064584,
+        "sha256": "adf029fd6626c32aafe5d448b74ebf13946fa13a581a4bb1877b302aa5c2db82"
+      }
+    },
+    {
+      "id": "novel_guimie",
+      "title": "鬼灭之刃：我的眼睛能看到弹幕",
+      "corpus_file": "novel_guimie_full.txt",
+      "script": "简体",
+      "kind": "real_novel",
+      "gutenberg_id": null,
+      "bytes": 1603888,
+      "chars": 548142,
+      "lines": 18184,
+      "sha256": "9ac4e4890b0ea2710ef3eda198fe619451a992d25803422c823980581dbb0eab",
+      "transform": "整篇采用（仅 CRLF→LF 与首尾空行裁剪）；CRLF→LF；裁掉首尾空行",
+      "chapter_range": null,
+      "source": {
+        "drive_path": "projects/fix_text/txt/鬼灭之刃：我的眼睛能看到弹幕 作者：陆要芝麻粒.txt",
+        "drive_token": "TyKfbfpKaoXmGqxA8EicoOuKnDg",
+        "file_name": "鬼灭之刃：我的眼睛能看到弹幕 作者：陆要芝麻粒.txt",
+        "bytes": 1603888,
+        "sha256": "9ac4e4890b0ea2710ef3eda198fe619451a992d25803422c823980581dbb0eab"
+      }
+    },
+    {
+      "id": "novel_fanpai",
+      "title": "反派少爷只想过佛系生活",
+      "corpus_file": "novel_fanpai_ch001-060.txt",
+      "script": "简体",
+      "kind": "real_novel",
+      "gutenberg_id": null,
+      "bytes": 435581,
+      "chars": 151879,
+      "lines": 5713,
+      "sha256": "5e94e48983ceff53a72b7220f8e780962eda2a9354b5447044786faaafd3e826",
+      "transform": "按「第N章」标记出现序取第 1-60 段（首段标题：第1章 达克迪蒙不是黑暗恶魔）；CRLF→LF；裁掉首尾空行",
+      "chapter_range": [
+        1,
+        60
+      ],
+      "source": {
+        "drive_path": "projects/fix_text/txt/反派少爷只想过佛系生活 作者：人之下.txt",
+        "drive_token": "Hr23bsrK4o63OixCV2ucIbEFn94",
+        "file_name": "反派少爷只想过佛系生活 作者：人之下.txt",
+        "bytes": 23482620,
+        "sha256": "42a92e777976bae9335454044c18335c4c6301fb42c4f6c628469c76e5dd5f91"
+      }
+    }
+  ]
+}

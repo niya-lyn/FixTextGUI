@@ -1,0 +1,39 @@
+{
+  "total_rules": 304256,
+  "unique_before": 243536,
+  "per_var": {
+    "1.自定义词库.php::punctuationMap": 1,
+    "1.自定义词库.php::preprocessMap": 7938,
+    "1.自定义词库.php::extraPreprocessMap": 32,
+    "1.自定义词库.php::normalMap": 131692,
+    "1.自定义词库.php::extraMap": 19390,
+    "1.自定义词库.php::strictMap": 3795,
+    "1.自定义词库.php::postFixMap": 1296,
+    "1.自定义词库_旧式、通假写法_.php::oldStyleMap": 1102,
+    "2.繁转简词库.php::t2sMap": 3141,
+    "2.繁转简词库.php::t2sRadicalMap": 892,
+    "2.繁转简词库.php::radicalsSupplementMap": 215,
+    "3.txtFormat 词库.php::txtFormatMap": 86917,
+    "4.的地得词库.php::dddMap": 11238,
+    "4.的地得词库.php::dei2deMap": 607,
+    "4.的地得词库.php::accurateDddMap": 3377,
+    "5.临时校对表.php::tempMap": 1,
+    "7.生僻字词库.php::shengpiziMap": 17260,
+    "7.生僻字词库_扩展区_.php::cjkExtMap": 14719,
+    "7.生僻字词库_扩展区_.php::cjkRecoverMap": 643
+  },
+  "before_byte_len_dist_top": {
+    "3": 20735,
+    "4": 15398,
+    "5": 33,
+    "6": 21864,
+    "7": 200,
+    "8": 35,
+    "9": 59076,
+    "10": 223,
+    "11": 8,
+    "12": 119482
+  },
+  "max_before_bytes": 73,
+  "min_before_bytes": 3
+}

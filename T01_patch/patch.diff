@@ -1,0 +1,277 @@
+T0.1 骨架 CI 集成补丁（相对 T0.1 原版）
+适用方式：将本目录 scripts/ci.py、scripts/ci_baseline.py、.github/workflows/ci.yml
+复制到 T0.1 仓库对应位置，并把 baseline/ 整目录放入仓库根目录即可。
+
+--- a/scripts/ci.py
++++ b/scripts/ci.py
+@@ -1,5 +1,5 @@
+ #!/usr/bin/env python3
+-"""一键 CI：lint + 门禁静态检查 + 单元测试。
++"""一键 CI：lint + 门禁静态检查 + 单元测试 + 回归基线。
+ 
+ 设计目标：
+ - 跨平台一致（Windows / Linux 同一入口），不依赖 bash 专有语法；
+@@ -7,10 +7,11 @@
+ - 各环节可单独跳过，便于本地只跑一部分。
+ 
+ 用法：
+-    python scripts/ci.py               # 全量：lint → 门禁 → 单测
+-    python scripts/ci.py --only lint   # 只跑 lint（lint|gates|tests）
++    python scripts/ci.py               # 全量：lint → 门禁 → 单测 → 回归基线
++    python scripts/ci.py --only baseline   # 只跑回归基线（T0.4）
+     python scripts/ci.py --skip lint
+ 退出码：0 = 全部通过；1 = 有环节失败。
++（回归基线环节在缺 php/go 依赖或 baseline/ 未并入时按 SKIP 处理，不算失败。）
+ """
+ 
+ from __future__ import annotations
+@@ -26,7 +27,9 @@
+ PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ SRC = PROJECT_ROOT / "src"
+ 
+-STAGES = ("lint", "format-check", "gates", "tests")
++STAGES = ("lint", "format-check", "gates", "tests", "baseline")
++
++BASELINE_SKIP_CODE = 77  # ci_baseline.py 约定：77 = 环节跳过（非失败）
+ 
+ 
+ @dataclass
+@@ -35,14 +38,15 @@
+     ok: bool
+     seconds: float
+     detail: str = ""
++    skipped: bool = False
+ 
+ 
+ def _python() -> str:
+     return sys.executable
+ 
+ 
+-def _run(cmd: list[str], env: dict[str, str] | None = None) -> tuple[bool, str]:
+-    """执行子进程并回传 (是否成功, 合并输出)。"""
++def _run(cmd: list[str], env: dict[str, str] | None = None) -> tuple[bool, str, int]:
++    """执行子进程并回传 (是否成功, 合并输出, 退出码)。"""
+     merged_env = os.environ.copy()
+     merged_env.setdefault("PYTHONIOENCODING", "utf-8")
+     # 保证未安装包时也能以源码布局运行
+@@ -61,46 +65,62 @@
+         errors="replace",
+     )
+     output = (proc.stdout or "") + (proc.stderr or "")
+-    return proc.returncode == 0, output.strip()
++    return proc.returncode == 0, output.strip(), proc.returncode
+ 
+ 
+ def stage_lint() -> StageResult:
+     started = time.time()
+-    ok, output = _run([_python(), "-m", "ruff", "check", "."])
++    ok, output, _ = _run([_python(), "-m", "ruff", "check", "."])
+     return StageResult("lint", ok, time.time() - started, output)
+ 
+ 
+ def stage_format_check() -> StageResult:
+     started = time.time()
+-    ok, output = _run([_python(), "-m", "ruff", "format", "--check", "."])
++    ok, output, _ = _run([_python(), "-m", "ruff", "format", "--check", "."])
+     return StageResult("format-check", ok, time.time() - started, output)
+ 
+ 
+ def stage_gates() -> StageResult:
+     started = time.time()
+-    ok, output = _run([_python(), str(PROJECT_ROOT / "scripts" / "check_gates.py")])
++    ok, output, _ = _run([_python(), str(PROJECT_ROOT / "scripts" / "check_gates.py")])
+     return StageResult("gates", ok, time.time() - started, output)
+ 
+ 
+ def stage_tests() -> StageResult:
+     started = time.time()
+-    ok, output = _run(
++    ok, output, _ = _run(
+         [_python(), "-m", "pytest", "-q"],
+         env={"QT_QPA_PLATFORM": "offscreen"},
+     )
+     return StageResult("tests", ok, time.time() - started, output)
+ 
+ 
++def stage_baseline() -> StageResult:
++    """T0.4 回归基线重跑比对：Go + PHP 双后端 × 15 语料 vs 冻结基线。"""
++    started = time.time()
++    script = PROJECT_ROOT / "scripts" / "ci_baseline.py"
++    if not script.exists():
++        return StageResult(
++            "baseline", True, time.time() - started,
++            "SKIP：未找到 scripts/ci_baseline.py", skipped=True,
++        )
++    ok, output, code = _run([_python(), str(script)])
++    if code == BASELINE_SKIP_CODE:
++        return StageResult("baseline", True, time.time() - started, output, skipped=True)
++    return StageResult("baseline", ok, time.time() - started, output)
++
++
+ RUNNERS = {
+     "lint": stage_lint,
+     "format-check": stage_format_check,
+     "gates": stage_gates,
+     "tests": stage_tests,
++    "baseline": stage_baseline,
+ }
+ 
+ 
+ def main(argv: list[str] | None = None) -> int:
+-    parser = argparse.ArgumentParser(description="FixText CI：lint + 门禁 + 单测")
++    parser = argparse.ArgumentParser(description="FixText CI：lint + 门禁 + 单测 + 回归基线")
+     parser.add_argument(
+         "--only",
+         action="append",
+@@ -111,7 +131,7 @@
+         "--skip",
+         action="append",
+         choices=STAGES,
+-        help="跳过指定环节（可重复）",
++        help="跳过指定环节",
+     )
+     parser.add_argument(
+         "--verbose",
+@@ -135,8 +155,11 @@
+     for name in selected:
+         result = RUNNERS[name]()
+         results.append(result)
+-        mark = "PASS" if result.ok else "FAIL"
+-        print(f"[{mark}] {result.name:<13} {result.seconds:6.2f}s")
++        if result.skipped:
++            print(f"[SKIP] {result.name:<13} {result.seconds:6.2f}s")
++        else:
++            mark = "PASS" if result.ok else "FAIL"
++            print(f"[{mark}] {result.name:<13} {result.seconds:6.2f}s")
+         if result.detail and (args.verbose or not result.ok):
+             for line in result.detail.splitlines():
+                 print("    " + line)
+@@ -148,7 +171,8 @@
+         return 1
+ 
+     total = sum(r.seconds for r in results)
+-    print(f"CI 全部通过（{len(results)} 个环节，合计 {total:.2f}s）")
++    ran = [r for r in results if not r.skipped]
++    print(f"CI 全部通过（{len(ran)} 个环节执行，{len(results) - len(ran)} 个跳过，合计 {total:.2f}s）")
+     return 0
+ 
+ 
+--- /dev/null
++++ b/scripts/ci_baseline.py
+@@ -0,0 +1,70 @@
++#!/usr/bin/env python3
++"""CI 环节：FixText 回归基线重跑比对（T0.4 交付物并入 T0.1 骨架）。
++
++前置：仓库根目录下存在 baseline/（T0.4 回归基线集，可直接整目录放入）。
++行为：
++  - 检查 php（CLI）与 go（工具链或随包预编译二进制）是否可用；
++  - 调用 baseline/scripts/run_baseline.py 一键重跑比对（Go + PHP 双后端 × 15 语料）；
++  - 缺依赖或缺 baseline/ 时以退出码 77 报 SKIP（不视为 CI 失败，适用于无 php/go 的矩阵位）；
++  - 比对不一致时退出码 1（视为 CI 失败——这正是回归基线的意义）。
++
++用法：
++    python scripts/ci_baseline.py [--keep-json]
++"""
++
++from __future__ import annotations
++
++import argparse
++import os
++import shutil
++import subprocess
++import sys
++import tempfile
++from pathlib import Path
++
++PROJECT_ROOT = Path(__file__).resolve().parent.parent
++BASELINE_DIR = PROJECT_ROOT / "baseline"
++RUNNER = BASELINE_DIR / "scripts" / "run_baseline.py"
++
++SKIP_CODE = 77  # 与 ci.py 约定：77 = 环节跳过（非失败）
++
++
++def main(argv: list[str] | None = None) -> int:
++    ap = argparse.ArgumentParser(description="CI 环节：回归基线重跑比对")
++    ap.add_argument("--keep-json", action="store_true", help="把比对结果 JSON 保留在 baseline/results/ 下")
++    args = ap.parse_args(argv)
++
++    if not RUNNER.exists():
++        print("[SKIP] 未找到 baseline/scripts/run_baseline.py（回归基线集未并入本仓库）")
++        return SKIP_CODE
++
++    php = shutil.which("php")
++    go = shutil.which("go")
++    prebuilt = (BASELINE_DIR / "scripts" / "go" / "replace_by_go.bin").exists() and \
++        (BASELINE_DIR / "scripts" / "go" / "count_hits.bin").exists()
++    if not php:
++        print("[SKIP] 未检测到 php CLI（本机无法运行 PHP 后端基线）")
++        return SKIP_CODE
++    if not go and not prebuilt:
++        print("[SKIP] 未检测到 go 工具链，且无随包预编译二进制（仅限 linux/amd64）")
++        return SKIP_CODE
++    print(f"[INFO] php={'✓' if php else '✗'} go={'✓' if go else '预编译二进制'}")
++
++    cmd = [sys.executable, str(RUNNER)]
++    json_path = None
++    if args.keep_json:
++        results_dir = BASELINE_DIR / "results"
++        results_dir.mkdir(exist_ok=True)
++        json_path = results_dir / "ci_baseline_check.json"
++        cmd += ["--json", str(json_path)]
++
++    env = os.environ.copy()
++    env.setdefault("PYTHONIOENCODING", "utf-8")
++    proc = subprocess.run(cmd, cwd=str(PROJECT_ROOT), env=env)  # noqa: S603 - 固定脚本
++    if proc.returncode == 0 and json_path:
++        print(f"[INFO] 比对结果 JSON：{json_path}")
++    return proc.returncode
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -8,7 +8,7 @@
+ 
+ jobs:
+   check:
+-    name: lint + gates + tests (${{ matrix.os }})
++    name: lint + gates + tests + baseline (${{ matrix.os }})
+     runs-on: ${{ matrix.os }}
+     strategy:
+       fail-fast: false
+@@ -33,8 +33,33 @@
+           python -m pip install --upgrade pip
+           python -m pip install -e ".[dev]"
+ 
+-      - name: 一键 CI（lint + format-check + gates + tests）
++      - name: 一键 CI（lint + format-check + gates + tests + baseline）
++        # baseline 环节在缺 php/go 的矩阵位（如 Windows）自动 SKIP，不算失败
+         run: python scripts/ci.py
+ 
+       - name: 空壳应用启动冒烟（独立进程，offscreen）
+         run: python scripts/smoke_launch.py --timeout 60
++
++  baseline:
++    # T0.4 回归基线专用位：ubuntu 自带 php 与 go，强制执行（不接受 SKIP）
++    name: 回归基线重跑比对（T0.4）
++    runs-on: ubuntu-latest
++    env:
++      PYTHONIOENCODING: utf-8
++    steps:
++      - uses: actions/checkout@v4
++
++      - uses: actions/setup-python@v5
++        with:
++          python-version: "3.11"
++
++      - name: 一键重跑比对（Go + PHP 双后端 × 15 语料 vs 冻结基线）
++        run: python scripts/ci_baseline.py --keep-json
++
++      - name: 上传比对结果
++        if: always()
++        uses: actions/upload-artifact@v4
++        with:
++          name: baseline-check-result
++          path: baseline/results/ci_baseline_check.json
++          if-no-files-found: ignore
