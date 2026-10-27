@@ -625,19 +625,59 @@ class CheckModule(QWidget):
     def problem_candidate(self, i: int) -> dict:
         """把第 i 处问题整理成一条待加入词库的词条。
 
-        取这一处的「可疑写法」作为原词：自动改法能算出来的，替换值就是改后；
-        算不出来的（需要人工判断）不上「加入词库」这条快路，避免写进错值。
+        词库规则是**全书生效**的：一条 ``”`` → ``“”`` 的规则会让全书每一个右引号
+        都被改写。检查页这一版的问题全是引号配对（一处一个标点），所以这里
+        不拿单个字符当词条，而是把**这一句的写法**整段作为词条——规则只在同样
+        写法出现时才生效，既保住了「加入词库」这条快路，又不会波及全书。
+
+        连上下文都没有、只剩一个标点时：返回 ``blocked`` 原因，界面拦截不写。
         """
         p = self.probs[i]
-        word = str(p.get("hl") or "").strip()
+        hl = str(p.get("hl") or "").strip()
         fixed = checkdata.apply_action(p).strip()
+        pre = str(p.get("pre") or "").rstrip()
+        post = str(p.get("post") or "").lstrip()
+
+        word, value, scope = hl, fixed, "单处"
+        if self.vocab_word_blocker(hl):
+            # 单个标点做词条会改坏全书 → 用整句上下文收窄生效范围
+            if pre:
+                word, value = pre + hl, pre + fixed
+                scope = "整句"
+            elif post:
+                word, value = hl + post, fixed + post
+                scope = "整句"
+            else:
+                word, value = hl, fixed
         return dict(
             word=word,
-            value=(fixed or word),
-            type="错词校正",
+            value=(value or word),
+            type=("缺字漏字" if (p.get("action") or {}).get("mode") in
+                  ("prepend", "append") else "错词校正"),
             count=1,
+            scope=scope,
+            blocked=self.vocab_word_blocker(word),
             note=f"检查页第 {p.get('line')} 行 · {p.get('type') or ''}".strip(" ·"),
         )
+
+    @staticmethod
+    def vocab_word_blocker(word: str) -> str:
+        """判断这个词能不能进词库；能进返回空串，不能进返回人话原因。
+
+        词库规则是**全书生效**的：一条 `”` → `“”` 的规则会让全书每一个右引号
+        都被改写。所以标点/单字符这类「一处问题」不能直接当作词条写进词库——
+        这是防止用户点一下按钮就把整本书改坏的最后一道门。
+        """
+        w = str(word or "").strip()
+        if not w:
+            return "这一处没有可加入词库的写法"
+        if len(w) < 2:
+            return ("这一处只有一个标点、前后也没有上下文，收进词库会让全书同类"
+                    "标点一起变；请用行内修复逐处处理，或到「词库管理」手动新增")
+        if not any(ch.isalnum() for ch in w):
+            return ("这一处全是标点，收进词库会让全书同类标点一起变；"
+                    "请用行内修复逐处处理，或到「词库管理」手动新增")
+        return ""
 
     def add_problem_to_vocab(self, i: int) -> dict | None:
         """问题行「＋词库」：预览 → 确认加入（可撤销、必须查重）。"""
@@ -647,8 +687,8 @@ class CheckModule(QWidget):
             self.toast("词库暂不可用，请到「词库管理」页手动新增这一条")
             return None
         cand = self.problem_candidate(i)
-        if not cand["word"]:
-            self.toast("这一处没有可加入词库的写法")
+        if cand.get("blocked"):
+            self.toast(cand["blocked"])
             return None
         if cand["word"] == cand["value"]:
             self.toast("这一处还没有可靠的自动改法，暂不建议加入词库")
@@ -661,8 +701,9 @@ class CheckModule(QWidget):
         box.setInformativeText(
             f"词条：{cand['word']}\n"
             f"替换值：{cand['value']}\n"
-            f"类型：{cand['type']}\n\n"
-            "加入后下次校正同类错误自动生效，加入动作可以撤销。"
+            f"类型：{cand['type']}\n"
+            f"生效范围：{cand.get('scope') or '单处'}\n\n"
+            "加入后下次校正同类写法自动生效，加入动作可以撤销。"
         )
         box.setStandardButtons(
             QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
