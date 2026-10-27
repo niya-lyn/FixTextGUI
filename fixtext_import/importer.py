@@ -79,6 +79,8 @@ class ImportResult:
     reminded: list[str] = field(default_factory=list)
     reused: bool = False
     elapsed_ms: int = 0
+    #: 作者（导入时从书的元信息里自动提取，可在导出页修正）
+    author: str = ""
 
     @property
     def human_notes(self) -> list[str]:
@@ -189,6 +191,7 @@ def import_book(
             notes.append(messages.uncertain_warning())
         chapters = 1
         title = source.stem
+        author = ""
     else:
         from . import epub_import
 
@@ -196,6 +199,7 @@ def import_book(
         preview = epub_import.chapter_preview(original_copy)
         chapters = len(preview.chapters)
         title = preview.title or source.stem
+        author = preview.author or ""
         notes.append(messages.epub_merged_note(chapters))
 
         if epub_mode == "direct":
@@ -222,6 +226,7 @@ def import_book(
     result = ImportResult(
         book_id=book_id,
         title=title,
+        author=author,
         source_path=str(source),
         source_suffix=source.suffix.lower(),
         workspace_dir=str(book_dir),

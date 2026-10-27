@@ -61,6 +61,7 @@ class ChapterInfo:
 @dataclass
 class PreviewResult:
     title: str
+    author: str = ""
     chapters: list[ChapterInfo] = field(default_factory=list)
     order_ok: bool = True
     order_notes: list[str] = field(default_factory=list)
@@ -177,6 +178,7 @@ def chapter_preview(path: str | Path) -> PreviewResult:
     ok, notes = verify_order_against_ncx(info)
     return PreviewResult(
         title=info.title or path.stem,
+        author=info.creator or "",
         chapters=chapters,
         order_ok=ok,
         order_notes=list(notes),

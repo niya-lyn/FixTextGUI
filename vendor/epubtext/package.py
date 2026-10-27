@@ -94,6 +94,7 @@ class PackageInfo:
     spine: list[SpineItem]
     title: str = ""
     identifier: str = ""
+    creator: str = ""
     ncx_path: str | None = None
     toc: list[TocNode] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -222,9 +223,11 @@ def parse_package(archive: EpubArchive, opf_path: str | None = None) -> PackageI
     metadata = opf_root.find(".//opf:metadata", NS) or opf_root.find(".//metadata")
     title = ""
     identifier = ""
+    creator = ""
     if metadata is not None:
         title = _text_of(metadata.find("dc:title", NS)) or _text_of(metadata.find("title"))
         identifier = _text_of(metadata.find("dc:identifier", NS)) or _text_of(metadata.find("identifier"))
+        creator = _text_of(metadata.find("dc:creator", NS)) or _text_of(metadata.find("creator"))
 
     info = PackageInfo(
         opf_path=opf_path,
@@ -233,6 +236,7 @@ def parse_package(archive: EpubArchive, opf_path: str | None = None) -> PackageI
         spine=spine,
         title=title,
         identifier=identifier,
+        creator=creator,
         warnings=warnings,
         spine_duplicates=duplicates,
     )
