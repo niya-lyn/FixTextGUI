@@ -59,6 +59,31 @@ REFERENCE_SEC: dict[str, float] = {
 }
 
 
+def _count_replaced(before: Path | None, after: Path | None) -> int | None:
+    """统计本次替换的命中数（按导出口径，与导出统计里的数字一致）。
+
+    命中数是「改前/改后正文实际差异」算出来的，不是引擎自报的次数；
+    算不出来（文件缺失/依赖不可用）时返回 None，界面上显示「—」，
+    绝不编一个数字充数。
+    """
+    if not before or not after:
+        return None
+    try:
+        import tempfile
+
+        import fixtext_export as fx
+
+        if not (before.is_file() and after.is_file()):
+            return None
+        # 统计要用到引擎包里的分词/差异库，先把它们挂上（与导出同一条引导）
+        fx.ensure_vendor(None)
+        with tempfile.TemporaryDirectory(prefix="fixtext-hits-") as tmp:
+            hits, _rows = fx._count_hits(before, after, Path(tmp))
+        return int(hits)
+    except Exception:
+        return None
+
+
 def _artifact_paths(layout: dict, replace: dict, quote: dict,
                     restore: dict) -> dict[str, str]:
     """汇总本次运行的**权威产物路径**（各阶段报告里自述的绝对路径）。
@@ -150,9 +175,15 @@ class CorrectionJob:
 
     def __init__(self, *, epub: Path, workdir: Path, rules_before: Path,
                  rules_after: Path, engine_path: Path, pipeline_root: Path,
+                 title: str = "", author: str = "", source_epub: Path | None = None,
                  on_stage_started: Callable[[int], None] | None = None,
                  on_stage_finished: Callable[[int, float], None] | None = None):
         self.epub = Path(epub)
+        #: 界面显示的书名 / 作者（历史记录要用；缺省回落到文件名）
+        self.title = str(title or "").strip()
+        self.author = str(author or "").strip()
+        #: 用户导入的原书（纯文本书包装成电子书时，原书另有其物）
+        self.source_epub = Path(source_epub) if source_epub else None
         self.workdir = Path(workdir)
         self.rules_before = Path(rules_before)
         self.rules_after = Path(rules_after)
@@ -278,6 +309,7 @@ class CorrectionJob:
         _engine_client.subprocess = _SubprocessProxy(self)
 
         self._run_started_at = self._now()
+        self._run_started_wall = time.time()
         try:
             for i, meta in enumerate(HUMAN_STAGES):
                 if self.cancel_requested:
@@ -333,6 +365,11 @@ class CorrectionJob:
         counts = bookmap.get("entry_counts") or {}
         summary = {
             "book": cfg.epub.stem,
+            "title": self.title or cfg.epub.stem,
+            "author": self.author,
+            "source_epub": str(self.source_epub or self.epub),
+            "started_at": getattr(self, "_run_started_wall", 0.0),
+            "finished_at": time.time(),
             "workdir": str(cfg.workdir),
             "chapters": merge.get("chapters"),
             "layout_changed": layout.get("changed"),
@@ -340,6 +377,10 @@ class CorrectionJob:
             "replace_chars_in": replace.get("chars_in"),
             "replace_chars_out": replace.get("chars_out"),
             "quote_errors": quote.get("error_count"),
+            "hits": _count_replaced(
+                Path(str(replace.get("before_path") or "")) if replace.get("before_path") else None,
+                Path(str(replace.get("after_path") or "")) if replace.get("after_path") else None,
+            ),
             "bookmap_entries": sum(counts.values()) if counts else None,
             "restored_sha256": restore.get("restored_sha256"),
             "stage_elapsed": dict(self.stage_elapsed),

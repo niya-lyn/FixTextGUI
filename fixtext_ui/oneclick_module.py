@@ -597,6 +597,10 @@ class OneClickModule(QWidget):
             rules_after=Path(ctx["rules_after"]),
             engine_path=Path(ctx["engine_path"]),
             pipeline_root=Path(ctx["pipeline_root"]),
+            # 书名 / 作者 / 原书进运行摘要：历史记录靠它显示这条是谁
+            title=str(ctx.get("title") or ""),
+            author=str(ctx.get("author") or ""),
+            source_epub=Path(str(ctx.get("epub") or source_epub)),
         )
         worker = CorrectionWorker(job)
         self._worker = worker
