@@ -59,6 +59,28 @@ REFERENCE_SEC: dict[str, float] = {
 }
 
 
+def _artifact_paths(layout: dict, replace: dict, quote: dict,
+                    restore: dict) -> dict[str, str]:
+    """汇总本次运行的**权威产物路径**（各阶段报告里自述的绝对路径）。
+
+    导出侧拿它定位校正后的正文，不必再按文件名推测——导入侧固定写
+    ``book.txt``、管线按书名命名，两套名字天生不同，猜名字必错。
+    """
+    laid_out = str(layout.get("text_path") or "")
+    ledger = ""
+    if laid_out:
+        cand = Path(laid_out).with_name(Path(laid_out).stem + ".bundle.json")
+        ledger = str(cand) if cand.exists() else ""
+    return {
+        "laid_out_text": laid_out,
+        "before_text": str(replace.get("before_path") or ""),
+        "after_text": str(replace.get("after_path") or ""),
+        "checked_file": str(quote.get("checked_file") or ""),
+        "ledger": ledger,
+        "restored_epub": str(restore.get("restored_epub") or ""),
+    }
+
+
 class CorrectionCancelled(RuntimeError):
     """用户取消。"""
 
@@ -322,6 +344,10 @@ class CorrectionJob:
             "restored_sha256": restore.get("restored_sha256"),
             "stage_elapsed": dict(self.stage_elapsed),
             "total_elapsed_s": round(self.elapsed_s(), 3),
+            # 本次运行的**权威产物路径**：各阶段自己报告的绝对路径。
+            # 导出侧据此定位，不再按文件名猜（导入侧固定写 book.txt，
+            # 而管线按书名命名，两套名字天生不同 → 猜必错）。
+            "artifacts": _artifact_paths(layout, replace, quote, restore),
         }
         # 运行摘要落盘（工作目录内，供导出/排查；界面不直接展示路径）
         from fixtext_pipeline.config import dump_json

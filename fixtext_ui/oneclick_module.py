@@ -74,9 +74,9 @@ MAPS = [
 ]
 
 ENGINES = [
-    ("自动（Go 内置，异常时自动降级 Python）", "auto"),
-    ("强制标准引擎（Go）", "force"),
-    ("降级模式（Python greedy）", "degrade"),
+    ("自动（推荐）", "auto"),
+    ("强制标准模式", "force"),
+    ("稳妥模式", "degrade"),
 ]
 
 # 进度步骤不再是演的：来自 M1 编排器六阶段的人话映射
@@ -238,9 +238,12 @@ class OneClickModule(QWidget):
         engine_path / runs_root / title（可选，书名显示用）
         """
         self.run_context = dict(ctx)
-        title = ctx.get("title") or Path(str(ctx["epub"])).stem
-        size_mb = Path(str(ctx["epub"])).stat().st_size / (1024 * 1024)
-        self.book_name_label.setText(f"《{title}》.epub")
+        ref = ctx.get("epub") or ctx.get("plain_source") or ""
+        title = ctx.get("title") or Path(str(ref)).stem
+        suffix = (ctx.get("suffix") or Path(str(ref)).suffix or "").lower()
+        kind = "电子书" if suffix == ".epub" else "文本"
+        size_mb = Path(str(ref)).stat().st_size / (1024 * 1024) if ref else 0
+        self.book_name_label.setText(f"《{title}》· {kind}")
         self.book_meta_label.setText(
             f"{size_mb:.1f} MB · 校正过程只读原文件，可随时恢复到校正前")
         self.book_pill.setText("已就绪")
@@ -270,7 +273,7 @@ class OneClickModule(QWidget):
             f"color:#fff;font-size:{fs('lg')};"
             f"font-weight:{FONT_WEIGHT['bold']};background:transparent")
         p = QLabel(
-            "使用「常规校正」词库 + Go 引擎 + 默认排版项，"
+            "使用常规校正词库 + 默认排版项，"
             "一次跑完备份→排版→替换→校验。")
         p.setWordWrap(True)
         p.setStyleSheet(
@@ -552,12 +555,28 @@ class OneClickModule(QWidget):
 
     # -------------------------------------------------------------- 执行流程
 
+    @staticmethod
+    def _source_epub(ctx: dict, workdir: Path) -> Path:
+        """校正链路的输入：EPUB 书用原书；纯文本书先包成单章电子书。
+
+        包装只发生在本次运行目录里，用户导入文件夹不被写入。
+        """
+        epub = ctx.get("epub")
+        if epub:
+            return Path(str(epub))
+        from plain_book import plain_source_epub
+        return plain_source_epub(
+            ctx["plain_source"], workdir,
+            title=str(ctx.get("title") or ""),
+            author=str(ctx.get("author") or ""),
+        )
+
     def do_correction(self):
         """真实执行：M1 编排器六阶段在后台线程跑，进度弹窗事件驱动。"""
         if self._running:
             return
         if not self.run_context:
-            self._toast("请先在「导入」页选择 EPUB，再开始校正")
+            self._toast("请先在「导入」页选择一本书，再开始校正")
             return
 
         ctx = self.run_context
@@ -566,10 +585,13 @@ class OneClickModule(QWidget):
         runs_root = Path(ctx["runs_root"])
         runs_root.mkdir(parents=True, exist_ok=True)
         workdir = runs_root / f"run-{int(time.time() * 1000)}"
-        book = ctx.get("title") or Path(str(ctx["epub"])).stem
+        book = ctx.get("title") or Path(str(ctx.get("epub") or "")).stem
+
+        # 纯文本书没有章节包结构：先原样包成单章电子书，再走同一条链路
+        source_epub = self._source_epub(ctx, workdir)
 
         job = CorrectionJob(
-            epub=Path(ctx["epub"]),
+            epub=source_epub,
             workdir=workdir,
             rules_before=Path(ctx["rules_before"]),
             rules_after=Path(ctx["rules_after"]),

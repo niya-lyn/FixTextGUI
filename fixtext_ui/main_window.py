@@ -781,7 +781,12 @@ class MainWindow(QMainWindow):
         self._sync_export(summary)
 
     def build_run_context(self, text_path: str) -> dict | None:
-        """由导入结果推导一次校正所需的路径（真实文件，不做假运行）。"""
+        """由导入结果推导一次校正所需的路径（真实文件，不做假运行）。
+
+        EPUB 书直接用原书当输入；纯文本（TXT）书没有章节包结构，
+        由 ``plain_book`` 把它原样包成单章电子书后走**同一条**六阶段链路——
+        这样纯文本书也真的有校正结果，而不是永远拿「命中数 0」。
+        """
         try:
             book_dir = Path(text_path).resolve().parent
             record = book_dir / "import.json"
@@ -790,24 +795,35 @@ class MainWindow(QMainWindow):
         except Exception:
             return None
         original = meta.get("original_copy_path") or ""
-        # 只有 EPUB 原书才能走「校正后还原成 EPUB」的真链路
-        if not original.lower().endswith(".epub") or not Path(original).exists():
+        if not original or not Path(original).exists():
             return None
+
         pipeline = PKG_ROOT / "pipeline"
         engine = (pipeline / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
                   / "replace_by_go-linux-amd64")
         rules = PKG_ROOT / "data" / "rules"
         if not engine.exists() or not (rules / "before.json").exists():
             return None
-        return dict(
-            epub=str(Path(original)),
+
+        title = str(meta.get("title") or Path(original).stem)
+        ctx = dict(
             pipeline_root=str(pipeline),
             rules_before=str(rules / "before.json"),
             rules_after=str(rules / "after.json"),
             engine_path=str(engine),
             runs_root=str(PKG_ROOT / "runs"),
-            title=str(meta.get("title") or Path(original).stem),
+            title=title,
+            author=str(meta.get("author") or ""),
+            suffix=Path(original).suffix.lower(),
         )
+        if original.lower().endswith(".epub"):
+            ctx["epub"] = str(Path(original))
+            #: 以原书副本为模板，导出时可逐字节还原成电子书
+            ctx["template_epub"] = str(Path(original))
+        else:
+            #: 纯文本：运行时包成单章电子书再进链路（不写进用户文件夹）
+            ctx["plain_source"] = str(Path(text_path))
+        return ctx
 
     # ------------------------------------------------------------------ 路由
 

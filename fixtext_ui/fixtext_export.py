@@ -70,6 +70,8 @@ class ExportSource:
     #: 本次校正的工作目录
     run_dir: str = ""
     pipeline_root: str = ""
+    #: 产物路径是怎么定位到的（排查用，界面不展示）
+    resolve_notes: list[str] = field(default_factory=list)
 
     @property
     def can_restore_epub(self) -> bool:
@@ -134,10 +136,151 @@ def ensure_vendor(pipeline_root: str | Path | None) -> str:
     return str(root)
 
 
+def _run_artifact_paths(run: dict | None) -> dict[str, str]:
+    """从校正摘要（ui_run_summary.json 的 ``artifacts`` 段）读权威产物路径。
+
+    这是第一优先来源：它由跑校正的那一端（worker / CorrectionJob）
+    在结束时回传，路径都是各阶段自己报的绝对路径。
+    """
+    block = (run or {}).get("artifacts") or {}
+    mapping = {
+        "after": block.get("after_text"),
+        "before": block.get("before_text"),
+        "laid_out": block.get("laid_out_text"),
+        "checked": block.get("checked_file"),
+        "ledger": block.get("ledger"),
+        "restored_epub": block.get("restored_epub"),
+    }
+    out: dict[str, str] = {}
+    for key, value in mapping.items():
+        if value and Path(str(value)).exists():
+            out[key] = str(value)
+    return out
+
+
+def _run_report_paths(run_dir: Path,
+                      run: dict | None = None) -> dict[str, str]:
+    """读出一次校正的**权威产物路径**（不靠文件名猜）。
+
+    先读校正摘要的 ``artifacts``（调用方回传的绝对路径），
+    再从各阶段报告里的自述补齐：``03_replace/replace_report.json`` 有
+    before_path / after_path，``02_layout/layout_report.json`` 有 text_path，
+    ``04_quote/quote_summary.json`` 有 checked_file。
+    有这些就绝不猜名字。
+    """
+    out: dict[str, str] = dict(_run_artifact_paths(run))
+    replace = _load_json(run_dir / "03_replace" / "replace_report.json")
+    if replace.get("after_path"):
+        out["after"] = str(replace["after_path"])
+    if replace.get("before_path"):
+        out["before"] = str(replace["before_path"])
+
+    layout = _load_json(run_dir / "02_layout" / "layout_report.json")
+    if layout.get("text_path"):
+        out["laid_out"] = str(layout["text_path"])
+
+    quote = _load_json(run_dir / "04_quote" / "quote_summary.json")
+    after = out.get("after") or quote.get("checked_file")
+    if after:
+        out.setdefault("after", str(after))
+        # 引号检查读的就是替换后的正文；它和 replace_report 互为佐证
+        out["checked"] = str(quote.get("checked_file") or after)
+
+    restore = _load_json(run_dir / "06_restore" / "validate_report.json")
+    if restore.get("restored_epub"):
+        out["restored_epub"] = str(restore["restored_epub"])
+    return {k: v for k, v in out.items() if v and Path(v).exists()}
+
+
+def _enumerate_stage_text(run_dir: Path, stage: str, sub: str = "") -> list[Path]:
+    """按目录**实际内容**枚举阶段的 .txt 产物，返回按修改时间倒序的列表。
+
+    这是与「按 stem 拼名字」相反的策略：不假设产物叫什么，
+    只看目录里真的有什么。校正刚跑完时最新的那份就是本次产物。
+    """
+    base = run_dir / stage / sub if sub else run_dir / stage
+    if not base.is_dir():
+        return []
+    files = [p for p in base.glob("*.txt") if p.is_file()]
+    return sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)
+
+
+def _pick_after_text(run_dir: Path, stem: str,
+                     run: dict | None = None) -> tuple[Path | None, str]:
+    """定位校正后的正文。返回 (路径, 来源说明)。
+
+    优先级：校正摘要/阶段报告自述的权威路径 → 目录实际枚举 →
+    最后才按 stem 猜（并告警）。
+    """
+    report = _run_report_paths(run_dir, run)
+    if report.get("after"):
+        how = "运行摘要" if _run_artifact_paths(run).get("after") else "阶段报告"
+        return Path(report["after"]), how
+
+    candidates = _enumerate_stage_text(run_dir, "03_replace", "after")
+    if len(candidates) == 1:
+        return candidates[0], "目录枚举"
+    if candidates:
+        # 多份时优先同名（stem 一致的那份），否则取最新
+        for cand in candidates:
+            if cand.stem == stem:
+                return cand, "目录枚举（同名优先）"
+        return candidates[0], "目录枚举（取最新）"
+
+    guessed = run_dir / "03_replace" / "after" / f"{stem}.txt"
+    if guessed.exists():
+        return guessed, "按文件名推测"
+    return None, ""
+
+
+def _pick_before_text(run_dir: Path, after: Path,
+                      run: dict | None = None) -> Path | None:
+    """定位改前正文：摘要/报告自述 → 与 after 同名的 before → 目录枚举。"""
+    report = _run_report_paths(run_dir, run)
+    if report.get("before"):
+        return Path(report["before"])
+    same_name = after.parent.parent / "before" / after.name
+    if same_name.exists():
+        return same_name
+    candidates = _enumerate_stage_text(run_dir, "03_replace", "before")
+    return candidates[0] if candidates else None
+
+
+def _pick_ledger(run_dir: Path, stem: str, after: Path | None,
+                 run: dict | None = None) -> Path | None:
+    """定位排版账本：摘要/报告自述 → 与 after 同名 → 目录枚举 → 按 stem 猜。"""
+    report = _run_report_paths(run_dir, run)
+    if report.get("ledger"):
+        return Path(report["ledger"])
+    layout_dir = run_dir / "02_layout"
+    if after is not None:
+        same_name = layout_dir / f"{after.stem}.bundle.json"
+        if same_name.exists():
+            return same_name
+    if layout_dir.is_dir():
+        ledgers = sorted(layout_dir.glob("*.bundle.json"),
+                         key=lambda p: p.stat().st_mtime, reverse=True)
+        if ledgers:
+            return ledgers[0]
+    guessed = layout_dir / f"{stem}.bundle.json"
+    return guessed if guessed.exists() else None
+
+
 def resolve_source(record: dict | None,
                    run: dict | None = None,
                    pipeline_root: str | Path | None = None) -> ExportSource:
     """由导入记录（import.json）+ 校正摘要（ui_run_summary.json）推导导出源。
+
+    **不靠文件名猜产物**：导入侧把正文固定写成 ``book.txt``
+    （``fixtext_import/importer.py``），而 M1 管线按原书名给各阶段产物命名
+    （``<书名>.txt``，见 ``fixtext_pipeline/config.py`` 的 book_stem）——
+    两套命名天生不相等，按 stem 拼路径必然找不到校正后的正文。
+
+    所以这里按可信度从高到低取：
+    1. 校正摘要自带的 ``artifacts`` 段（worker 回传的绝对路径）；
+    2. 阶段报告自述的绝对路径（replace_report / layout_report / quote_summary）；
+    3. 直接枚举运行目录里**真实存在**的 .txt；
+    4. 最后才按 stem 推测，并在 ``notes`` 里显式告警（供排查，不静默）。
 
     没有校正摘要时按「没跑过校正」处理：导出导入时的原文，统计命中数为 0。
     """
@@ -161,19 +304,30 @@ def resolve_source(record: dict | None,
         pipeline_root=str(pipeline_root or ""),
     )
 
+    #: 记录「源是怎么定位的」，界面不展示，验收与排查要看
+    src.resolve_notes = []
+
     workdir = str((run or {}).get("workdir") or "")
-    if workdir:
+    if workdir and Path(workdir).is_dir():
         wd = Path(workdir)
-        after = wd / "03_replace" / "after" / f"{stem}.txt"
-        before = wd / "03_replace" / "before" / f"{stem}.txt"
-        ledger = wd / "02_layout" / f"{stem}.bundle.json"
-        if after.exists():
+        after, how = _pick_after_text(wd, stem, run)
+        if after is not None and after.suffix.lower() == ".txt":
             src.corrected = True
-            src.run_dir = workdir
+            src.run_dir = str(wd)
             src.text_path = str(after)
-            src.before_text = str(before) if before.exists() else ""
-            if ledger.exists():
+            src.resolve_notes.append(f"校正后正文：{how}")
+            if how == "按文件名推测":
+                src.resolve_notes.append(
+                    "警告：没有找到阶段报告自述的产物路径，按文件名推测定位")
+            before = _pick_before_text(wd, after, run)
+            if before is not None and before.exists():
+                src.before_text = str(before)
+            ledger = _pick_ledger(wd, stem, after, run)
+            if ledger is not None:
                 src.ledger_path = str(ledger)
+        elif run:
+            src.resolve_notes.append(
+                f"运行目录里没有找到校正后的正文：{Path(workdir).name}")
 
     # EPUB 且带账本 → 可还原回 EPUB
     if original_copy.lower().endswith(".epub") and Path(original_copy).exists():
