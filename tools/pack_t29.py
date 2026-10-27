@@ -26,19 +26,27 @@ EXCLUDE_DIRS = {"__pycache__", "t23_runs", "t27_runs", "runs", "workspace"}
 
 
 def git_files() -> list[str]:
-    out = subprocess.run(["git", "ls-files", "-s"], cwd=PKG,
+    """列出应进包的文件及 git 记录的 mode。
+
+    必须用 ``-z``（NUL 分隔）：默认输出会把非 ASCII 路径加引号并转义成
+    ``\345\244\250...``，按路径去开文件必然失败，解包后就表现为「文件被删」。
+    """
+    out = subprocess.run(["git", "ls-files", "-s", "-z"], cwd=PKG,
                          capture_output=True, text=True, check=True).stdout
     rows = []
-    for line in out.splitlines():
+    for line in out.split("\0"):
+        if not line.strip():
+            continue
         meta, path = line.split("\t", 1)
-        mode = int(meta.split()[0], 8)
-        rows.append((path, mode))
-    # 未跟踪但应当随包分发的新文件
-    extra = subprocess.run(["git", "ls-files", "-o", "--exclude-standard"],
+        rows.append((path, int(meta.split()[0], 8)))
+    # 未跟踪但应当随包分发的新文件（同样用 -z）
+    extra = subprocess.run(["git", "ls-files", "-o", "--exclude-standard", "-z"],
                            cwd=PKG, capture_output=True, text=True,
-                           check=True).stdout.splitlines()
+                           check=True).stdout.split("\0")
+    seen = {p for p, _ in rows}
     for path in extra:
-        rows.append((path, 0o100644))
+        if path.strip() and path not in seen:
+            rows.append((path, 0o100644))
     return rows
 
 
@@ -65,6 +73,18 @@ def main() -> int:
             if mode & 0o111:
                 exec_bits += 1
             zf.writestr(info, src.read_bytes())
+        # .git 必须随包（客户要能 `git log` 看到小步提交历史）
+        git_dir = PKG / ".git"
+        if git_dir.is_dir():
+            for item in git_dir.rglob("*"):
+                if not item.is_file():
+                    continue
+                rel = f"{PKG.name}/{item.relative_to(PKG).as_posix()}"
+                info = zipfile.ZipInfo(rel)
+                info.external_attr = 0o100644 << 16
+                info.compress_type = zipfile.ZIP_DEFLATED
+                info.create_system = 3
+                zf.writestr(info, item.read_bytes())
     size_mb = out_zip.stat().st_size / (1024 * 1024)
     print(f"打包完成：{out_zip.name}  {len(files)} 条目  {size_mb:.2f} MB  "
           f"带执行位文件 {exec_bits} 个")
