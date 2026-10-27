@@ -37,7 +37,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QPoint, Qt, Signal
+from PySide6.QtCore import QPoint, Qt, Signal, QTimer, QSettings
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout,
@@ -51,6 +51,7 @@ from fixtext_tokens import (
     c, sp, r, fs, px, FONT_WEIGHT,
 )
 from fixtext_widgets import Card, Modal, Pill, Switch, hline
+from first_run_wizard import FirstRunWizard
 from check_module import CheckModule
 from export_module import ExportModule
 from history_module import HistoryModule
@@ -549,6 +550,26 @@ class MainWindow(QMainWindow):
         self._bind_shortcuts()
         self.go(HOME_KEY)
 
+        # 首次使用向导（T2.8 并入）：首启自动弹出一次，之后不再自动弹
+        QTimer.singleShot(0, self._maybe_first_run)
+
+    # ------------------------------------------------------------------ 首次向导
+
+    def _maybe_first_run(self) -> None:
+        """首启（设置里没有 wizardSeen）→ 自动弹向导；之后不再自动弹。"""
+        if QSettings("FixText", "V1").value("wizardSeen", "0") == "1":
+            return
+        self._open_wizard()
+
+    def _open_wizard(self) -> None:
+        """弹出新手向导（首启触发，或 ☰ 菜单里重新观看）。"""
+        w = FirstRunWizard(self)
+        accepted = w.exec() == QDialog.DialogCode.Accepted
+        # 任何关闭方式都算已看过（跳过 / 关闭 / 完成一致），先记再看跳转
+        QSettings("FixText", "V1").setValue("wizardSeen", "1")
+        if accepted:
+            self.go("import")  # 完成 → 跳到「导入书籍」页
+
     # ------------------------------------------------------------------ 顶栏
 
     def _build_topbar(self) -> QWidget:
@@ -865,8 +886,11 @@ class MainWindow(QMainWindow):
         m.exec()
 
     def _act_more(self):
-        """菜单：重新生成样式表 / 打开设计依据目录 / 关于。"""
+        """菜单：新手向导 / 重新生成样式表 / 打开设计依据目录 / 关于。"""
         menu = QMenu(self)
+        a_wizard = menu.addAction("新手向导（重新观看）")
+        a_wizard.triggered.connect(self._open_wizard)
+        menu.addSeparator()
         a_regen = menu.addAction("重新生成样式表")
         a_regen.triggered.connect(self._regen_qss)
         a_open = menu.addAction("打开设计依据目录")
