@@ -64,6 +64,25 @@ tools/accept_t34.py:51:         import fixtext_run_snapshot as snap
 | A4 冷启动真实构建 MainWindow | **独立子进程**从零 import 并 `MainWindow()` | A、B 同时进 `sys.modules`；`vocab_module.store.snap` 的模块 = `fixtext_snapshot`；`history_module.snapshot` 的模块 = `fixtext_run_snapshot`；窗口标题 `FixText V1`，六入口在册 |
 | A5 导入链没被注释掉 | 扫 `main_window.py` 有无被注释的导入 + 查两条链的叶子导入 | 被注释的相关导入=0；`history_module`/`vocab_module` 均在；`fixtext_vocab` 确有 `from fixtext_snapshot import`；`history_module` 确有 `import fixtext_run_snapshot` |
 
+**实测原始输出**（在最终包解压目录上直接跑，非沙箱工作区）：
+
+```console
+$ python -c "import fixtext_ui.fixtext_snapshot as A; import fixtext_ui.fixtext_run_snapshot as B; ..."
+ok
+A: /tmp/v35/fixtext_ui/fixtext_snapshot.py | SnapshotStore= True
+B: /tmp/v35/fixtext_ui/fixtext_run_snapshot.py | list_points= True | restore_point= True
+同一文件? False | A 有 B 接口? False | B 有 A 接口? False
+sys.modules 两条: True True
+```
+
+冷启动 `MainWindow` 后的真实引用归属（A4 子进程内取）：
+
+```
+vocab_snap_module:      fixtext_snapshot        ← 线 A 的 SnapshotStore
+history_snapshot_module: fixtext_run_snapshot   ← 线 B 的阶段点恢复层
+window_title:            FixText V1
+```
+
 **关键说明**：`main_window.py` 本身**不直接**导入这两个快照模块，它是经两条传递依赖同时拉起两边——`main_window → vocab_module → fixtext_vocab → fixtext_snapshot`（线 A），`main_window → history_module → fixtext_run_snapshot`（线 B）。A4 用冷启动子进程真实构建窗口来验证这条链，比静态 grep 更有说服力：窗口起来了、两模块都进 `sys.modules`、各自引用指向正确的那个文件。
 
 ---
@@ -192,20 +211,20 @@ snapshot_dir=str(work),
 evidence/ + screenshots/ 文件总数: 39
 早于合并提交的文件数: 0
 最早一件证据: 2026-10-28 06:13:04  screenshots/01_home_overview.png
-最晚一件证据: 2026-10-28 06:57:05  evidence/t35_coexist_import.json
+最晚一件证据: 2026-10-28 07:00:01  evidence/t32_tests.txt
 ```
 
 自检时先发现 **7 个文件早于合并提交**，已全部重新生成：
 
 | 文件 | 原时间 | 产出方式 | 现时间 |
 |---|---|---|---|
-| `evidence/smoke_stderr.log` | 02:34:48 | 重跑 `tools/smoke_e2e.py`（stderr 重定向） | 06:5x |
-| `evidence/t31_tests.txt` | 02:34:49 | 重跑 `pytest tests/test_t31_*.py`（43 passed / 16.22s） | 06:5x |
-| `screenshots/08_topbar_help_open.png` | 02:34:55 | 新建 `tools/_shoot_topbar.py` 重拍 | 06:5x |
-| `screenshots/09_topbar_settings_open.png` | 02:34:55 | 同上 | 06:5x |
-| `screenshots/10_topbar_menu_open.png` | 02:34:55 | 同上 | 06:5x |
-| `evidence/t32_tests.txt` | 03:42:15 | 重跑 `pytest tests/test_t32_vocab_safety.py`（23 passed / 22.64s） | 06:5x |
-| `evidence/t29_scan.json` | 05:26:55 | 重跑 `tools/scan_t29.py`（2153 条文案 / 25 项词表 / 命中 0） | 06:5x |
+| `evidence/smoke_stderr.log` | 02:34:48 | 重跑 `tools/smoke_e2e.py`（stderr 重定向） | 06:58:52 |
+| `evidence/t31_tests.txt` | 02:34:49 | 重跑 `pytest tests/test_t31_*.py`（43 passed / 16.22s） | 06:59:33 |
+| `screenshots/08_topbar_help_open.png` | 02:34:55 | 新建 `tools/_shoot_topbar.py` 重拍 | 06:58:25 |
+| `screenshots/09_topbar_settings_open.png` | 02:34:55 | 同上 | 06:58:26 |
+| `screenshots/10_topbar_menu_open.png` | 02:34:55 | 同上 | 06:58:26 |
+| `evidence/t32_tests.txt` | 03:42:15 | 重跑 `pytest tests/test_t32_vocab_safety.py`（23 passed / 22.64s） | 07:00:01 |
+| `evidence/t29_scan.json` | 05:26:55 | 重跑 `tools/scan_t29.py`（2153 条文案 / 25 项词表 / 命中 0） | 06:58:33 |
 
 **说明一处口径**：顶栏三张展开态截图原本由 M2-T2.6 一次性人工补拍、包里没有可复现脚本。本次补了 `tools/_shoot_topbar.py`（QTimer 在 `exec()` 弹窗出现后抓图再关闭，规避无头环境阻塞），按同一口径重新生成，使该项也变成可复现的。若小组长认为这三张属于 M2-T2.6 范畴、不该由本卡承担，可整组剔除，不影响本卡任何验收条款（六入口截图 01–07 由 `verify_m2t21.py` 产出，与这三张无关）。
 
