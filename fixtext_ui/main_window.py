@@ -546,6 +546,7 @@ class MainWindow(QMainWindow):
         self.mount_import(self.workspace)
         self.mount_oneclick()
         self._wire_book_ready()
+        self._load_history()
 
         self._bind_shortcuts()
         self.go(HOME_KEY)
@@ -754,6 +755,7 @@ class MainWindow(QMainWindow):
         """
         self._import_record = self._read_import_record(text_path)
         self._sync_export(None)
+        self._refresh_export_ctx(None)
         ctx = self.build_run_context(text_path)
         if ctx is None:
             return
@@ -777,8 +779,90 @@ class MainWindow(QMainWindow):
             self._import_record, run, str(PKG_ROOT / "pipeline"))
 
     def _on_correction_done(self, summary: dict) -> None:
-        """校正完成 → 导出页立刻知道有可导出的产物。"""
+        """校正完成 → 导出页拿到产物，检查页拿到真实问题，历史页记一条。"""
         self._sync_export(summary)
+        self._sync_check(summary)
+        self._sync_history(summary)
+
+    # --------------------------------------------------- 检查页 / 历史页 接线（T2.10）
+
+    def _sync_check(self, run: dict | None) -> None:
+        """读这次运行目录里的引号检查报告，注入检查页（不显示任何假条目）。"""
+        if self.check_module is None:
+            return
+        import fixtext_check as checkdata
+
+        run_dir = str((run or {}).get("workdir") or "")
+        if not run_dir:
+            self.check_module.set_empty()
+            return
+        report = checkdata.load_report(run_dir)
+        self.check_module.set_marks(checkdata.load_marks(run_dir))
+        self.check_module.set_report(report)
+
+    def _load_history(self) -> None:
+        """历史页接上运行目录：启动即按磁盘扫一遍（重启后历史还在）。"""
+        if self.history_module is None:
+            return
+        self.history_module.set_runs_root(str(PKG_ROOT / "runs"))
+        self._refresh_export_ctx(None)
+        self.history_module.refresh()
+
+    def _refresh_export_ctx(self, run: dict | None) -> None:
+        """把「重新导出」要用的上下文交给历史页：导入记录 + 流水根 + 导出目录。"""
+        if self.history_module is None:
+            return
+        pipeline_root = str(PKG_ROOT / "pipeline")
+        self.history_module.set_export_ctx({
+            "import_record": self._import_record,
+            "pipeline_root": pipeline_root,
+            "out_dir": str(self.export_out_dir()),
+            "baseline_sha256": str((run or {}).get("restored_sha256") or ""),
+        })
+
+    def export_out_dir(self) -> Path:
+        """导出目录：跟导出页同一口径（导入文件夹旁边的「导出结果」）。
+
+        没有导入记录时退回工作区下的同名文件夹——真实可写目录，
+        不写进任何界面文案，也不在界面里显示绝对路径。
+        """
+        original = str((self._import_record or {}).get("original_copy_path") or "")
+        if original:
+            return Path(original).resolve().parent / "导出结果"
+        base = self.workspace or (PKG_ROOT / "workspace")
+        return Path(base) / "导出结果"
+
+    def _sync_history(self, run: dict | None) -> None:
+        """校正完成 → 把本次记录写进运行摘要并让历史页重扫（重启也在）。"""
+        if self.history_module is None:
+            return
+        import fixtext_history as histdata
+
+        run_dir = str((run or {}).get("workdir") or "")
+        if run_dir:
+            hits = (run or {}).get("hits")
+            if hits is None:
+                # 老摘要可能没写命中数：按本次产物现算，算不出就留空（不编数字）
+                import fixtext_worker as worker
+
+                art = (run or {}).get("artifacts") or {}
+                hits = worker._count_replaced(
+                    Path(art["before_text"]) if art.get("before_text") else None,
+                    Path(art["after_text"]) if art.get("after_text") else None,
+                )
+            histdata.write_run_meta(
+                run_dir,
+                title=str((run or {}).get("title") or (run or {}).get("book") or ""),
+                book=str((run or {}).get("book") or ""),
+                author=str((run or {}).get("author") or ""),
+                hits=hits,
+                quote_errors=(run or {}).get("quote_errors"),
+                chapters=(run or {}).get("chapters"),
+                restored_sha256=str((run or {}).get("restored_sha256") or ""),
+                source_epub=str((run or {}).get("source_epub") or ""),
+            )
+        self._refresh_export_ctx(run)
+        self.history_module.refresh()
 
     def build_run_context(self, text_path: str) -> dict | None:
         """由导入结果推导一次校正所需的路径（真实文件，不做假运行）。
