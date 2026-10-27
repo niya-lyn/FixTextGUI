@@ -559,7 +559,13 @@ class VocabModule(QWidget):
     # ----- 历史与快照（底线② 自动快照 · 可恢复）-----
 
     def _snap_card(self) -> Card:
-        card = Card("历史与快照", basis="底线② 自动快照 · 可恢复")
+        """「历史与快照」面板（对齐原型 ``#historyPanel`` 的面板头）。
+
+        面板头左边是标题、右边是「恢复默认词库」按钮（原型同一位置、同一文案）；
+        面板体分两段：上面是时间线（``renderSnaps`` 的 1:1 移植），下面是
+        操作历史（每次变更的时间点 + 摘要）。两段都只显示人话，不出现路径。
+        """
+        card = Card(basis="底线② 自动快照 · 可恢复")
         self.basis_labels.append(card.basis)
         card.body_l.setSpacing(10)
 
@@ -567,18 +573,43 @@ class VocabModule(QWidget):
         hl = QHBoxLayout(head)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(10)
+        hl.addWidget(_label("历史与快照", size="base", color="neutral.800", weight="semibold"))
         hl.addStretch(1)
-        restore = QPushButton("↺ 恢复默认词库（保留自定义）")
-        restore.setObjectName("BtnGhost")
-        restore.setCursor(Qt.CursorShape.PointingHandCursor)
-        restore.clicked.connect(self.restore_default)
-        hl.addWidget(restore)
+        self._restore_btn = QPushButton("↺ 恢复默认词库（保留自定义）")
+        self._restore_btn.setObjectName("BtnGhost")
+        self._restore_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._restore_btn.clicked.connect(self.restore_default)
+        hl.addWidget(self._restore_btn)
         card.body_l.addWidget(head)
 
+        # ---- 时间线 ----
         self._snap_list = QVBoxLayout()
+        self._snap_list.setSpacing(0)
         wrap = QWidget()
         wrap.setLayout(self._snap_list)
         card.body_l.addWidget(wrap)
+
+        # ---- 操作历史 ----
+        op_head = QHBoxLayout()
+        op_head.setContentsMargins(0, 8, 0, 0)
+        op_head.setSpacing(8)
+        op_head.addWidget(_label("操作历史", size="sm", color="neutral.800", weight="semibold"))
+        self._op_summary = _label("", size="xs", color="neutral.500")
+        op_head.addWidget(self._op_summary)
+        op_head.addStretch(1)
+        self._op_toggle = _link_btn("展开全部")
+        self._op_toggle.clicked.connect(self._toggle_ops)
+        op_head.addWidget(self._op_toggle)
+        body_w = QWidget()
+        body_w.setLayout(op_head)
+        card.body_l.addWidget(body_w)
+
+        self._ops_expanded = False
+        self._op_list = QVBoxLayout()
+        self._op_list.setSpacing(0)
+        ops_wrap = QWidget()
+        ops_wrap.setLayout(self._op_list)
+        card.body_l.addWidget(ops_wrap)
         return card
 
     # ------------------------------------------------------------------ 渲染
@@ -599,6 +630,7 @@ class VocabModule(QWidget):
         self._render_entries()
         self._set_dict_active(self.dict_)
         self._render_snaps()
+        self._render_ops()
         self._update_sel_state()
         self._render_hint()
 
@@ -687,38 +719,117 @@ class VocabModule(QWidget):
         self._page = target
         self._render_entries()
 
-    def _render_snaps(self):
-        while self._snap_list.count():
-            item = self._snap_list.takeAt(0)
+    @staticmethod
+    def _clear_layout(lay: QVBoxLayout):
+        while lay.count():
+            item = lay.takeAt(0)
             w = item.widget()
             if w is not None:
                 w.setParent(None)
-        records = self.store.history()
+
+    def _render_snaps(self):
+        """时间线：1:1 移植原型 ``renderSnaps()``。
+
+        原型语义逐条对齐：
+        * 最新一个在前，圆点高亮 + 时间后面带「· 当前」，且不显示「恢复到此」；
+        * 其余每个时间点都带「恢复到此」链接；
+        * 一条记录都没有时，给空状态说明（不写任何内部概念）。
+        """
+        self._clear_layout(self._snap_list)
+        records = self.store.timeline(limit=12)
         if not records:
-            empty = _label("暂无变更记录（新增 / 编辑 / 删除 / 合并都会自动留一份）",
-                           size="xs", color="neutral.500")
-            empty.setContentsMargins(0, 4, 0, 4)
-            self._snap_list.addWidget(empty)
+            box = QWidget()
+            v = QVBoxLayout(box)
+            v.setContentsMargins(0, 12, 0, 12)
+            v.setSpacing(4)
+            t = _label("还没有可恢复的时间点", size="sm", color="neutral.800", weight="semibold")
+            t.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            sub = _label("新增 / 编辑 / 删除 / 合并词条时，会自动留一份，随时能回到当时的样子。",
+                         size="xs", color="neutral.500", wrap=True)
+            sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            v.addWidget(t)
+            v.addWidget(sub)
+            self._snap_list.addWidget(box)
             return
-        for i, s in enumerate(records):
+
+        for i, rec in enumerate(records):
+            cur = bool(rec.get("is_current"))
             item = QWidget()
+            item.setObjectName("SnapItem")
+            item.setStyleSheet(
+                f"QWidget#SnapItem{{border-bottom:1px solid {c('neutral.100')};}}")
             hl = QHBoxLayout(item)
-            hl.setContentsMargins(0, 10, 0, 10)
+            hl.setContentsMargins(2, 10, 2, 10)
             hl.setSpacing(10)
             dot = QLabel()
             dot.setFixedSize(9, 9)
             dot.setStyleSheet(
-                f"background:{c('success') if i == 0 else c('neutral.200')};"
-                + ("border:3px solid %s;" % c("success.bg") if i == 0 else "")
+                f"background:{c('success') if cur else c('neutral.200')};"
+                + (f"border:3px solid {c('success.bg')};" if cur else "")
                 + "border-radius:999px")
             hl.addWidget(dot)
-            hl.addWidget(_label(s["label"], size="sm", color="neutral.800"))
+            hl.addWidget(_label(rec["label"], size="sm", weight="semibold",
+                                color="neutral.800"), 0)
             hl.addStretch(1)
-            hl.addWidget(_label(s.get("time", ""), size="xs", color="neutral.500"))
-            b = _link_btn("恢复到此")
-            b.clicked.connect(lambda _c, idx=i: self.restore_snap(idx))
-            hl.addWidget(b)
+            txt = rec.get("time", "")
+            hl.addWidget(_label(f"{txt} · 当前" if cur else txt, size="xs",
+                                color="neutral.500"))
+            if not cur:
+                b = _link_btn("恢复到此")
+                b.setToolTip(f"回到 {rec.get('time', '')} 这一刻的词库内容")
+                b.clicked.connect(lambda _c, pid=int(rec["id"]): self.restore_point(pid))
+                hl.addWidget(b)
             self._snap_list.addWidget(item)
+
+    def _toggle_ops(self):
+        self._ops_expanded = not self._ops_expanded
+        self._op_toggle.setText("收起" if self._ops_expanded else "展开全部")
+        self._render_ops()
+
+    def _render_ops(self):
+        """操作历史：每次变更的时间点 + 摘要，与时间点恢复联动。
+
+        「联动」体现在每行右侧的「回到这里」——点了就是「恢复到该行那次变更
+        完成后的状态」，与时间线上同名时间点是同一个动作、同一份数据。
+        """
+        self._clear_layout(self._op_list)
+        total = self.store.op_count()
+        limit = 30 if self._ops_expanded else 6
+        rows = self.store.ops(limit=limit)
+        self._op_toggle.setVisible(total > 6)
+        self._op_toggle.setText("收起" if self._ops_expanded else "展开全部")
+        self._op_summary.setText(f"共 {_fmt_num(total)} 次变更" if total else "")
+        if not rows:
+            lab = _label("还没有操作记录。每次改动都会记下时间与内容，可随时回到某个时间点。",
+                         size="xs", color="neutral.500", wrap=True)
+            lab.setContentsMargins(0, 6, 0, 2)
+            self._op_list.addWidget(lab)
+            return
+
+        current_pid = self.store.current_point_id()
+
+        for op in rows:
+            item = QWidget()
+            hl = QHBoxLayout(item)
+            hl.setContentsMargins(0, 8, 0, 8)
+            hl.setSpacing(10)
+            hl.addWidget(_label(op.get("time", ""), size="xs", color="neutral.500"))
+            pill = QLabel(op.get("act_name", "变更"))
+            pill.setStyleSheet(
+                f"background:{c('neutral.100')};color:{c('neutral.700')};"
+                f"border-radius:6px;padding:2px 8px;font-size:{fs('xs')}")
+            hl.addWidget(pill)
+            hl.addWidget(_label(op.get("summary", ""), size="sm", color="neutral.800"), 0)
+            hl.addStretch(1)
+            pid = int(op.get("point_id") or 0)
+            if pid and pid != current_pid:
+                b = _link_btn("回到这里")
+                b.setToolTip(f"把词库恢复到 {op.get('time', '')} 这次变更之后")
+                b.clicked.connect(lambda _c, p=pid: self.restore_point(p))
+                hl.addWidget(b)
+            elif pid and pid == current_pid:
+                hl.addWidget(_label("当前", size="xs", color="success"))
+            self._op_list.addWidget(item)
 
     def _update_sel_state(self):
         valid = [i for i in self._selected if self._is_custom(i)]
@@ -799,17 +910,37 @@ class VocabModule(QWidget):
             return
         self._selected = {i for i in self._selected if self._by_id(i)}
         self._render_all()
-        self._toast("已撤销上一步操作", with_undo=False)
+        if rec.get("builtin_restored") is False:
+            self._toast("已撤销上一步，内置词库未能一并还原")
+        else:
+            self._toast(f"已撤销「{rec['label']}」，词库回到操作前")
+
+    def restore_point(self, point_id: int):
+        """「恢复到此」：把该时间点的内容原样写回（原型 ``restoreSnap`` 的落点）。"""
+        self._hide_status()
+        rec = self.store.restore_point(point_id)
+        if not rec:
+            self._toast("这个时间点已无法恢复")
+            return
+        self._selected = {i for i in self._selected if self._by_id(i)}
+        self._page = 0
+        self._render_all()
+        if rec.get("identical"):
+            self._toast("已恢复到所选时间点", with_undo=True)
+        else:
+            self._toast("已恢复，但没能在恢复后与记录核对一致，建议再核对一次")
 
     def restore_snap(self, idx: int):
-        """按「历史与快照」里的真实记录把自定义词库原字节回写。"""
+        """按「历史与快照」里第 ``idx`` 条记录退回它之前的状态。"""
+        self._hide_status()
         rec = self.store.undo_to(idx)
         if not rec:
             self._toast("这份记录已无法恢复")
             return
         self._selected = {i for i in self._selected if self._by_id(i)}
+        self._page = 0
         self._render_all()
-        self._toast("已恢复到所选记录", with_undo=False)
+        self._toast(f"已退回「{rec['label']}」之前")
 
     # ------------------------------------------------------------------ 新增词条
 
@@ -1119,21 +1250,17 @@ class VocabModule(QWidget):
         m.show()
 
     def add_book_words(self, modal: Modal) -> int:
-        added = 0
+        """整批一起写：一次还原点覆盖整批，撤销时整批一起回去。"""
+        picked = []
         for i, cb in enumerate(self._book_checks or []):
-            if not cb.isChecked():
-                continue
-            w = self._book_words[i]
-            word = w["word"]
-            value = w.get("value") or word
-            if self.store.conflicts_for_add(word, value):
-                continue           # 已在词库里就不再重复写入
-            try:
-                self.store.add_entry(word=word, value=value, typ="专有名词",
-                                     book=self._book_title)
-            except VocabDataError:
-                continue
-            added += 1
+            if cb.isChecked() and i < len(self._book_words):
+                picked.append(self._book_words[i])
+        try:
+            res = self.store.add_book_words(picked, self._book_title)
+        except VocabDataError as exc:
+            self._toast(f"没有加入：{exc}")
+            return 0
+        added = res["added"]
         self.hide_banner()
         modal.accept()
         self._render_all()
@@ -1142,21 +1269,59 @@ class VocabModule(QWidget):
 
     # ------------------------------------------------------------------ 恢复默认（底线⑤）
 
-    def restore_default(self):
-        """只重置内置词库；自定义词条原样保留（内置本来只读，这里做完整性自检 + 说明）。"""
-        d = ConfirmDialog(
-            icon="↺", title="恢复默认词库",
-            note="底线⑤：恢复默认词库只重置内置词库，不影响你的自定义词条。",
-            confirm_text="确认恢复", confirm_kind="primary", parent=self)
-        if d.exec() != QDialog.DialogCode.Accepted:
-            return
-        ok, detail = self.store.builtin.self_check() if hasattr(
-            self.store.builtin, "self_check") else (self.store.builtin.available, "")
+    def open_restore_default(self) -> dict | None:
+        """第一步：预览（只读）——把会影响什么先摊开，不写任何东西。"""
+        pv = self.store.preview_restore_default()
+        self._restore_preview = pv
+        m = Modal(icon="↺", title="恢复默认词库", parent=self)
+        m.add_note("底线⑤：恢复默认词库只重置内置词库，不影响你的自定义词条。", "info")
+        m.add_widget(_label(
+            "将把内置词库（常规校正 / 标点规范 / 繁简转换）重置为出厂版本，自定义词条保持不变。可撤销。",
+            size="sm", color="neutral.700", wrap=True))
+        rows = [
+            ("内置词条", f"{_fmt_num(pv['total_entries'])} 条（"
+                         f"常规校正 {_fmt_num(pv['tier_counts'].get('b1', 0))} / "
+                         f"标点规范 {_fmt_num(pv['tier_counts'].get('b2', 0))} / "
+                         f"繁简转换 {_fmt_num(pv['tier_counts'].get('b3', 0))}）"),
+            ("与出厂版本的差异", "已是出厂状态（无需改动）" if pv["already_default"]
+                                 else f"{pv['changed_files']} 份内容与出厂版本不同"),
+            ("我的词库", f"{_fmt_num(pv['custom_entries'])} 条，保持不动"),
+            ("可以撤销", "可以，恢复后仍能撤回"),
+        ]
+        m.add_widget(_mini_table(["项目", "影响"], rows))
+        m.add_foot("取消", "ghost", m.reject)
+        m.add_foot("确认恢复", "primary",
+                   lambda: self.do_restore_default(mv=m))
+        m.show()
+        return pv
+
+    def do_restore_default(self, *, mv=None) -> dict:
+        """第二步：执行恢复（写内置词库的工作副本，自定义词条一个字节都不动）。"""
+        self._hide_status()
+        before_custom = len(self.store.custom)
+        try:
+            res = self.store.restore_default()
+        except VocabDataError as exc:
+            self._toast(f"没有恢复：{exc}")
+            return dict(ok=False, reason=str(exc))
+        if mv is not None:
+            try:
+                mv.accept()
+            except RuntimeError:
+                pass
+        self._page = 0
         self._render_all()
-        if ok:
-            self._toast(f"内置词库已校验完整，自定义词条保留（{_fmt_num(len(self.store.custom))} 条）")
-        else:
-            self._toast(f"内置词库不完整：{detail}")
+        if not res["custom_untouched"]:
+            self._toast("已恢复内置词库，但自定义词库内容有变化，请核对")
+            return dict(res, ok=False)
+        tail = "（与出厂版本一致）" if res["identical_to_factory"] else ""
+        self._toast(f"已恢复默认词库{tail}，自定义 {_fmt_num(before_custom)} 条保留",
+                    with_undo=True)
+        return dict(res, ok=True)
+
+    def restore_default(self):
+        """入口：先预览、再二次确认、最后执行（底线④ 批量先预览）。"""
+        self.open_restore_default()
 
     # ------------------------------------------------------------------ 公共
 
