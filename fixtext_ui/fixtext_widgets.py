@@ -231,6 +231,7 @@ class FieldRow(QWidget):
         else:
             hl.addStretch(1)
 
+        self._chip = None
         if chip is not None:
             cp = QLabel(chip)
             cp.setStyleSheet(
@@ -240,9 +241,15 @@ class FieldRow(QWidget):
             )
             cp.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
             hl.addWidget(cp)
+            self._chip = cp
 
         if control is not None:
             hl.addWidget(control)
+
+    def set_chip(self, text: str) -> None:
+        """更新右侧统计小标签（数据变了就地改，不重建整行）。"""
+        if self._chip is not None:
+            self._chip.setText(str(text))
 
 
 class RadioDot(QFrame):
