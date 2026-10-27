@@ -717,11 +717,18 @@ class OneClickModule(QWidget):
         stats = QHBoxLayout()
         stats.setContentsMargins(0, 14, 0, 12)
         stats.setSpacing(12)
-        for num, lab in (
+        # §2.4.2 第 1 条：处理完成时就告诉用户「这本书抽到了多少条专有词」，
+        # 数就是引擎实际产物（去重后的清单条数），不是估算。
+        stats_items = [
             (f"{_fmt_num(summary.get('chapters'))} 章", "全书章节"),
             (f"{_fmt_num(summary.get('replace_rules'))}", "校正词库规则（条）"),
             (f"{_fmt_num(summary.get('quote_errors'))}", "引号待修（处）"),
-        ):
+        ]
+        book_n = summary.get('book_words_unique')
+        if book_n is None:
+            book_n = len(summary.get('book_words') or [])
+        stats_items.append((f"{_fmt_num(book_n)} 条", "本书专有词条"))
+        for num, lab in stats_items:
             stats.addWidget(self._stat(num, lab), 1)
         card.body_l.addLayout(stats)
 
@@ -744,8 +751,16 @@ class OneClickModule(QWidget):
             rows.append(f"替换环节：{_fmt_num(ci)} 字符 → {_fmt_num(co)} 字符"
                         + ("（有内容被修正）" if ci != co else "（本词库未命中）"))
         if summary.get("bookmap_entries") is not None:
-            rows.append(f"提取到 {_fmt_num(summary['bookmap_entries'])} 条本书专有词条，"
-                        "可在词库管理里确认后加入")
+            raw_n = summary.get("book_words_declared_total")
+            uniq_n = summary.get("book_words_unique")
+            if uniq_n is not None and raw_n is not None and raw_n != uniq_n:
+                rows.append(
+                    f"提取到 {_fmt_num(raw_n)} 条本书专有词条（按写法合并后 "
+                    f"{_fmt_num(uniq_n)} 条可加入），可在下面预览后加入词库")
+            else:
+                rows.append(
+                    f"提取到 {_fmt_num(summary['bookmap_entries'])} 条本书专有词条，"
+                    "可在下面预览后加入词库")
         sha = summary.get("restored_sha256")
         if sha:
             rows.append(f"成品校验指纹 {sha[:16]}…（与重跑结果一致）")
@@ -810,9 +825,15 @@ class OneClickModule(QWidget):
 
         acts.addStretch(1)
 
-        words = QPushButton("✨ 把本书专有词条加入词库")
+        book_n = (self._summary or {}).get('book_words_unique')
+        if book_n is None:
+            book_n = len((self._summary or {}).get('book_words') or [])
+        words = QPushButton(
+            f"✨ 预览本书专有词条（{_fmt_num(book_n)} 条）并加入词库")
         words.setObjectName("BtnOutline")
         words.setCursor(Qt.CursorShape.PointingHandCursor)
+        words.setToolTip("先看清单再决定加入哪些，加入后下次校正自动生效")
+        words.setAccessibleName("预览本书专有词条")
         words.clicked.connect(self._open_book_words)
         acts.addWidget(words)
         return acts

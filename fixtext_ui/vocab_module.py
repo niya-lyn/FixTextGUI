@@ -28,7 +28,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDialog,
-    QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy,
+    QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy, QScrollArea,
 )
 
 from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO
@@ -1217,55 +1217,192 @@ class VocabModule(QWidget):
     # ------------------------------------------------------------------ 本书专有词（2.4.2）
 
     def open_book_words(self):
+        """本书专有词条 · 加入预览（§2.4.2 第 2 条）。
+
+        清单列**词条 / 类型 / 替换值 / 出现次数**，逐条可勾选并可整组全选；
+        **条数等于引擎实际抽出的条数**（引擎侧不截断，见 bookmap 阶段的
+        条数守恒门禁），不做「只显示前 N 条」的静默丢条。
+        """
         if not self._book_words:
-            self._toast("还没有可加入的本书专有词条")
+            # 空状态走人话说明，不显示一张空表格
+            self._toast("这本书校正后没有提取到可加入的专有词条，无需操作")
             return
-        m = Modal(icon="✨", title="本书专有词条（加入预览）", parent=self)
-        m.add_note("加入前有预览，可逐条或整组确认；加入后下次校正自动生效。", "info")
-        checks = []
+        total = len(self._book_words)
+        m = Modal(icon="✨", title="本书专有词条（加入预览）", parent=self,
+                  min_width=780)
+        m.add_note(
+            f"共 {_fmt_num(total)} 条，全部列在下方，可在下面逐条勾选或整组选择；"
+            "加入后下次校正自动生效，加入动作可以撤销。", "info")
+
+        # ---- 整组选择行 ----
+        top = QWidget()
+        tl = QHBoxLayout(top)
+        tl.setContentsMargins(0, 0, 0, 0)
+        tl.setSpacing(10)
+        all_cb = QCheckBox("整组全选")
+        all_cb.setChecked(True)
+        all_cb.setCursor(Qt.CursorShape.PointingHandCursor)
+        tl.addWidget(all_cb)
+        self._book_all_cb = all_cb
+        self._book_pick_label = _label("", size="xs", color="neutral.500")
+        tl.addWidget(self._book_pick_label, 1)
+        m.add_widget(top)
+
+        # ---- 清单（可滚动，但内容是全量） ----
+        checks: list[QCheckBox] = []
         rows = QVBoxLayout()
         rows.setContentsMargins(0, 0, 0, 0)
-        rows.setSpacing(4)
-        for w in self._book_words:
+        rows.setSpacing(0)
+        head = QWidget()
+        hl = QHBoxLayout(head)
+        hl.setContentsMargins(2, 0, 2, 4)
+        hl.setSpacing(10)
+        for txt, stretch in (("加入", 0), ("词条", 3), ("类型", 1),
+                             ("替换值", 3), ("出现次数", 1)):
+            hl.addWidget(_label(txt, size="xs", color="neutral.600",
+                                weight="semibold"), stretch)
+        rows.addWidget(head)
+        rows.addWidget(hline())
+        for i, w in enumerate(self._book_words):
             rw = QWidget()
             rl = QHBoxLayout(rw)
-            rl.setContentsMargins(0, 0, 0, 0)
+            rl.setContentsMargins(2, 5, 2, 5)
             rl.setSpacing(10)
             cb = QCheckBox()
             cb.setChecked(True)
+            cb.setCursor(Qt.CursorShape.PointingHandCursor)
+            cb.toggled.connect(self._book_sync_pick_label)
             checks.append(cb)
-            rl.addWidget(cb)
-            rl.addWidget(_label(w["word"], size="sm", weight="bold",
-                                color="neutral.900", mono=True), 0)
-            rl.addWidget(_label(w.get("note") or "", size="xs",
-                                color="neutral.500"), 1)
+            rl.addWidget(cb, 0)
+            rl.addWidget(_label(w.get("word") or "", size="xs",
+                                color="neutral.900", weight="bold", mono=True), 3)
+            rl.addWidget(_label(w.get("type") or "专有名词", size="xs",
+                                color="neutral.600"), 1)
+            rl.addWidget(_label(w.get("value") or w.get("word") or "", size="xs",
+                                color="neutral.700", mono=True), 3)
+            rl.addWidget(_label(f"{int(w.get('count') or 1)} 次", size="xs",
+                                color="neutral.500", mono=True), 1)
             rows.addWidget(rw)
-        self._book_checks = checks
+            if i != len(self._book_words) - 1:
+                rows.addWidget(hline())
         rows_box = QWidget()
         rows_box.setLayout(rows)
-        m.add_widget(rows_box)
+        area = QScrollArea()
+        area.setWidgetResizable(True)
+        area.setFrameShape(QFrame.Shape.NoFrame)
+        area.setMinimumHeight(320)
+        area.setMaximumHeight(420)
+        area.setWidget(rows_box)
+        area.setStyleSheet(
+            f"QScrollArea{{border:1px solid {c('neutral.200')};"
+            f"border-radius:10px;background:{c('neutral.0')}}}")
+        m.add_widget(area)
+
+        self._book_checks = checks
+        all_cb.toggled.connect(
+            lambda on: [cb.setChecked(bool(on)) for cb in checks])
+        self._book_sync_pick_label()
         m.add_foot("取消", "ghost", m.reject)
         m.add_foot("加入选中词条到「我的词库」", "primary",
                    lambda: self.add_book_words(m))
         m.show()
 
-    def add_book_words(self, modal: Modal) -> int:
-        """整批一起写：一次还原点覆盖整批，撤销时整批一起回去。"""
+    def _book_sync_pick_label(self):
+        """实时反映「已勾选 X / 共 Y 条」，让用户确认加入范围。"""
+        lbl = getattr(self, "_book_pick_label", None)
+        if lbl is None:
+            return
+        picks = [cb for cb in (self._book_checks or []) if cb.isChecked()]
+        total = len(self._book_words)
+        self._book_all_cb_guard(picks, total)
+        lbl.setText(f"已勾选 {_fmt_num(len(picks))} / 共 {_fmt_num(total)} 条")
+
+    def _book_all_cb_guard(self, picks: list, total: int):
+        cb = getattr(self, "_book_all_cb", None)
+        if cb is None:
+            return
+        prev = cb.blockSignals(True)
+        cb.setChecked(bool(total) and len(picks) == total)
+        cb.blockSignals(prev)
+
+    def add_book_words(self, modal: Modal | None = None) -> int:
+        """整批一起写：一次还原点覆盖整批，撤销时整批一起回去。
+
+        查重结果**必须显式展示**：写进去几条、跳过几条、哪几条冲突、
+        冲突是同词同值 / 同词异值 / 同值异词——不静默跳过、不静默覆盖。
+        """
         picked = []
         for i, cb in enumerate(self._book_checks or []):
             if cb.isChecked() and i < len(self._book_words):
                 picked.append(self._book_words[i])
+        if not picked:
+            self._toast("还没有勾选任何词条，请先在清单里勾选要加入的词条")
+            return 0
         try:
             res = self.store.add_book_words(picked, self._book_title)
         except VocabDataError as exc:
             self._toast(f"没有加入：{exc}")
             return 0
-        added = res["added"]
+        added = int(res.get("added") or 0)
+        skipped = list(res.get("skipped_exists") or [])
+        conflicts = list(res.get("conflicts") or [])
+        if modal is not None:
+            modal.accept()
         self.hide_banner()
-        modal.accept()
         self._render_all()
-        self._toast(f"已加入 {added} 条专有词条到「我的词库」", with_undo=added > 0)
+        self._book_report(res, added, skipped, conflicts)
         return added
+
+    def _book_report(self, res: dict, added: int,
+                     skipped: list, conflicts: list):
+        """把加入结果（含全部冲突明细）摆到界面，不静默跳过。"""
+        if not skipped and not conflicts:
+            self._toast(f"已加入 {added} 条专有词条到「我的词库」",
+                        with_undo=added > 0)
+            return
+        # 有跳过 / 冲突 → 用弹窗把明细一条条列出来
+        m = Modal(icon="ℹ️", title="加入结果（含未加入的词条）", parent=self,
+                  min_width=720)
+        m.add_note(
+            f"本次提交 {int(res.get('requested') or 0)} 条："
+            f"已加入 {added} 条，跳过 {len(skipped)} 条，冲突 {len(conflicts)} 条。",
+            "warn" if conflicts else "info")
+        if skipped:
+            rows = [(w.get("word", ""), w.get("value", ""),
+                     str(w.get("reason") or "词库里已有同词同值的词条"))
+                    for w in skipped[:50]]
+            m.add_widget(_label(f"已在词库里（无需重复加入）· {len(skipped)} 条",
+                                size="sm", weight="bold", color="neutral.900"))
+            m.add_widget(_mini_table(["词条", "替换值", "说明"], rows,
+                                     mono_cols={0, 1}))
+            if len(skipped) > 50:
+                m.add_widget(_label(
+                    f"（另有 {len(skipped) - 50} 条同类，未逐条列出）",
+                    size="xs", color="neutral.500"))
+        if conflicts:
+            m.add_widget(_label(
+                f"与已有词条冲突，未写入（避免覆盖）· {len(conflicts)} 条",
+                size="sm", weight="bold", color="error"))
+            rows = []
+            for c0 in conflicts[:50]:
+                kinds = "、".join(sorted({str(h.get("kind") or "") for h in
+                                          (c0.get("hits") or []) if h.get("kind")}))
+                wheres = "、".join(sorted({str(h.get("where") or "") for h in
+                                           (c0.get("hits") or []) if h.get("where")}))
+                rows.append((c0.get("word", ""), c0.get("value", ""),
+                             kinds or "冲突", wheres or "词库"))
+            m.add_widget(_mini_table(
+                ["词条", "想加入的替换值", "冲突种类", "已在哪一级"], rows,
+                mono_cols={0, 1}))
+            if len(conflicts) > 50:
+                m.add_widget(_label(
+                    f"（另有 {len(conflicts) - 50} 条同类，未逐条列出）",
+                    size="xs", color="neutral.500"))
+        m.add_foot("知道了", "primary", m.accept)
+        m.show()
+        self._toast(
+            f"已加入 {added} 条；跳过 {len(skipped)} 条；冲突 {len(conflicts)} 条未写入",
+            with_undo=added > 0)
 
     # ------------------------------------------------------------------ 恢复默认（底线⑤）
 

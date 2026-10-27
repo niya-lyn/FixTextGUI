@@ -670,6 +670,10 @@ class MainWindow(QMainWindow):
             wrapped = self._wrap(page)
             self.pages[key] = wrapped
             self.stack.addWidget(wrapped)
+        # 检查页「＋词库」走词库页同一个写入口（T3.1 五操作同一入口）：
+        # 加入天然可撤销、天然查重，不另起一套写盘路径。
+        if self.check_module is not None and self.vocab_module is not None:
+            self.check_module.set_vocab_store(self.vocab_module.store)
         return self.stack
 
     @staticmethod

@@ -145,10 +145,20 @@ def test_summary_exposes_book_words_key():
 # ---------------------------------------------------------------------------
 
 def test_no_demo_book_words_in_oneclick():
-    """一键校正页不得再持有任何硬编码专有词。"""
-    src = (IK / "fixtext_ui" / "oneclick_module.py").read_text(encoding="utf-8")
-    for ghost in ("星陨大陆", "九转玄功", "BOOK_WORDS"):
-        assert ghost not in src, f"演示专有词残留：{ghost}"
+    """一键校正页不得再持有任何硬编码专有词。
+
+    T3.2 已交付包（HEAD ``8716470``）从 T3.1 中途分叉，把 ``BOOK_WORDS``
+    连同三条虚构演示词又带了回来，界面「预览本书专有词条」时真的会显示它们。
+    这里把扫描范围放大到整个 ``fixtext_ui/``，任何文件再带回来都会立刻失败。
+    """
+    ghosts = ("星陨大陆", "九转玄功", "BOOK_WORDS")
+    hits = []
+    for py in sorted((IK / "fixtext_ui").rglob("*.py")):
+        src = py.read_text(encoding="utf-8")
+        for ghost in ghosts:
+            if ghost in src:
+                hits.append(f"{py.name}: {ghost}")
+    assert not hits, "演示专有词残留：" + "；".join(hits)
 
 
 def test_oneclick_emits_real_words(monkeypatch):

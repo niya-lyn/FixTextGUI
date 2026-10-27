@@ -69,6 +69,8 @@ PAGE_SIZE = 40
 
 class ProblemRow(QFrame):
     clicked = Signal(int)
+    #: 「加入词库」按钮被点（§2.4.2 第 4 条：检查页问题行 → 预览 → 确认加入）
+    addRequested = Signal(int)
 
     def __init__(self, idx: int, p: dict, selected: bool, parent=None):
         super().__init__(parent)
@@ -115,6 +117,21 @@ class ProblemRow(QFrame):
             badge = Pill("待确认", "warn")
         hl.addWidget(badge)
 
+        # 加入词库：把这一处的可疑写法收进「我的词库」，下次同类直接纠正
+        self.add_btn = QPushButton("＋词库")
+        self.add_btn.setObjectName("LinkBtn")
+        self.add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.add_btn.setToolTip("把这一处的写法加入「我的词库」，下次校正自动纠正")
+        self.add_btn.setAccessibleName("加入词库")
+        self.add_btn.setStyleSheet(
+            f"QPushButton#LinkBtn{{background:transparent;border:none;"
+            f"color:{c('primary.700')};font-weight:600;font-size:11px;"
+            f"padding:3px 6px;border-radius:6px}}"
+            f"QPushButton#LinkBtn:hover{{background:{c('primary.100')}}}")
+        self.add_btn.clicked.connect(
+            lambda _=False, i=idx: self.addRequested.emit(i))
+        hl.addWidget(self.add_btn)
+
     def mousePressEvent(self, event):
         self.clicked.emit(self.idx)
         super().mousePressEvent(event)
@@ -138,6 +155,10 @@ class CheckModule(QWidget):
         self.basis_labels = []
         self._marks: dict[str, str] = {}
         self._run_dir: str = ""
+        #: 词库写入口（由主窗口注入；None 时「＋词库」只给引导，不静默失败）
+        self.vocab_store = None
+        #: 最近一次加入结果的还原点（供界面提示「可撤销」）
+        self.last_add_point: int = 0
 
         self._toast_timer = QTimer(self)
         self._toast_timer.setSingleShot(True)
@@ -590,9 +611,92 @@ class CheckModule(QWidget):
             idx = start + off
             row = ProblemRow(idx, p, idx == self.cur)
             row.clicked.connect(self.select)
+            row.addRequested.connect(self.add_problem_to_vocab)
             self.prob_box.addWidget(row)
         self.prob_box.addStretch(1)
         self._update_pager()
+
+    # -------------------------------------------------- 问题行 → 加入词库（§2.4.2 第 4 条）
+
+    def set_vocab_store(self, store) -> None:
+        """注入词库写入口（T3.1 的五操作同一入口，加入也走它 → 天然可撤销）。"""
+        self.vocab_store = store
+
+    def problem_candidate(self, i: int) -> dict:
+        """把第 i 处问题整理成一条待加入词库的词条。
+
+        取这一处的「可疑写法」作为原词：自动改法能算出来的，替换值就是改后；
+        算不出来的（需要人工判断）不上「加入词库」这条快路，避免写进错值。
+        """
+        p = self.probs[i]
+        word = str(p.get("hl") or "").strip()
+        fixed = checkdata.apply_action(p).strip()
+        return dict(
+            word=word,
+            value=(fixed or word),
+            type="错词校正",
+            count=1,
+            note=f"检查页第 {p.get('line')} 行 · {p.get('type') or ''}".strip(" ·"),
+        )
+
+    def add_problem_to_vocab(self, i: int) -> dict | None:
+        """问题行「＋词库」：预览 → 确认加入（可撤销、必须查重）。"""
+        if not self._guard() or not (0 <= i < len(self.probs)):
+            return None
+        if self.vocab_store is None:
+            self.toast("词库暂不可用，请到「词库管理」页手动新增这一条")
+            return None
+        cand = self.problem_candidate(i)
+        if not cand["word"]:
+            self.toast("这一处没有可加入词库的写法")
+            return None
+        if cand["word"] == cand["value"]:
+            self.toast("这一处还没有可靠的自动改法，暂不建议加入词库")
+            return None
+
+        box = QMessageBox(self)
+        box.setWindowTitle("加入词库预览")
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setText("把这一处写法加入「我的词库」？")
+        box.setInformativeText(
+            f"词条：{cand['word']}\n"
+            f"替换值：{cand['value']}\n"
+            f"类型：{cand['type']}\n\n"
+            "加入后下次校正同类错误自动生效，加入动作可以撤销。"
+        )
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
+        box.button(QMessageBox.StandardButton.Cancel).setText("取消")
+        box.button(QMessageBox.StandardButton.Ok).setText("确认加入")
+        box.setDefaultButton(QMessageBox.StandardButton.Ok)
+        if box.exec() != QMessageBox.StandardButton.Ok:
+            return None
+
+        try:
+            res = self.vocab_store.add_book_words([cand], str(
+                (self.report or {}).get("book") or ""))
+        except Exception as exc:                       # 词库写失败要说清原因
+            self.toast(f"没有加入：{exc}")
+            return None
+
+        added = int(res.get("added") or 0)
+        skipped = list(res.get("skipped_exists") or [])
+        conflicts = list(res.get("conflicts") or [])
+        self.last_add_point = int(res.get("point_id") or 0)
+        if added:
+            self.toast(f"已加入「{cand['word']}」到「我的词库」，可撤销")
+        elif conflicts:
+            kinds = "、".join(sorted({str(h.get("kind") or "") for c0 in conflicts
+                                      for h in (c0.get("hits") or []) if h.get("kind")}))
+            self.toast(
+                f"没有加入：「{cand['word']}」与词库里已有词条冲突（{kinds}），"
+                "未覆盖已有写法")
+        elif skipped:
+            self.toast(f"没有重复加入：「{cand['word']}」已在词库中")
+        else:
+            self.toast("没有加入：这一条被词库规则跳过")
+        return dict(res, added=added, skipped=len(skipped),
+                    conflicts=len(conflicts), candidate=cand)
 
     def _empty_text(self) -> str:
         return (
