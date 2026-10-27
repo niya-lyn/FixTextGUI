@@ -85,7 +85,7 @@ def _count_replaced(before: Path | None, after: Path | None) -> int | None:
 
 
 def _artifact_paths(layout: dict, replace: dict, quote: dict,
-                    restore: dict) -> dict[str, str]:
+                    restore: dict, bookmap: dict | None = None) -> dict[str, str]:
     """汇总本次运行的**权威产物路径**（各阶段报告里自述的绝对路径）。
 
     导出侧拿它定位校正后的正文，不必再按文件名推测——导入侧固定写
@@ -103,6 +103,7 @@ def _artifact_paths(layout: dict, replace: dict, quote: dict,
         "checked_file": str(quote.get("checked_file") or ""),
         "ledger": ledger,
         "restored_epub": str(restore.get("restored_epub") or ""),
+        "book_map_file": str((bookmap or {}).get("book_map_file") or ""),
     }
 
 
@@ -382,18 +383,48 @@ class CorrectionJob:
                 Path(str(replace.get("after_path") or "")) if replace.get("after_path") else None,
             ),
             "bookmap_entries": sum(counts.values()) if counts else None,
+            "book_words": self._book_words_preview(bookmap),
             "restored_sha256": restore.get("restored_sha256"),
             "stage_elapsed": dict(self.stage_elapsed),
             "total_elapsed_s": round(self.elapsed_s(), 3),
             # 本次运行的**权威产物路径**：各阶段自己报告的绝对路径。
             # 导出侧据此定位，不再按文件名猜（导入侧固定写 book.txt，
             # 而管线按书名命名，两套名字天生不同 → 猜必错）。
-            "artifacts": _artifact_paths(layout, replace, quote, restore),
+            "artifacts": _artifact_paths(layout, replace, quote, restore, bookmap),
         }
         # 运行摘要落盘（工作目录内，供导出/排查；界面不直接展示路径）
         from fixtext_pipeline.config import dump_json
         dump_json(cfg.paths.report / "ui_run_summary.json", summary)
         return summary
+
+    # ---------------- 本书专有词 ----------------
+
+    def _book_words_preview(self, bookmap: dict) -> list[dict]:
+        """把 bookmap 阶段抽出的**真实**专有词条整理成界面可用的三元组。
+
+        没有真实词条时返回空列表——界面据此不显示横幅，绝不退回演示数据。
+
+        抽取是按上下文片段做的，同一处改动在相邻上下文里会各抽一次，所以这里
+        按「原词 + 替换值」去重：横幅报的条数必须是用户真正能加入的条数，
+        否则会出现「说 20 条、实际只写进 19 条」的落差。
+        """
+        out: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+        book = str(self.title or self.epub.stem or "")
+        preview = bookmap.get("entry_preview") or {}
+        for _key, arr in preview.items():
+            for w in arr or []:
+                before = str(w.get("before") or "").strip()
+                after = str(w.get("after") or "").strip()
+                if not before:
+                    continue
+                key = (before, after or before)
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(dict(word=before, value=after or before,
+                                note=f"本书专有词 · 《{book}》"))
+        return out
 
     # ---------------- 引擎引导 ----------------
 

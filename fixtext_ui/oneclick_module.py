@@ -82,13 +82,6 @@ ENGINES = [
 # 进度步骤不再是演的：来自 M1 编排器六阶段的人话映射
 # （fixtext_worker.HUMAN_STAGES），由真实任务信号驱动，见 do_correction。
 
-BOOK_WORDS = [
-    ("星陨大陆", "本书专有地名"),
-    ("墨羽", "角色名"),
-    ("九转玄功", "功法名"),
-]
-
-
 def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
            weight: str | None = None, wrap: bool = False) -> QLabel:
     lab = QLabel(text)
@@ -117,6 +110,8 @@ class OneClickModule(QWidget):
     correctionDone = Signal(object)
     #: 「去导出」→ 主窗口切到导出页
     gotoExport = Signal()
+    #: 本书专有词条就绪（真实词条列表, 书名）→ 交给词库管理页，由用户确认后加入
+    bookWordsReady = Signal(object, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -833,77 +828,17 @@ class OneClickModule(QWidget):
         self._toast("导出时会自动附上替换统计（文本 / 表格）")
 
     def _open_book_words(self):
-        dlg = QDialog(self)
-        dlg.setWindowTitle("本书专有词条（加入预览）")
-        dlg.setModal(True)
-        dlg.setMinimumWidth(460)
+        """本书专有词条：只取本次运行真实抽出的词，交给词库页确认后写入。
 
-        root = QVBoxLayout(dlg)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
-
-        head = QWidget()
-        head.setObjectName("ModalHead")
-        hl = QHBoxLayout(head)
-        hl.setContentsMargins(18, 16, 18, 16)
-        hl.addWidget(_label("✨ 本书专有词条（加入预览）", size="lg", weight="bold"))
-        root.addWidget(head)
-
-        body = QWidget()
-        bl = QVBoxLayout(body)
-        bl.setContentsMargins(18, 16, 18, 16)
-        bl.setSpacing(12)
-
-        note = QLabel("加入前预览，可逐条确认；加入后下次校正自动生效。")
-        note.setWordWrap(True)
-        note.setStyleSheet(
-            f"background:{c('info.bg')};border:1px solid {c('info.border')};"
-            f"color:{c('info')};border-radius:10px;padding:10px 14px;"
-            f"font-size:{fs('sm')}")
-        bl.addWidget(note)
-
-        boxes = []
-        for word, desc in BOOK_WORDS:
-            row = QWidget()
-            rl = QHBoxLayout(row)
-            rl.setContentsMargins(0, 6, 0, 6)
-            rl.setSpacing(12)
-            cb = QCheckBox()
-            cb.setChecked(True)
-            cb.setCursor(Qt.CursorShape.PointingHandCursor)
-            rl.addWidget(cb)
-            rl.addWidget(_label(word, size="sm", weight="semibold"))
-            rl.addWidget(_label(desc, size="xs", color="neutral.500"))
-            rl.addStretch(1)
-            boxes.append((cb, word))
-            bl.addWidget(row)
-            bl.addWidget(hline())
-
-        root.addWidget(body)
-
-        foot = QWidget()
-        foot.setObjectName("ModalFoot")
-        fl = QHBoxLayout(foot)
-        fl.setContentsMargins(18, 14, 18, 14)
-        fl.addStretch(1)
-        cancel = QPushButton("取消")
-        cancel.setObjectName("BtnOutline")
-        cancel.setCursor(Qt.CursorShape.PointingHandCursor)
-        cancel.clicked.connect(dlg.reject)
-        fl.addWidget(cancel)
-        confirm = QPushButton("加入选中词条")
-        confirm.setObjectName("BtnPrimary")
-        confirm.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        def _confirm():
-            n = sum(1 for cb, _w in boxes if cb.isChecked())
-            dlg.accept()
-            self._toast(f"已加入 {n} 条专有词条到「我的词库」")
-
-        confirm.clicked.connect(_confirm)
-        fl.addWidget(confirm)
-        root.addWidget(foot)
-        dlg.exec()
+        没有真实词条时明确告知「无需加入」，绝不退回演示词条。
+        """
+        words = list((self._summary or {}).get("book_words") or [])
+        if not words:
+            self._toast("本次校正没有提取到本书专有词条，无需加入")
+            return
+        title = str((self._summary or {}).get("title") or "")
+        self.bookWordsReady.emit(words, title)
+        self._toast(f"已把 {len(words)} 条本书专有词条带到词库管理，确认后加入")
 
     # ------------------------------------------------------------------ 公共
 

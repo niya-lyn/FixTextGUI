@@ -739,7 +739,16 @@ class MainWindow(QMainWindow):
         # 校正完成 → 导出页拿到可导出的产物；「去导出」→ 真的跳到导出页
         module.correctionDone.connect(self._on_correction_done)
         module.gotoExport.connect(lambda: self.go("export"))
+        # 本书专有词条（真实抽出）→ 词库管理页确认后加入
+        module.bookWordsReady.connect(self._on_book_words_ready)
         return module
+
+    def _on_book_words_ready(self, words, book_title: str):
+        """把本次运行真实抽出的本书专有词条交给词库页（页面自己再逐条查重）。"""
+        if self.vocab_module is None:
+            return
+        self.vocab_module.set_book_words(list(words or []), str(book_title or ""))
+        self.go("vocab")
 
     def _wire_book_ready(self):
         """导入完成 → 一键校正页就绪（同一本书直接往下走，不用再选一次）。"""

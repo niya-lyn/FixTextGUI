@@ -22,6 +22,10 @@ from typing import Any
 from ..config import dump_json
 from .base import Stage, StageError
 
+#: 报告里「本书专有词条」预览条数上限（界面弹窗只展示这些；
+#: 全量几千条塞进报告既慢也没人看，条数由 entry_counts 给全）。
+ENTRY_PREVIEW_MAX = 20
+
 
 class BookMapStage(Stage):
     name = "bookmap"
@@ -71,11 +75,21 @@ class BookMapStage(Stage):
             )
 
         book_map_file = self.cfg.bookmap_file()
+        # 界面侧「本书专有词条」要给用户看真实条目，而不是编几条演示词：
+        # 只放每本书的前若干条（全量几千条不适合塞进报告 / 弹窗）。
+        entry_preview = {
+            k: [
+                {"before": str(w.get("before", "")), "after": str(w.get("after", ""))}
+                for w in (v or [])[:ENTRY_PREVIEW_MAX]
+            ]
+            for k, v in entries.items()
+        }
         report = {
             "map_root": str(map_root),
             "book_map_dir": str(book_map_dir),
             "books": books,
             "entry_counts": {k: len(v) for k, v in entries.items()},
+            "entry_preview": entry_preview,
             "skipped": skipped,
             "book_map_file": str(book_map_file),
             "book_map_exists": book_map_file.exists(),
