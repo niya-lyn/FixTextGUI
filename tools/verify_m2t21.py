@@ -31,7 +31,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(HERE)
 UI = os.path.join(PKG, "fixtext_ui")
 SHOTS = os.path.join(PKG, "screenshots")
+# 【M2-T2.5】合并后主窗口会挂真模块，包根也要在 sys.path 上
+# （fixtext_import / fixtext_error_center 都在包根下）。
 sys.path.insert(0, UI)
+sys.path.insert(0, PKG)
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -271,9 +274,12 @@ def main() -> int:
     )
 
     # 占位页上的「去用检查问题」按钮：真实点击应切到检查问题页
-    win.go("import")
+    # 【M2-T2.5 集成调整】原脚本点的是「导入书籍」页——合并后该页已换成真实
+    # 导入模块（T2.2），不再有占位 CTA。改点仍然是占位页的历史记录页，
+    # 断言语义不变（占位页的「现在可以先去这里」必须真能跳转）。
+    win.go("history")
     QApplication.processEvents()
-    bpage = win.page("import")
+    bpage = win.page("history")
     jump_btn = None
     for b in bpage.findChildren(QPushButton):
         if "检查问题" in b.text():
@@ -288,13 +294,30 @@ def main() -> int:
         passed=jumped, button_found=jump_btn is not None, jumped_to_check=jumped,
     )
 
+    # 【M2-T2.5】导入 / 一键校正 / 检查问题 三页必须挂的是真模块，
+    # 不能还是占位页（否则「六入口真实可用」这条验收不成立）
+    merged_pages = {}
+    for key in ("import", "oneclick", "check"):
+        win.go(key)
+        QApplication.processEvents()
+        cls = type(win.page(key)).__name__
+        merged_pages[key] = cls
+    report["1e_modules_mounted"] = dict(
+        passed=(merged_pages["import"] != "BuildingPage"
+                and merged_pages["oneclick"] != "BuildingPage"),
+        page_classes=merged_pages,
+    )
+
     # 顶栏三个按钮不是死键：点击应弹出真窗口并在验证后关闭
     def _top_click_probe(btn) -> bool:
         opened = {"n": 0}
 
         def _close():
+            # 【M2-T2.5】顶栏 ⚙ 合并后打开的是模态 SettingsDialog（QDialog），
+            # 原探针只关 QMessageBox 会卡死在 exec()；两类都关。
+            from PySide6.QtWidgets import QDialog
             for w in QApplication.topLevelWidgets():
-                if isinstance(w, QMessageBox) and w.isVisible():
+                if isinstance(w, (QMessageBox, QDialog)) and w.isVisible():
                     opened["n"] += 1
                     w.close()
 

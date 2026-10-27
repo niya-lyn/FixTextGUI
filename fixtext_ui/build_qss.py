@@ -123,6 +123,17 @@ def build() -> str:
     q.append(f'    color: {c("neutral.600")};')
     q.append(f'    font-size: {FONT_SIZE["md"]};')
     q.append("}")
+    # #PageHead 是 T2.2 / T2.3 各页的页头容器（标题 + 副标题都放在里面）：
+    # 与 #PageTitle / #PageSub 同值，两套写法视觉一致。
+    q.append("#PageHead h1 {")
+    q.append(f'    color: {c("neutral.900")};')
+    q.append(f'    font-size: {FONT_SIZE["2xl"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
+    q.append("}")
+    q.append("#PageHead QLabel {")
+    q.append(f'    color: {c("neutral.600")};')
+    q.append(f'    font-size: {FONT_SIZE["md"]};')
+    q.append("}")
     q.append("#TopWhere {")
     q.append(f'    color: {c("neutral.300")};')
     q.append(f'    font-size: {FONT_SIZE["sm"]};')
@@ -383,7 +394,10 @@ def build() -> str:
 
 
 if __name__ == "__main__":
-    out = "fixtext.qss"
+    import os
+
+    # 始终写到本脚本同目录：从任意 cwd 运行都不会把样式表落到别处
+    out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtext.qss")
     text = build()
     with open(out, "w", encoding="utf-8") as f:
         f.write(text)

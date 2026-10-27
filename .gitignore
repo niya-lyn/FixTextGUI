@@ -1,9 +1,7 @@
-.venv/
 __pycache__/
 *.pyc
-.idea/
+*.pyo
 .pytest_cache/
-workspace/
 runs/
 logs/
-_tmp_extract/
+workspace/

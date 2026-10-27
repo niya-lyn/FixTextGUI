@@ -23,6 +23,7 @@ from .center import (
 )
 from .classify import classify, format_technical
 from .diaglog import init, last_record, log_dir, log_path, read_records
+from .qt_bridge import open_log_dir
 from .error_codes import CATEGORY_OF, ENGINE_CODE_MAP, ErrorCode
 from .messages import FORBIDDEN_TERMS, all_codes, get_message
 
@@ -36,5 +37,6 @@ __all__ = [
     "install_app_hooks", "uninstall_app_hooks",
     "set_dialog_host", "set_dialog_shower", "on_report",
     "init", "log_dir", "log_path", "read_records", "last_record",
+    "open_log_dir",
     "get_message", "all_codes", "FORBIDDEN_TERMS",
 ]

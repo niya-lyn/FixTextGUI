@@ -148,14 +148,24 @@ def chapter_preview(path: str | Path) -> PreviewResult:
             raw = archive.read_bytes(item.path)
             label = info.label_for(item.path) or ""
             text = xhtml_to_text(raw)
+            chars = len(re.sub(r"\s+", "", text))
             if not label and text:
                 first = text.split("\n", 1)[0].strip()
                 if looks_like_chapter_title(first):
                     label = first
+            title = label
+            if not title:
+                # 没有任何文字的页不是「未命名章节」：第一页通常是封面（只有图），
+                # 其余是分隔页 / 空白插页 —— 标出来，用户才不会以为丢了一章。
+                if chars == 0:
+                    title = (messages.epub_cover_page() if idx == 1
+                             else messages.epub_blank_page())
+                else:
+                    title = messages.epub_unnamed_chapter()
             chapters.append(ChapterInfo(
                 index=idx,
-                title=label or messages.epub_unnamed_chapter(),
-                chars=len(re.sub(r"\s+", "", text)),
+                title=title,
+                chars=chars,
                 named=bool(label),
             ))
     finally:

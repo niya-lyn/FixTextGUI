@@ -6,7 +6,7 @@
       {
         "key": "import",
         "label": "导入书籍",
-        "status": "building",
+        "status": "ready",
         "clicked_by_mouse": true,
         "stack_current_is_page": true,
         "active_count": 1,
@@ -14,18 +14,18 @@
         "topbar_where": "📥  导入书籍",
         "topbar_follows": true,
         "rail_tag_matches_status": true,
-        "page_class": "BuildingPage",
+        "page_class": "ImportModule",
         "page_visible": true,
         "page_size": [
-          1028,
-          447
+          1018,
+          820
         ],
         "passed": true
       },
       {
         "key": "oneclick",
         "label": "一键校正",
-        "status": "building",
+        "status": "ready",
         "clicked_by_mouse": true,
         "stack_current_is_page": true,
         "active_count": 1,
@@ -33,11 +33,11 @@
         "topbar_where": "⚡  一键校正",
         "topbar_follows": true,
         "rail_tag_matches_status": true,
-        "page_class": "BuildingPage",
+        "page_class": "OneClickModule",
         "page_visible": true,
         "page_size": [
-          1028,
-          447
+          1018,
+          1230
         ],
         "passed": true
       },
@@ -75,7 +75,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          447
+          436
         ],
         "passed": true
       },
@@ -94,7 +94,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          447
+          436
         ],
         "passed": true
       },
@@ -113,7 +113,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          447
+          436
         ],
         "passed": true
       }
@@ -135,6 +135,14 @@
     "button_found": true,
     "jumped_to_check": true
   },
+  "1e_modules_mounted": {
+    "passed": true,
+    "page_classes": {
+      "import": "ImportModule",
+      "oneclick": "OneClickModule",
+      "check": "CheckModule"
+    }
+  },
   "1e_topbar_actions": {
     "passed": true,
     "button_count": 3,
@@ -153,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 543,
+    "scanned": 967,
     "forbidden_patterns": 25,
     "hits": []
   },
@@ -173,7 +181,7 @@
     "diffs": [],
     "missing_in_css": [],
     "extra_in_css": [],
-    "source": "FixText_V1_设计系统_薄地基.html"
+    "source": "design_root_snapshot.css"
   },
   "4_construct_and_screenshots": {
     "passed": true,
@@ -183,37 +191,37 @@
       {
         "key": "home",
         "file": "screenshots/01_home_overview.png",
-        "bytes": 119856
+        "bytes": 116257
       },
       {
         "key": "import",
         "file": "screenshots/02_entry1_import.png",
-        "bytes": 115352
+        "bytes": 93200
       },
       {
         "key": "oneclick",
         "file": "screenshots/03_entry2_oneclick.png",
-        "bytes": 108818
+        "bytes": 153158
       },
       {
         "key": "check",
         "file": "screenshots/04_entry3_check.png",
-        "bytes": 157396
+        "bytes": 150629
       },
       {
         "key": "vocab",
         "file": "screenshots/05_entry4_vocab.png",
-        "bytes": 110374
+        "bytes": 109260
       },
       {
         "key": "export",
         "file": "screenshots/06_entry5_export.png",
-        "bytes": 107418
+        "bytes": 106161
       },
       {
         "key": "history",
         "file": "screenshots/07_entry6_history.png",
-        "bytes": 108240
+        "bytes": 106808
       }
     ]
   },

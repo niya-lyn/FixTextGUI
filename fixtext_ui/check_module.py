@@ -80,8 +80,11 @@ class ProblemRow(QFrame):
         state = p.get("state")
         border = c("primary.500") if selected else c("neutral.100")
         bg = c("primary.50") if selected else c("neutral.0")
+        # 精确选择器：# 内联 QSS 的类型选择器会连带命中 QLabel（QLabel 是 QFrame 子类）
+        self.setObjectName("ProblemRow")
         self.setStyleSheet(
-            f"QFrame{{background:{bg};border:1px solid {border};border-radius:10px}}"
+            f"QFrame#ProblemRow{{background:{bg};border:1px solid {border};"
+            f"border-radius:10px}}"
         )
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -182,8 +185,7 @@ class CheckModule(QWidget):
             f"font-weight:{FONT_WEIGHT['bold']}"
         )
         sub = QLabel(
-            "引号配对检查 + 逐处交互修复。检查结果能定位到具体一处，"
-            "可以单独处理，改错了还能撤销。"
+            "引号配对检查 + 逐处交互修复。检查结果可定位、可单独处理、可撤销。"
         )
         sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('md')}")
         col.addWidget(title)
@@ -396,7 +398,7 @@ class CheckModule(QWidget):
     def _legend(self) -> QLabel:
         lab = QLabel(
             "勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。"
-            "「逐处人工确认」是这个模块的核心价值，不能只做「一键修复全部」（§2.7.4）。"
+            "「逐处人工确认」是这个模块的核心价值，不能只做「一键修复全部」。"
         )
         lab.setWordWrap(True)
         lab.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")

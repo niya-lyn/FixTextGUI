@@ -112,6 +112,16 @@ def epub_unnamed_chapter() -> str:
     return "未命名章节"
 
 
+def epub_cover_page() -> str:
+    """书里第一页常常是封面（只有图、没有正文），单独给它一个名字。"""
+    return "封面"
+
+
+def epub_blank_page() -> str:
+    """其它没有任何文字的一页（分隔页 / 空白插页）。"""
+    return "空白页"
+
+
 def order_feedback_submitted() -> str:
     return "已经记下了。这本书会照原样导入，顺序问题我们会在后续版本里支持手动调整。"
 

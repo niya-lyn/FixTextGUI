@@ -151,7 +151,7 @@ WINDOW_MIN_W, WINDOW_MIN_H = 1220, 700
 
 ENTRIES = [
     dict(
-        key="import", icon="📥", label="导入书籍", status="building",
+        key="import", icon="📥", label="导入书籍", status="ready",
         short="拖放或选择 TXT / EPUB，自动识别编码并转成通用文本",
         what=[
             "把书拖进窗口就能用，不需要事先改格式、改编码。",
@@ -160,7 +160,7 @@ ENTRIES = [
         ],
     ),
     dict(
-        key="oneclick", icon="⚡", label="一键校正", status="building",
+        key="oneclick", icon="⚡", label="一键校正", status="ready",
         short="排版、词库替换、标点统一一次跑完，随时可停",
         what=[
             "点一下就把排版、词库替换、标点统一跑完，不用挑词库组合。",

@@ -84,6 +84,15 @@ QLabel { background-color: transparent; }
     color: #4A5363;
     font-size: 16px;
 }
+#PageHead h1 {
+    color: #15191F;
+    font-size: 24px;
+    font-weight: 700;
+}
+#PageHead QLabel {
+    color: #4A5363;
+    font-size: 16px;
+}
 #TopWhere {
     color: #C2CAD6;
     font-size: 13px;

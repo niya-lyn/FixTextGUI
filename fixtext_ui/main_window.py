@@ -1,34 +1,42 @@
 """
-FixText V1 · 主窗口与六入口路由（M2-T2.1）
-============================================
+FixText V1 · 主窗口与六入口路由（M2-T2.5 四卡集成）
+=====================================================
 
-在已验收的 Qt 骨架上收敛出的**统一主界面框架**：
-顶栏 + 左侧常驻 6 入口导航轨 + 内容区（QStackedWidget 面板路由）。
+本文件是 M2 的**唯一**主程序外壳：T2.1 的顶栏 + 六入口左轨 + 内容区路由为基座，
+把 T2.2 导入模块、T2.3 worker/进度/取消链路、T2.4 人话错误体系接在同一份
+chrome 上。合并口径如下：
 
-设计要点（对照《FixText 第一版功能范围与开发排期》§4.4 T2.1 / §2.2）：
+| 来源 | 在本文件里的落点 |
+|---|---|
+| T2.1 主窗口基座 | `MainWindow`：顶栏 / 左轨 / 内容区 / 路由 / 快捷键 / 面板保状态 |
+| T2.2 导入模块 | `mount_import()` → `pages["import"]` 内嵌 `ImportModule` |
+| T2.3 一键校正 | `mount_oneclick()` → `pages["oneclick"]` 内嵌 `OneClickModule`（真链路） |
+| T2.3 检查问题 | `pages["check"]` → `CheckModule`（T2.3 修订版，修 `QFrame{}` 样式泄漏） |
+| T2.4 错误中心 | 启动时 `init/install_app_hooks/set_dialog_host`；各页错误出口 `@guard`；
+设置页「打开诊断日志目录」按钮 |
 
-- **左侧六入口常驻**：导入书籍 / 一键校正 / 检查问题 / 词库管理 / 导出结果 / 历史记录。
-  六入口等权、任何页面都可见、点一下即切模块，chrome（顶栏+轨）不变。
-- **首页概览**是内容区里的一页（点顶栏品牌回首页），不占左轨配额。
-- **面板路由不重建窗口**：每个页面只构造一次并常驻 QStackedWidget，
-  切走再切回状态原样保留（检查问题里已修复的条目切回后仍是已修复）。
-- **状态清晰**：当前入口有选中态（主色浅底 + 左侧强调条 + 图标反白），
-  未完成入口在轨上带「建设中」标记，页面内也有建设中说明；
-  顶栏始终显示「当前位置」，任何时候都知道自己在哪。
-- **零露出**：界面字符串不出现 books / booksBak / spine / OPF / 内部文件名等概念，
-  统一用「你的原文件」「软件自己复制的一份」这类人话。
+**已知集成偏差的修复**（本卡验收③）：
+1. 常量统一：令牌唯一来源是 `fixtext_tokens.ENTRIES`；全包不再出现 `MODULES`，
+   `host_window.py` 只剩转发，不存在两版常量并存导致的 ImportError。
+2. 入口状态：导入 / 一键校正已接真链路，令牌里 `status="ready"`，
+   左轨与首页概览都不再挂「建设中」徽标。
+3. 封面页：EPUB 章节预览把零字首页标成「封面」（不是「第 1 章 未命名章节」）。
+
+设计约束（沿用 T2.1 验收基线）：六入口常驻可达、路由不重建窗口、切走切回保状态、
+界面零内部术语、令牌与设计地基一致。
 
 运行：
-    python main_window.py
-依赖：pip install PySide6（`fixtext.qss` 需与本包同目录，由 build_qss.py 生成）。
+    python main_app.py          （推荐入口，含错误中心接线）
+或  python main_window.py       （仅窗口，错误中心用默认诊断目录）
 """
 
 from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout,
@@ -46,6 +54,13 @@ from check_module import CheckModule
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 QSS_PATH = os.path.join(HERE, "fixtext.qss")
+PKG_ROOT = Path(HERE).resolve().parent
+
+#: 人话错误体系（T2.4）。缺包时降级：界面照常可用，只是没有错误卡与诊断日志。
+try:
+    import fixtext_error_center as error_center
+except Exception:                                    # pragma: no cover
+    error_center = None
 
 
 # ---------------------------------------------------------------------------
@@ -347,12 +362,130 @@ def _dialog(parent, title: str, lines: list[str]):
 
 
 # ---------------------------------------------------------------------------
+# 设置对话框（含「打开诊断日志目录」——T2.4 的 open_log_dir）
+# ---------------------------------------------------------------------------
+
+class SettingsDialog(QDialog):
+    """设置面板（M2 阶段只做已落地的项：诊断日志目录）。
+
+    没有可选项时装样子不如不装：这里只放真实可用的动作，并用一句话说明
+    其余设置项为什么现在没有（由软件按默认方式处理，不影响正常使用）。
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("设置")
+        self.setObjectName("SettingsDialog")
+        self.setMinimumWidth(520)
+        self._toast = None
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(20, 20, 20, 20)
+        root.setSpacing(px(sp("3")))
+
+        title = QLabel("设置")
+        title.setStyleSheet(
+            f"color:{c('neutral.900')};font-size:{fs('lg')};"
+            f"font-weight:{FONT_WEIGHT['bold']}"
+        )
+        root.addWidget(title)
+
+        sub = QLabel(
+            "现在能调的就下面这一项。校正用的词库、进度提示这些由软件按默认方式处理，"
+            "不影响正常使用。"
+        )
+        sub.setWordWrap(True)
+        sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
+        root.addWidget(sub)
+
+        card = Card("诊断日志", "出问题时把这里的文件发给技术支持，能定位得更快")
+        self.log_hint = QLabel(self._log_hint_text())
+        self.log_hint.setWordWrap(True)
+        self.log_hint.setStyleSheet(
+            f"color:{c('neutral.700')};font-size:{fs('sm')}"
+        )
+        card.body_l.addWidget(self.log_hint)
+
+        row = QHBoxLayout()
+        row.setSpacing(10)
+        self.open_btn = QPushButton("打开诊断日志目录")
+        self.open_btn.setObjectName("BtnOutline")
+        self.open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.open_btn.clicked.connect(self.open_log_dir)
+        row.addWidget(self.open_btn)
+        row.addStretch(1)
+        card.body_l.addLayout(row)
+
+        self.feedback = QLabel("")
+        self.feedback.setWordWrap(True)
+        self.feedback.setVisible(False)
+        card.body_l.addWidget(self.feedback)
+        root.addWidget(card)
+
+        root.addStretch(1)
+
+        foot = QHBoxLayout()
+        foot.addStretch(1)
+        close_btn = QPushButton("关闭")
+        close_btn.setObjectName("BtnSecondary")
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        close_btn.clicked.connect(self.accept)
+        foot.addWidget(close_btn)
+        root.addLayout(foot)
+
+    # -- 日志目录状态 --------------------------------------------------
+    def _log_hint_text(self) -> str:
+        if error_center is None:
+            return "诊断日志功能没有装好，这一项暂时用不了；不影响正常使用。"
+        try:
+            where = error_center.log_dir()
+        except Exception:
+            return "诊断日志目录还没准备好，第一次出错的时候会自动建好。"
+        return f"诊断日志存在这台电脑的这个位置：{where}"
+
+    def open_log_dir(self):
+        """打开诊断日志目录（T2.4 qt_bridge.open_log_dir）。"""
+        self.feedback.setVisible(False)
+        if error_center is None:
+            self._say("诊断日志功能没有装好，这一项暂时用不了。", "warn")
+            return
+        try:
+            from fixtext_error_center.qt_bridge import open_log_dir
+        except Exception:
+            self._say("诊断日志功能没有装好，这一项暂时用不了。", "warn")
+            return
+        ok = False
+        try:
+            ok = bool(open_log_dir())
+        except Exception:
+            ok = False
+        if ok:
+            self._say("已经在文件管理器里打开诊断日志目录。", "ok")
+        else:
+            self._say(
+                "没能自动打开文件夹。你可以照着上面那行位置自己找过去。", "warn")
+
+    def _say(self, text: str, kind: str):
+        palette = {
+            "warn": ("warning.bg", "warning", "neutral.200"),
+            "ok": ("success.bg", "success", "success.bg"),
+        }
+        bg, fg, border = palette.get(kind, palette["warn"])
+        self.feedback.setText(text)
+        self.feedback.setStyleSheet(
+            f"background:{c(bg)};color:{c(fg)};border:1px solid {c(border)};"
+            f"border-radius:{r('md')};padding:8px 10px;font-size:{fs('sm')}"
+        )
+        self.feedback.setVisible(True)
+
+
+# ---------------------------------------------------------------------------
 # 主窗口
 # ---------------------------------------------------------------------------
 
 class MainWindow(QMainWindow):
 
-    def __init__(self):
+    def __init__(self, workspace: str | os.PathLike | None = None):
         super().__init__()
         self.setWindowTitle(APP_TITLE)
         self.resize(WINDOW_W, WINDOW_H)
@@ -361,6 +494,12 @@ class MainWindow(QMainWindow):
         self.pages: dict[str, QWidget] = {}
         self.rail_items: dict[str, RailItem] = {}
         self.current_key = HOME_KEY
+        self.workspace = Path(workspace) if workspace else None
+
+        # 已挂载的真实模块（mount_* 之前为 None）
+        self.import_module = None
+        self.oneclick_module = None
+        self.check_module = None
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -375,6 +514,11 @@ class MainWindow(QMainWindow):
         body.addWidget(self._build_rail())
         body.addWidget(self._build_content(), 1)
         root.addLayout(body)
+
+        # 三个真实模块挂进各自页面（T2.2 / T2.3 / T2.1-T2.3 检查页）
+        self.mount_import(self.workspace)
+        self.mount_oneclick()
+        self._wire_book_ready()
 
         self._bind_shortcuts()
         self.go(HOME_KEY)
@@ -446,40 +590,142 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------ 内容区
 
     def _build_content(self) -> QWidget:
-        def wrap(widget: QWidget) -> QScrollArea:
-            """内容装进滚动区：窗口变小时在内容区内部滚动，不裁切、不挤压。"""
-            sa = QScrollArea()
-            sa.setWidgetResizable(True)
-            sa.setFrameShape(QFrame.Shape.NoFrame)
-            sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-            sa.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-            inner = QWidget()
-            il = QVBoxLayout(inner)
-            il.setContentsMargins(20, 20, 20, 20)
-            il.setSpacing(px(sp("4")))
-            il.addWidget(widget)
-            il.addStretch(1)
-            sa.setWidget(inner)
-            return sa
-
         self.stack = QStackedWidget()
         self.stack.setObjectName("Content")
 
         # 首页概览（内容区页，不占左轨配额）
-        self.pages[HOME_KEY] = wrap(HomeOverview(on_enter=self.go))
+        self.pages[HOME_KEY] = self._wrap(HomeOverview(on_enter=self.go))
         self.stack.addWidget(self.pages[HOME_KEY])
 
-        # 六个入口：检查问题为已移植真实模块，其余为建设中占位页
+        # 六个入口：导入 / 一键校正 / 检查问题为真实模块，其余为建设中占位页。
+        # 导入与一键校正页先放一个空控制器，由 mount_* 填真实模块——
+        # 这样「页面实例只建一次」的约束在挂载前后都成立（不重建 stack 页）。
         for entry in ENTRIES:
-            if entry["key"] == "check":
-                page = CheckModule()
+            key = entry["key"]
+            if key == "check":
+                self.check_module = CheckModule()
+                page = self.check_module
+            elif key in ("import", "oneclick"):
+                page = self._module_host()
             else:
                 page = BuildingPage(entry)
                 page.action_requested.connect(self.go)
-            wrapped = wrap(page)
-            self.pages[entry["key"]] = wrapped
+            wrapped = self._wrap(page)
+            self.pages[key] = wrapped
             self.stack.addWidget(wrapped)
         return self.stack
+
+    @staticmethod
+    def _module_host() -> QWidget:
+        """真实模块的占位宿主：挂载时把真实模块塞进它的布局。"""
+        holder = QWidget()
+        holder.setObjectName("ModuleHost")
+        lay = QVBoxLayout(holder)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(px(sp("4")))
+        return holder
+
+    def _content_slot(self, key: str) -> QWidget:
+        """取某页内容区里的业务部件（滚动区内的第一层容器）。"""
+        sa = self.pages[key]
+        inner = sa.widget()
+        return inner.layout().itemAt(0).widget()
+
+    def wrap(self, widget: QWidget) -> QScrollArea:
+        """内容装进滚动区：窗口变小时在内容区内部滚动，不裁切、不挤压。"""
+        return self._wrap(widget)
+
+    def _wrap(self, widget: QWidget) -> QScrollArea:
+        sa = QScrollArea()
+        sa.setWidgetResizable(True)
+        sa.setFrameShape(QFrame.Shape.NoFrame)
+        sa.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        sa.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        inner = QWidget()
+        il = QVBoxLayout(inner)
+        il.setContentsMargins(20, 20, 20, 20)
+        il.setSpacing(px(sp("4")))
+        il.addWidget(widget)
+        il.addStretch(1)
+        sa.setWidget(inner)
+        return sa
+
+    # ------------------------------------------------------------------ 挂载
+
+    def mount_import(self, workspace: str | os.PathLike | None = None):
+        """把 T2.2 导入模块挂进「导入书籍」页（替换其占位宿主）。"""
+        if self.import_module is not None:
+            return self.import_module
+        from import_module import ImportModule, install_global_drop
+
+        root = Path(workspace) if workspace else PKG_ROOT / "workspace"
+        module = ImportModule(root)
+        host = self._content_slot("import")
+        host.layout().addWidget(module)
+        host.layout().addStretch(1)
+        # 整个窗口接受拖放，拖进来自动切到导入页
+        install_global_drop(self, module, goto_page=self.go)
+        self.import_module = module
+        return module
+
+    def mount_oneclick(self):
+        """把 T2.3 一键校正页（真链路 + 进度 + 取消）挂进「一键校正」页。"""
+        if self.oneclick_module is not None:
+            return self.oneclick_module
+        from oneclick_module import OneClickModule
+
+        module = OneClickModule()
+        host = self._content_slot("oneclick")
+        host.layout().addWidget(module)
+        host.layout().addStretch(1)
+        self.oneclick_module = module
+        return module
+
+    def _wire_book_ready(self):
+        """导入完成 → 一键校正页就绪（同一本书直接往下走，不用再选一次）。"""
+        if self.import_module is None or self.oneclick_module is None:
+            return
+        self.import_module.bookReady.connect(self._on_book_ready)
+
+    def _on_book_ready(self, text_path: str):
+        """导入完成的接力：把这本书的运行上下文交给一键校正页。
+
+        只有 EPUB 且在「直接处理」路径下才有可还原的书；TXT / 先转 TXT 的
+        EPUB 没有可还原的原书，这时不注入上下文，一键校正页会自己给出人话引导。
+        """
+        ctx = self.build_run_context(text_path)
+        if ctx is None:
+            return
+        self.oneclick_module.set_run_context(ctx)
+
+    def build_run_context(self, text_path: str) -> dict | None:
+        """由导入结果推导一次校正所需的路径（真实文件，不做假运行）。"""
+        try:
+            book_dir = Path(text_path).resolve().parent
+            record = book_dir / "import.json"
+            import json
+            meta = json.loads(record.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+        original = meta.get("original_copy_path") or ""
+        # 只有 EPUB 原书才能走「校正后还原成 EPUB」的真链路
+        if not original.lower().endswith(".epub") or not Path(original).exists():
+            return None
+        pipeline = PKG_ROOT / "pipeline"
+        engine = (pipeline / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
+                  / "replace_by_go-linux-amd64")
+        rules = PKG_ROOT / "data" / "rules"
+        if not engine.exists() or not (rules / "before.json").exists():
+            return None
+        return dict(
+            epub=str(Path(original)),
+            pipeline_root=str(pipeline),
+            rules_before=str(rules / "before.json"),
+            rules_after=str(rules / "after.json"),
+            engine_path=str(engine),
+            runs_root=str(PKG_ROOT / "runs"),
+            title=str(meta.get("title") or Path(original).stem),
+        )
 
     # ------------------------------------------------------------------ 路由
 
@@ -500,20 +746,24 @@ class MainWindow(QMainWindow):
         self.brand.style().polish(self.brand)
 
     def page(self, key: str) -> QWidget:
-        """取面板里承载的业务部件（供自检/外部接线用）。"""
-        sa = self.pages[key]
-        inner = sa.widget()
-        layout = inner.layout()
-        return layout.itemAt(0).widget()
+        """取页面里承载的业务部件（供自检/外部接线用）。
+
+        真实模块页返回模块本身（导入 / 一键校正 / 检查问题）；
+        占位页返回占位部件。
+        """
+        if key == "import" and self.import_module is not None:
+            return self.import_module
+        if key == "oneclick" and self.oneclick_module is not None:
+            return self.oneclick_module
+        if key == "check" and self.check_module is not None:
+            return self.check_module
+        return self._content_slot(key)
 
     # ------------------------------------------------------------------ 顶栏动作
 
     def _act_settings(self):
-        _dialog(self, "设置", [
-            "设置面板还在建设中。",
-            "做好之后可以在这里选替换用的引擎、调进度提示、打开诊断日志——"
-            "现在这些都由软件自己按默认方式处理，不影响正常使用。",
-        ])
+        dlg = SettingsDialog(self)
+        dlg.exec()
 
     def _act_help(self):
         _dialog(self, "帮助", [
@@ -557,6 +807,16 @@ class MainWindow(QMainWindow):
         sc.setContext(ctx)
         sc.activated.connect(lambda: self.go(HOME_KEY))
 
+    # ------------------------------------------------------------------ 收尾
+
+    def closeEvent(self, event):
+        if self.import_module is not None:
+            try:
+                self.import_module.shutdown()
+            except Exception:
+                pass
+        super().closeEvent(event)
+
 
 # ---------------------------------------------------------------------------
 
@@ -572,7 +832,24 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName(APP_NAME)
     load_qss(app)
+
+    # 错误中心：QApplication 之后、show 之前安装（T2.4 接法 1）
+    if error_center is not None:
+        try:
+            error_center.init(str(PKG_ROOT / "logs"))
+        except Exception:
+            pass
+        try:
+            error_center.install_app_hooks()
+        except Exception:
+            pass
+
     win = MainWindow()
+    if error_center is not None:
+        try:
+            error_center.set_dialog_host(win)
+        except Exception:
+            pass
     win.show()
     sys.exit(app.exec())
 
