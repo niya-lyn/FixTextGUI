@@ -161,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 2180,
+    "scanned": 2723,
     "forbidden_patterns": 25,
     "hits": []
   },
@@ -206,7 +206,7 @@
       {
         "key": "check",
         "file": "screenshots/04_entry3_check.png",
-        "bytes": 150007
+        "bytes": 151270
       },
       {
         "key": "vocab",
