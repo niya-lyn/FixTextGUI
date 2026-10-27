@@ -2,8 +2,7 @@
 
 验收点：历史一律从 ``runs/run-*/report/ui_run_summary.json`` 扫出来，
 所以**重启进程后记录仍然在**；页面不持有任何会话内假数据；
-「重新导出」走真实导出执行层；「恢复」在 M3-T3.4 换成了真快照恢复
-（阶段级时点，见 ``test_t34_snapshot.py``），这里只守 T2.10 那几条。
+「重新导出」走真实导出执行层，「恢复」已如实降级为「用该次产物重新导出」。
 """
 from __future__ import annotations
 
@@ -98,7 +97,7 @@ def test_add_task_dedups_by_run_dir(runs_root, qapp):
 
 
 def test_reexport_is_wired_to_real_export_layer(runs_root, qapp):
-    """历史页的导出 / 恢复入口都接真实执行层（没有假动作）。"""
+    """「重新导出」接的是真实执行层，「恢复」已降级成重新导出（无假动作）。"""
     import history_module as hm
     from PySide6.QtWidgets import QPushButton
 
@@ -106,13 +105,11 @@ def test_reexport_is_wired_to_real_export_layer(runs_root, qapp):
     mod.set_runs_root(runs_root)
     mod.refresh()
     assert not hasattr(mod, "_reexport"), "假动作 _reexport 必须已删除"
-    for name in ("_run_export", "_do_export", "_confirm_restore",
-                 "_open_snapshot_dialog", "_apply_restore"):
-        assert hasattr(mod, name), f"应存在真实执行路径：{name}"
+    for name in ("_run_export", "_do_export", "_confirm_restore"):
+        assert hasattr(mod, name), f"应存在真实导出路径：{name}"
     texts = [b.text() for b in mod.findChildren(QPushButton)]
     assert any("重新导出" in t for t in texts), "行内动作应明说「重新导出」"
-    assert any(t.strip("↺ ") == "恢复" for t in texts), "行内应有「恢复」入口"
-    # 「重新导出」确认后直接进真实导出，而不是只弹个提示
+    # 「恢复」不再有假动作：确认后直接进真实导出，而不是只弹个提示
     # 确认框是模态 exec()，无头环境下必须打桩，否则自动化会卡死。
     class _FakeConfirm:
         def __init__(self, **kw):

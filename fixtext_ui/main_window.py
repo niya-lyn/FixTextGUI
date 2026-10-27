@@ -809,25 +809,15 @@ class MainWindow(QMainWindow):
         self.history_module.refresh()
 
     def _refresh_export_ctx(self, run: dict | None) -> None:
-        """把「重新导出 / 快照恢复 / 从时点继续」要用的上下文交给历史页。
-
-        不只是导出：恢复后要继续跑后面的阶段，就得有词库与处理组件的位置，
-        所以这里一并把它们的真实路径注入（缺任何一项，继续按钮会自己说不行）。
-        """
+        """把「重新导出」要用的上下文交给历史页：导入记录 + 流水根 + 导出目录。"""
         if self.history_module is None:
             return
         pipeline_root = str(PKG_ROOT / "pipeline")
-        rules = PKG_ROOT / "data" / "rules"
-        engine = (PKG_ROOT / "pipeline" / "vendor" / "fixtext" / "engine"
-                  / "go_src" / "bin" / "replace_by_go-linux-amd64")
         self.history_module.set_export_ctx({
             "import_record": self._import_record,
             "pipeline_root": pipeline_root,
             "out_dir": str(self.export_out_dir()),
             "baseline_sha256": str((run or {}).get("restored_sha256") or ""),
-            "rules_before": str(rules / "before.json"),
-            "rules_after": str(rules / "after.json"),
-            "engine_path": str(engine),
         })
 
     def export_out_dir(self) -> Path:
