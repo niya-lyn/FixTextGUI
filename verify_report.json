@@ -75,7 +75,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          600
+          445
         ],
         "passed": true
       },
@@ -161,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 2109,
+    "scanned": 2086,
     "forbidden_patterns": 25,
     "hits": []
   },
@@ -206,12 +206,12 @@
       {
         "key": "check",
         "file": "screenshots/04_entry3_check.png",
-        "bytes": 149292
+        "bytes": 150007
       },
       {
         "key": "vocab",
         "file": "screenshots/05_entry4_vocab.png",
-        "bytes": 167963
+        "bytes": 117294
       },
       {
         "key": "export",
