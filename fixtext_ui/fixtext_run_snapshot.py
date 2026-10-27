@@ -727,6 +727,10 @@ def _adopt_workspace(work_dir: str | Path, runs_root: str | Path, *,
         created_at=time.time(),
         created_at_text=time.strftime("%Y-%m-%d %H:%M", time.localtime()),
         run_dir=str(src_meta.get("run_dir") or ""),
+        # M3-T3.5 修：续跑后这里就是新的「当前工作区」现场，指针必须带上
+        # snapshot_dir，否则 current_state() 判定「没有时点」直接返回 None，
+        # 「导出当前工作区」会在续跑成功后反而失效。
+        snapshot_dir=str(work),
         point=point_key,
         point_name=point_name,
         title=title,

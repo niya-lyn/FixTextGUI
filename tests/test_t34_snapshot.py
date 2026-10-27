@@ -245,3 +245,48 @@ def test_restore_replace_then_resume_skips_done_stages(tmp_path):
     restored = [p for p in (work / "06_restore").glob("*.epub")]
     assert restored, "续跑应产出成品电子书"
     assert _sha(restored[0]).startswith("717fdfce"), _sha(restored[0])
+
+
+@pytest.mark.skipif(not EPUB.exists() or not ENGINE.exists(),
+                    reason="缺少真实样书或引擎")
+def test_resume_adopts_workspace_and_stays_exportable(tmp_path):
+    """M3-T3.5 回归：续跑成功后「当前工作区」必须仍然可导出。
+
+    合并前 ``_adopt_workspace`` 写指针时漏了 ``snapshot_dir``，``current_state``
+    因此判定「没有时点」返回 None —— 续跑本身成功、成品 sha 也对，但紧接着
+    「导出当前工作区」会报「还没有恢复过时点」。这条锁住指针完整性。
+    """
+    from fixtext_worker import CorrectionJob
+
+    runs_root = tmp_path / "runs"
+    run = runs_root / "run-1"
+    job = CorrectionJob(epub=EPUB, workdir=run,
+                        rules_before=RULES / "before.json",
+                        rules_after=RULES / "after.json",
+                        engine_path=ENGINE, pipeline_root=PKG / "pipeline",
+                        title="炮火弧线")
+    summary = job.run()
+    assert summary["restored_sha256"].startswith("717fdfce")
+
+    res = snap.restore_point(run, "replace", runs_root)
+    assert res.ok, res.message
+    cur = snap.current_state(runs_root)
+
+    out = snap.resume_from_point(
+        cur["snapshot_dir"], runs_root, point="replace",
+        epub=summary["source_epub"],
+        rules_before=RULES / "before.json", rules_after=RULES / "after.json",
+        engine_path=ENGINE, pipeline_root=PKG / "pipeline",
+        work_dir=runs_root / "_snapshots" / "work-adopt", adopt=True)
+    assert out["exit_code"] == 0, out.get("report")
+
+    after = snap.current_state(runs_root)
+    assert after is not None, "续跑后当前工作区指针丢了（snapshot_dir 未写入）"
+    assert after.get("snapshot_dir"), "指针缺 snapshot_dir"
+    assert Path(after["snapshot_dir"]).is_dir()
+    assert after.get("working_text") and Path(after["working_text"]).is_file()
+
+    # 指针完整性还要能真正走通「导出当前工作区」的取源
+    src = snap.build_export_source(after, PKG / "pipeline")
+    assert src.corrected and Path(src.text_path).is_file()
+    assert src.can_restore_epub
