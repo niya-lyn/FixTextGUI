@@ -1,94 +1,66 @@
 """
-FixText V1 · 词库管理模块（Qt 移植）
-====================================
+FixText V1 · 词库管理模块（Qt 移植 · M3-T3.1 接真实词库）
+=========================================================
 
-对照更新后的 `FixText_V1_词库管理_原型.html` **1:1 移植**。
+对照 `FixText_V1_词库管理_原型.html` **1:1 移植**，控件语义与文案逐条对齐。
 
 结构（页头 → 本书专有词库横幅 → 左侧词库分级 + 右侧工作区）：
 - 页头：标题 / 副标题 / 「显示设计依据」开关 / 分级切换（全部·自定义·内置）
-- 本书专有词库横幅（2.4.2）：发现专有词条 → 查看并加入 / 稍后
+- 本书专有词库横幅（2.4.2）：有真实专有词时才出现，否则整条隐藏
 - 左侧词库分级（底线③ 文件不暴露 · 友好名）：我的词库（可编辑）+ 3 内置（只读）
 - 右侧工作区：
   · 工具条（§2.4.1 五操作）：新增 / 检索 / 查重 / 合并 / 删除选中 / 展开核对 / 选择计数
-  · 词条表格（底线③ 结构化表格 · 不露内部文件格式）：选择 / 原词 / 替换为 / 类型 / 来源 / 命中书籍 / 操作
-  · 历史与快照面板（底线② 自动快照 · 可恢复，默认隐藏）
+  · 词条表格（底线③ 结构化表格 · 不露内部文件格式）+ 翻页
+  · 历史与快照面板（底线② 自动快照 · 可恢复）
 
-产品规则（逐条对应原型标注）：
-- 五操作（§2.4.1）：新增 / 检索 / 查重 / 删除 / 合并；写入与批量动作先预览再二次确认（底线④）。
-- 文件不暴露（底线③）：用友好名，结果以结构化表格呈现，不露内部文件格式。
-- 自动快照（底线②）：每次变更前自动快照，可恢复到任一时间点；恢复默认词库仅重置内置、保留自定义（底线⑤）。
-- 撤销（底线①）：所有写动作可撤销，toast 内「撤销」入口 + Ctrl+Z。
-- 条款号一律收进「显示设计依据」，正文不露 §。
+数据来源（M3-T3.1 起全部为真实词库）
+------------------------------------
+界面**不再持有任何演示数据**：检索、分页、查重、删除、合并、新增、编辑
+全部通过 ``fixtext_vocab.VocabStore`` 读写真实文件——内置词库只读、
+「我的词库」独立成文件（分级存储，界面只显示友好名，不露路径）。
+新增 / 编辑 / 删除 / 合并都可撤销，撤销是把操作前的**原始字节**整份写回，
+因此撤销后的文件与操作前逐字节一致。
 """
 
 from __future__ import annotations
-
-import copy
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDialog,
-    QLineEdit, QComboBox, QCheckBox, QScrollArea, QFrame,
-    QSizePolicy, QApplication,
+    QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy,
 )
 
-from fixtext_tokens import c, fs, r, sp, FONT_WEIGHT, FONT_MONO
+from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO
 from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal
 
+from fixtext_vocab import (
+    ENTRY_TYPES, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
+)
+
 
 # ---------------------------------------------------------------------------
-# 数据（与 HTML 原型同源）
+# 常量
 # ---------------------------------------------------------------------------
 
-ENTRY_TYPES = ["错词校正", "角色名", "专有名词", "其他"]
+#: 词库表格每页条数（内置词库 30 万条，翻页而不是截断）
+PAGE_SIZE = 40
 
-DICT_NAMES = {
-    "custom": "我的词库",
-    "b1": "常规校正词库",
-    "b2": "标点规范词库",
-    "b3": "繁简转换词库",
-}
-
-DICT_ORDER = ["custom", "b1", "b2", "b3"]
-
-
-def _seed_builtin() -> list:
-    """内置词库出厂种子（只读，可被「恢复默认词库」重置）。"""
-    return [
-        dict(id=11, word="好象", value="好像", type="错词校正", pinyin="", dict="b1", tier="builtin", books=[]),
-        dict(id=12, word="做为一个", value="作为一个", type="错词校正", pinyin="", dict="b1", tier="builtin", books=[]),
-        dict(id=13, word="他门", value="他们", type="错词校正", pinyin="", dict="b1", tier="builtin", books=[]),
-        dict(id=14, word="在次", value="再次", type="错词校正", pinyin="", dict="b1", tier="builtin", books=[]),
-        dict(id=21, word="“", value="“", type="其他", pinyin="", dict="b2", tier="builtin", books=[]),
-        dict(id=22, word="''", value="“”,", type="其他", pinyin="", dict="b2", tier="builtin", books=[]),
-        dict(id=31, word="網", value="网", type="其他", pinyin="", dict="b3", tier="builtin", books=[]),
-        dict(id=32, word="國", value="国", type="其他", pinyin="", dict="b3", tier="builtin", books=[]),
-        dict(id=33, word="對", value="对", type="其他", pinyin="", dict="b3", tier="builtin", books=[]),
-    ]
-
-
-def _seed_custom() -> list:
-    return [
-        dict(id=1, word="星河彼端", value="星河彼岸", type="专有名词", pinyin="", dict="custom", tier="custom", books=["《星河彼端》"]),
-        dict(id=2, word="绯红之翼", value="绯红之翌", type="专有名词", pinyin="", dict="custom", tier="custom", books=["《绯红之翼》", "《黎明誓约》"]),
-        dict(id=3, word="萧衍", value="萧彦", type="角色名", pinyin="xiāo yàn", dict="custom", tier="custom", books=["《九域志》"]),
-        dict(id=4, word="地煞", value="第煞", type="错词校正", pinyin="", dict="custom", tier="custom", books=[]),
-        dict(id=5, word="玄机阁", value="悬机阁", type="专有名词", pinyin="", dict="custom", tier="custom", books=["《玄机阁秘录》"]),
-    ]
-
-
-# 本书专有词条（2.4.2）：校正完成后发现的待加入条目
-BOOK_WORDS = [
-    dict(word="星陨大陆", value="星陨大陆", note="本书专有地名"),
-    dict(word="墨羽", value="墨羽", note="角色名"),
-    dict(word="九转玄功", value="九转玄功", note="功法名"),
-]
+COL_CHECK_W = 34
+COL_ACT_W = 128
 
 
 # ---------------------------------------------------------------------------
 # 通用工具
 # ---------------------------------------------------------------------------
+
+def _fmt_num(n: int) -> str:
+    """数字加千位分隔（30 万条要看得出量级）。"""
+    try:
+        return f"{int(n):,}"
+    except (TypeError, ValueError):
+        return str(n)
+
 
 def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
            weight: str | None = None, wrap: bool = False,
@@ -118,44 +90,46 @@ def _link_btn(text: str, *, danger: bool = False, enabled: bool = True) -> QPush
         f"QPushButton#{kind}:hover{{background:{hover_bg}}}")
     if not enabled:
         btn.setEnabled(False)
-        btn.setStyleSheet(
-            f"QPushButton#{kind}{{background:transparent;border:none;"
-            f"color:{c('neutral.300')};font-weight:600;font-size:{fs('xs')};"
-            f"padding:4px 6px;border-radius:6px}}")
     return btn
 
 
 def _mini_table(headers: list, rows: list, *, mono_cols: set | None = None) -> QWidget:
-    """只读小表格（删除预览 / 查重 / 展开核对共用）。"""
+    """弹窗里的小表格（纯 QWidget 拼，样式沿用卡片感）。"""
     mono_cols = mono_cols or set()
-    w = QWidget()
-    v = QVBoxLayout(w)
-    v.setContentsMargins(0, 0, 0, 0)
-    v.setSpacing(2)
+    box = QFrame()
+    box.setObjectName("MiniTable")
+    box.setStyleSheet(
+        f"QFrame#MiniTable{{border:1px solid {c('neutral.200')};"
+        f"border-radius:10px;background:{c('neutral.0')}}}")
+    vl = QVBoxLayout(box)
+    vl.setContentsMargins(12, 10, 12, 10)
+    vl.setSpacing(0)
+
     head = QWidget()
     hl = QHBoxLayout(head)
-    hl.setContentsMargins(0, 0, 0, 0)
+    hl.setContentsMargins(0, 0, 0, 6)
+    hl.setSpacing(10)
     for h in headers:
-        lab = _label(h, size="xs", color="neutral.600", weight="semibold")
-        hl.addWidget(lab, 1)
-    v.addWidget(head)
-    v.addWidget(hline("neutral.200"))
-    for row in rows:
+        hl.addWidget(_label(h, size="xs", color="neutral.600", weight="semibold"), 1)
+    vl.addWidget(head)
+    vl.addWidget(hline())
+
+    if not rows:
+        vl.addWidget(_label("（无）", size="xs", color="neutral.500"))
+        return box
+
+    for i, row in enumerate(rows):
         rw = QWidget()
         rl = QHBoxLayout(rw)
-        rl.setContentsMargins(0, 6, 0, 6)
-        for i, cell in enumerate(row):
-            mono = i in mono_cols
-            lab = _label(str(cell), size="xs", color="neutral.800", mono=mono)
-            rl.addWidget(lab, 1)
-        v.addWidget(rw)
-    return w
-
-
-# 词条表格列宽比例（头行与数据行共用，保证对齐）
-# 选择(固定) / 原词 / 替换为 / 类型 / 来源 / 命中书籍 / 操作(固定)
-COL_CHECK_W = 34
-COL_ACT_W = 128
+        rl.setContentsMargins(0, 7, 0, 7)
+        rl.setSpacing(10)
+        for j, cell in enumerate(row):
+            rl.addWidget(_label(str(cell), size="xs", color="neutral.800",
+                                mono=(j in mono_cols), wrap=True), 1)
+        vl.addWidget(rw)
+        if i != len(rows) - 1:
+            vl.addWidget(hline())
+    return box
 
 
 # ---------------------------------------------------------------------------
@@ -167,18 +141,22 @@ class VocabModule(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # ---- 状态（与 HTML 原型同源）----
-        self.entries = _seed_custom() + _seed_builtin()
+        # ---- 数据：唯一入口，界面自己不拼路径、不直接写文件 ----
+        self.store = VocabStore()
+
+        # ---- 状态 ----
         self.tier = "all"          # all / custom / builtin
-        self.dict_ = "custom"      # custom / b1 / b2 / b3
+        self.dict_ = "custom"      # custom / all / b1 / b2 / b3
         self.search = ""
+        self._page = 0
+        self._hit_total = 0
+        self._page_rows: list = []
         self._selected: set = set()
-        self._snapshots: list = []
-        self._undo_stack: list = []
-        self._seq = 100
         self._pending_add: dict | None = None
         self._merge_sel: list | None = None
-        self._book_sel: list | None = None
+        self._book_words: list = []       # 真实专有词（空则不显示横幅）
+        self._book_title = ""
+        self._book_checks: list = []
 
         self.basis_labels = []
         self._toast_timer = QTimer(self)
@@ -197,7 +175,7 @@ class VocabModule(QWidget):
         root.addWidget(self._layout_grid())
 
         self.legend = _label(
-            "勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。新增 / 查重 / 删除 / 合并"
+            "勾选「显示设计依据」可看到每个界面元素对应的文档条款。新增 / 查重 / 删除 / 合并"
             "与本书专有词均受五条安全底线约束。",
             size="xs", color="neutral.500", wrap=True)
         root.addWidget(self.legend)
@@ -252,7 +230,8 @@ class VocabModule(QWidget):
         self._snap_toggle = QPushButton("🕑 快照")
         self._snap_toggle.setObjectName("BtnOutline")
         self._snap_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._snap_toggle.clicked.connect(lambda: self._snap_card.setVisible(not self._snap_card.isVisible()))
+        self._snap_toggle.clicked.connect(
+            lambda: self._snap_card.setVisible(not self._snap_card.isVisible()))
         right.addWidget(self._snap_toggle)
 
         hl.addLayout(right)
@@ -262,9 +241,7 @@ class VocabModule(QWidget):
     def _set_tier_active(self, t: str):
         for key, b in self._tier_btns.items():
             on = (key == t)
-            # Qt 的样式表没有 cursor / box-shadow 这两个属性（写了会刷
-            # "Unknown property" 警告且不生效），选中态改用描边表达层级；
-            # 手型光标在构造按钮时已用 setCursor 设好。
+            # Qt 样式表没有 cursor / box-shadow：选中态改用描边表达层级
             b.setStyleSheet(
                 f"QPushButton#TierTab{{border-radius:{r('full')};padding:6px 15px;"
                 f"font-weight:600;font-size:{fs('sm')};"
@@ -293,8 +270,10 @@ class VocabModule(QWidget):
         hl.addWidget(ico)
         txt = QVBoxLayout()
         txt.setSpacing(2)
-        txt.addWidget(_label("《星河彼端》校正完成，发现 3 条本书专有词条", size="base", weight="bold", color="neutral.900"))
-        txt.addWidget(_label("是否把它们加入你的自定义词库？加入后，下次校正同类错误将自动生效。", size="sm", color="neutral.500"))
+        self._banner_title = _label("", size="base", weight="bold", color="neutral.900")
+        txt.addWidget(self._banner_title)
+        txt.addWidget(_label("是否把它们加入你的自定义词库？加入后，下次校正同类错误将自动生效。",
+                             size="sm", color="neutral.500"))
         hl.addLayout(txt, 1)
         add = QPushButton("查看并加入")
         add.setObjectName("BtnPrimary")
@@ -306,7 +285,22 @@ class VocabModule(QWidget):
         later.clicked.connect(self.hide_banner)
         hl.addWidget(add)
         hl.addWidget(later)
+        # 没有真实专有词就不出现——不摆一条假横幅
+        self._banner_w.setVisible(False)
         return self._banner_w
+
+    def set_book_words(self, words: list, title: str = ""):
+        """真实专有词入口：只有真的提取到条目时才显示横幅（2.4.2）。"""
+        self._book_words = [dict(w) if isinstance(w, dict) else dict(word=w, note="")
+                            for w in (words or [])]
+        self._book_title = title or ""
+        if not self._book_words:
+            self._banner_w.setVisible(False)
+            return
+        head = f"《{self._book_title}》" if self._book_title else ""
+        self._banner_title.setText(
+            f"{head}校正完成，发现 {_fmt_num(len(self._book_words))} 条本书专有词条")
+        self._banner_w.setVisible(True)
 
     def hide_banner(self):
         self._banner_w.setVisible(False)
@@ -332,7 +326,7 @@ class VocabModule(QWidget):
         card.body_l.setSpacing(6)
 
         self._dict_items = {}
-        for d in DICT_ORDER:
+        for d in TIER_ORDER:
             item = self._dict_item(d)
             self._dict_items[d] = item
             card.body_l.addWidget(item)
@@ -356,7 +350,7 @@ class VocabModule(QWidget):
         hl.addWidget(ico)
         col = QVBoxLayout()
         col.setSpacing(1)
-        col.addWidget(_label(DICT_NAMES[d], size="sm", weight="bold", color="neutral.800"))
+        col.addWidget(_label(TIER_NAMES[d], size="sm", weight="bold", color="neutral.800"))
         meta = _label("", size="xs", color="neutral.500")
         col.addWidget(meta)
         item._meta = meta
@@ -368,14 +362,18 @@ class VocabModule(QWidget):
         item.mousePressEvent = lambda e, d=d: self.select_dict(d)
         return item
 
+    def counts(self) -> dict:
+        return self.store.counts()
+
     def _set_dict_active(self, d: str):
+        counts = self.counts()
         for key, item in self._dict_items.items():
             on = (key == d)
             item.setStyleSheet(
                 f"QWidget#DictItem{{border:1px solid {c('primary.500') if on else c('neutral.200')};"
                 f"border-radius:{r('md')};background:{c('primary.50') if on else c('neutral.0')}}}")
             item._meta.setText(
-                f"{sum(1 for e in self.entries if e['dict']==key)} 条 · {'可编辑' if key=='custom' else '只读'}")
+                f"{_fmt_num(counts.get(key, 0))} 条 · {'可编辑' if key=='custom' else '只读'}")
 
     # ----- 右侧工作区 -----
 
@@ -446,6 +444,10 @@ class VocabModule(QWidget):
         self._sel_count = _label("未选择", size="xs", color="neutral.500")
         bl.addWidget(self._sel_count)
         card.body_l.addWidget(bar)
+
+        self._hint = _label("", size="xs", color="neutral.500", wrap=True)
+        self._hint.setVisible(False)
+        card.body_l.addWidget(self._hint)
         return card
 
     # ----- 词条表格（底线③ 结构化表格 · 不露内部文件格式）-----
@@ -487,23 +489,31 @@ class VocabModule(QWidget):
         hl.setContentsMargins(0, 12, 0, 12)
         hl.setSpacing(12)
 
+        is_builtin = e.get("tier") == "builtin"
         chk = QCheckBox()
         chk.setChecked(e["id"] in self._selected)
+        chk.setEnabled(not is_builtin)          # 内置只读，不给勾选框假希望
         chk.stateChanged.connect(lambda s, i=e["id"]: self._toggle_row(i, s))
         hl.addWidget(chk, 0)
 
-        word = _label(e["word"], size="sm", weight="bold", color="neutral.900", mono=True)
-        hl.addWidget(word, 3)
-        val = _label(e["value"], size="sm", color="primary.700", mono=True)
-        hl.addWidget(val, 3)
-        typ = _label(e.get("type", "—"), size="sm", color="neutral.600")
-        hl.addWidget(typ, 2)
+        word_col = QVBoxLayout()
+        word_col.setSpacing(1)
+        word_col.addWidget(_label(e["word"], size="sm", weight="bold",
+                                   color="neutral.900", mono=True))
+        if e.get("pinyin"):
+            word_col.addWidget(_label(f"/{e['pinyin']}", size="xs",
+                                      color="neutral.500", mono=True))
+        wbox = QWidget()
+        wbox.setLayout(word_col)
+        hl.addWidget(wbox, 3)
 
-        is_builtin = e["tier"] == "builtin"
-        chip = Pill("自定义" if not is_builtin else "内置", "ok" if not is_builtin else "info")
-        hl.addWidget(chip, 2)
+        hl.addWidget(_label(e["value"], size="sm", color="primary.700", mono=True), 3)
+        hl.addWidget(_label(e.get("type") or "—", size="sm", color="neutral.600"), 2)
 
-        books = ("📖 " + "、".join(e["books"])) if e["books"] else "—"
+        hl.addWidget(Pill("自定义" if not is_builtin else "内置",
+                          "ok" if not is_builtin else "info"), 2)
+
+        books = ("📖 " + "、".join(e["books"])) if e.get("books") else "—"
         bk = _label(books, size="xs", color="neutral.600")
         bk.setWordWrap(True)
         hl.addWidget(bk, 3)
@@ -513,11 +523,10 @@ class VocabModule(QWidget):
         al.setContentsMargins(0, 0, 0, 0)
         al.setSpacing(8)
         al.addStretch(1)
-        edit = _link_btn("编辑", enabled=not is_builtin)
         if not is_builtin:
+            edit = _link_btn("编辑")
             edit.clicked.connect(lambda _c, i=e["id"]: self.open_edit(i))
-        al.addWidget(edit)
-        if not is_builtin:
+            al.addWidget(edit)
             dele = _link_btn("删除", danger=True)
             dele.clicked.connect(lambda _c, i=e["id"]: self._confirm_delete([i]))
             al.addWidget(dele)
@@ -525,6 +534,26 @@ class VocabModule(QWidget):
             al.addWidget(_label("只读", size="xs", color="neutral.400"))
         hl.addWidget(acts, 0)
         acts.setFixedWidth(COL_ACT_W)
+        return row
+
+    def _pager(self) -> QWidget:
+        row = QWidget()
+        hl = QHBoxLayout(row)
+        hl.setContentsMargins(0, 12, 0, 2)
+        hl.setSpacing(10)
+        self.page_label = _label("", size="xs", color="neutral.500")
+        hl.addWidget(self.page_label)
+        hl.addStretch(1)
+        self.prev_btn = QPushButton("上一页")
+        self.prev_btn.setObjectName("BtnOutline")
+        self.prev_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.prev_btn.clicked.connect(lambda: self.turn_page(-1))
+        self.next_btn = QPushButton("下一页")
+        self.next_btn.setObjectName("BtnOutline")
+        self.next_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.next_btn.clicked.connect(lambda: self.turn_page(1))
+        hl.addWidget(self.prev_btn)
+        hl.addWidget(self.next_btn)
         return row
 
     # ----- 历史与快照（底线② 自动快照 · 可恢复）-----
@@ -554,24 +583,39 @@ class VocabModule(QWidget):
 
     # ------------------------------------------------------------------ 渲染
 
+    def _scope(self) -> str:
+        """当前选择折算成数据层的检索范围。"""
+        if self.dict_ == "custom":
+            return "custom"
+        if self.dict_ in ("b1", "b2", "b3"):
+            return self.dict_
+        if self.tier == "custom":
+            return "custom"
+        if self.tier == "builtin":
+            return "builtin"
+        return "all"
+
     def _render_all(self):
         self._render_entries()
         self._set_dict_active(self.dict_)
         self._render_snaps()
         self._update_sel_state()
+        self._render_hint()
+
+    def _render_hint(self):
+        warn = self.store.warning() if hasattr(self.store, "warning") else ""
+        if warn:
+            self._hint.setText(warn)
+            self._hint.setVisible(True)
+        else:
+            self._hint.setVisible(False)
 
     def get_filtered(self) -> list:
-        lst = self.entries[:]
-        if self.dict_ != "all":
-            lst = [e for e in lst if e["dict"] == self.dict_]
-        elif self.tier == "custom":
-            lst = [e for e in lst if e["tier"] == "custom"]
-        elif self.tier == "builtin":
-            lst = [e for e in lst if e["tier"] == "builtin"]
-        q = self.search.strip().lower()
-        if q:
-            lst = [e for e in lst if q in e["word"].lower() or q in e["value"].lower()]
-        return lst
+        """当前页的行（真实数据；不再是内存里的假列表）。"""
+        return list(self._page_rows)
+
+    def pages(self) -> int:
+        return max(1, (self._hit_total + PAGE_SIZE - 1) // PAGE_SIZE)
 
     def _render_entries(self):
         while self._table_body.count():
@@ -580,20 +624,68 @@ class VocabModule(QWidget):
             if w is not None:
                 w.setParent(None)
 
+        total, rows = self.store.query(self.search, scope=self._scope(),
+                                       offset=self._page * PAGE_SIZE, limit=PAGE_SIZE)
+        self._hit_total = total
+        self._page_rows = rows
+        # 页码越界（删完 / 检索变少）时回到最后一页
+        if self._page >= self.pages():
+            self._page = self.pages() - 1
+            total, rows = self.store.query(self.search, scope=self._scope(),
+                                           offset=self._page * PAGE_SIZE, limit=PAGE_SIZE)
+            self._hit_total = total
+            self._page_rows = rows
+
         self._table_body.addWidget(self._entry_header())
         self._table_body.addWidget(hline())
 
-        lst = self.get_filtered()
-        if not lst:
-            empty = _label("没有匹配的词条", size="sm", color="neutral.500")
-            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty.setContentsMargins(0, 28, 0, 28)
-            self._table_body.addWidget(empty)
+        if not rows:
+            self._table_body.addWidget(self._empty_state())
             return
-        for i, e in enumerate(lst):
+
+        for i, e in enumerate(rows):
             self._table_body.addWidget(self._entry_row(e))
-            if i != len(lst) - 1:
+            if i != len(rows) - 1:
                 self._table_body.addWidget(hline())
+        self._table_body.addWidget(hline())
+        self._table_body.addWidget(self._pager())
+        self._update_pager()
+
+    def _empty_state(self) -> QWidget:
+        """空状态给人话，不摆假词条（底线：无数据就说无数据）。"""
+        q = self.search.strip()
+        if q:
+            msg = (f"没有找到包含「{q}」的词条。\n"
+                   "换个词试试，或切到别的分级（自定义 / 内置）再看。")
+        elif self._scope() == "custom":
+            msg = ("我的词库还没有词条。\n"
+                   "点左上「＋ 新增词条」把常错的词加进来，下次校正会自动生效。")
+        else:
+            msg = "当前分级下没有可显示的词条。"
+        lab = _label(msg, size="sm", color="neutral.500", wrap=True)
+        lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lab.setContentsMargins(0, 32, 0, 32)
+        return lab
+
+    def _update_pager(self):
+        total = self._hit_total
+        pages = self.pages()
+        if total == 0:
+            self.page_label.setText("共 0 条")
+        else:
+            start = self._page * PAGE_SIZE + 1
+            end = min(total, (self._page + 1) * PAGE_SIZE)
+            self.page_label.setText(
+                f"第 {start}–{end} 条 / 共 {_fmt_num(total)} 条 · 第 {self._page + 1}/{pages} 页")
+        self.prev_btn.setEnabled(self._page > 0)
+        self.next_btn.setEnabled(self._page + 1 < pages)
+
+    def turn_page(self, delta: int):
+        target = self._page + delta
+        if target < 0 or target >= self.pages():
+            return
+        self._page = target
+        self._render_entries()
 
     def _render_snaps(self):
         while self._snap_list.count():
@@ -601,12 +693,14 @@ class VocabModule(QWidget):
             w = item.widget()
             if w is not None:
                 w.setParent(None)
-        if not self._snapshots:
-            empty = _label("暂无快照（任何变更都会自动创建）", size="xs", color="neutral.500")
+        records = self.store.history()
+        if not records:
+            empty = _label("暂无变更记录（新增 / 编辑 / 删除 / 合并都会自动留一份）",
+                           size="xs", color="neutral.500")
             empty.setContentsMargins(0, 4, 0, 4)
             self._snap_list.addWidget(empty)
             return
-        for i, s in enumerate(self._snapshots):
+        for i, s in enumerate(records):
             item = QWidget()
             hl = QHBoxLayout(item)
             hl.setContentsMargins(0, 10, 0, 10)
@@ -614,35 +708,37 @@ class VocabModule(QWidget):
             dot = QLabel()
             dot.setFixedSize(9, 9)
             dot.setStyleSheet(
-                f"background:{c('success') if i==0 else c('neutral.200')};"
-                f"border-radius:999px")
-            if i == 0:
-                dot.setStyleSheet(
-                    f"background:{c('success')};border-radius:999px;"
-                    f"border:3px solid {c('success.bg')}")
+                f"background:{c('success') if i == 0 else c('neutral.200')};"
+                + ("border:3px solid %s;" % c("success.bg") if i == 0 else "")
+                + "border-radius:999px")
             hl.addWidget(dot)
             hl.addWidget(_label(s["label"], size="sm", color="neutral.800"))
             hl.addStretch(1)
-            time = _label(s["time"] + (" · 当前" if i == 0 else ""), size="xs", color="neutral.500")
-            hl.addWidget(time)
-            if i > 0:
-                b = _link_btn("恢复到此")
-                b.clicked.connect(lambda _c, sid=s["id"]: self.restore_snap(sid))
-                hl.addWidget(b)
+            hl.addWidget(_label(s.get("time", ""), size="xs", color="neutral.500"))
+            b = _link_btn("恢复到此")
+            b.clicked.connect(lambda _c, idx=i: self.restore_snap(idx))
+            hl.addWidget(b)
             self._snap_list.addWidget(item)
 
     def _update_sel_state(self):
-        sel = list(self._selected)
-        valid = [i for i in sel if self._by_id(i) and self._by_id(i)["tier"] == "custom"]
+        valid = [i for i in self._selected if self._is_custom(i)]
         self._sel_count.setText(
-            f"已选 {len(self._selected)} 条（可删 {len(valid)}）" if self._selected else "未选择")
+            f"已选 {_fmt_num(len(self._selected))} 条（可删 {_fmt_num(len(valid))}）"
+            if self._selected else "未选择")
         self._del_btn.setEnabled(len(valid) > 0)
         self._merge_btn.setEnabled(len(valid) >= 2)
 
     # ------------------------------------------------------------------ 选择
 
-    def _by_id(self, i):
-        return next((e for e in self.entries if e["id"] == i), None)
+    def _is_custom(self, i) -> bool:
+        """内置词条用负数 id，天然与自定义（正 id）区分。"""
+        try:
+            return int(i) > 0
+        except (TypeError, ValueError):
+            return False
+
+    def _by_id(self, i) -> dict | None:
+        return self.store.row_by_id(int(i))
 
     def _toggle_row(self, i: int, state: int):
         if state:
@@ -652,7 +748,9 @@ class VocabModule(QWidget):
         self._update_sel_state()
 
     def _toggle_all(self, state: int):
-        for e in self.get_filtered():
+        for e in self._page_rows:
+            if not self._is_custom(e["id"]):
+                continue
             if state:
                 self._selected.add(e["id"])
             else:
@@ -664,65 +762,54 @@ class VocabModule(QWidget):
         self.tier = t
         if t == "custom":
             self.dict_ = "custom"
-        else:
+        elif t == "builtin":
             self.dict_ = "all"
+        self._page = 0
         self._set_dict_active(self.dict_)
         self._set_tier_active(t)
         self._render_entries()
+        self._update_sel_state()
 
     def select_dict(self, d: str):
         self.dict_ = d
-        if d not in ("custom", "all"):
+        if d in ("custom", "all"):
+            self.tier = "custom" if d == "custom" else "all"
+            self._set_tier_active(self.tier)
+        else:
             self.tier = "all"
             self._set_tier_active("all")
+        self._page = 0
         self._set_dict_active(d)
         self._render_entries()
+        self._update_sel_state()
 
     def _on_search(self, text: str):
         self.search = text
+        self._page = 0
         self._render_entries()
+        self._update_sel_state()
 
-    # ------------------------------------------------------------------ 快照 / 撤销
-
-    def _now(self) -> str:
-        import datetime
-        d = datetime.datetime.now()
-        return f"{d.hour:02d}:{d.minute:02d}:{d.second:02d}"
-
-    def _snap(self, label: str):
-        self._seq += 1
-        self._snapshots.insert(0, dict(
-            id=self._seq, time=self._now(), label=label,
-            data=copy.deepcopy(self.entries)))
-        if len(self._snapshots) > 12:
-            self._snapshots.pop()
-        self._render_snaps()
-
-    def _push_undo(self, before):
-        self._undo_stack.append(dict(before=copy.deepcopy(before)))
+    # ------------------------------------------------------------------ 撤销
 
     def _undo(self):
         self._hide_status()
-        if not self._undo_stack:
+        rec = self.store.undo()
+        if not rec:
             self._toast("没有可撤销的操作")
             return
-        last = self._undo_stack.pop()
-        self.entries = copy.deepcopy(last["before"])
         self._selected = {i for i in self._selected if self._by_id(i)}
-        self._snap("撤销上一步")
         self._render_all()
-        self._toast("已撤销上一步操作")
+        self._toast("已撤销上一步操作", with_undo=False)
 
-    def restore_snap(self, sid: int):
-        s = next((x for x in self._snapshots if x["id"] == sid), None)
-        if not s:
+    def restore_snap(self, idx: int):
+        """按「历史与快照」里的真实记录把自定义词库原字节回写。"""
+        rec = self.store.undo_to(idx)
+        if not rec:
+            self._toast("这份记录已无法恢复")
             return
-        self._push_undo(self.entries)
-        self.entries = copy.deepcopy(s["data"])
         self._selected = {i for i in self._selected if self._by_id(i)}
-        self._snap(f"恢复到 {s['time']}")
         self._render_all()
-        self._toast("已恢复到所选时间点")
+        self._toast("已恢复到所选记录", with_undo=False)
 
     # ------------------------------------------------------------------ 新增词条
 
@@ -732,18 +819,22 @@ class VocabModule(QWidget):
         modal = Modal(icon="＋", title="新增词条", parent=self)
         modal.add_note(
             "写入「我的词库」（自定义分级）；加入前自动查重；操作可撤销（同五条安全底线）。", "info")
-        word = QLineEdit(); word.setPlaceholderText("例如：萧衍")
-        val = QLineEdit(); val.setPlaceholderText("例如：萧彦")
+        word = QLineEdit()
+        word.setPlaceholderText("例如：萧衍")
+        val = QLineEdit()
+        val.setPlaceholderText("例如：萧彦")
         typ = QComboBox()
         typ.addItems(ENTRY_TYPES)
-        py = QLineEdit(); py.setPlaceholderText("例如：xiāo yàn")
+        py = QLineEdit()
+        py.setPlaceholderText("例如：xiāo yàn")
         modal.add_widget(self._field("原词（词 / 角色名）", word))
         modal.add_widget(self._field("替换为", val))
         modal.add_widget(self._field("类型", typ))
         modal.add_widget(self._field("注音（可选）", py))
         modal.add_foot("取消", "ghost", modal.reject)
         modal.add_foot("预览并查重", "primary",
-                       lambda: self.preview_add(modal, word.text(), val.text(), typ.currentText(), py.text()))
+                       lambda: self.preview_add(modal, word.text(), val.text(),
+                                                typ.currentText(), py.text()))
         modal.show()
 
     def preview_add(self, parent_modal, word: str, value: str, typ: str, pinyin: str):
@@ -751,26 +842,29 @@ class VocabModule(QWidget):
         value = (value or "").strip()
         pinyin = (pinyin or "").strip()
         if not word:
-            self._toast("请填写原词"); return
+            self._toast("请填写原词")
+            return
         if not value:
-            self._toast("请填写替换为"); return
+            self._toast("请填写替换为")
+            return
         if word == value:
-            self._toast("原词与替换值相同，无需新增"); return
-        f = dict(word=word, value=value, type=typ, pinyin=pinyin)
-        self._pending_add = f
-        same_word = [e for e in self.entries if e["word"] == word]
-        same_val = [e for e in self.entries if e["value"] == value and e["word"] != word]
+            self._toast("原词与替换值相同，无需新增")
+            return
+        self._pending_add = dict(word=word, value=value, typ=typ, pinyin=pinyin)
+        conflicts = self.store.conflicts_for_add(word, value)
+
         m = Modal(icon="✍", title="写入词库（二次确认）", parent=self)
         m.add_note("底线④：批量 / 写动作先预览再执行；新增可撤销。", "warn")
-        rows = [(e["word"], e["value"], DICT_NAMES[e["dict"]], "内置" if e["tier"] == "builtin" else "自定义")
-                for e in (same_word + same_val)]
+        rows = [(cf["kind"], cf["word"], cf["value"], cf["where"]) for cf in conflicts]
         m.add_widget(_mini_table(["冲突", "原词", "替换为", "所在"], rows, mono_cols={1, 2}))
         if rows:
-            m.add_note("加入前查重：发现冲突，请确认是否仍要写入「我的词库」。", "warn")
+            kinds = sorted({cf["kind"] for cf in conflicts})
+            m.add_note("加入前查重：发现冲突（" + "、".join(kinds) +
+                       "），请确认是否仍要写入「我的词库」。", "warn")
         else:
             m.add_note("查重通过：未发现同词 / 同值冲突。", "info")
-        m.add_widget(_label(
-            f"本次将写入 1 条到自定义词库；与内置词库分开管理（底线⑤）。", size="xs", color="neutral.500"))
+        m.add_widget(_label("本次将写入 1 条到自定义词库；与内置词库分开管理（底线⑤）。",
+                            size="xs", color="neutral.500"))
         m.add_foot("返回修改", "ghost", parent_modal.show)
         m.add_foot("确认写入", "primary", lambda: self.confirm_add(m))
         m.show()
@@ -778,17 +872,20 @@ class VocabModule(QWidget):
     def confirm_add(self, modal: Modal):
         f = self._pending_add
         if not f:
-            self._toast("没有待写入的词条"); return
-        before = copy.deepcopy(self.entries)
-        nid = (max(e["id"] for e in self.entries) if self.entries else 0) + 1
-        self.entries.append(dict(
-            id=nid, word=f["word"], value=f["value"], type=f["type"],
-            pinyin=f.get("pinyin", "") or "", dict="custom", tier="custom", books=[]))
-        self._push_undo(before)
-        self._snap(f"新增「{f['word']}」")
+            self._toast("没有待写入的词条")
+            return
+        try:
+            self.store.add_entry(word=f["word"], value=f["value"],
+                                 typ=f["typ"], pinyin=f.get("pinyin", ""))
+        except VocabDataError as exc:
+            self._toast(f"没有写入：{exc}")
+            return
         self._pending_add = None
-        self.dict_ = "custom"; self.tier = "custom"
-        self._set_dict_active("custom"); self._set_tier_active("custom")
+        self.dict_ = "custom"
+        self.tier = "custom"
+        self._page = 0
+        self._set_dict_active("custom")
+        self._set_tier_active("custom")
         modal.accept()
         self._render_all()
         self._toast(f"已新增「{f['word']}」到我的词库", with_undo=True)
@@ -797,47 +894,46 @@ class VocabModule(QWidget):
 
     def open_edit(self, i: int):
         e = self._by_id(i)
-        if not e or e["tier"] == "builtin":
+        if not e or not self._is_custom(i):
             return
         modal = Modal(icon="✎", title="编辑词条", parent=self)
         word = QLineEdit(e["word"])
         val = QLineEdit(e["value"])
-        typ = QComboBox(); typ.addItems(ENTRY_TYPES); typ.setCurrentText(e.get("type", "错词校正"))
+        typ = QComboBox()
+        typ.addItems(ENTRY_TYPES)
+        typ.setCurrentText(e.get("type") or ENTRY_TYPES[0])
         py = QLineEdit(e.get("pinyin", ""))
         modal.add_widget(self._field("原词", word))
         modal.add_widget(self._field("替换为", val))
         modal.add_widget(self._field("类型", typ))
         modal.add_widget(self._field("注音（可选）", py))
-        modal.add_note("修改后自动快照，可撤销（底线①②）。", "info")
+        modal.add_note("修改后自动留一份变更记录，可撤销（底线①②）。", "info")
         modal.add_foot("取消", "ghost", modal.reject)
         modal.add_foot("保存", "primary",
-                       lambda: self.save_edit(i, word.text(), val.text(), typ.currentText(), py.text(), modal))
+                       lambda: self.save_edit(i, word.text(), val.text(),
+                                              typ.currentText(), py.text(), modal))
         modal.show()
 
     def save_edit(self, i: int, word: str, value: str, typ: str, pinyin: str, modal: Modal):
-        before = copy.deepcopy(self.entries)
-        e = self._by_id(i)
-        if not e:
+        try:
+            self.store.update_entry(int(i), word=word, value=value, typ=typ, pinyin=pinyin)
+        except VocabDataError as exc:
+            self._toast(f"没有保存：{exc}")
             return
-        e["word"] = (word or "").strip() or e["word"]
-        e["value"] = (value or "").strip() or e["value"]
-        e["type"] = typ or e.get("type", "错词校正")
-        e["pinyin"] = (pinyin or "").strip()
-        self._push_undo(before)
-        self._snap(f"编辑「{e['word']}」")
         modal.accept()
         self._render_all()
         self._toast("已保存修改", with_undo=True)
 
     # ------------------------------------------------------------------ 查重
 
-    def open_dup(self):
-        groups = self._compute_dups()
+    def open_dup(self) -> list:
+        groups = self.store.dup_groups()
         if not groups:
-            self._toast("未发现重复词条"); return
+            self._toast("未发现重复词条")
+            return groups
         m = Modal(icon="🔁", title="查重结果（先预览，确认后处理）", parent=self)
         m.add_note("底线④：查重结果先给预览清单，确认后才执行；处理动作可撤销。", "warn")
-        for g in groups:
+        for g in groups[:20]:
             box = QFrame()
             box.setObjectName("DupGroup")
             box.setStyleSheet(
@@ -846,37 +942,32 @@ class VocabModule(QWidget):
             bl = QVBoxLayout(box)
             bl.setContentsMargins(0, 0, 0, 0)
             bl.setSpacing(8)
-            bl.addWidget(_label(f"{g['type']}：{g['key']}", size="sm", color="warning", weight="bold"))
-            bl.addWidget(_mini_table(["原词", "替换为", "来源"],
-                                     [(e["word"], e["value"], DICT_NAMES[e["dict"]]) for e in g["items"]],
-                                     mono_cols={0, 1}))
+            bl.addWidget(_label(f"{g['kind']}：{g['key']}", size="sm",
+                                color="warning", weight="bold"))
+            bl.addWidget(_mini_table(
+                ["原词", "替换为", "来源"],
+                [(row["word"], row["value"], TIER_NAMES[row["dict"]]) for row in g["items"]],
+                mono_cols={0, 1}))
             m.add_widget(box)
+        if len(groups) > 20:
+            m.add_note(f"重复分组较多，这里只列出前 20 组（共 {len(groups)} 组）。", "info")
         m.add_widget(_label("建议合并同词不同值冲突，或保留其一。可撤销，请放心处理。",
                             size="sm", color="neutral.500"))
         m.add_foot("暂时不处理", "ghost", m.reject)
         m.add_foot("我知道了", "primary", m.accept)
         m.show()
+        return groups
 
     def _compute_dups(self) -> list:
-        lst = [e for e in self.entries if e["tier"] == "custom"]
-        by_word, by_val, groups = {}, {}, []
-        for e in lst:
-            by_word.setdefault(e["word"], []).append(e)
-            by_val.setdefault(e["value"], []).append(e)
-        for w, arr in by_word.items():
-            if len(arr) > 1:
-                groups.append(dict(type="同词不同值", key=w, items=arr))
-        for v, arr in by_val.items():
-            if len(arr) > 1:
-                groups.append(dict(type="同值不同词", key=v, items=arr))
-        return groups
+        return self.store.dup_groups()
 
     # ------------------------------------------------------------------ 合并
 
     def open_merge(self):
-        sel = [i for i in self._selected if self._by_id(i) and self._by_id(i)["tier"] == "custom"]
+        sel = [i for i in self._selected if self._is_custom(i) and self._by_id(i)]
         if len(sel) < 2:
-            self._toast("请至少选择 2 条自定义词条进行合并"); return
+            self._toast("请至少选择 2 条自定义词条进行合并")
+            return
         self._merge_sel = sel
         items = [self._by_id(i) for i in sel]
         m = Modal(icon="➕", title="合并词条（先预览清单）", parent=self)
@@ -885,107 +976,138 @@ class VocabModule(QWidget):
         target.addItems([f"{e['word']} → {e['value']}" for e in items])
         m.add_widget(self._field("合并为「原词」（保留其一作为主词，其余并入其替换值）", target))
         m.add_widget(_mini_table(["处理", "原词", "替换为"],
-                                 [("并入", e["word"], e["value"]) for e in items], mono_cols={1, 2}))
-        m.add_widget(_label("合并后需「写入词库」二次确认（展示将写入条数）。", size="xs", color="neutral.500"))
+                                 [("并入", e["word"], e["value"]) for e in items],
+                                 mono_cols={1, 2}))
+        m.add_widget(_label("合并后需「写入词库」二次确认（展示将写入条数）。",
+                            size="xs", color="neutral.500"))
         m.add_foot("取消", "ghost", m.reject)
-        m.add_foot("预览写入", "primary", lambda: self.do_merge(m, target.currentText().split(" → ")[0]))
+        m.add_foot("预览写入", "primary",
+                   lambda: self.do_merge(m, target.currentText().split(" → ")[0]))
         m.show()
 
-    def do_merge(self, parent_modal, target_word: str):
-        sel = self._merge_sel or []
-        items = [self._by_id(i) for i in sel if self._by_id(i)]
-        if not items:
-            return
-        before = copy.deepcopy(self.entries)
-        self.entries = [e for e in self.entries if not (e["id"] in sel and e["word"] != target_word)]
+    def do_merge(self, parent_modal, target_word: str) -> dict | None:
+        sel = [i for i in (self._merge_sel or []) if self._by_id(i)]
+        if len(sel) < 2:
+            return None
+        items = [self._by_id(i) for i in sel]
         removed = len([e for e in items if e["word"] != target_word])
-        self._push_undo(before)
-        self._selected = {i for i in self._selected if self._by_id(i)}
-        self._snap(f"合并为「{target_word}」")
+        # 先给二次确认清单，确认后才真的写文件（底线④）
         m = Modal(icon="✍", title="写入词库（二次确认）", parent=self)
         m.add_note(
             f"将把合并结果写入「我的词库」，主词保留「{target_word}」，移除 {removed} 条重复词条。", "info")
-        m.add_widget(_label(f"本次将写入 1 条主词、移除 {removed} 条（合并动作可撤销）。", size="sm", color="neutral.700"))
+        m.add_widget(_label(f"本次将保留 1 条主词、移除 {removed} 条（合并动作可撤销）。",
+                            size="sm", color="neutral.700"))
         m.add_foot("取消", "ghost", m.reject)
-        m.add_foot("确认写入", "primary", lambda: (m.accept(), self._after_merge()))
-        parent_modal.accept()
+        m.add_foot("确认写入", "primary",
+                   lambda: self._do_merge_commit(m, sel, target_word))
         m.show()
+        parent_modal.accept()
+        return dict(pending=True, removed=removed, target=target_word)
 
-    def _after_merge(self):
+    def _do_merge_commit(self, modal: Modal, ids: list, target_word: str) -> dict | None:
+        try:
+            res = self.store.merge_entries(ids, target_word)
+        except VocabDataError as exc:
+            modal.reject()
+            self._toast(f"没有写入：{exc}")
+            return None
         self._merge_sel = None
+        self._selected = {i for i in self._selected if self._by_id(i)}
+        modal.accept()
         self._render_all()
-        self._toast("已写入词库，合并完成", with_undo=True)
+        self._toast(f"已合并为「{target_word}」，移除 {res['removed']} 条", with_undo=True)
+        return res
 
     # ------------------------------------------------------------------ 展开核对
 
     def open_expand(self):
-        scope = self.entries if (self.dict_ in ("custom", "all")) else \
-            [e for e in self.entries if e["dict"] == self.dict_]
-        lst = sorted(scope, key=lambda e: e["word"])
+        rows = self._page_rows
         m = Modal(icon="📋", title="展开核对（只读）", parent=self, min_width=620)
         m.add_note("结果以结构化表格呈现，不展示内部文件内容 / 行号（底线③）。", "info")
-        m.add_widget(_mini_table(["#", "原词", "替换为", "来源"],
-                                 [(i + 1, e["word"], e["value"], DICT_NAMES[e["dict"]])
-                                  for i, e in enumerate(lst)], mono_cols={1, 2}))
+        m.add_widget(_mini_table(
+            ["#", "原词", "替换为", "来源"],
+            [(self._page * PAGE_SIZE + i + 1, e["word"], e["value"], TIER_NAMES[e["dict"]])
+             for i, e in enumerate(rows)], mono_cols={1, 2}))
+        m.add_widget(_label(
+            f"当前页共 {len(rows)} 条；整体命中 {_fmt_num(self._hit_total)} 条，翻页可看全部。",
+            size="xs", color="neutral.500"))
         m.add_foot("关闭", "primary", m.accept)
         m.show()
 
     # ------------------------------------------------------------------ 删除（底线①④）
 
     def _on_delete_selected(self):
-        targets = [i for i in self._selected if self._by_id(i) and self._by_id(i)["tier"] == "custom"]
+        targets = [i for i in self._selected if self._is_custom(i) and self._by_id(i)]
         if not targets:
-            self._toast("没有可删除的自定义词条"); return
+            self._toast("没有可删除的自定义词条")
+            return
         self._confirm_delete(targets)
 
     def _confirm_delete(self, ids: list):
-        targets = [self._by_id(i) for i in ids if self._by_id(i) and self._by_id(i)["tier"] == "custom"]
+        targets = [self._by_id(i) for i in ids if self._is_custom(i) and self._by_id(i)]
         if not targets:
-            self._toast("没有可删除的自定义词条"); return
+            self._toast("没有可删除的自定义词条")
+            return
         book_map = {}
         for e in targets:
-            for b in e["books"]:
+            for b in e.get("books") or []:
                 book_map[b] = book_map.get(b, 0) + 1
         book_lines = "；".join(f"{b}：涉及 {n} 条" for b, n in book_map.items()) or \
             "无（这些词条尚未在任何校正中命中）"
         m = Modal(icon="🗑", title="删除确认（批量先预览）", parent=self)
         m.add_note("底线④：批量删除必须先给预览清单，确认后执行；底线①：误删可撤销。", "warn")
-        m.add_widget(_label(f"即将删除 {len(targets)} 条自定义词条，删除后可通过「撤销」恢复。", size="sm", color="neutral.800"))
-        m.add_widget(_label("影响范围（命中过哪些书）：", size="sm", weight="semibold", color="neutral.700"))
+        m.add_widget(_label(
+            f"即将删除 {len(targets)} 条自定义词条，删除后可通过「撤销」恢复。",
+            size="sm", color="neutral.800"))
+        m.add_widget(_label("影响范围（命中过哪些书）：", size="sm",
+                            weight="semibold", color="neutral.700"))
         m.add_note(book_lines, "info")
-        m.add_widget(_mini_table(["原词", "替换为"], [(e["word"], e["value"]) for e in targets], mono_cols={0, 1}))
+        m.add_widget(_mini_table(["原词", "替换为"],
+                                 [(e["word"], e["value"]) for e in targets],
+                                 mono_cols={0, 1}))
         m.add_foot("取消", "ghost", m.reject)
         m.add_foot(f"确认删除 {len(targets)} 条", "danger",
-                   lambda: (m.accept(), self.do_delete(ids)))
+                   lambda: self.do_delete(ids, m))
         m.show()
 
-    def do_delete(self, ids: list):
-        before = copy.deepcopy(self.entries)
-        self.entries = [e for e in self.entries if e["id"] not in ids]
+    def do_delete(self, ids: list, modal: Modal | None = None) -> dict | None:
+        try:
+            res = self.store.delete_entries(ids)
+        except VocabDataError as exc:
+            self._toast(f"没有删除：{exc}")
+            return None
         self._selected = {i for i in self._selected if self._by_id(i)}
-        self._push_undo(before)
-        self._snap(f"删除 {len(ids)} 条")
+        if modal is not None:
+            modal.accept()
         self._render_all()
-        self._toast(f"已删除 {len(ids)} 条自定义词条", with_undo=True)
+        self._toast(f"已删除 {res['removed']} 条自定义词条", with_undo=True)
+        return res
 
     # ------------------------------------------------------------------ 本书专有词（2.4.2）
 
     def open_book_words(self):
+        if not self._book_words:
+            self._toast("还没有可加入的本书专有词条")
+            return
         m = Modal(icon="✨", title="本书专有词条（加入预览）", parent=self)
         m.add_note("加入前有预览，可逐条或整组确认；加入后下次校正自动生效。", "info")
         checks = []
         rows = QVBoxLayout()
         rows.setContentsMargins(0, 0, 0, 0)
         rows.setSpacing(4)
-        for i, w in enumerate(BOOK_WORDS):
+        for w in self._book_words:
             rw = QWidget()
             rl = QHBoxLayout(rw)
             rl.setContentsMargins(0, 0, 0, 0)
             rl.setSpacing(10)
-            cb = QCheckBox(); cb.setChecked(True); checks.append(cb)
+            cb = QCheckBox()
+            cb.setChecked(True)
+            checks.append(cb)
             rl.addWidget(cb)
-            rl.addWidget(_label(w["word"], size="sm", weight="bold", color="neutral.900", mono=True), 0)
-            rl.addWidget(_label(w["note"], size="xs", color="neutral.500"), 1)
+            rl.addWidget(_label(w["word"], size="sm", weight="bold",
+                                color="neutral.900", mono=True), 0)
+            rl.addWidget(_label(w.get("note") or "", size="xs",
+                                color="neutral.500"), 1)
             rows.addWidget(rw)
         self._book_checks = checks
         rows_box = QWidget()
@@ -996,41 +1118,45 @@ class VocabModule(QWidget):
                    lambda: self.add_book_words(m))
         m.show()
 
-    def add_book_words(self, modal: Modal):
-        before = copy.deepcopy(self.entries)
-        added = []
-        nid = (max(e["id"] for e in self.entries) if self.entries else 0)
+    def add_book_words(self, modal: Modal) -> int:
+        added = 0
         for i, cb in enumerate(self._book_checks or []):
-            if cb.isChecked():
-                w = BOOK_WORDS[i]
-                if not any(e["word"] == w["word"] and e["dict"] == "custom" for e in self.entries):
-                    nid += 1
-                    self.entries.append(dict(
-                        id=nid, word=w["word"], value=w["value"], type="专有名词",
-                        pinyin="", dict="custom", tier="custom", books=["《星河彼端》"]))
-                    added.append(w["word"])
-        self._push_undo(before)
-        self._snap(f"加入 {len(added)} 条专有词")
+            if not cb.isChecked():
+                continue
+            w = self._book_words[i]
+            word = w["word"]
+            value = w.get("value") or word
+            if self.store.conflicts_for_add(word, value):
+                continue           # 已在词库里就不再重复写入
+            try:
+                self.store.add_entry(word=word, value=value, typ="专有名词",
+                                     book=self._book_title)
+            except VocabDataError:
+                continue
+            added += 1
         self.hide_banner()
         modal.accept()
         self._render_all()
-        self._toast(f"已加入 {len(added)} 条专有词条到「我的词库」", with_undo=True)
+        self._toast(f"已加入 {added} 条专有词条到「我的词库」", with_undo=added > 0)
+        return added
 
     # ------------------------------------------------------------------ 恢复默认（底线⑤）
 
     def restore_default(self):
+        """只重置内置词库；自定义词条原样保留（内置本来只读，这里做完整性自检 + 说明）。"""
         d = ConfirmDialog(
             icon="↺", title="恢复默认词库",
             note="底线⑤：恢复默认词库只重置内置词库，不影响你的自定义词条。",
             confirm_text="确认恢复", confirm_kind="primary", parent=self)
-        if d.exec() == QDialog.DialogCode.Accepted:
-            before = copy.deepcopy(self.entries)
-            custom = [e for e in self.entries if e["tier"] == "custom"]
-            self.entries = custom + _seed_builtin()
-            self._push_undo(before)
-            self._snap("恢复默认词库")
-            self._render_all()
-            self._toast("已恢复默认词库（自定义词条保留）", with_undo=True)
+        if d.exec() != QDialog.DialogCode.Accepted:
+            return
+        ok, detail = self.store.builtin.self_check() if hasattr(
+            self.store.builtin, "self_check") else (self.store.builtin.available, "")
+        self._render_all()
+        if ok:
+            self._toast(f"内置词库已校验完整，自定义词条保留（{_fmt_num(len(self.store.custom))} 条）")
+        else:
+            self._toast(f"内置词库不完整：{detail}")
 
     # ------------------------------------------------------------------ 公共
 
@@ -1064,14 +1190,14 @@ class VocabModule(QWidget):
         self.status.setObjectName("Toast")
         self.status.setStyleSheet(
             f"#Toast{{background:{c('neutral.800')};color:#fff;"
-            f"border-radius:10px;padding:10px 16px;font-size:{fs('sm')}}}") 
+            f"border-radius:10px;padding:10px 16px;font-size:{fs('sm')}}}")
         self.status.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         self.undo_btn = QPushButton("撤销")
         self.undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.undo_btn.setStyleSheet(
             f"QPushButton{{background:{c('primary.500')};color:#fff;border:none;"
             f"padding:6px 12px;border-radius:7px;font-weight:700;font-size:{fs('sm')}}}"
-            f"QPushButton:hover{{background:{c('primary.600')}}}") 
+            f"QPushButton:hover{{background:{c('primary.600')}}}")
         self.undo_btn.clicked.connect(self._undo)
         sl.addWidget(self.status)
         sl.addWidget(self.undo_btn)
