@@ -1,0 +1,123 @@
+{
+  "summary": {
+    "total_files": 15,
+    "identical_files": 15,
+    "different_files": 0,
+    "missing": 0,
+    "total_php_entries": 91926,
+    "total_py_entries": 91926,
+    "excluded_shipped_maps": [
+      "天之下.php",
+      "铁鹤书.php"
+    ],
+    "corpora_count": 15,
+    "all_identical": true
+  },
+  "files": [
+    {
+      "file": "novel_fanpai_ch001-060.php",
+      "php_entry_count": 190,
+      "py_entry_count": 190,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "novel_guimie_full.php",
+      "php_entry_count": 1891,
+      "py_entry_count": 1891,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "novel_quehun_ch001-060.php",
+      "php_entry_count": 247,
+      "py_entry_count": 247,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg23863_水滸傳.php",
+      "php_entry_count": 907,
+      "py_entry_count": 907,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg23910_封神演義.php",
+      "php_entry_count": 5631,
+      "py_entry_count": 5631,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg23950_三國志演義.php",
+      "php_entry_count": 1324,
+      "py_entry_count": 1324,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg23962_西遊記.php",
+      "php_entry_count": 880,
+      "py_entry_count": 880,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg24032_儒林外史.php",
+      "php_entry_count": 90,
+      "py_entry_count": 90,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg24141_警世通言.php",
+      "php_entry_count": 4457,
+      "py_entry_count": 4457,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg24226_史記.php",
+      "php_entry_count": 5807,
+      "py_entry_count": 5807,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg24230_今古奇觀.php",
+      "php_entry_count": 36669,
+      "py_entry_count": 36669,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg24264_紅樓夢.php",
+      "php_entry_count": 22310,
+      "py_entry_count": 22310,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg27166_呐喊.php",
+      "php_entry_count": 4681,
+      "py_entry_count": 4681,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg51828_聊齋志異.php",
+      "php_entry_count": 3409,
+      "py_entry_count": 3409,
+      "status": "identical",
+      "diff_lines": []
+    },
+    {
+      "file": "pg52200_金瓶梅.php",
+      "php_entry_count": 3433,
+      "py_entry_count": 3433,
+      "status": "identical",
+      "diff_lines": []
+    }
+  ]
+}

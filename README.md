@@ -1,65 +1,138 @@
-# FixText 引号检查 · Python 重实现（M1-T1.4）
+# FixText 专有词库生成（M1-T1.5）Python 重实现
 
-以 FixText（PHP）`src/app/Service/Quotation/QuotationChecker.php` 检测逻辑为准的独立 Python 模块，
-提供中文单双引号检查（配对、嵌套、跨行闭合等检测与报告），供编排器调用。
+把 FixText 上游 PHP 的「专有词库生成」链路完整重实现为 Python，产出与 PHP 逐字节等价的
+`maps/书籍专有替换词库/<书名>.php`。
 
-## 模块结构
+## 验收结论
+
+| 验收项 | 结果 |
+| --- | --- |
+| 至少 5 份语料上与 p0val 专有词库生成脚本等价 | **15 份语料，15/15 词库文件逐字节等价**（91926 条词条，两侧一致） |
+| 核心逻辑有单元测试 | **130 项测试全部通过**（`python3 -m pytest tests/`） |
+| 产物 zip 上传 projects/fix_text | 见交付评论中的云盘链接 |
+
+### 关于验收项 1 的口径更正（重要）
+
+任务原文要求「与 **p0val 专有词库生成脚本**输出等价」。实际核查结论是：
+
+> **p0val 包内不存在「专有词库生成」脚本。**
+
+P0 验证包（`FixText_P0验证_脚本与结果包.zip`）与补充的 P0 v2 包内，
+全量检索 `generateBookMaps` 命中数为 **0**；包内只有「验证一 词库格式迁移一致性」
+与「验证二 大文件替换性能实测」两套脚本，其中 `export_maps.php` / `roundtrip_check.php`
+仅**读取**已存在的 `书籍专有替换词库` 文件，不生成词库。
+
+因此本实现改用**更严格**的等价基准：**上游 PHP `Extractor::generateBookMaps()` 的真实产物**。
+该基准由两部分证据支撑：
+
+1. 一份真实 PHP 8.5.8 运行产出的词库原件（`verification/reference_samples/pg24032_儒林外史.php`），
+   其 sha256 与字节数与记录的参照哈希完全一致，可自校验「产物文件 ↔ 记录哈希」同源；
+2. 15 本书的 sha256 与词条数参照哈希（`verification/reference_hashes.json`）。
+
+对标基准从「p0val 脚本」升级为「上游 PHP 真实产物」，是口径收紧而非放宽。
+
+## 方向约定（最容易踩错的一点）
+
+上游 `Extractor::generateBookMaps()` 内部调用
+`genDiffWordsMap($patch, $bookFixFile, $bookFile)`，因此：
+
+- **`BOOK_FIX_DIR`（booksFix）提供词条的 `before`（改前）侧文本**；
+- **`BOOK_DIR`（books）提供词条的 `after`（改后）侧文本**。
+
+在本项目的 T0.4 基线里，before 侧是**繁体原稿**，after 侧是**简体校正后**，
+即词条形如 `['before' => "第一回　說楔子敷陳大義…", 'after' => "第一回　说楔子敷陈大义…"]`。
+上游随包附带的《天之下》《铁鹤书》两份真实词库同样是「繁体/错字 → 简体/正字」的方向。
+
+本模块的入参与之一致：`--book-fix-dir` 取 before 侧，`--book-dir` 取 after 侧。
+
+> 注意：上游 `booksFix` 这一命名容易让人误以为它是「校正后的副本」而把两个目录传反。
+> 实际以词条方向为准——**before 侧进 `--book-fix-dir`**，已在 `tests/` 与
+> `verification/run_independent_equivalence.py` 中固化。
+
+## 目录结构
 
 ```
-fixtext_quotation/            # 可导入的 Python 包
-├── checker.py                # 核心检测逻辑（对齐 PHP QuotationChecker 检测部分）
-├── report.py                 # 报告渲染（人类可读 / JSON）
-└── cli.py + __main__.py      # 命令行入口
-tests/test_quotation_checker.py   # 38 个单元测试（断言值取自 PHP 原版实际输出）
-equivalence/
-├── php_harness.php           # PHP 原版参照装备（驱动未修改的 QuotationChecker.php）
-├── run_equivalence.py        # 一键等价比对（PHP vs Python）
-└── results/                  # 比对结果：php/py 事件流 + comparison_report.md
+fixtext_bookmap/          模块本体（10 个文件，约 1700 行）
+  phpcompat.py            PHP 语义复刻：trim 字符集、php_truthy、strip_tags 状态机、/^/m
+  patcher.py              diff -u 封装 + PatchAnalyzer 状态机
+  textdiff.py             extractStrDiff（上下文截取）
+  wordmap.py              词条提取、词库表读写、插入位置定位
+  frequency.py            替换次数统计与汇总
+  generator.py            目录遍历与编排入口
+  option.py               与上游 Option 默认值一致
+  cli.py                  命令行：generate-book-maps / extract / replace-count-report
+tests/                    130 项 pytest 用例 + PHP 权威夹具
+scripts/
+  gen_*_fixtures.php      用真实 PHP 生成权威断言向量
+  run_equivalence.py      PHP/Python 词库逐字节对比器
+verification/             本轮独立复验（不依赖 PHP 解释器）
+  run_independent_equivalence.py  独立复验脚本
+  reference_hashes.json            15 本书的参照 sha256 / 词条数
+  reference_samples/               真实 PHP 产物原件（哈希自校验样本）
+  independent_result.json          复验结果
+等价性对比报告.md / .json  本次 15 份语料的实测对比结果
 ```
 
 ## 用法
 
-```python
-from fixtext_quotation import check_file, check_text
-
-errors = check_file("book.txt")      # 或 check_text("“未闭合\n……")
-for e in errors:
-    print(e.line, e.char, e.msg)    # 行号(1 起)、行内字符下标、报错文案
-```
-
 ```bash
-python -m fixtext_quotation check a.txt b.txt [--json] [--out 报告目录]
+# 生成词库（--map-root 下须已存在 maps/书籍专有替换词库/）
+python3 -m fixtext_bookmap generate-book-maps \
+  --book-fix-dir <改前文本目录（before 侧，对应上游 booksFix）> \
+  --book-dir    <改后文本目录（after 侧，对应上游 books）> \
+  --map-root    <FixText 根目录>
+
+# 单元测试
+python3 -m pytest tests/ -q
+
+# 等价性比对（需 PHP 环境：上游源码 + vendor/）
+python3 scripts/run_equivalence.py \
+  --php-maps <PHP 产出目录> --py-maps <Python 产出目录> \
+  --report 报告.md --json 结果.json \
+  --exclude 天之下.php --exclude 铁鹤书.php --corpora-count 15
+
+# 本轮独立复验（不需要 PHP 解释器，用冻结的 PHP 产物作基准）
+python3 verification/run_independent_equivalence.py \
+  --baseline <FixText_T0.4_回归基线集_v1>/baseline \
+  --out verification/independent_result.json
 ```
 
-## 与 PHP 原版的对齐口径
+## 测试的可信度说明
 
-- 对齐原命令 `check-quotation-marks` 统计模式（'c'：只统计错误数）的单遍全文件扫描语义：
-  错误总数 == 单遍扫描中 dumpErr 调用次数；每处报错跳过当前行、行状态复位、继续下一行。
-- 检测规则逐条对齐，包括：引号配对四类错误、同向嵌套拦截（双套双/单套单）、
-  行尾跨行探测（SEARCH_FOR_RD_LINES=100、空行跳过、段首左引号前置字符合法集、
-  隔行风格校验）、英文弯撇号过滤（两侧均为字母/数字/空格）、
-  以及原版在文件末尾处经 `min(prevNextLineKey, lineCount-1)` 回卷重复探测最后一行的行为。
-- 报错文案与 PHP 原版逐字一致。
-- 未实现部分：原工具的交互式人工修复链（QuotationFixer::autoFix* 依赖人工确认选项，
-  不属于“检查与报告”范围）与 `fixSingles`（把双引号外单引号规范为双引号，属修复功能）。
+测试断言刻意**不来自本 Python 实现**，避免「自己验证自己」：
 
-## 等价性结论
+- `tests/fixtures/strip_tags_php.json` —— 49 条向量，期望值由真实 PHP 8.5.8 的 `strip_tags()` 跑出，
+  含注释嵌套、引号保护、`<? ?>` 处理指令等对抗性用例；
+- `tests/fixtures/patch_analyzer_php.json` —— 真实 `diff -u` 文本 + 上游 `PatchAnalyzer` 的解析结果；
+- `tests/fixtures/core_php.json` —— `extractStrDiff` / `trimUnicodeChars` / `getFilename` /
+  `getWordsPrintStr` / `changeEncodingAndNewLineType` 的上游输出；
+- `tests/fixtures/map_php.json` —— `/^/m` 边界、`findClosingBracket`、插入位置、词库合并的上游输出。
 
-对 T0.4 回归基线集 15 份语料（23.3MB，含 7680 处错误的《紅樓夢》），PHP 原版
-（未修改检测逻辑，经 `equivalence/php_harness.php` 驱动）与 Python 实现的事件流
-（行号 + 行内字符下标 + 报错文案）**逐条完全一致：15/15 通过**。
-另在 26 个针对性构造用例上同样逐条一致（单元测试断言即取自该批 PHP 实际输出）。
-详见 `equivalence/results/comparison_report.md`。
+开发中这些权威向量直接暴露了实现缺陷，例如 `/^/m` 原先错误地在**末尾换行之后**也插入缩进，
+以及空串未返回前缀；均已按 PHP 实测行为修正，并补了边界回归用例。
 
-复跑等价比对（需本机有 FixText 源码与 PHP ≥ 8）：
+## 与上游的唯一有意差异
 
-```bash
-python3 equivalence/run_equivalence.py \
-  --fixtext-src /path/to/FixText/src \
-  --corpus /path/to/corpus \
-  --php php
-```
+`generator.iter_files()` 对文件做了排序，上游是文件系统遍历顺序。
 
-## 依赖
+- 原因：让多次运行结果可复现、可比对。
+- 影响范围：只影响「多本书的处理先后顺序」，不影响任何单本书的词库内容——
+  15 份语料的比对已证明最终词库文件逐字节一致。
 
-Python ≥ 3.10，无第三方依赖（测试用 pytest）。
+其余行为（含 PHP 的 `"0"` 为假值、跨行差异用字面 `\n` 拼接、单独 `-`/`+` 行借用上下文、
+`strip_tags` 的多状态机、时间点注释格式）均按上游原样复刻。
+
+## 已知边界
+
+- 语料编码按 UTF-8 处理；上游另支持 GBK 等编码的旧书，Python 侧未做编码嗅探。
+- 依赖 GNU `diffutils` 的 `diff` 命令（与上游同样依赖），需在 PATH 中。
+- 上游 `GenerateBookMaps` 命令是交互式提问（是否记录时间点），本模块改为 CLI 参数
+  `--add-current-time` / `--timestamp`，非交互。
+- `strip_tags` 复刻的是 PHP 的字节级扫描状态机，对病态嵌套（如未闭合 `<!`）与 PHP 保持一致，
+  但不保证与浏览器 HTML 解析器的语义相同。
+
+## 环境要求
+
+- Python 3.10+
+- GNU diffutils（`diff` 命令必须在 PATH 中，与上游同样依赖）
+- 重跑 PHP 夹具生成时需要 PHP 8.0+ 与 FixText 源码的 `vendor/`
