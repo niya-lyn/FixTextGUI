@@ -113,7 +113,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          576
+          623
         ],
         "passed": true
       }
@@ -161,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 2723,
+    "scanned": 2799,
     "forbidden_patterns": 25,
     "hits": []
   },
@@ -221,7 +221,7 @@
       {
         "key": "history",
         "file": "screenshots/07_entry6_history.png",
-        "bytes": 131603
+        "bytes": 139734
       }
     ]
   },
