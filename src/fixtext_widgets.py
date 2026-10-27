@@ -1,0 +1,618 @@
+"""
+FixText V1 · 复用部件库（Qt）
+================================
+
+从 HTML 原型提炼的可复用控件，全部**只消费 `fixtext_tokens.py` 的令牌**，
+不硬编码任何颜色/尺寸字面值（避免再次漂移）。
+
+- `Card`      白底圆角卡片，可带标题行 / 折叠 / 「设计依据」标签
+- `Switch`    胶囊开关（40×22，自绘，无动画）
+- `Pill`      状态徽标（ok / info / warn / err / neutral）
+- `FieldRow`  编号 + 名称 + 描述 + 控件 的一行（检查项、规则开关都用它）
+- `no_badge`  行首序号方块
+- `hline`     1px 分隔线
+"""
+
+from __future__ import annotations
+
+from PySide6.QtCore import Qt, QSize, Signal, QTimer
+from PySide6.QtGui import QPainter, QColor
+from PySide6.QtWidgets import (
+    QFrame, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QAbstractButton, QSizePolicy, QDialog, QProgressBar, QPushButton,
+)
+
+from fixtext_tokens import c, sp, r, fs, FONT_WEIGHT, FONT_MONO
+
+
+def px(value: str) -> int:
+    """'12px' -> 12"""
+    return int(str(value).replace("px", ""))
+
+
+def hline(color_key: str = "neutral.100") -> QFrame:
+    f = QFrame()
+    f.setFixedHeight(1)
+    f.setStyleSheet(f"background:{c(color_key)};border:none")
+    return f
+
+
+def no_badge(n) -> QLabel:
+    lab = QLabel(str(n))
+    lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    lab.setFixedSize(22, 22)
+    lab.setStyleSheet(
+        f"background:{c('neutral.100')};color:{c('neutral.500')};"
+        f"border-radius:6px;font-size:11px;font-weight:700"
+    )
+    return lab
+
+
+_PILL = {
+    "ok":      ("success",       "success.bg",    "success.border"),
+    "info":    ("info",          "info.bg",       "info.border"),
+    "warn":    ("warning",       "warning.bg",    "warning.border"),
+    "err":     ("error",         "error.bg",      "error.border"),
+    "neutral": ("neutral.500",   "neutral.100",   "neutral.200"),
+}
+
+
+class Pill(QLabel):
+    """状态徽标。kind ∈ ok/info/warn/err/neutral。"""
+
+    def __init__(self, text: str, kind: str = "info", parent=None):
+        super().__init__(text, parent)
+        fg, bg, _bd = _PILL.get(kind, _PILL["neutral"])
+        self.setStyleSheet(
+            f"color:{c(fg)};background:{c(bg)};"
+            f"border-radius:{r('full')};padding:2px 9px;"
+            f"font-size:{fs('xs')};font-weight:700"
+        )
+        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+
+
+class Switch(QAbstractButton):
+    """胶囊开关：选中为主色轨道 + 白色滑块。"""
+
+    def __init__(self, checked: bool = True, parent=None):
+        super().__init__(parent)
+        self.setCheckable(True)
+        self.setChecked(checked)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFixedSize(40, 22)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+    def sizeHint(self) -> QSize:
+        return QSize(40, 22)
+
+    def paintEvent(self, _event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.setBrush(QColor(c("primary.500") if self.isChecked() else c("neutral.200")))
+        p.drawRoundedRect(0, 0, 40, 22, 11, 11)
+        p.setBrush(QColor("#FFFFFF"))
+        p.drawEllipse(20 if self.isChecked() else 2, 2, 18, 18)
+        p.end()
+
+
+class Card(QFrame):
+    """白底圆角卡片。
+
+    title / sub    标题行（sub 为灰字补充）
+    collapsible    标题行可点击折叠
+    open_          初始展开状态
+    basis          「设计依据」标签文案（默认隐藏，由调用方统一控制显隐）
+    """
+
+    def __init__(self, title: str = "", sub: str = "", *,
+                 collapsible: bool = False, open_: bool = True,
+                 basis: str = "", parent=None):
+        super().__init__(parent)
+        self.setObjectName("Card")
+        self._collapsible = collapsible
+        self._open = open_
+        self._chev = None
+        self._sep = None
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        if title:
+            head = QWidget()
+            hl = QHBoxLayout(head)
+            hl.setContentsMargins(18, 14, 18, 14)
+            hl.setSpacing(10)
+            t = QLabel(title)
+            t.setStyleSheet(
+                f"color:{c('neutral.800')};font-size:{fs('base')};"
+                f"font-weight:{FONT_WEIGHT['semibold']}"
+            )
+            hl.addWidget(t)
+            if sub:
+                s = QLabel(sub)
+                s.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+                hl.addWidget(s)
+            hl.addStretch(1)
+            if collapsible:
+                self._chev = QLabel("▼" if open_ else "▶")
+                self._chev.setStyleSheet(
+                    f"color:{c('neutral.500')};font-size:{fs('sm')}"
+                )
+                hl.addWidget(self._chev)
+                head.setCursor(Qt.CursorShape.PointingHandCursor)
+                head.mousePressEvent = lambda e: self.toggle()
+            root.addWidget(head)
+
+            self._sep = hline()
+            root.addWidget(self._sep)
+
+        self.body = QWidget()
+        self.body_l = QVBoxLayout(self.body)
+        self.body_l.setContentsMargins(18, 14, 18, 18)
+        self.body_l.setSpacing(0)
+        root.addWidget(self.body)
+
+        # 「设计依据」标签：放进可整体显隐的容器，隐藏时间距一并消失
+        self.basis = None          # 容器（供外部 setVisible 控制）
+        self.basis_label = None
+        if basis:
+            text = basis if basis.lstrip().startswith("§") else f"§ {basis}"
+            box = QWidget()
+            bl = QVBoxLayout(box)
+            bl.setContentsMargins(0, 0, 0, 0)
+            bl.setSpacing(0)
+            self.basis_label = QLabel(text)
+            self.basis_label.setStyleSheet(
+                f"color:{c('primary.700')};background:{c('primary.50')};"
+                f"border-radius:{r('full')};padding:2px 9px;"
+                f"font-size:{fs('xs')};font-weight:700"
+            )
+            self.basis_label.setSizePolicy(
+                QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed
+            )
+            bl.addWidget(self.basis_label)
+            bl.addSpacing(12)
+            box.setVisible(False)
+            self.body_l.addWidget(box)
+            self.basis = box
+
+        if collapsible:
+            self.set_open(open_)
+
+    def set_open(self, v: bool):
+        self._open = v
+        self.body.setVisible(v)
+        if self._sep is not None:
+            self._sep.setVisible(v)
+        if self._chev is not None:
+            self._chev.setText("▼" if v else "▶")
+
+    def toggle(self):
+        self.set_open(not self._open)
+
+
+class FieldRow(QWidget):
+    """编号 + 名称 + 描述 + （chip / 控件）的一行。
+
+    idx=None 时不显示行首序号（如批量操作行）。
+    """
+
+    def __init__(self, idx, name: str, desc: str = "", *,
+                 control: QWidget | None = None, chip: str | None = None,
+                 name_width: int = 150, parent=None):
+        super().__init__(parent)
+        hl = QHBoxLayout(self)
+        hl.setContentsMargins(0, 11, 0, 11)
+        hl.setSpacing(12)
+
+        if idx is not None:
+            hl.addWidget(no_badge(idx))
+
+        n = QLabel(name)
+        n.setStyleSheet(
+            f"color:{c('neutral.800')};font-weight:600;font-size:{fs('sm')}"
+        )
+        n.setMinimumWidth(name_width)
+        hl.addWidget(n)
+
+        if desc:
+            d = QLabel(desc)
+            d.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+            d.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+            hl.addWidget(d, 1)
+        else:
+            hl.addStretch(1)
+
+        if chip is not None:
+            cp = QLabel(chip)
+            cp.setStyleSheet(
+                f"background:{c('neutral.100')};color:{c('neutral.500')};"
+                f"border-radius:{r('full')};padding:3px 9px;"
+                f"font-size:11px;font-weight:700"
+            )
+            cp.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+            hl.addWidget(cp)
+
+        if control is not None:
+            hl.addWidget(control)
+
+
+class RadioDot(QFrame):
+    """圆形单选指示器：外环 + 内点。
+
+    不用 ○ / ● 字形——字形基线在字体里偏低，垂直居中会跑偏，
+    且纯颜色区分选中态对色觉障碍不友好，这里补一个形状信号。
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("RadioDot")
+        self.setFixedSize(15, 15)
+        self._inner = QFrame(self)
+        self._inner.setObjectName("RadioDotInner")
+        self._inner.setFixedSize(7, 7)
+        box = QVBoxLayout(self)
+        box.setContentsMargins(0, 0, 0, 0)
+        box.addWidget(self._inner, 0, Qt.AlignmentFlag.AlignCenter)
+        self.set_selected(False)
+
+    def set_selected(self, on: bool):
+        ring = c("primary.500") if on else c("neutral.300")
+        self.setStyleSheet(
+            f"QFrame#RadioDot{{background:transparent;border:2px solid {ring};"
+            f"border-radius:7px}}")
+        self._inner.setStyleSheet(
+            f"QFrame#RadioDotInner{{background:{c('primary.500')};border:none;"
+            f"border-radius:3px}}" if on
+            else "QFrame#RadioDotInner{background:transparent;border:none}")
+        self._inner.setVisible(on)
+
+
+class RadioCard(QFrame):
+    """可点击的单选卡片（标题 + 说明 + 圆形指示器）。chosen 携带 value。
+
+    注意：内联 QSS 必须用 `#RadioCard` 精确选择器。写成裸 `QFrame{}` 会连带
+    命中卡片内的 QLabel（QLabel 是 QFrame 子类），出现多层边框。
+    """
+
+    chosen = Signal(str)
+
+    def __init__(self, title: str, desc: str, value: str, parent=None):
+        super().__init__(parent)
+        self.value = value
+        self.setObjectName("RadioCard")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setMinimumHeight(58)
+
+        hl = QHBoxLayout(self)
+        hl.setContentsMargins(12, 12, 12, 12)
+        hl.setSpacing(10)
+
+        self._dot = RadioDot()
+        col = QVBoxLayout()
+        col.setSpacing(3)
+        t = QLabel(title)
+        t.setStyleSheet(
+            f"font-weight:700;font-size:{fs('sm')};color:{c('neutral.800')}")
+        d = QLabel(desc)
+        d.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+        col.addWidget(t)
+        col.addWidget(d)
+        hl.addWidget(self._dot, 0, Qt.AlignmentFlag.AlignVCenter)
+        hl.addLayout(col, 1)
+
+        self.set_selected(False)
+
+    def set_selected(self, on: bool):
+        self._dot.set_selected(on)
+        if on:
+            bg, border = c("primary.50"), c("primary.500")
+        else:
+            bg, border = c("neutral.0"), c("neutral.200")
+        hover = border if on else c("primary.300")
+        self.setStyleSheet(
+            f"QFrame#RadioCard{{background:{bg};border:1px solid {border};"
+            f"border-radius:{r('md')}}}"
+            f"QFrame#RadioCard:hover{{border:1px solid {hover}}}")
+
+    def mousePressEvent(self, event):
+        self.chosen.emit(self.value)
+        super().mousePressEvent(event)
+
+
+class ProgressDialog(QDialog):
+    """长任务进度弹窗：步骤列表 + 进度条 + 预计剩余，可取消。
+
+    两种模式：
+
+    * ``mode="timer"``（默认，旧用法）：steps 为
+      ``[{"name":..., "desc":..., "dur":毫秒}, ...]``，QTimer 按时长推步骤。
+      取消即 ``reject()``，由调用方负责「不留半成品」的语义。
+    * ``mode="live"``（M2-T2.3，真实事件驱动）：steps 为
+      ``[{"name":..., "desc":...}, ...]``，由真实后台任务的信号驱动：
+      ``start_live(state_provider)`` 启动后，调用方把任务信号接到
+      ``live_stage_started / live_stage_finished``，百分比与剩余时间由
+      ``state_provider() -> dict``（含 percent/elapsed_s/eta_s）每 200ms 轮询。
+      点「取消」不直接关窗：先回调 ``on_cancel_request``（让任务终止并清理），
+      窗口进入「正在取消…」状态，等调用方确认清理完成后再
+      ``live_close_cancelled()`` 关闭——保证用户看到的是干净收场，而不是
+      窗口先关、后台还在跑。
+    """
+
+    def __init__(self, *, icon: str, title: str, note: str, steps: list,
+                 on_finish=None, cancel_text: str = "取消（不留半成品）",
+                 finish_text: str = "完成", parent=None,
+                 mode: str = "timer", on_cancel_request=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setModal(True)
+        self.setMinimumWidth(480)
+        self.steps = steps
+        self.on_finish = on_finish
+        self._finish_text = finish_text
+        self._mode = mode
+        self._on_cancel_request = on_cancel_request
+        self._i = 0
+        self._total = sum(s.get("dur", 0) for s in steps)
+        self._acc = 0
+        self._cancelled = False
+        self._closing = False
+        self._state_provider = None
+        self._live_timer = QTimer(self)
+        self._live_timer.setInterval(200)
+        self._live_timer.timeout.connect(self._live_tick)
+        self._build(icon, title, note, cancel_text)
+
+    def _build(self, icon: str, title: str, note: str, cancel_text: str):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        head = QWidget()
+        head.setObjectName("ModalHead")
+        hl = QHBoxLayout(head)
+        hl.setContentsMargins(18, 16, 18, 16)
+        ico = QLabel(icon)
+        ico.setFixedSize(30, 30)
+        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ico.setStyleSheet(
+            f"background:{c('primary.100')};color:{c('primary.700')};"
+            f"border-radius:8px;font-size:16px")
+        htitle = QLabel(title)
+        htitle.setStyleSheet(
+            f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
+        hl.addWidget(ico)
+        hl.addWidget(htitle)
+        root.addWidget(head)
+
+        body = QWidget()
+        bl = QVBoxLayout(body)
+        bl.setContentsMargins(18, 16, 18, 16)
+        bl.setSpacing(12)
+
+        if note:
+            nl = QLabel(note)
+            nl.setWordWrap(True)
+            nl.setStyleSheet(
+                f"background:{c('info.bg')};border:1px solid {c('info.border')};"
+                f"color:{c('info')};border-radius:10px;padding:10px 14px;"
+                f"font-size:{fs('sm')}")
+            bl.addWidget(nl)
+
+        self.list_w = QWidget()
+        self.list_l = QVBoxLayout(self.list_w)
+        self.list_l.setContentsMargins(0, 0, 0, 0)
+        self.list_l.setSpacing(0)
+        self.step_rows = []
+        for s in self.steps:
+            self.step_rows.append(self._step_row(s["name"], s.get("desc", "")))
+            self.list_l.addWidget(self.step_rows[-1])
+        bl.addWidget(self.list_w)
+
+        self.bar = QProgressBar()
+        self.bar.setRange(0, 100)
+        self.bar.setValue(0)
+        self.bar.setStyleSheet(
+            f"QProgressBar{{background:{c('neutral.100')};border-radius:999px;"
+            f"height:10px;text-align:none}}"
+            f"QProgressBar::chunk{{background:{c('primary.500')};"
+            f"border-radius:999px}}")
+        bl.addWidget(self.bar)
+
+        meta = QHBoxLayout()
+        self.step_name = QLabel("准备中…")
+        self.step_name.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.600')}")
+        self.eta = QLabel("—")
+        self.eta.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+        meta.addWidget(self.step_name)
+        meta.addStretch(1)
+        meta.addWidget(self.eta)
+        bl.addLayout(meta)
+
+        root.addWidget(body)
+
+        foot = QWidget()
+        foot.setObjectName("ModalFoot")
+        fl = QHBoxLayout(foot)
+        fl.setContentsMargins(18, 14, 18, 14)
+        fl.addStretch(1)
+        self.cancel_btn = QPushButton(cancel_text)
+        self.cancel_btn.setObjectName("BtnDanger")
+        self.cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.cancel_btn.clicked.connect(self._cancel)
+        fl.addWidget(self.cancel_btn)
+        root.addWidget(foot)
+
+    def _step_row(self, name: str, desc: str):
+        w = QWidget()
+        hl = QHBoxLayout(w)
+        hl.setContentsMargins(0, 10, 0, 10)
+        hl.setSpacing(12)
+        dot = QLabel()
+        dot.setFixedSize(22, 22)
+        dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        n = QLabel(name)
+        n.setStyleSheet(f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.600')}")
+        d = QLabel(desc)
+        d.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+        hl.addWidget(dot)
+        hl.addWidget(n, 0)
+        hl.addWidget(d, 1)
+        w._dot = dot
+        w._name = n
+        return w
+
+    def _paint(self):
+        for idx, row in enumerate(self.step_rows):
+            if idx < self._i:
+                row._dot.setText("✓")
+                row._dot.setStyleSheet(
+                    f"background:{c('success')};color:#fff;border-radius:999px;"
+                    f"font-size:12px;font-weight:700")
+                row._name.setStyleSheet(
+                    f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.600')}")
+            elif idx == self._i:
+                row._dot.setText(str(idx + 1))
+                row._dot.setStyleSheet(
+                    f"background:{c('primary.500')};color:#fff;border-radius:999px;"
+                    f"font-size:12px;font-weight:700")
+                row._name.setStyleSheet(
+                    f"font-weight:700;font-size:{fs('sm')};color:{c('primary.700')}")
+            else:
+                row._dot.setText(str(idx + 1))
+                row._dot.setStyleSheet(
+                    f"background:{c('neutral.100')};color:{c('neutral.500')};"
+                    f"border-radius:999px;font-size:12px;font-weight:700")
+                row._name.setStyleSheet(
+                    f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.500')}")
+
+    # ---------------------------------------------------------------- timer 模式
+
+    def start(self):
+        self._paint()
+        self._advance()
+
+    def _advance(self):
+        if self._cancelled:
+            return
+        if self._i >= len(self.steps):
+            self._finish()
+            return
+        s = self.steps[self._i]
+        self._paint()
+        self.step_name.setText(s["name"] + "…")
+        remain = max(1, round((self._total - self._acc) / 1000))
+        self.eta.setText(f"预计 {remain} 秒")
+        QTimer.singleShot(s["dur"], self._step_done)
+
+    def _step_done(self):
+        if self._cancelled:
+            return
+        s = self.steps[self._i]
+        self._acc += s["dur"]
+        self.bar.setValue(int(self._acc / self._total * 100))
+        self._i += 1
+        self._advance()
+
+    def _finish(self):
+        self.bar.setValue(100)
+        self.step_name.setText(self._finish_text)
+        self.eta.setText("0 秒")
+        self._paint()
+        QTimer.singleShot(500, self._done)
+
+    def _done(self):
+        if self._cancelled:
+            return
+        if self.on_finish:
+            self.on_finish()
+        self.accept()
+
+    # ---------------------------------------------------------------- live 模式
+
+    def start_live(self, state_provider=None):
+        """启动事件驱动模式：state_provider 返回含 percent/elapsed_s/eta_s 的 dict。"""
+        self._state_provider = state_provider
+        self._paint()
+        self.step_name.setText("准备中…")
+        self.eta.setText("正在估算剩余时间…")
+        self._live_timer.start()
+
+    def live_stage_started(self, i: int):
+        self._i = i
+        self._paint()
+        if 0 <= i < len(self.steps):
+            self.step_name.setText(self.steps[i]["name"] + "…")
+
+    def live_stage_finished(self, i: int, elapsed_s: float):
+        self._i = i + 1
+        self._paint()
+
+    def _live_tick(self):
+        if self._closing:
+            return
+        provider = self._state_provider
+        if provider is None:
+            return
+        try:
+            state = provider()
+        except Exception:
+            return
+        self.bar.setValue(int(min(100.0, state.get("percent", 0.0))))
+        if not self._cancelled:
+            eta_s = state.get("eta_s")
+            elapsed = state.get("elapsed_s", 0.0)
+            self.eta.setText(
+                f"已用 {self._fmt_sec(elapsed)} · 预计剩余 {self._fmt_sec(eta_s)}"
+                if eta_s is not None else "—")
+
+    @staticmethod
+    def _fmt_sec(sec) -> str:
+        if sec is None:
+            return "—"
+        sec = max(0, int(sec))
+        if sec < 60:
+            return f"{sec} 秒"
+        return f"{sec // 60} 分 {sec % 60} 秒"
+
+    def live_finish(self):
+        """全部完成：进度条满格，短暂展示后接受关闭。"""
+        self._closing = True
+        self._live_timer.stop()
+        self._i = len(self.steps)
+        self._paint()
+        self.bar.setValue(100)
+        self.step_name.setText(self._finish_text)
+        self.eta.setText("已完成")
+        if self.on_finish:
+            self.on_finish()
+        QTimer.singleShot(400, self.accept)
+
+    def live_begin_cancelling(self):
+        """用户点了取消：进入「正在取消」状态，等待后台清理完成再关窗。"""
+        self._cancelled = True
+        self._live_timer.stop()
+        self.cancel_btn.setEnabled(False)
+        self.cancel_btn.setText("正在取消…")
+        self.step_name.setText("正在取消本次校正…")
+        self.eta.setText("正在清理已生成的临时文件")
+
+    def live_close_cancelled(self):
+        """后台确认清理完成：关窗（结果码 Rejected，cancelled=True）。"""
+        self._closing = True
+        self.reject()
+
+    # ---------------------------------------------------------------- 取消入口
+
+    def _cancel(self):
+        if self._mode == "live" and self._on_cancel_request is not None:
+            if self._cancelled or self._closing:
+                return
+            self.live_begin_cancelling()
+            self._on_cancel_request()
+            return
+        self._cancelled = True
+        self.reject()
+

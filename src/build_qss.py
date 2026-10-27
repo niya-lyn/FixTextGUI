@@ -1,0 +1,350 @@
+"""
+FixText V1 · 共享 QSS 生成器
+================================
+
+读取 `fixtext_tokens.py` 的令牌，**生成** `fixtext.qss`。
+
+- 这是 Qt 交付的**单一样式来源**：原型 HTML 里的 `:root` 复制块仅作离线预览，
+  不再作为 Qt 样式来源（见决策文档「Qt 交付阶段待办」第一条）。
+- QSS 不支持 CSS 变量，故此处把令牌值字面展开进样式；改令牌只需改
+  `fixtext_tokens.py` 后重跑本脚本即可全量再生。
+
+运行：python build_qss.py  →  生成 ./fixtext.qss
+"""
+
+import os
+
+from fixtext_tokens import (
+    COLORS, FONT_SANS, FONT_MONO, FONT_SIZE, FONT_WEIGHT, LINE_HEIGHT,
+    SPACE, RADIUS, SHADOW, c, sp, r, fs,
+)
+
+# 取值便捷
+P = COLORS  # 颜色字典
+
+# 始终把 fixtext.qss 写到本脚本同目录（与 main_window.py / 各模块同处 UI/src），
+# 避免从其他 cwd 运行时把样式表写错位置。
+HERE = os.path.dirname(os.path.abspath(__file__))
+
+
+def build() -> str:
+    q = []
+
+    q.append("/* ============================================================")
+    q.append("   FixText V1 · 共享样式表（由 build_qss.py 自动生成，勿手改）")
+    q.append("   令牌来源：fixtext_tokens.py（与 薄地基 :root 逐字对应）")
+    q.append("   ============================================================ */")
+    q.append("")
+
+    # ---- 全局基座 ------------------------------------------------------
+    q.append("QWidget {")
+    q.append(f'    font-family: {FONT_SANS};')
+    q.append(f'    font-size: {FONT_SIZE["base"]};')
+    q.append(f'    color: {c("neutral.800")};')
+    q.append(f'    background-color: {c("neutral.50")};')
+    q.append("}")
+    q.append("")
+
+    q.append("QMainWindow {")
+    q.append(f'    background-color: {c("neutral.50")};')
+    q.append("}")
+    q.append("")
+
+    # 标签一律透明，避免继承全局 QWidget 的底色而在白卡片上出现灰块
+    q.append("QLabel { background-color: transparent; }")
+    q.append("")
+
+    # ---- 顶栏（中性-900 深色，53px）-----------------------------------
+    q.append("#TopBar {")
+    q.append(f'    background-color: {c("neutral.900")};')
+    q.append(f'    border: none;')
+    q.append("    min-height: 53px;")
+    q.append("    max-height: 53px;")
+    q.append("}")
+    q.append("#TopBar QWidget { background-color: transparent; color: #FFFFFF; }")
+    q.append("#Brand {")
+    q.append("    color: #FFFFFF;")
+    q.append("    background: transparent;")
+    q.append("    border: none;")
+    q.append(f'    font-size: {FONT_SIZE["lg"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
+    q.append("    padding: 0 12px;")
+    q.append("}")
+    q.append("#Brand:hover { color: #FFFFFF; }")
+    q.append("#TopAct {")
+    q.append(f'    color: {c("neutral.300")};')
+    q.append("    background: transparent;")
+    q.append("    border: none;")
+    q.append("    font-size: 16px;")
+    q.append(f'    padding: 4px 10px;')
+    q.append(f'    border-radius: {RADIUS["sm"]};')
+    q.append("}")
+    q.append(f"#TopAct:hover {{ background-color: {c('neutral.700')}; color: #FFFFFF; }}")
+    q.append("")
+
+    # ---- 左轨（中性-0，right border）----------------------------------
+    q.append("#Rail {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    border: none;')
+    q.append(f'    border-right: 1px solid {c("neutral.200")};')
+    q.append(f'    padding: {sp("3")} {sp("2")};')
+    q.append("}")
+    q.append("#RailTitle {")
+    q.append(f'    color: {c("neutral.400")};')
+    q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
+    q.append("    padding: 6px 12px;")
+    q.append("}")
+    q.append("#RailItem {")
+    q.append(f'    color: {c("neutral.700")};')
+    q.append(f'    font-size: {FONT_SIZE["sm"]};')
+    q.append(f'    padding: {sp("2")} {sp("3")};')
+    q.append(f'    border-radius: {RADIUS["sm"]};')
+    q.append(f'    border: none;')
+    q.append(f'    text-align: left;')
+    q.append("}")
+    q.append(f"#RailItem:hover {{ background-color: {c('neutral.100')}; color: {c('neutral.900')}; }}")
+    q.append("#RailItem[active=\"true\"] {")
+    q.append(f'    background-color: {c("primary.50")};')
+    q.append(f'    color: {c("primary.700")};')
+    q.append(f'    font-weight: {FONT_WEIGHT["medium"]};')
+    # 左侧强调条：Qt 没有 ::border 伪元素，直接在此画左边框；
+    # 同时把左内边距减 3px，使文字与非激活项左对齐（padding 补偿）。
+    q.append(f'    border-left: 3px solid {c("primary.500")};')
+    q.append(f'    padding-left: {int(sp("3").replace("px", "")) - 3}px;')
+    q.append("}")
+    q.append("")
+
+    # ---- 内容区 ------------------------------------------------------
+    q.append("#Content {")
+    q.append(f'    background-color: {c("neutral.50")};')
+    q.append(f'    border: none;')
+    q.append("}")
+    q.append("#PageHead h1 {")
+    q.append(f'    color: {c("neutral.900")};')
+    q.append(f'    font-size: {FONT_SIZE["2xl"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
+    q.append("}")
+    q.append("#PageHead QLabel {")
+    q.append(f'    color: {c("neutral.600")};')
+    q.append(f'    font-size: {FONT_SIZE["md"]};')
+    q.append("}")
+    q.append("")
+
+    # ---- 卡片 / 面板 -------------------------------------------------
+    q.append("QFrame#Card {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["lg"]};')
+    q.append("}")
+    q.append("")
+
+    # ---- 按钮 --------------------------------------------------------
+    # 主按钮
+    q.append("QPushButton {")
+    q.append(f'    font-family: {FONT_SANS};')
+    q.append(f'    font-size: {FONT_SIZE["base"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["medium"]};')
+    q.append(f'    border: none;')
+    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append(f'    padding: {sp("2")} {sp("4")};')
+    q.append("}")
+    q.append("QPushButton:disabled {")
+    q.append("    opacity: 0.6;")
+    q.append("}")
+    q.append("#BtnPrimary {")
+    q.append(f'    background-color: {c("primary.500")};')
+    q.append("    color: #FFFFFF;")
+    q.append("}")
+    q.append(f"#BtnPrimary:hover:!pressed {{ background-color: {c('primary.600')}; }}")
+    q.append(f"#BtnPrimary:pressed {{ background-color: {c('primary.700')}; }}")
+    q.append("#BtnSecondary {")
+    q.append(f'    background-color: {c("neutral.100")};')
+    q.append(f'    color: {c("neutral.800")};')
+    q.append("}")
+    q.append(f"#BtnSecondary:hover {{ background-color: {c('neutral.200')}; }}")
+    q.append("#BtnGhost {")
+    q.append("    background-color: transparent;")
+    q.append(f'    color: {c("primary.600")};')
+    q.append("}")
+    q.append(f"#BtnGhost:hover {{ background-color: {c('primary.50')}; }}")
+    q.append("")
+    # 描边按钮（白底 + 细边，对应原型的 .btn）
+    q.append("#BtnOutline {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    color: {c("neutral.800")};')
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append("}")
+    q.append(f"#BtnOutline:hover {{ background-color: {c('primary.50')}; border-color: {c('primary.100')}; }}")
+    # 危险按钮（结束检查 / 删除类操作）
+    q.append("#BtnDanger {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    color: {c("error")};')
+    q.append(f'    border: 1px solid {c("error.border")};')
+    q.append("}")
+    q.append(f"#BtnDanger:hover {{ background-color: {c('error.bg')}; }}")
+    q.append("")
+
+    # ---- 输入控件 ----------------------------------------------------
+    q.append("QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append(f'    padding: {sp("2")} {sp("3")};')
+    q.append(f'    font-size: {FONT_SIZE["base"]};')
+    q.append("}")
+    q.append("QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus {")
+    q.append(f'    border: 1px solid {c("primary.500")};')
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append("}")
+    q.append("QLineEdit:disabled, QTextEdit:disabled {")
+    q.append(f'    background-color: {c("neutral.100")};')
+    q.append(f'    color: {c("neutral.400")};')
+    q.append("}")
+    q.append("")
+
+    # ---- 复选 / 开关（业务规则开关、选项勾选）-------------------------
+    q.append("QCheckBox {")
+    q.append(f'    color: {c("neutral.700")};')
+    q.append(f'    spacing: {sp("2")};')
+    q.append("}")
+    q.append("QCheckBox::indicator {")
+    q.append(f'    width: 16px; height: 16px;')
+    q.append(f'    border-radius: {RADIUS["sm"]};')
+    q.append(f'    border: 1px solid {c("neutral.300")};')
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append("}")
+    q.append(f"QCheckBox::indicator:checked {{ background-color: {c('primary.500')}; border-color: {c('primary.500')}; }}")
+    q.append(f"QCheckBox::indicator:checked {{ image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTYgMTEuM2wtMy4zLTMuM2EuOTh4Ljk4IDAgMCAxIDEuNC0xLjRMNiA4LjU5bDUuNi01LjU5YTEuMDEgMS4wMSAwIDEgMSAxLjQxIDEuNDFMNiAxMS4zeiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==); }}")
+    q.append("")
+
+    # ---- 表格 --------------------------------------------------------
+    q.append("QTableWidget, QTreeWidget, QListWidget {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append(f'    gridline-color: {c("neutral.100")};')
+    q.append(f'    font-size: {FONT_SIZE["sm"]};')
+    q.append("}")
+    q.append("QHeaderView::section {")
+    q.append(f'    background-color: {c("neutral.50")};')
+    q.append(f'    color: {c("neutral.600")};')
+    q.append(f'    border: none;')
+    q.append(f'    border-bottom: 1px solid {c("neutral.200")};')
+    q.append(f'    padding: {sp("2")} {sp("3")};')
+    q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
+    q.append("}")
+    q.append(f"QTableWidget::item:selected, QListWidget::item:selected {{ background-color: {c('primary.50')}; color: {c('primary.800')}; }}")
+    q.append("")
+
+    # ---- 状态徽标 / 标签 ---------------------------------------------
+    q.append("#Badge {")
+    q.append(f'    color: {c("primary.700")};')
+    q.append(f'    background-color: {c("primary.50")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    padding: 1px 8px;')
+    q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append("}")
+    q.append("#TagOk {")
+    q.append(f'    color: {c("success")};')
+    q.append(f'    background-color: {c("success.bg")};')
+    q.append(f'    border: 1px solid {c("success.border")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    padding: 1px 8px;')
+    q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append("}")
+    q.append("#TagWarn {")
+    q.append(f'    color: {c("warning")};')
+    q.append(f'    background-color: {c("warning.bg")};')
+    q.append(f'    border: 1px solid {c("warning.border")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    padding: 1px 8px;')
+    q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append("}")
+    q.append("#TagErr {")
+    q.append(f'    color: {c("error")};')
+    q.append(f'    background-color: {c("error.bg")};')
+    q.append(f'    border: 1px solid {c("error.border")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    padding: 1px 8px;')
+    q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append("}")
+    q.append("")
+
+    # ---- 分隔线 ------------------------------------------------------
+    q.append("Line, QFrame[frameShape=\"4\"] {")  # HLine
+    q.append(f'    background-color: {c("neutral.200")};')
+    q.append("}")
+    q.append("")
+
+    # ---- 滚动条（与 HTML 原型一致：细轨 + 圆角手柄）-------------------
+    q.append("QScrollArea, QAbstractScrollArea {")
+    q.append(f'    border: none;')
+    q.append("}")
+    q.append("QScrollBar:vertical {")
+    q.append(f'    background: {c("neutral.50")};')
+    q.append("    width: 10px;")
+    q.append(f'    margin: 2px;')
+    q.append("}")
+    q.append("QScrollBar::handle:vertical {")
+    q.append(f'    background: {c("neutral.300")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    min-height: 36px;')
+    q.append("}")
+    q.append(f"QScrollBar::handle:vertical:hover {{ background: {c('neutral.400')}; }}")
+    q.append("QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {")
+    q.append("    height: 0; width: 0;")
+    q.append("}")
+    q.append("QScrollBar:horizontal {")
+    q.append(f'    background: {c("neutral.50")};')
+    q.append("    height: 10px;")
+    q.append(f'    margin: 2px;')
+    q.append("}")
+    q.append("QScrollBar::handle:horizontal {")
+    q.append(f'    background: {c("neutral.300")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    min-width: 36px;')
+    q.append("}")
+    q.append(f"QScrollBar::handle:horizontal:hover {{ background: {c('neutral.400')}; }}")
+    q.append("QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {")
+    q.append("    height: 0; width: 0;")
+    q.append("}")
+    q.append("")
+
+    # ---- 进度条 ------------------------------------------------------
+    q.append("QProgressBar {")
+    q.append(f'    background-color: {c("neutral.100")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append("    height: 8px;")
+    q.append(f'    text-align: center;')
+    q.append(f'    color: {c("neutral.600")};')
+    q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append("}")
+    q.append(f"QProgressBar::chunk {{ background-color: {c('primary.500')}; border-radius: {RADIUS['full']}; }}")
+    q.append("")
+
+    # ---- 标签页 / 折叠（业务折叠面板用 QGroupBox）---------------------
+    q.append("QGroupBox {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append(f'    margin-top: {sp("4")};')
+    q.append(f'    padding: {sp("3")};')
+    q.append("}")
+    q.append("QGroupBox::title {")
+    q.append(f'    color: {c("neutral.700")};')
+    q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
+    q.append(f'    subcontrol-origin: margin;')
+    q.append(f'    left: {sp("3")};')
+    q.append("}")
+    q.append("")
+
+    return "\n".join(q) + "\n"
+
+
+if __name__ == "__main__":
+    out = os.path.join(HERE, "fixtext.qss")
+    text = build()
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(text)
+    print(f"generated {out}  ({len(text)} chars)")

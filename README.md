@@ -1,78 +1,76 @@
-# FixText M2-T2.1 · 主窗口与六入口路由
+# FixText M2-T2.3 可视化进度与取消
 
-在已验收的 Qt 骨架上完成统一主界面框架：左侧六入口常驻导航轨 + 顶栏 + 内容区，
-六个入口全部可点、状态清晰，界面无内部目录概念露出。
+> 交付包 · 2026-10-27 · 依赖：M2 Qt 骨架（prototypes/ + src/）+ M1-T1.1 编排器产品
 
-## 一、这一版做了什么
+## 一、实现内容（UI 层 + 编排器对接层，未改 M1 引擎）
 
-| # | 改动 | 说明 |
-|---|---|---|
-| 1 | 左轨从 7 项收敛为 6 项 | 骨架把「首页概览」当成第 7 个导航项，与任务卡「六入口」不符。首页降级为内容区页，左轨只留导入书籍 / 一键校正 / 检查问题 / 词库管理 / 导出结果 / 历史记录。 |
-| 2 | 占位页改成用户话术 | 原占位页直接打印 HTML 原型文件名（内部资料名露出）。改为三句话说明「它没坏、点得动」+ 做好后能做什么 + 「去用检查问题」直达按钮。 |
-| 3 | 顶栏三个按钮接上真实功能 | 骨架里 ☰ / ? / ⚙ 三个 `_top_action` 是 `pass` 空实现（点了没反应）。现在分别是「想去哪」菜单、三步使用说明、设置说明。 |
-| 4 | 顶栏加「当前位置」 | 切换入口时顶栏同步显示 `图标 + 入口名`，用户随时知道自己在哪。 |
-| 5 | 品牌名改为可聚焦按钮 | 原来是 `QLabel + mousePressEvent`，键盘 Tab 到不了。改成 `QPushButton`，可 Tab 聚焦、Enter 触发回首页。 |
-| 6 | 加入键盘快捷方式 | `Ctrl+1~6` 直达六个入口，`Ctrl+H` 回首页。 |
-| 7 | 窗口尺寸按内容反推 | 默认 1280×820、最小 1220×700，实测 1220/1280/1400 三档宽度下六个页面均无横向滚动条（不裁切、不挤压）。 |
-| 8 | 检查问题页副标题去术语 | 原文带「（§2.2 入口③ 验收②）」这类排期文档内部编号，改成用户能读懂的描述。 |
+### 1. `src/fixtext_worker.py`（新增，核心对接层）
 
-## 二、目录结构
+- `HUMAN_STAGES`：六阶段 → 人话步骤映射（merge→「读取章节」、layout→「整理排版」、
+  replace→「替换词语」、quote→「检查标点引号」、bookmap→「提取本书专有词」、
+  restore→「生成校正后的 EPUB」）；内部阶段名不进界面。
+- `CorrectionJob`：直接驱动 M1 的六个 Stage 类（非整链 run_pipeline），阶段间插取消检查点；
+  通过 monkey-patch `fixtext.engine.client.subprocess` 注入 `_SubprocessProxy`，
+  把 Go 引擎子进程句柄登记到 `_active_proc` —— 点「取消」立即 `kill()`，不等引擎跑完。
+  每阶段完成检查取消标记，取消后 `_cleanup()` 整目录删除工作区（chmod 兜底），
+  抛 `CorrectionCancelled`。
+- `snapshot()`：percent / eta_s / elapsed_s / current_index / cancelling，供界面 200ms 轮询。
+- ETA 外推：已完成阶段的实际耗时 vs 基准权重（REFERENCE_SEC，来自大语料实测）按比例缩放；
+  末阶段完成前进度条封顶 96%，避免「假完成」。
+- `CorrectionWorker(QObject)`：后台 `threading.Thread` 跑 job，`set_stage_callbacks` 把阶段回调
+  转成 Qt 信号（stage_started / stage_finished / succeeded / failed / cancelled，跨线程自动排队）。
+  失败消息经 `_human_error()` 归成人话（E 码 / 堆栈 / 路径不进界面）。
+- 原始 EPUB 全程只读（引擎只碰工作区副本）→ 天然「校正前快照」，取消即干净。
 
-```
-FixText_M2-T2.1_qt_ui/
-├── fixtext_ui/                 可直接运行的 Qt 界面包
-│   ├── main_window.py          主窗口：左轨 + 顶栏 + QStackedWidget 路由
-│   ├── fixtext_tokens.py       令牌单一来源（71 项）+ 六入口定义（ENTRIES）
-│   ├── build_qss.py            令牌 -> fixtext.qss 生成器
-│   ├── fixtext.qss             由上面生成，勿手改
-│   ├── fixtext_widgets.py      通用控件（Card / Pill / Switch / FieldRow）
-│   └── check_module.py         检查问题模块（已验收移植版，本卡未改业务逻辑）
-├── screenshots/                七个页面离屏截图（验收④证据）
-│   ├── 01_home_overview.png    首页概览（无轨选中）
-│   ├── 02_entry1_import.png    导入书籍（建设中）
-│   ├── 03_entry2_oneclick.png  一键校正（建设中）
-│   ├── 04_entry3_check.png     检查问题（可用，真实模块）
-│   ├── 05_entry4_vocab.png     词库管理（建设中）
-│   ├── 06_entry5_export.png    导出结果（建设中）
-│   └── 07_entry6_history.png   历史记录（建设中）
-├── tools/
-│   └── verify_m2t21.py         四项验收自检脚本（见下）
-├── reference/
-│   └── design_root_snapshot.css  设计地基 :root 原样快照（MD5 6faf81eeb24e592a906cb22caf3977e4）
-├── verify_report.json          最近一次自检的机器可读结果
-└── README.md
-```
+### 2. `src/fixtext_widgets.py`（修改：ProgressDialog 升级双模式）
 
-## 三、怎么跑
+- 新增 `mode="live"`：`start_live(state_provider)` 启动 200ms 轮询定时器，
+  驱动进度条值 + 「已用 X · 预计剩余 Y」文案；`live_stage_started/finished` 更新步骤文案与指示点；
+  `live_begin_cancelling()`（「正在取消本次校正…」+ 禁用取消按钮）→ `live_close_cancelled()`。
+- 旧 `timer` 模式保留（导入/导出页继续用，不回归）。
+
+### 3. `src/oneclick_module.py`（修改：一键校正页接真链路）
+
+- `set_run_context()` 注入 EPUB / 词库 / 引擎 / pipeline 路径 + 书名；书条显示
+  「《书名》.epub · X MB」与「校正过程只读原文件，可随时恢复到校正前」。
+- `do_correction()`：创建独立工作目录 `runs/run-<ms>` → CorrectionJob + CorrectionWorker →
+  live 进度弹窗（取消按钮接 `worker.request_cancel`）→ `exec()` 阻塞等结果。
+- 结果区全部换成真实数据（章节数 / 规则条数 / 引号待修 / 字符数 / 成品指纹）。
+- 取消后 toast：「已取消，工作区已清理，未留下半成品（原书完好）」，界面回可重跑状态。
+
+## 二、验收自检（大语料实测：炮火弧线 EPUB 4.6MB · 788 章 · 304,255 规则 × 2 趟）
+
+| 验收条 | 结论 | 实测数字 |
+| --- | --- | --- |
+| ① >3s 操作有进度反馈 | PASS | 完整运行 19.54s。layout 9.24s 期间 92 次进度更新、步骤文案「整理排版…」、进度 4.7%→51.3%、ETA「已用 X 秒 · 预计剩余 Y 秒」持续滚动；replace 3.15s 期间 32 次更新、「替换词语…」、59.9%→78.2%；restore 2.83s 也有 33 次更新（未到 3s 线但有反馈） |
+| ② 取消即时生效且无脏状态 | PASS | 替换阶段（Go 子进程运行中）取消：点击→子进程被杀 1.00s，弹窗关闭 1.00s；排版阶段（纯 Python 阶段）取消：1.00s 置位标记 + 杀进程句柄，弹窗在本阶段结束点关闭（9.58s，layout 不可中断属设计内）。取消后工作区整目录删除、runs 目录零残留、原书 sha256 不变。**sha256 对照：取消复跑 B2 与首次完整运行 A 完全一致（`717fdfcee76fe3ee74d9…9641dc2`），C2 亦一致，且与 M1 编排器直跑基线一致（all_equal=true）** |
+| ③ 人话步骤、零内部露出 | PASS | 全部 6 步文案为人话（「整理排版…」「替换词语…」…）；露出扫描 1,561 条界面文本（模块控件树 + 弹窗全量文本 + 步骤/ETA 采样原文），内部阶段名 / 命令行词 / 内部路径命中 0 |
+
+复跑耗时：B2 18.07s、C2 18.29s，与首次同量级；全程无命令行输出进界面。
+
+## 三、遗留问题分级
+
+- **P0**：无。
+- **P1**：纯 Python 阶段（layout，本语料约 9.2s）内取消需等本阶段结束才生效（阶段间检查点 +
+  子进程即时杀，进程内 Python 循环不可安全中断）。界面以「正在取消本次校正…」明示等待。
+  若要求秒级，需 M1 阶段内部加协作式取消点（改引擎，超本卡范围）。
+- **P2**：① ETA 初始估计依赖 REFERENCE_SEC 基准权重（按本语料标定），语料体量差异大时
+  前几秒估计偏差较大，随阶段完成自动收敛；② 基准权重当前硬编码于 fixtext_worker.py，
+  后续可落配置文件；③ 验收脚本阶段信号钩子改为「轮询采样 + job 自报 stage_elapsed」双通道
+  取证（信号钩子时序在离屏环境不可靠，不影响产品代码）。
+
+## 四、目录
+
+- `src/`：完整源码（新增 fixtext_worker.py；fixtext_widgets.py / oneclick_module.py 修改；
+  其余为骨架原文件，未动词库管理占位页）。
+- `tests/accept_t23.py`：验收脚本（真实点击路径：QTest.mouseClick 主按钮 / 取消按钮；
+  5 场景 A/B/B2/C/C2 + 露出扫描 + sha256 确定性判定）。
+- `evidence/t23_evidence.json`：全量实测证据（各场景耗时 / 取消延迟 / sha / 轮询采样原文）。
+- `evidence/证据摘要.md`：人类可读摘要。
+
+## 五、复跑方式
 
 ```bash
-pip install PySide6==6.11.2
-cd FixText_M2-T2.1_qt_ui
-python fixtext_ui/main_window.py
+QT_QPA_PLATFORM=offscreen PYTHONPATH=<PySide6 site-packages> \
+  python3.12 tests/accept_t23.py   # 需 in/ 下的语料、词库、T1.1 产品（见脚本头部路径）
 ```
-
-自检（离屏，无需显示器）：
-
-```bash
-cd FixText_M2-T2.1_qt_ui
-QT_QPA_PLATFORM=offscreen python tools/verify_m2t21.py
-# 退出码 0 = 四项全通过；同时刷新 screenshots/ 与 verify_report.json
-```
-
-## 四、四项验收怎么对应
-
-| 验收标准 | 脚本里的检查 | 判定条件 |
-|---|---|---|
-| ① 六入口可达且状态清晰 | `1_entries_reachable` / `1b` / `1c` / `1d` / `1e` | 对左轨控件发**真实鼠标点击**（不是直接调 `go()`），逐个断言：stack 当前页是它、选中态有且仅有它、顶栏位置跟随、"建设中"标签与入口状态一致、页面可见且有尺寸；再验 Ctrl+1~6 / Ctrl+H、占位页直达按钮、顶栏三个按钮各自弹出真窗口 |
-| ② 内部目录概念零露出 | `2_zero_internal_leak` | 扫控件树里所有可见字符串（text / tooltip / accessibleName / accessibleDescription / placeholder / windowTitle）+ 源码中文文案字面量，共 543 条，对 25 条禁用模式（books / booksBak / booksFix / spine / OPF / NCX / manifest / rules.json / 内部路径 / 内部标识符等）零命中 |
-| ③ 令牌值与设计地基一致 | `3_tokens_aligned` | `fixtext_tokens.py` 展开 71 项，与设计地基 `:root` 逐项比对：颜色 34、字号 9、字重 4、行高 3、间距 10、圆角 5、阴影 4 + 2 字体族，差异 0 / 缺失 0 / 多余 0 |
-| ④ 主窗口可构造 + 六页截图 | `4_construct_and_screenshots` | 走真实构造路径建窗口，七个页面各截一张 PNG，全部落盘且非空 |
-
-补充：`1b_route_keeps_state` 验证「切换不丢状态、不重建窗口」——在检查问题里修一处引号，
-切到词库管理再切回，断言取到的是**同一个控件实例**、修复状态仍在、全程窗口数始终为 1。
-
-## 五、已知遗留（分级见任务评论）
-
-- 五个占位入口尚未接后端引擎（M3/M4 卡范围）。
-- 检查问题页内容较高（1319px），窗口变高前需在内容区竖向滚动，属预期行为。
-- 顶栏 ☰ 菜单目前只有两项（回首页 / 关于），等模块补齐后再扩。
