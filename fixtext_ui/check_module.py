@@ -46,6 +46,8 @@ PROBS = [
          fix="“这样写反了”"),
     dict(line=1024, type="连续同向引号", pre="", hl="““这样连着两个左引号”", post="",
          fix="“这样连着两个左引号”"),
+    dict(line=1288, type="最外层单引号", pre="她低声说：", hl="‘那是我们之间的秘密’", post="",
+         fix="“那是我们之间的秘密”"),
 ]
 
 CHECKS = [
@@ -511,8 +513,12 @@ class CheckModule(QWidget):
         self.render()
 
     def _push_undo(self):
+        # pre / post 一起存：批量操作会同时改一段话的上下文，只存 hl 撤不完整
         p = self.probs[self.cur]
-        self.undo.append({"i": self.cur, "hl": p["hl"], "state": p.get("state")})
+        self.undo.append({
+            "i": self.cur, "pre": p["pre"], "hl": p["hl"],
+            "post": p["post"], "state": p.get("state"),
+        })
 
     def fix_here(self):
         p = self.probs[self.cur]
@@ -532,6 +538,7 @@ class CheckModule(QWidget):
         self.toast("已跳过，记入跳过清单")
 
     def save_and_next(self):
+        self._push_undo()
         self.probs[self.cur]["state"] = "fixed"
         self.render()
         self.next_issue()
@@ -542,8 +549,23 @@ class CheckModule(QWidget):
             self.toast("没有可撤销的操作")
             return
         a = self.undo.pop()
+        if a.get("batch"):
+            # 批量操作是一条撤销记录：整组一起回退，光标回到第一处
+            for it in a["items"]:
+                p = self.probs[it["i"]]
+                p["pre"] = it["pre"]
+                p["hl"] = it["hl"]
+                p["post"] = it["post"]
+                p["state"] = it["state"]
+            self.cur = a["items"][0]["i"]
+            self.ins_buf = ""
+            self.render()
+            self.toast("已撤销批量操作")
+            return
         p = self.probs[a["i"]]
+        p["pre"] = a["pre"]
         p["hl"] = a["hl"]
+        p["post"] = a["post"]
         p["state"] = a["state"]
         self.cur = a["i"]
         self.ins_buf = ""
@@ -592,11 +614,30 @@ class CheckModule(QWidget):
         if box.exec() == QMessageBox.StandardButton.Yes:
             self.toast("已结束本轮检查")
 
+    def _affected_single(self):
+        """会被「最外层单引号改双引号」影响的处（上下文任一段含单引号）。"""
+        out = []
+        for i, p in enumerate(self.probs):
+            txt = p["pre"] + p["hl"] + p["post"]
+            if "‘" in txt or "’" in txt:
+                out.append((i, p))
+        return out
+
+    @staticmethod
+    def _apply_outer_single(text: str) -> str:
+        return text.replace("‘", "“").replace("’", "”")
+
     def batch_op(self):
+        affected = self._affected_single()
+        if not affected:
+            self.toast("未检出需要批量处理的单引号")
+            return
         box = QMessageBox(self)
         box.setWindowTitle("批量操作确认")
         box.setIcon(QMessageBox.Icon.Warning)
-        box.setText("最外层单引号改双引号 · 影响 42 处。")
+        box.setText(f"最外层单引号改双引号 · 影响 {len(affected)} 处。")
+        box.setWindowTitle("批量操作确认")
+        box.setIcon(QMessageBox.Icon.Warning)
         box.setInformativeText(
             "执行前预览影响条数，执行后可撤销。\n"
             "原：‘这里的引号是外层的’\n改：“这里的引号是外层的”"
@@ -608,4 +649,14 @@ class CheckModule(QWidget):
         box.button(QMessageBox.StandardButton.Ok).setText("确认执行")
         box.setDefaultButton(QMessageBox.StandardButton.Cancel)
         if box.exec() == QMessageBox.StandardButton.Ok:
-            self.toast("已批量修改 42 处（可撤销）")
+            items = [{
+                "i": i, "pre": p["pre"], "hl": p["hl"],
+                "post": p["post"], "state": p.get("state"),
+            } for i, p in affected]
+            for _i, p in affected:
+                p["pre"] = self._apply_outer_single(p["pre"])
+                p["hl"] = self._apply_outer_single(p["hl"])
+                p["post"] = self._apply_outer_single(p["post"])
+            self.undo.append({"batch": True, "items": items})
+            self.render()
+            self.toast(f"已批量修改 {len(affected)} 处（可撤销）")
