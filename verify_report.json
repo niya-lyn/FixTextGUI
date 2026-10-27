@@ -82,7 +82,7 @@
       {
         "key": "export",
         "label": "导出结果",
-        "status": "building",
+        "status": "ready",
         "clicked_by_mouse": true,
         "stack_current_is_page": true,
         "active_count": 1,
@@ -90,11 +90,11 @@
         "topbar_where": "📤  导出结果",
         "topbar_follows": true,
         "rail_tag_matches_status": true,
-        "page_class": "BuildingPage",
+        "page_class": "ExportModule",
         "page_visible": true,
         "page_size": [
-          1028,
-          436
+          1018,
+          1101
         ],
         "passed": true
       },
@@ -132,8 +132,8 @@
   },
   "1d_placeholder_cta": {
     "passed": true,
-    "button_found": true,
-    "jumped_to_check": true
+    "export_page_class": "ExportModule",
+    "guide_shown": true
   },
   "1e_modules_mounted": {
     "passed": true,
@@ -161,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 1352,
+    "scanned": 1499,
     "forbidden_patterns": 25,
     "hits": []
   },
@@ -191,37 +191,37 @@
       {
         "key": "home",
         "file": "screenshots/01_home_overview.png",
-        "bytes": 114834
+        "bytes": 113086
       },
       {
         "key": "import",
         "file": "screenshots/02_entry1_import.png",
-        "bytes": 91366
+        "bytes": 90494
       },
       {
         "key": "oneclick",
         "file": "screenshots/03_entry2_oneclick.png",
-        "bytes": 151367
+        "bytes": 150453
       },
       {
         "key": "check",
         "file": "screenshots/04_entry3_check.png",
-        "bytes": 148924
+        "bytes": 147993
       },
       {
         "key": "vocab",
         "file": "screenshots/05_entry4_vocab.png",
-        "bytes": 168866
+        "bytes": 167963
       },
       {
         "key": "export",
         "file": "screenshots/06_entry5_export.png",
-        "bytes": 108491
+        "bytes": 112808
       },
       {
         "key": "history",
         "file": "screenshots/07_entry6_history.png",
-        "bytes": 158246
+        "bytes": 157310
       }
     ]
   },

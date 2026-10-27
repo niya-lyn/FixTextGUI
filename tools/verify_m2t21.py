@@ -273,24 +273,24 @@ def main() -> int:
         ctrl3_to_check=sc_ok, ctrl_h_to_home=sc_home_ok,
     )
 
-    # 占位页上的「去用检查问题」按钮：真实点击应切到检查问题页
-    # 【M2-T2.6】词库管理 / 历史记录 已换成真模块（v4 增强移植），占位页只剩
-    # 「导出结果」。断言语义不变：占位页的「现在可以先去这里」必须真能跳转。
+    # 【M2-T2.7】导出结果从占位页换成真模块（export_module.ExportModule）。
+    # 原「占位页 CTA 跳转到检查问题」断言语义随占位页消失而失效，改为：
+    # 导出页必须挂真模块，且未导入书时给「先去导入」的引导文案。
     win.go("export")
     QApplication.processEvents()
-    bpage = win.page("export")
-    jump_btn = None
-    for b in bpage.findChildren(QPushButton):
-        if "检查问题" in b.text():
-            jump_btn = b
+    epage = win.page("export")
+    export_module_cls = type(epage).__name__
+    export_real = export_module_cls != "BuildingPage"
+    guide_ok = False
+    for lbl in epage.findChildren(QLabel):
+        txt = lbl.text()
+        if "先在「导入」页" in txt or "尚未导入书籍" in txt:
+            guide_ok = True
             break
-    jumped = False
-    if jump_btn is not None:
-        QTest.mouseClick(jump_btn, Qt.MouseButton.LeftButton)
-        QApplication.processEvents()
-        jumped = win.stack.currentWidget() is win.pages["check"]
     report["1d_placeholder_cta"] = dict(
-        passed=jumped, button_found=jump_btn is not None, jumped_to_check=jumped,
+        passed=export_real and guide_ok,
+        export_page_class=export_module_cls,
+        guide_shown=guide_ok,
     )
 
     # 【M2-T2.5】导入 / 一键校正 / 检查问题 三页必须挂的是真模块，

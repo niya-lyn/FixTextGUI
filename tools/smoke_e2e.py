@@ -40,6 +40,9 @@ import fixtext_error_center as error_center
 import main_window as M
 
 EPUB = PKG.parent / "in" / "paohuo.epub"
+# 【M2-T2.7】布局适配：语料与包同级时直接用同级文件
+if not EPUB.exists():
+    EPUB = PKG.parent / "paohuo.epub"
 WS = PKG.parent / "e2e_ws"
 RUNS_ROOT = PKG / "runs"
 EVID = PKG / "evidence"

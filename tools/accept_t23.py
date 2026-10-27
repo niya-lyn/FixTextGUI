@@ -33,8 +33,12 @@ from PySide6.QtWidgets import QApplication, QLabel, QPushButton, QProgressBar
 #   - 语料与基线仍在 build/in/（未随包分发）
 #   - 运行产物与 evidence 不进交付 zip：runs 放 build/t23_runs
 PKG = Path(__file__).resolve().parent.parent          # build/pkg
-SRC = PKG / "fixtext_ui"
+# 【M2-T2.7】布局适配：语料与包同级（artifacts/in 下直接放 paohuo.epub /
+# baseline_paohuo）时不再要求 build/in 子目录；两种布局都能跑。
 WORK = PKG.parent / "in"                              # build/in
+if not WORK.is_dir() and (PKG.parent / "paohuo.epub").exists():
+    WORK = PKG.parent
+SRC = PKG / "fixtext_ui"
 EVID = PKG / "evidence"
 
 EPUB = WORK / "paohuo.epub"
