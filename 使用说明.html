@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixText V1 · 使用说明</title>
+<style>
+  :root{
+    --primary:#2f6df6; --primary-700:#1f54d6;
+    --ink:#1f2430; --muted:#6b7280; --line:#e5e9f0;
+    --bg:#f6f8fc; --card:#ffffff;
+    --warn-bg:#fff7ed; --warn-line:#fdba74; --warn-ink:#9a3412;
+    --ok-bg:#ecfdf5; --ok-ink:#065f46;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+    color:var(--ink); background:var(--bg);
+    line-height:1.65; font-size:14px; padding:32px 20px;
+    display:flex; justify-content:center;
+  }
+  .page{
+    width:100%; max-width:760px; background:var(--card);
+    border:1px solid var(--line); border-radius:16px;
+    padding:36px 40px 28px; box-shadow:0 6px 24px rgba(31,36,48,.06);
+  }
+  header{ border-bottom:2px solid var(--primary); padding-bottom:14px; margin-bottom:22px;}
+  .brand{ display:flex; align-items:center; gap:10px;}
+  .logo{
+    width:34px;height:34px;border-radius:9px;background:var(--primary);
+    color:#fff;font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center;
+  }
+  h1{ font-size:22px; letter-spacing:.5px;}
+  .sub{ color:var(--muted); font-size:13px; margin-top:4px;}
+
+  h2{
+    font-size:16px; margin:22px 0 10px; display:flex; align-items:center; gap:9px;
+  }
+  .num{
+    flex:none; width:24px;height:24px;border-radius:50%;background:var(--primary);
+    color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;
+  }
+  ol.steps{ list-style:none; counter-reset:s; }
+  ol.steps li{
+    counter-increment:s; position:relative; padding:8px 0 8px 34px; border-bottom:1px dashed var(--line);
+  }
+  ol.steps li:last-child{border-bottom:none;}
+  ol.steps li::before{
+    content:counter(s); position:absolute; left:0; top:9px;
+    width:22px;height:22px;border-radius:50%;background:#eaf1ff;color:var(--primary-700);
+    font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;
+  }
+  code{
+    background:#f1f4f9; border:1px solid var(--line); border-radius:6px;
+    padding:1px 6px; font-size:12.5px; color:var(--primary-700); font-family:"SFMono-Regular",Consolas,monospace;
+  }
+  .callout{
+    border-radius:12px; padding:14px 16px; margin:12px 0; font-size:13.5px;
+  }
+  .callout.warn{ background:var(--warn-bg); border:1px solid var(--warn-line); color:var(--warn-ink);}
+  .callout.ok{ background:var(--ok-bg); border:1px solid #a7f3d0; color:var(--ok-ink);}
+  .callout b{ font-weight:700;}
+  .kbd{ background:#fff; border:1px solid var(--line); border-bottom-width:2px; border-radius:5px; padding:1px 7px; font-size:12px;}
+  footer{
+    margin-top:24px; padding-top:12px; border-top:1px solid var(--line);
+    color:var(--muted); font-size:12px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:6px;
+  }
+  @media print{
+    body{ background:#fff; padding:0;}
+    .page{ box-shadow:none; border:none; max-width:none; padding:0 4mm;}
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="logo">F</div>
+        <div>
+          <h1>FixText V1 · 使用说明</h1>
+          <div class="sub">三步上手 · 遇到问题先翻这一页</div>
+        </div>
+      </div>
+    </header>
+
+    <h2><span class="num">1</span>解压与启动</h2>
+    <ol class="steps">
+      <li>找到发行压缩包 <code>FixText_V1.zip</code>，右键 → <b>全部解压</b>（或「解压到 FixText_V1\」）。</li>
+      <li>打开解压后的文件夹，确认里面包含启动程序 <code>FixText.exe</code>、<code>fixtext_ui\</code>、<code>pipeline\</code> 等目录。</li>
+      <li>双击 <code>FixText.exe</code> 启动。首次打开会弹出「新手向导」，跟着三步演示走完即可开始使用。</li>
+    </ol>
+    <div class="callout ok">
+      绿色便携版：不写注册表、不改系统设置，整个文件夹可随意复制、移动或删除。
+    </div>
+    <p style="font-size:12.5px;color:var(--muted);margin-top:6px;">
+      若你拿到的是<b>源码包</b>而非打包 exe，请先装好 Python 3.11+，再运行根目录的 <code>main_app.py</code>。
+    </p>
+
+    <h2><span class="num">2</span>Windows 首启 SmartScreen 警告</h2>
+    <p>第一次运行未经签名的发行版时，Windows 会弹出蓝色 SmartScreen 拦截框，<b>这是正常现象，不代表软件含病毒</b>。</p>
+    <div class="callout warn">
+      <b>为什么会这样？</b> 应用尚未向 Microsoft 提交代码签名证书、且发布时间较短，SmartScreen 对「未知发布者」默认拦截——属于 Windows 的内置保护机制，并非查杀到威胁。
+    </div>
+    <ol class="steps">
+      <li>在 SmartScreen 对话框中点击 <span class="kbd">更多信息</span>（或「详细信息」）。</li>
+      <li>按钮会变成 <span class="kbd">仍要运行</span>，点击它即可放行。</li>
+      <li>应用随后正常启动；同一版本首次通过后，短期内一般不再拦截。</li>
+    </ol>
+    <div class="callout warn" style="margin-top:10px;">
+      若系统杀毒软件（如 Windows Defender / 第三方卫士）也拦截，请把 <code>FixText.exe</code> 所在文件夹加入<b>白名单 / 信任区</b>。仍不放心可对照发布页提供的文件哈希自行校验。
+    </div>
+
+    <h2><span class="num">3</span>关于桌面快捷方式</h2>
+    <p>本版<b>不会</b>在桌面自动创建快捷方式——我们刻意保持「下载即用、不留痕迹」，不替你往系统里塞东西。</p>
+    <ol class="steps">
+      <li>想要一键启动？在资源管理器里右键 <code>FixText.exe</code> → <b>发送到</b> → <b>桌面快捷方式</b>。</li>
+      <li>或启动后右键任务栏图标 → <b>固定到任务栏</b>，以后从任务栏直接打开。</li>
+      <li>也可把解压文件夹固定到「快速访问」，方便随时进入。</li>
+    </ol>
+
+    <footer>
+      <span>FixText V1 · 排版校正工具</span>
+      <span>问题反馈：见发布页 / 项目仓库 Issues</span>
+    </footer>
+  </div>
+</body>
+</html>
