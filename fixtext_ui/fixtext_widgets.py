@@ -11,6 +11,12 @@ FixText V1 · 复用部件库（Qt）
 - `FieldRow`  编号 + 名称 + 描述 + 控件 的一行（检查项、规则开关都用它）
 - `no_badge`  行首序号方块
 - `hline`     1px 分隔线
+- `ConfirmDialog` 需二次确认的动作（删除 / 恢复 / 清理）的确认弹窗
+- `Modal`     通用模态弹窗（头 / 体 / 脚可组合），设置、帮助与各模块表单共用
+- `ProgressDialog` 长任务进度弹窗（timer / live 两种模式）
+
+`ConfirmDialog` 与 `Modal` 于 M2-T2.6 从 UI v4 骨架提升为共享部件，供词库 /
+历史 / 主窗口顶栏统一复用——三处不再各写一套弹窗，样式与行为只在这里改一次。
 """
 
 from __future__ import annotations
@@ -616,3 +622,177 @@ class ProgressDialog(QDialog):
         self._cancelled = True
         self.reject()
 
+
+
+# ---------------------------------------------------------------------------
+# 确认弹窗 / 通用模态弹窗（M2-T2.6 自 UI v4 骨架提升为共享部件）
+# ---------------------------------------------------------------------------
+
+class ConfirmDialog(QDialog):
+    """带「取消 / 确认」的操作确认弹窗，用于破坏性或需二次确认的动作。
+
+    note_kind="warn" 用琥珀底（破坏性操作），否则用信息底。
+    confirm_kind="danger" 用危险按钮（红边），否则用主色按钮。
+    """
+
+    def __init__(self, *, icon: str, title: str, note: str,
+                 note_kind: str = "info", confirm_text: str = "确认",
+                 confirm_kind: str = "primary", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setModal(True)
+        self.setMinimumWidth(480)
+        self._build(icon, title, note, note_kind, confirm_text, confirm_kind)
+
+    def _build(self, icon, title, note, note_kind, confirm_text, confirm_kind):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        head = QWidget()
+        head.setObjectName("ModalHead")
+        hl = QHBoxLayout(head)
+        hl.setContentsMargins(18, 16, 18, 16)
+        ico = QLabel(icon)
+        ico.setFixedSize(30, 30)
+        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ico.setStyleSheet(
+            f"background:{c('primary.100')};color:{c('primary.700')};"
+            f"border-radius:8px;font-size:16px")
+        htitle = QLabel(title)
+        htitle.setStyleSheet(
+            f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
+        hl.addWidget(ico)
+        hl.addWidget(htitle)
+        root.addWidget(head)
+
+        body = QWidget()
+        bl = QVBoxLayout(body)
+        bl.setContentsMargins(18, 16,18, 16)
+        bl.setSpacing(12)
+        nl = QLabel(note)
+        nl.setWordWrap(True)
+        if note_kind == "warn":
+            nl.setStyleSheet(
+                f"background:{c('warning.bg')};border:1px solid {c('warning.border')};"
+                f"color:{c('warning')};border-radius:10px;padding:10px 14px;"
+                f"font-size:{fs('sm')}")
+        else:
+            nl.setStyleSheet(
+                f"background:{c('info.bg')};border:1px solid {c('info.border')};"
+                f"color:{c('info')};border-radius:10px;padding:10px 14px;"
+                f"font-size:{fs('sm')}")
+        bl.addWidget(nl)
+        root.addWidget(body)
+
+        foot = QWidget()
+        foot.setObjectName("ModalFoot")
+        fl = QHBoxLayout(foot)
+        fl.setContentsMargins(18, 14, 18, 14)
+        fl.addStretch(1)
+        cancel = QPushButton("取消")
+        cancel.setObjectName("BtnGhost")
+        cancel.setCursor(Qt.CursorShape.PointingHandCursor)
+        cancel.clicked.connect(self.reject)
+        fl.addWidget(cancel)
+        confirm = QPushButton(confirm_text)
+        confirm.setObjectName(
+            "BtnPrimary" if confirm_kind == "primary" else "BtnDanger")
+        confirm.setCursor(Qt.CursorShape.PointingHandCursor)
+        confirm.clicked.connect(self.accept)
+        fl.addWidget(confirm)
+        root.addWidget(foot)
+
+
+class Modal(QDialog):
+    """通用模态弹窗：头（图标 + 标题 + 关闭）× 体（可组合）× 脚（按钮）。
+
+    用于设置、帮助、关于等富交互弹窗，以及各模块内的新增 / 编辑 / 查重 /
+    合并 / 删除预览 / 展开核对等。复用共享样式（ModalHead / ModalFoot /
+    BtnPrimary / BtnDanger / BtnGhost），只消费令牌，不硬编码颜色。
+    """
+
+    def __init__(self, *, icon: str, title: str, parent=None, min_width: int = 560):
+        super().__init__(parent)
+        # 标题栏也要有字：v4 原码只在头部标签里写标题，窗口标题留空，
+        # 在任务栏 / 无头截图里看是一片空白。这里补上。
+        self.setWindowTitle(title)
+        self.setModal(True)
+        self.setMinimumWidth(min_width)
+        self._build(icon, title)
+
+    def _build(self, icon, title):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        head = QWidget()
+        head.setObjectName("ModalHead")
+        hl = QHBoxLayout(head)
+        hl.setContentsMargins(18, 16, 18, 16)
+        ico = QLabel(icon)
+        ico.setFixedSize(30, 30)
+        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ico.setStyleSheet(
+            f"background:{c('primary.100')};color:{c('primary.700')};"
+            f"border-radius:8px;font-size:16px")
+        htitle = QLabel(title)
+        htitle.setStyleSheet(
+            f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
+        hl.addWidget(ico)
+        hl.addWidget(htitle)
+        hl.addStretch(1)
+        close = QPushButton("×")
+        close.setObjectName("ModalClose")
+        close.setCursor(Qt.CursorShape.PointingHandCursor)
+        close.setFixedSize(30, 30)
+        close.clicked.connect(self.reject)
+        hl.addWidget(close)
+        root.addWidget(head)
+
+        self.body = QWidget()
+        self.body_l = QVBoxLayout(self.body)
+        self.body_l.setContentsMargins(18, 16, 18, 16)
+        self.body_l.setSpacing(12)
+        root.addWidget(self.body)
+
+        self.foot = QWidget()
+        self.foot.setObjectName("ModalFoot")
+        self.fl = QHBoxLayout(self.foot)
+        self.fl.setContentsMargins(18, 14, 18, 14)
+        self.fl.addStretch(1)
+        root.addWidget(self.foot)
+
+    def add_note(self, text: str, kind: str = "info") -> QLabel:
+        nl = QLabel(text)
+        nl.setWordWrap(True)
+        if kind == "warn":
+            bg, bd, fg = c("warning.bg"), c("warning.border"), c("warning")
+        elif kind == "info":
+            bg, bd, fg = c("info.bg"), c("info.border"), c("info")
+        else:
+            bg, bd, fg = c("neutral.100"), c("neutral.200"), c("neutral.600")
+        nl.setStyleSheet(
+            f"background:{bg};border:1px solid {bd};color:{fg};"
+            f"border-radius:10px;padding:10px 14px;font-size:{fs('sm')}")
+        self.body_l.addWidget(nl)
+        return nl
+
+    def add_widget(self, w: QWidget) -> QWidget:
+        self.body_l.addWidget(w)
+        return w
+
+    def add_spacing(self, px: int):
+        self.body_l.addSpacing(px)
+
+    def add_foot(self, text: str, kind: str = "primary", slot=None) -> QPushButton:
+        btn = QPushButton(text)
+        obj = {"primary": "BtnPrimary", "danger": "BtnDanger", "ghost": "BtnGhost"}[kind]
+        btn.setObjectName(obj)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        if slot is not None:
+            btn.clicked.connect(slot)
+        else:
+            btn.clicked.connect(self.accept)
+        self.fl.addWidget(btn)
+        return btn
