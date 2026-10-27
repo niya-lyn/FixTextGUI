@@ -1,25 +1,27 @@
 """
-FixText V1 · 词库真实数据层（M3-T3.1）
-=====================================
+FixText V1 · 词库真实数据层（M3-T3.1 / M3-T3.2）
+================================================
 
 本模块**不依赖 Qt**，只负责词库的读取、检索、查重与写入。界面层
 （``vocab_module.py``）只通过这里的接口取数，不自己拼路径、不自己写文件。
 
 分级存储（§2.4.1 底线⑤ · 自定义与内置物理分离）
 ------------------------------------------------
-* **内置词库（只读）**：``data/rules/before.json`` + ``after.json`` 两份平行数组，
-  每条规则占同一下标。所属分级由 ``data/rules/builtin_tiers.bin``（每条 1 字节：
+* **内置词库**：出厂状态是 ``data/rules/before.json`` + ``after.json`` 两份平行数组，
+  每条规则占同一下标，所属分级由 ``builtin_tiers.bin``（每条 1 字节：
   ``1`` 常规校正 / ``2`` 标点规范 / ``3`` 繁简转换）给出，出处与校验值见
-  ``data/rules/builtin_index_meta.json``。内置词库全程**不写**。
+  ``builtin_index_meta.json``。出厂文件**永不改写**；程序运行时读的是可写工作副本
+  ``workspace/vocab/rules/``（首次需要时才由出厂文件复制而来），
+  「恢复默认词库」就是把工作副本逐字节还原为出厂内容。
 * **自定义词库（可写）**：独立的 ``workspace/vocab/custom_vocab.json``，与内置词库
   既不在同一目录、也不是同一份文件；界面只显示友好名「我的词库」，不露路径。
 
 写入安全
 --------
 * 写文件一律「临时文件 + fsync + os.replace + fsync 目录」，避免半截文件。
-* 每次改动前把**原始字节**整份留在撤销记录里；撤销时把原始字节原样写回，
-  因此撤销后的文件与改动前逐字节一致（sha256 相同，可自证）。
-* 内置词库不进撤销记录——它本来就不写，撤销只需要还原自定义词库那一份文件。
+* 每次改动前把**原始字节**整份留在还原点里（落盘，见 ``fixtext_snapshot.py``）；
+  还原时把原始字节原样写回，因此还原后的文件与改动前逐字节一致（sha256 相同，可自证）。
+* 操作历史与还原点同盘持久化：换一个新进程仍然读得到，不是界面内存里的临时列表。
 """
 
 from __future__ import annotations
@@ -32,6 +34,8 @@ import time
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
+from fixtext_snapshot import SnapshotStore
+
 # ---------------------------------------------------------------------------
 # 路径（仅本模块内部使用，界面层拿不到、也不展示）
 # ---------------------------------------------------------------------------
@@ -43,10 +47,17 @@ RULES_DIR = PKG_ROOT / "data" / "rules"
 BUILTIN_BEFORE = "before.json"
 BUILTIN_AFTER = "after.json"
 BUILTIN_TIERS = "builtin_tiers.bin"
+BUILTIN_MARKS = "builtin_marks.json"
+BUILTIN_META = "builtin_index_meta.json"
+BUILTIN_FILES = (BUILTIN_BEFORE, BUILTIN_AFTER, BUILTIN_TIERS, BUILTIN_MARKS, BUILTIN_META)
 
-#: 自定义词库目录（与内置词库 ``data/rules/`` 完全不同的一棵子树）
+#: 用户区目录（与内置词库 ``data/rules/`` 完全不同的一棵子树）
 CUSTOM_DIR = HERE / "workspace" / "vocab"
 CUSTOM_FILE = "custom_vocab.json"
+#: 内置词库的可写工作副本（只在「恢复默认」等需要改写时才用）
+WORK_RULES_DIR = "rules"
+#: 还原点与操作历史
+SNAP_DIR = "snapshots"
 
 #: 分级代号 → 友好名（内置三级 + 自定义）
 TIER_NAMES = {
@@ -65,6 +76,29 @@ ENTRY_TYPES = ["错词校正", "角色名", "专有名词", "其他"]
 KIND_SAME_BOTH = "同词同值"
 KIND_SAME_WORD = "同词异值"
 KIND_SAME_VALUE = "同值异词"
+
+#: 变更动作代号（操作历史与还原点都记这个，界面自己翻译成人话）
+ACT_ADD = "add"
+ACT_EDIT = "edit"
+ACT_DELETE = "delete"
+ACT_MERGE = "merge"
+ACT_BOOK = "book"
+ACT_RESTORE_DEFAULT = "restore_default"
+ACT_RESTORE_POINT = "restore_point"
+ACT_UNDO = "undo"
+
+#: 动作代号 → 人话（操作历史面板直接用这个，不把代号给用户看）
+ACT_NAMES = {
+    ACT_ADD: "新增",
+    ACT_EDIT: "编辑",
+    ACT_DELETE: "删除",
+    ACT_MERGE: "合并",
+    ACT_BOOK: "加入专有词",
+    ACT_RESTORE_DEFAULT: "恢复默认",
+    ACT_RESTORE_POINT: "恢复到时间点",
+    ACT_UNDO: "撤销",
+    "note": "标记",
+}
 
 
 class VocabDataError(RuntimeError):
@@ -117,28 +151,51 @@ def _read_bytes(path: Path) -> bytes | None:
 
 
 # ---------------------------------------------------------------------------
-# 内置词库（只读，按需生成行，不为 30 万条建 dict 列表）
+# 内置词库（出厂只读 + 可写工作副本）
 # ---------------------------------------------------------------------------
 
 class BuiltinVocab:
-    """内置词库：两份平行数组 + 每条的 1 字节分级码。"""
+    """内置词库：两份平行数组 + 每条的 1 字节分级码。
 
-    def __init__(self, rules_dir: Path | str | None = None):
+    出厂文件（``data/rules/``）只读、永不改写；若 ``work_dir`` 下存在一份完整的
+    工作副本，则优先读它——这样「恢复默认词库」才有真实可写、可还原的对象。
+    """
+
+    def __init__(self, rules_dir: Path | str | None = None,
+                 work_dir: Path | str | None = None):
         self.dir = Path(rules_dir) if rules_dir else RULES_DIR
+        self.work_dir = Path(work_dir) if work_dir else None
         self._before: list[str] | None = None
         self._after: list[str] | None = None
         self._tiers: bytes | None = None
         self._meta: dict = {}
         self._available = False
+        self._source = self.dir
         self.error = ""
         self._load()
 
     # ----- 载入 -----
 
+    def _active_dir(self) -> Path:
+        """工作副本**五份文件齐全**时读它，否则一律读出厂文件。
+
+        为什么要五份都齐：工作副本少一份分级索引时，条数与分级码对不上，
+        只能把全部词条当成「常规校正」——分级会静默走样。宁可判定这份副本
+        不完整、退回读出厂文件，也不让分级悄悄变。
+        """
+        if self.work_dir is None:
+            return self.dir
+        if all((self.work_dir / n).is_file() for n in BUILTIN_FILES):
+            return self.work_dir
+        return self.dir
+
     def _load(self) -> None:
-        before = self.dir / BUILTIN_BEFORE
-        after = self.dir / BUILTIN_AFTER
-        tiers = self.dir / BUILTIN_TIERS
+        self._available = False
+        self.error = ""
+        self._source = self._active_dir()
+        before = self._source / BUILTIN_BEFORE
+        after = self._source / BUILTIN_AFTER
+        tiers = self._source / BUILTIN_TIERS
         if not before.is_file() or not after.is_file():
             self.error = "内置词库文件未随程序一起提供"
             return
@@ -162,7 +219,7 @@ class BuiltinVocab:
             # 没有分级索引时全部归入常规校正（只读浏览仍然可用）
             raw = b"1" * len(self._before)
         self._tiers = raw
-        meta_path = self.dir / "builtin_index_meta.json"
+        meta_path = self._source / BUILTIN_META
         if meta_path.is_file():
             try:
                 self._meta = json.loads(meta_path.read_text("utf-8"))
@@ -170,11 +227,112 @@ class BuiltinVocab:
                 self._meta = {}
         self._available = True
 
+    def reload(self) -> None:
+        self._load()
+
+    # ----- 出厂状态 / 工作副本 -----
+
+    def factory_shas(self) -> dict[str, str]:
+        """出厂各文件的 sha256（用来证明「恢复默认」真的回到了初始状态）。"""
+        out: dict[str, str] = {}
+        for name in BUILTIN_FILES:
+            raw = _read_bytes(self.dir / name)
+            if raw is not None:
+                out[name] = _sha256_bytes(raw)
+        return out
+
+    def current_shas(self) -> dict[str, str]:
+        """当前正在读的那一份（工作副本或出厂）各文件 sha256。"""
+        out: dict[str, str] = {}
+        for name in BUILTIN_FILES:
+            raw = _read_bytes(self._source / name)
+            if raw is not None:
+                out[name] = _sha256_bytes(raw)
+        return out
+
+    def combined_sha(self) -> str:
+        """把各文件 sha 拼起来再取一次，作为「这一份内置词库」的整体指纹。"""
+        shas = self.current_shas()
+        blob = "\n".join(f"{k}={shas[k]}" for k in sorted(shas)).encode("utf-8")
+        return _sha256_bytes(blob)
+
+    def factory_combined_sha(self) -> str:
+        shas = self.factory_shas()
+        blob = "\n".join(f"{k}={shas[k]}" for k in sorted(shas)).encode("utf-8")
+        return _sha256_bytes(blob)
+
+    def has_work_copy(self) -> bool:
+        """工作副本是否完整可用（五份文件齐全 + 分级条数对得上）。"""
+        if not self.work_dir:
+            return False
+        if not all((self.work_dir / n).is_file() for n in BUILTIN_FILES):
+            return False
+        raw = _read_bytes(self.work_dir / BUILTIN_TIERS)
+        before = _read_bytes(self.work_dir / BUILTIN_BEFORE)
+        if raw is None or before is None:
+            return False
+        try:
+            n = len(json.loads(before.decode("utf-8")))
+        except (UnicodeDecodeError, ValueError):
+            return False
+        return len(raw) == n
+
+    def read_work_bytes(self) -> dict[str, bytes]:
+        """当前生效那一份的全部字节（还原默认前先留一份，撤销才回得去）。"""
+        out: dict[str, bytes] = {}
+        for name in BUILTIN_FILES:
+            raw = _read_bytes(self._source / name)
+            if raw is not None:
+                out[name] = raw
+        return out
+
+    def write_work_bytes(self, files: dict[str, bytes]) -> None:
+        """把给定字节写进工作副本（原子写每个文件），随后重载。"""
+        if self.work_dir is None:
+            raise VocabDataError("内置词库没有可写的工作副本")
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        for name, raw in files.items():
+            _atomic_write(self.work_dir / name, raw)
+        self.reload()
+
+    def restore_from_factory(self) -> dict:
+        """把工作副本逐字节还原为出厂内容（这就是「恢复默认词库」的真正动作）。"""
+        if self.work_dir is None:
+            raise VocabDataError("内置词库没有可写的工作副本")
+        before_sha = self.combined_sha()
+        factory = self.read_factory_bytes()
+        if not factory:
+            raise VocabDataError("出厂词库文件缺失，无法恢复")
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        for name, raw in factory.items():
+            _atomic_write(self.work_dir / name, raw)
+        self.reload()
+        after_sha = self.combined_sha()
+        return dict(
+            sha_before=before_sha,
+            sha_after=after_sha,
+            factory_sha=self.factory_combined_sha(),
+            identical_to_factory=after_sha == self.factory_combined_sha(),
+            files=len(factory),
+        )
+
+    def read_factory_bytes(self) -> dict[str, bytes]:
+        out: dict[str, bytes] = {}
+        for name in BUILTIN_FILES:
+            raw = _read_bytes(self.dir / name)
+            if raw is not None:
+                out[name] = raw
+        return out
+
     # ----- 基本信息 -----
 
     @property
     def available(self) -> bool:
         return self._available
+
+    @property
+    def source(self) -> Path:
+        return self._source
 
     def __len__(self) -> int:
         return len(self._before or [])
@@ -309,7 +467,6 @@ class BuiltinVocab:
                 if len(hits) >= limit:
                     break
         return hits
-
 
 # ---------------------------------------------------------------------------
 # 自定义词库（可写，独立文件）
@@ -500,13 +657,33 @@ class CustomVocab:
 # ---------------------------------------------------------------------------
 
 class VocabStore:
-    """界面层唯一入口：分级检索、查重、写入与回滚都在这里。"""
+    """界面层唯一入口：分级检索、查重、写入、还原点与操作历史都在这里。
+
+    所有写操作都走同一条路：``_begin`` 先把「操作前」的原始字节留成还原点
+    （落盘，见 :mod:`fixtext_snapshot`），再真正写文件，最后 ``_commit`` 记下
+    「操作后」的字节。于是两条判据都变成硬的：
+
+    * 撤回一步 → 写回该还原点的「操作前」字节，文件 sha 与当初相同；
+    * 恢复到此刻 → 写回该还原点的「操作后」字节，文件 sha 与当初相同。
+
+    还原点与操作历史都在 ``snapshots/index.json`` 里，换一个新进程照样读得到。
+    """
 
     def __init__(self, *, custom_path: Path | str | None = None,
-                 rules_dir: Path | str | None = None):
-        self.builtin = BuiltinVocab(rules_dir)
+                 rules_dir: Path | str | None = None,
+                 work_dir: Path | str | None = None,
+                 snap_dir: Path | str | None = None,
+                 max_points: int | None = None):
+        explicit = custom_path is not None
         self.custom = CustomVocab(custom_path)
-        self._undo: list[dict] = []
+        # 传了自定义路径（测试 / 便携模式）时，工作副本与还原点都放在同一棵
+        # 临时子树里，绝不碰交付包自带的用户区。
+        base_dir = self.custom.path.parent if explicit else CUSTOM_DIR
+        self.builtin = BuiltinVocab(
+            rules_dir,
+            work_dir=Path(work_dir) if work_dir else (base_dir / WORK_RULES_DIR))
+        snap = Path(snap_dir) if snap_dir else (base_dir / SNAP_DIR)
+        self.snap = SnapshotStore(snap, **({"max_points": max_points} if max_points else {}))
 
     # ----- 一律量 -----
 
@@ -520,7 +697,7 @@ class VocabStore:
         return len(self.builtin)
 
     def warning(self) -> str:
-        return self.custom.error or self.builtin.error
+        return self.custom.error or self.builtin.error or self.snap.error
 
     # ----- 检索 -----
 
@@ -619,76 +796,313 @@ class VocabStore:
                 break
         return groups
 
-    # ----- 写入（先留快照，再改文件）-----
+    # ----- 写操作的公共骨架：先落还原点，再写，最后记「操作后」-----
 
-    def _begin(self, label: str) -> None:
-        self._undo.append(dict(label=label, raw=self.custom.snapshot(),
-                               sha=self.custom.sha256(),
-                               time=time.strftime("%H:%M:%S"),
-                               at=time.time()))
+    def _disk_sha(self) -> str:
+        """从磁盘重新读一次自定义词库的 sha——自证用，不用内存里的缓存。"""
+        raw = _read_bytes(self.custom.path)
+        return _sha256_bytes(raw) if raw is not None else ""
+
+    def _begin(self, *, label: str, act: str, touches_builtin: bool = False) -> int:
+        return self.snap.begin(
+            label=label, act=act, before_bytes=self.custom.raw_bytes(),
+            builtin_before=self.builtin.read_work_bytes() if touches_builtin else None,
+            builtin_sha_before=self.builtin.combined_sha() if touches_builtin else "")
+
+    def _commit(self, pid: int, *, act: str, summary: str, sha_before: str,
+                detail: dict | None = None,
+                builtin_sha_before: str = "", builtin_sha_after: str = "",
+                builtin_factory: bool = False) -> dict:
+        rec = self.snap.commit(pid, after_bytes=self.custom.raw_bytes(),
+                               builtin_after_is_factory=builtin_factory,
+                               builtin_sha_after=builtin_sha_after)
+        self.snap.log_op(act=act, summary=summary, point_id=pid,
+                         sha_before=rec.get("sha_before", sha_before),
+                         sha_after=rec.get("sha_after", ""),
+                         builtin_sha_before=builtin_sha_before,
+                         builtin_sha_after=builtin_sha_after,
+                         detail=detail)
+        return dict(point_id=pid,
+                    sha_before=rec.get("sha_before", sha_before),
+                    sha_after=rec.get("sha_after", ""))
+
+    def _run(self, *, label: str, act: str, summary: str, write,
+             touches_builtin: bool = False, detail: dict | None = None) -> tuple[dict, dict]:
+        """一次写操作的标准流程；写失败就把还原点撤掉，不留半截记录。"""
+        sha_before = self._disk_sha()
+        b_sha_before = self.builtin.combined_sha() if touches_builtin else ""
+        pid = self._begin(label=label, act=act, touches_builtin=touches_builtin)
+        try:
+            result = write()
+        except Exception:
+            self.snap.abort(pid)
+            raise
+        b_sha_after = self.builtin.combined_sha() if touches_builtin else ""
+        meta = self._commit(pid, act=act, summary=summary, sha_before=sha_before,
+                            detail=detail, builtin_sha_before=b_sha_before,
+                            builtin_sha_after=b_sha_after,
+                            builtin_factory=(touches_builtin and
+                                             b_sha_after == self.builtin.factory_combined_sha()))
+        return result, meta
+
+    # ----- 五个写操作（界面必须先预览确认，这里只负责写）-----
 
     def add_entry(self, *, word: str, value: str, typ: str, pinyin: str = "",
                   book: str = "") -> dict:
-        self._begin(f"新增「{word.strip()}」")
-        return self.custom.add(word=word, value=value, typ=typ, pinyin=pinyin, book=book)
+        label = f"新增「{word.strip()}」"
+        result, meta = self._run(
+            label=label, act=ACT_ADD, summary=label,
+            write=lambda: self.custom.add(word=word, value=value, typ=typ,
+                                          pinyin=pinyin, book=book),
+            detail=dict(word=word.strip(), value=value.strip(), typ=typ))
+        return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
 
     def update_entry(self, rid: int, *, word: str | None = None, value: str | None = None,
                      typ: str | None = None, pinyin: str | None = None) -> dict:
-        self._begin(f"编辑「{word.strip() if word else rid}」")
-        return self.custom.update(rid, word=word, value=value, typ=typ, pinyin=pinyin)
+        old = self.row_by_id(int(rid)) or {}
+        label = f"编辑「{word.strip() if word else old.get('word') or rid}」"
+        result, meta = self._run(
+            label=label, act=ACT_EDIT, summary=label,
+            write=lambda: self.custom.update(rid, word=word, value=value,
+                                             typ=typ, pinyin=pinyin),
+            detail=dict(id=int(rid), before_value=old.get("value", ""),
+                        after_value=value))
+        return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
 
     def delete_entries(self, ids: Iterable[int]) -> dict:
         ids = [int(i) for i in ids]
-        self._begin(f"删除 {len(ids)} 条")
-        return self.custom.delete(ids)
+        label = f"删除 {len(ids)} 条"
+        result, meta = self._run(
+            label=label, act=ACT_DELETE, summary=label,
+            write=lambda: self.custom.delete(ids), detail=dict(ids=ids))
+        return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
 
     def merge_entries(self, ids: Iterable[int], target_word: str) -> dict:
-        self._begin(f"合并为「{target_word}」")
-        return self.custom.merge(ids, target_word)
+        ids = [int(i) for i in ids]
+        label = f"合并为「{target_word}」"
+        result, meta = self._run(
+            label=label, act=ACT_MERGE, summary=label,
+            write=lambda: self.custom.merge(ids, target_word),
+            detail=dict(ids=ids, target=target_word))
+        return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
 
-    # ----- 撤销 -----
+    def add_book_words(self, words: list[dict], book: str = "") -> dict:
+        """本书专有词批量加入（一次还原点覆盖整批，撤销时整批一起回去）。"""
+        label = f"加入 {len(words)} 条专有词"
+
+        def _write() -> dict:
+            added = 0
+            for w in words:
+                word = str(w.get("word") or "").strip()
+                if not word:
+                    continue
+                value = str(w.get("value") or word).strip() or word
+                if self.conflicts_for_add(word, value):
+                    continue
+                self.custom.add(word=word, value=value, typ="专有名词", book=book)
+                added += 1
+            return dict(added=added)
+
+        result, meta = self._run(
+            label=label, act=ACT_BOOK, summary=label, write=_write,
+            detail=dict(book=book, requested=len(words)))
+        return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
+
+    # ----- 恢复默认词库（只重置内置，自定义原样保留）-----
+
+    def preview_restore_default(self) -> dict:
+        """恢复默认的预览：真正动手前先算清楚会影响什么，界面拿它做二次确认。
+
+        只读，不写任何文件——调用前后文件 sha、还原点条数都不变。
+        """
+        cur = self.builtin.current_shas()
+        fac = self.builtin.factory_shas()
+        diff = [n for n in sorted(fac) if cur.get(n) != fac.get(n)]
+        return dict(
+            builtin_sha_before=self.builtin.combined_sha(),
+            builtin_sha_factory=self.builtin.factory_combined_sha(),
+            already_default=not diff,
+            changed_files=len(diff),
+            file_count=len(fac),
+            total_entries=self.builtin_total,
+            tier_counts=self.builtin.tier_counts(),
+            custom_entries=len(self.custom),
+            custom_untouched=True,
+            undoable=True,
+            has_work_copy=self.builtin.has_work_copy(),
+        )
+
+    def restore_default(self) -> dict:
+        """把内置词库逐字节还原为出厂内容；自定义词条条目与字节都不动。"""
+        custom_before = self._disk_sha()
+        result, meta = self._run(
+            label="恢复默认词库", act=ACT_RESTORE_DEFAULT,
+            summary="恢复默认词库（自定义保留）",
+            write=self.builtin.restore_from_factory, touches_builtin=True,
+            detail=dict(custom_entries=len(self.custom)))
+        custom_after = self._disk_sha()
+        return dict(
+            point_id=meta["point_id"],
+            sha_before=meta["sha_before"],
+            sha_after=meta["sha_after"],
+            custom_sha_before=custom_before,
+            custom_sha_after=custom_after,
+            custom_untouched=custom_before == custom_after,
+            builtin_sha_before=result["sha_before"],
+            builtin_sha_after=result["sha_after"],
+            factory_sha=result["factory_sha"],
+            identical_to_factory=result["identical_to_factory"],
+            files=result["files"],
+        )
+
+    # ----- 还原点 / 操作历史 -----
+
+    def timeline(self, limit: int | None = None) -> list[dict]:
+        """时间线（最新在前）：每一次变更的时间点与摘要，供界面渲染。"""
+        rows = self.snap.points(limit=limit)
+        out = []
+        for r in rows:
+            item = dict(r)
+            item["time"] = str(r.get("at", ""))[11:19] or str(r.get("at", ""))
+            item["act_name"] = ACT_NAMES.get(r.get("act", ""), "变更")
+            out.append(item)
+        return out
+
+    def ops(self, limit: int | None = None) -> list[dict]:
+        """操作历史（最新在前）：每次变更的时间点、摘要、前后指纹。"""
+        out = []
+        for o in self.snap.ops(limit=limit):
+            item = dict(o)
+            item["time"] = str(o.get("at", ""))[11:19] or str(o.get("at", ""))
+            item["act_name"] = ACT_NAMES.get(o.get("act", ""), "变更")
+            out.append(item)
+        return out
+
+    def current_point_id(self) -> int:
+        """当前状态对应的还原点 id（没有则为 0）——时间线与操作历史共用。"""
+        head = self.snap.newest_alive()
+        return int(head["id"]) if head else 0
+
+    def point_count(self) -> int:
+        return self.snap.point_count()
+
+    def op_count(self) -> int:
+        return self.snap.op_count()
 
     @property
     def can_undo(self) -> bool:
-        return bool(self._undo)
+        return self.snap.newest_undoable() is not None
 
     def undo(self) -> dict | None:
-        if not self._undo:
+        """撤回最近一次写操作：写回它的「操作前」字节。"""
+        p = self.snap.newest_undoable()
+        if p is None:
             return None
-        rec = self._undo.pop()
-        self.custom.restore(rec["raw"])
-        return dict(label=rec["label"], sha=self.custom.sha256(),
-                    expected_sha=rec["sha"], identical=self.custom.sha256() == rec["sha"])
+        pid = int(p["id"])
+        raw = self.snap.before_bytes(pid)
+        if raw is None:                     # 载荷丢了就不冒充能撤销
+            return None
+        expected = p.get("sha_before", "")
+        self.custom.restore(raw)
+        blob = self.snap.builtin_before(pid)
+        builtin_ok = True
+        if blob:
+            try:
+                self.builtin.write_work_bytes(blob)
+            except VocabDataError:
+                builtin_ok = False
+        self.snap.mark_undone(pid, True)
+        now = self._disk_sha()
+        self.snap.log_op(act=ACT_UNDO, summary=f"撤销「{p.get('label', '')}」",
+                         point_id=pid, sha_before=now, sha_after=now,
+                         detail=dict(undone_point=pid))
+        return dict(label=p.get("label", ""), sha=now, expected_sha=expected,
+                    identical=bool(now and now == expected),
+                    point_id=pid, builtin_restored=builtin_ok)
 
     def history(self, limit: int = 12) -> list[dict]:
-        """变更记录（最新在前），供「历史与快照」列表展示。
+        """变更记录（最新在前）——与「历史与快照」列表一一对应。
 
-        只给界面需要的字段：标签、时间、以及这条记录对应的还原点是否仍可用。
+        只列仍可回退的还原点：撤回过的、或已被更早时间点覆盖的，不再出现。
+        每行给 ``index``（按最新在前编号）、``label``、``time``、``sha``
+        （这一条对应的「操作前」指纹），``undo_to(index)`` 用的就是这个编号。
         """
+        alive = [r for r in self.snap.points() if not r["undone"]]
         out: list[dict] = []
-        for i, rec in enumerate(reversed(self._undo)):
+        for i, r in enumerate(alive):
             if len(out) >= limit:
                 break
-            out.append(dict(index=i, label=rec["label"], time=rec.get("time", ""),
-                            sha=rec.get("sha", "")))
+            out.append(dict(index=i, label=r["label"], time=r["time"],
+                            sha=r["sha_before"], sha_after=r["sha_after"],
+                            point_id=r["id"], is_current=r["is_current"]))
         return out
 
     def undo_to(self, index: int) -> dict | None:
-        """把自定义词库还原到「历史与快照」里第 ``index`` 条记录的原始字节。
+        """把词库还原到「历史与快照」里第 ``index`` 条记录之前的状态。
 
         记录按最新在前编号（与 :meth:`history` 一致）。还原后，比它更新的
-        记录随之失效（它们描述的状态已不存在），这条记录也一并出栈。
+        记录随之失效——它们描述的那条线已不存在。
         """
-        total = len(self._undo)
-        if index < 0 or index >= total:
+        alive = [r for r in self.snap.points() if not r["undone"]]
+        if index < 0 or index >= len(alive):
             return None
-        pos = total - 1 - int(index)
-        rec = self._undo[pos]
-        self.custom.restore(rec["raw"])
-        del self._undo[pos:]
-        return dict(label=rec["label"], sha=self.custom.sha256(),
-                    expected_sha=rec["sha"], identical=self.custom.sha256() == rec["sha"])
+        row = alive[int(index)]
+        pid = int(row["id"])
+        raw = self.snap.before_bytes(pid)
+        if raw is None:
+            return None
+        expected = row.get("sha_before", "")
+        self.custom.restore(raw)
+        blob = self.snap.builtin_before(pid)
+        if blob:
+            try:
+                self.builtin.write_work_bytes(blob)
+            except VocabDataError:
+                pass
+        newer = self.snap.mark_undone_newer_than(pid)
+        self.snap.mark_undone(pid, True)
+        now = self._disk_sha()
+        self.snap.log_op(act=ACT_UNDO, summary=f"退回到「{row['label']}」之前",
+                         point_id=pid, sha_before=now, sha_after=now,
+                         detail=dict(undone_point=pid, undone_newer=newer))
+        return dict(label=row["label"], sha=now, expected_sha=expected,
+                    identical=bool(now and now == expected),
+                    point_id=pid, undone_newer=newer)
 
-    def push_snapshot(self, label: str) -> None:
-        """给「本来就不用写文件」的动作也留一个回滚点（保持撤销语义一致）。"""
-        self._begin(label)
+    def restore_point(self, point_id: int) -> dict | None:
+        """「恢复到此刻」：把该时间点的「操作后」状态原样写回。"""
+        p = self.snap.get(int(point_id))
+        if p is None:
+            return None
+        pid = int(point_id)
+        raw = self.snap.after_bytes(pid)
+        if raw is None:
+            return None
+        expected = p.get("sha_after", "")
+        self.custom.restore(raw)
+        builtin_applied = False
+        if self.snap.builtin_after_is_factory(pid):
+            try:
+                self.builtin.restore_from_factory()
+                builtin_applied = True
+            except VocabDataError:
+                pass
+        newer = self.snap.mark_undone_newer_than(pid)
+        self.snap.mark_undone(pid, False)
+        now = self._disk_sha()
+        self.snap.log_op(act=ACT_RESTORE_POINT,
+                         summary=f"恢复到 {str(p.get('at', ''))[11:19]}",
+                         point_id=pid, sha_before=now, sha_after=now,
+                         detail=dict(point_id=pid, undone_newer=newer))
+        return dict(point_id=pid, label=p.get("label", ""),
+                    at=p.get("at", ""), sha=now, expected_sha=expected,
+                    identical=bool(now and now == expected),
+                    builtin_applied=builtin_applied, undone_newer=newer)
+
+    def push_snapshot(self, label: str) -> int:
+        """给「本来就不用写文件」的动作也留一个时间点（时间线不出现空洞）。"""
+        return int(self.snap.begin(label=label, act="note",
+                                   before_bytes=self.custom.raw_bytes()))
+
+    def flush(self) -> None:
+        self.snap._flush()
