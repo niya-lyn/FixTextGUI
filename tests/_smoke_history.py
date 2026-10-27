@@ -18,7 +18,8 @@ import tempfile  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 import history_module as hm  # noqa: E402
-import fixtext_history as histdata  # noqa: E402
+import fixtext_history as histdata
+import fixtext_snapshot as snap  # noqa: E402
 import _fixture_run as fxr  # noqa: E402
 from history_module import HistoryModule, ConfirmDialog  # noqa: E402
 
@@ -86,16 +87,26 @@ assert count_rows(mod) == 2, "撤销后恢复为 2 行"
 assert mod.status.text() == "已撤销删除，该条历史已恢复"
 print("删除 + 撤销 OK")
 
-# 6) 「恢复历史结果」已如实降级为「用该次产物重新导出」，且真的去执行
+# 6) 「重新导出」走真实导出执行层
 mod._undo_stack.clear()
 mod._active_idx = None
 calls = []
 mod._run_export = lambda t: calls.append(t.get("run_dir"))
 mod._confirm_restore(0)
 assert calls == [mod.tasks[0]["run_dir"]], "确认后应把该次运行交给真实导出执行层"
-assert mod._active_idx == 0, "应把 0 号记录标记为当前工作区"
-assert "当前工作区" in mod._active_hint.text(), "应刷新当前工作区提示"
-print("恢复 = 用该次产物重新导出（真实执行）OK")
+print("重新导出 = 真实执行层 OK")
+
+# 6b) 「恢复」= 真快照恢复（阶段点枚举 + 切现场 + 可撤销）
+pts = snap.list_points(mod.tasks[0]["run_dir"])
+assert len(pts) == 5, f"应枚举 5 个时点，实际 {len(pts)}"
+assert all(p["available"] for p in pts), "真实运行目录的五个时点都应可用"
+mod._apply_restore(0, "replace", pts)
+cur = snap.current_state(mod._runs_root)
+assert cur and cur["point"] == "replace", "当前工作区应指向替换完成"
+assert "替换完成" in mod._active_hint.text(), "提示应写明恢复到了哪个时点"
+mod._undo()
+assert snap.current_state(mod._runs_root) is None, "撤销后应回到未指定"
+print("快照恢复 + 撤销 OK")
 
 # 7) 清理全部：清空撤销栈（不可撤销）
 mod._undo_stack.append(dict(type="delete", item=dict(mod.tasks[0]), index=0))
