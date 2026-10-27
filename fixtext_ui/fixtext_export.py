@@ -725,6 +725,8 @@ def export_book(source: ExportSource,
         raise ExportError("这本书不是从 EPUB 导入的，只能导出纯文本。")
 
     _check_writable(out)
+    # 两种格式都要用到引擎包（纯文本也靠账本切章），所以统一在这里挂上
+    ensure_vendor(source.pipeline_root or None)
 
     safe = _safe_name(final_title)
     text_raw = Path(source.text_path).read_text(encoding="utf-8")
@@ -737,7 +739,6 @@ def export_book(source: ExportSource,
         outcome.notes.append("正文已去掉内部标记，可以直接用文本阅读器打开。")
     else:
         main = out / f"{safe}.epub"
-        ensure_vendor(source.pipeline_root or None)
         from epubtext import check_epub, compare_content, restore_epub
 
         restore_epub(
