@@ -887,21 +887,54 @@ class VocabStore:
         return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
 
     def add_book_words(self, words: list[dict], book: str = "") -> dict:
-        """本书专有词批量加入（一次还原点覆盖整批，撤销时整批一起回去）。"""
+        """本书专有词批量加入（一次还原点覆盖整批，撤销时整批一起回去）。
+
+        查重是硬的（§2.4.3 底线的延伸）：
+
+        * 与已有词条**同词同值** → 已存在，跳过，记进 ``skipped_exists``
+        * 与已有词条**同词异值 / 同值异词** → 冲突，跳过，记进 ``conflicts``
+          （带冲突种类与命中处，界面必须显示出来，不静默覆盖）
+        * 同一批里重复出现 → 只写第一条，记进 ``skipped_exists``
+
+        返回 ``added`` / ``skipped_exists`` / ``conflicts`` / ``requested``，
+        界面据此给出「加入几条、跳过几条、为什么跳过」。幂等：同一批再点一次
+        ``added`` = 0，已有词条一条都不会被改写（sha 不变）。
+        """
         label = f"加入 {len(words)} 条专有词"
 
         def _write() -> dict:
             added = 0
+            skipped_exists: list[dict] = []
+            conflicts: list[dict] = []
+            seen: set[tuple[str, str]] = set()
             for w in words:
                 word = str(w.get("word") or "").strip()
                 if not word:
                     continue
                 value = str(w.get("value") or word).strip() or word
-                if self.conflicts_for_add(word, value):
+                typ = str(w.get("type") or "专有名词").strip() or "专有名词"
+                key = (word, value)
+                if key in seen:
+                    skipped_exists.append(dict(word=word, value=value,
+                                               reason="这一批里重复出现，只写第一条"))
                     continue
-                self.custom.add(word=word, value=value, typ="专有名词", book=book)
+                seen.add(key)
+                hits = self.conflicts_for_add(word, value)
+                if hits:
+                    same = [h for h in hits if h.get("kind") == KIND_SAME_BOTH]
+                    if same and len(same) == len(hits):
+                        skipped_exists.append(dict(
+                            word=word, value=value,
+                            reason=f"《{book}》里已有同词同值的词条" if book
+                                   else "词库里已有同词同值的词条"))
+                    else:
+                        conflicts.append(dict(word=word, value=value,
+                                              hits=list(hits)))
+                    continue
+                self.custom.add(word=word, value=value, typ=typ, book=book)
                 added += 1
-            return dict(added=added)
+            return dict(added=added, requested=len(words),
+                        skipped_exists=skipped_exists, conflicts=conflicts)
 
         result, meta = self._run(
             label=label, act=ACT_BOOK, summary=label, write=_write,

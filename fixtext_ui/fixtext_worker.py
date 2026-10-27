@@ -384,6 +384,10 @@ class CorrectionJob:
             ),
             "bookmap_entries": sum(counts.values()) if counts else None,
             "book_words": self._book_words_preview(bookmap),
+            # 引擎原始条数（含重复 vs 去重后的清单条数）：两个数都摆出来，
+            # 界面上的「发现 N 条」= len(book_words)，可与这里互相核对。
+            "book_words_declared_total": bookmap.get("entries_total"),
+            "book_words_unique": bookmap.get("entries_unique"),
             "restored_sha256": restore.get("restored_sha256"),
             "stage_elapsed": dict(self.stage_elapsed),
             "total_elapsed_s": round(self.elapsed_s(), 3),
@@ -400,13 +404,16 @@ class CorrectionJob:
     # ---------------- 本书专有词 ----------------
 
     def _book_words_preview(self, bookmap: dict) -> list[dict]:
-        """把 bookmap 阶段抽出的**真实**专有词条整理成界面可用的三元组。
+        """把 bookmap 阶段抽出的**真实**专有词条整理成界面可用的行。
 
         没有真实词条时返回空列表——界面据此不显示横幅，绝不退回演示数据。
 
-        抽取是按上下文片段做的，同一处改动在相邻上下文里会各抽一次，所以这里
-        按「原词 + 替换值」去重：横幅报的条数必须是用户真正能加入的条数，
-        否则会出现「说 20 条、实际只写进 19 条」的落差。
+        M3-T3.3：**不再截断**。以前 bookmap 报告只带前 20 条，界面「整组加入」
+        最多写进 20 条，而引擎实际抽出几千条——这是静默丢条。现在报告带全量，
+        这里的条数 == 引擎产物去重后的条数，``declared_total`` 另行给出引擎
+        原始条数（含重复），两个数都摆出来，不互相顶替。
+
+        每条带：词条（原词）/ 替换值 / 类型 / 出现次数，供预览清单逐条展示。
         """
         out: list[dict] = []
         seen: set[tuple[str, str]] = set()
@@ -422,8 +429,13 @@ class CorrectionJob:
                 if key in seen:
                     continue
                 seen.add(key)
-                out.append(dict(word=before, value=after or before,
-                                note=f"本书专有词 · 《{book}》"))
+                out.append(dict(
+                    word=before,
+                    value=after or before,
+                    type=str(w.get("type") or "专有名词"),
+                    count=int(w.get("count") or 1),
+                    note=f"本书专有词 · 《{book}》",
+                ))
         return out
 
     # ---------------- 引擎引导 ----------------
