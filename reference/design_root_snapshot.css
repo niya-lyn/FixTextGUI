@@ -1,0 +1,36 @@
+/* FixText V1 · 设计地基 :root 快照（原样节选，未改任何数值）
+ *
+ * 来源文件：FixText_V1_设计系统_薄地基.html
+ * 源文件 MD5：6faf81eeb24e592a906cb22caf3977e4
+ * 节选范围：仅 :root 变量块；变量名与取值逐字保留原文件写法。
+ * 用途：交付包脱离原始设计包后，仍可复核「令牌值与设计地基一致」（验收③）。
+ * 复核方式：python3 tools/verify_m2t21.py 会自动读取本文件并与 fixtext_tokens.py 比对。
+ */
+
+:root {
+    --c-primary-50:#EEF0FB; --c-primary-100:#DDE1F6; --c-primary-200:#C0C6EE;
+    --c-primary-300:#9AA3E2; --c-primary-400:#6F79D1; --c-primary-500:#4F59C0;
+    --c-primary-600:#3F48A2; --c-primary-700:#333B83; --c-primary-800:#2B3169; --c-primary-900:#232852;
+    --c-neutral-0:#FFFFFF; --c-neutral-50:#F7F8FA; --c-neutral-100:#EEF1F5;
+    --c-neutral-200:#DDE2EA; --c-neutral-300:#C2CAD6; --c-neutral-400:#9AA4B4;
+    --c-neutral-500:#6B7585; --c-neutral-600:#4A5363; --c-neutral-700:#333B48;
+    --c-neutral-800:#222831; --c-neutral-900:#15191F;
+    --c-success:#15803D; --c-success-bg:#E7F4EC; --c-success-border:#B6E0C5;
+    --c-warning:#B45309; --c-warning-bg:#FBF1DF; --c-warning-border:#F0D6A8;
+    --c-error:#C0392B;   --c-error-bg:#FBEAE8;   --c-error-border:#F1C4BD;
+    --c-info:#3F48A2;    --c-info-bg:#ECEEF9;    --c-info-border:#C8CDEC;
+    --c-focus:#4F59C0;
+    --font-sans:"Segoe UI","Microsoft YaHei UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --font-mono:"Cascadia Code","JetBrains Mono",Consolas,monospace;
+    --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:16px; --fs-lg:18px;
+    --fs-xl:20px; --fs-2xl:24px; --fs-3xl:30px; --fs-4xl:36px;
+    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+    --lh-tight:1.25; --lh-normal:1.5; --lh-relaxed:1.7;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
+    --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px; --sp-16:64px;
+    --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-full:999px;
+    --sh-sm:0 1px 2px rgba(21,25,31,.06),0 1px 3px rgba(21,25,31,.08);
+    --sh-md:0 4px 10px rgba(21,25,31,.08),0 2px 4px rgba(21,25,31,.06);
+    --sh-lg:0 12px 28px rgba(21,25,31,.12),0 4px 8px rgba(21,25,31,.06);
+    --sh-focus:0 0 0 3px rgba(79,89,192,.28);
+  }

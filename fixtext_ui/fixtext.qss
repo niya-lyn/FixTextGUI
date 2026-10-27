@@ -1,0 +1,314 @@
+/* ============================================================
+   FixText V1 · 共享样式表（由 build_qss.py 自动生成，勿手改）
+   令牌来源：fixtext_tokens.py（与 薄地基 :root 逐字对应）
+   ============================================================ */
+
+QWidget {
+    font-family: "Segoe UI","Microsoft YaHei UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    font-size: 14px;
+    color: #222831;
+    background-color: #F7F8FA;
+}
+
+QMainWindow {
+    background-color: #F7F8FA;
+}
+
+QLabel { background-color: transparent; }
+
+#TopBar {
+    background-color: #15191F;
+    border: none;
+    min-height: 53px;
+    max-height: 53px;
+}
+#TopBar QWidget { background-color: transparent; color: #FFFFFF; }
+#Brand {
+    color: #FFFFFF;
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 0 12px;
+}
+#Brand:hover { color: #FFFFFF; }
+#TopAct {
+    color: #C2CAD6;
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+#TopAct:hover { background-color: #333B48; color: #FFFFFF; }
+
+#Rail {
+    background-color: #FFFFFF;
+    border: none;
+    border-right: 1px solid #DDE2EA;
+    padding: 12px 8px;
+}
+#RailTitle {
+    color: #9AA4B4;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+}
+#RailItem {
+    color: #333B48;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: none;
+    text-align: left;
+}
+#RailItem:hover { background-color: #EEF1F5; color: #15191F; }
+#RailItem[active="true"] {
+    background-color: #EEF0FB;
+    color: #333B83;
+    font-weight: 500;
+    border-left: 3px solid #4F59C0;
+    padding-left: 9px;
+}
+
+#Content {
+    background-color: #F7F8FA;
+    border: none;
+}
+#PageTitle {
+    color: #15191F;
+    font-size: 24px;
+    font-weight: 700;
+}
+#PageSub {
+    color: #4A5363;
+    font-size: 16px;
+}
+#TopWhere {
+    color: #C2CAD6;
+    font-size: 13px;
+    padding-left: 12px;
+}
+
+#RailIco {
+    border-radius: 7px;
+    font-size: 13px;
+}
+#RailLabel {
+    font-size: 14px;
+}
+#RailTag {
+    color: #B45309;
+    background-color: #FBF1DF;
+    border: 1px solid #F0D6A8;
+    border-radius: 999px;
+    padding: 0 6px;
+    font-size: 10px;
+    font-weight: 700;
+}
+#RailTip {
+    color: #9AA4B4;
+    font-size: 12px;
+    padding: 8px 12px 0 12px;
+}
+
+#OverviewCard {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 12px;
+}
+#OverviewCard:hover {
+    border-color: #9AA3E2;
+    background-color: #EEF0FB;
+}
+#OvfIco {
+    background-color: #EEF0FB;
+    border-radius: 8px;
+    font-size: 16px;
+}
+
+QFrame#Card {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 12px;
+}
+
+QPushButton {
+    font-family: "Segoe UI","Microsoft YaHei UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+}
+QPushButton:disabled {
+    opacity: 0.6;
+}
+#BtnPrimary {
+    background-color: #4F59C0;
+    color: #FFFFFF;
+}
+#BtnPrimary:hover:!pressed { background-color: #3F48A2; }
+#BtnPrimary:pressed { background-color: #333B83; }
+#BtnSecondary {
+    background-color: #EEF1F5;
+    color: #222831;
+}
+#BtnSecondary:hover { background-color: #DDE2EA; }
+#BtnGhost {
+    background-color: transparent;
+    color: #3F48A2;
+}
+#BtnGhost:hover { background-color: #EEF0FB; }
+
+#BtnOutline {
+    background-color: #FFFFFF;
+    color: #222831;
+    border: 1px solid #DDE2EA;
+}
+#BtnOutline:hover { background-color: #EEF0FB; border-color: #DDE1F6; }
+#BtnDanger {
+    background-color: #FFFFFF;
+    color: #C0392B;
+    border: 1px solid #F1C4BD;
+}
+#BtnDanger:hover { background-color: #FBEAE8; }
+
+QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus {
+    border: 1px solid #4F59C0;
+    background-color: #FFFFFF;
+}
+QLineEdit:disabled, QTextEdit:disabled {
+    background-color: #EEF1F5;
+    color: #9AA4B4;
+}
+
+QCheckBox {
+    color: #333B48;
+    spacing: 8px;
+}
+QCheckBox::indicator {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    border: 1px solid #C2CAD6;
+    background-color: #FFFFFF;
+}
+QCheckBox::indicator:checked { background-color: #4F59C0; border-color: #4F59C0; }
+QCheckBox::indicator:checked { image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTYgMTEuM2wtMy4zLTMuM2EuOTh4Ljk4IDAgMCAxIDEuNC0xLjRMNiA4LjU5bDUuNi01LjU5YTEuMDEgMS4wMSAwIDEgMSAxLjQxIDEuNDFMNiAxMS4zeiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==); }
+
+QTableWidget, QTreeWidget, QListWidget {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    gridline-color: #EEF1F5;
+    font-size: 13px;
+}
+QHeaderView::section {
+    background-color: #F7F8FA;
+    color: #4A5363;
+    border: none;
+    border-bottom: 1px solid #DDE2EA;
+    padding: 8px 12px;
+    font-weight: 600;
+}
+QTableWidget::item:selected, QListWidget::item:selected { background-color: #EEF0FB; color: #2B3169; }
+
+#Badge {
+    color: #333B83;
+    background-color: #EEF0FB;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 12px;
+}
+#TagOk {
+    color: #15803D;
+    background-color: #E7F4EC;
+    border: 1px solid #B6E0C5;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 12px;
+}
+#TagWarn {
+    color: #B45309;
+    background-color: #FBF1DF;
+    border: 1px solid #F0D6A8;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 12px;
+}
+#TagErr {
+    color: #C0392B;
+    background-color: #FBEAE8;
+    border: 1px solid #F1C4BD;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 12px;
+}
+
+Line, QFrame[frameShape="4"] {
+    background-color: #DDE2EA;
+}
+
+QScrollArea, QAbstractScrollArea {
+    border: none;
+}
+QScrollBar:vertical {
+    background: #F7F8FA;
+    width: 10px;
+    margin: 2px;
+}
+QScrollBar::handle:vertical {
+    background: #C2CAD6;
+    border-radius: 999px;
+    min-height: 36px;
+}
+QScrollBar::handle:vertical:hover { background: #9AA4B4; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0; width: 0;
+}
+QScrollBar:horizontal {
+    background: #F7F8FA;
+    height: 10px;
+    margin: 2px;
+}
+QScrollBar::handle:horizontal {
+    background: #C2CAD6;
+    border-radius: 999px;
+    min-width: 36px;
+}
+QScrollBar::handle:horizontal:hover { background: #9AA4B4; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    height: 0; width: 0;
+}
+
+QProgressBar {
+    background-color: #EEF1F5;
+    border-radius: 999px;
+    height: 8px;
+    text-align: center;
+    color: #4A5363;
+    font-size: 12px;
+}
+QProgressBar::chunk { background-color: #4F59C0; border-radius: 999px; }
+
+QGroupBox {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    margin-top: 16px;
+    padding: 12px;
+}
+QGroupBox::title {
+    color: #333B48;
+    font-weight: 600;
+    subcontrol-origin: margin;
+    left: 12px;
+}
+

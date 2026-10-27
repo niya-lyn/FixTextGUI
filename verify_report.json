@@ -1,0 +1,229 @@
+{
+  "1_entries_reachable": {
+    "passed": true,
+    "count": 6,
+    "entries": [
+      {
+        "key": "import",
+        "label": "导入书籍",
+        "status": "building",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "📥  导入书籍",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "BuildingPage",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          447
+        ],
+        "passed": true
+      },
+      {
+        "key": "oneclick",
+        "label": "一键校正",
+        "status": "building",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "⚡  一键校正",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "BuildingPage",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          447
+        ],
+        "passed": true
+      },
+      {
+        "key": "check",
+        "label": "检查问题",
+        "status": "ready",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "🔍  检查问题",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "CheckModule",
+        "page_visible": true,
+        "page_size": [
+          1018,
+          1319
+        ],
+        "passed": true
+      },
+      {
+        "key": "vocab",
+        "label": "词库管理",
+        "status": "building",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "📚  词库管理",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "BuildingPage",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          447
+        ],
+        "passed": true
+      },
+      {
+        "key": "export",
+        "label": "导出结果",
+        "status": "building",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "📤  导出结果",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "BuildingPage",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          447
+        ],
+        "passed": true
+      },
+      {
+        "key": "history",
+        "label": "历史记录",
+        "status": "building",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "🕓  历史记录",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "BuildingPage",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          447
+        ],
+        "passed": true
+      }
+    ],
+    "home": {
+      "stack_current_is_home": true,
+      "active_count": 0,
+      "topbar_where": "首页概览",
+      "passed": true
+    }
+  },
+  "1c_shortcuts": {
+    "passed": true,
+    "ctrl3_to_check": true,
+    "ctrl_h_to_home": true
+  },
+  "1d_placeholder_cta": {
+    "passed": true,
+    "button_found": true,
+    "jumped_to_check": true
+  },
+  "1e_topbar_actions": {
+    "passed": true,
+    "button_count": 3,
+    "each_opened_dialog": [
+      true,
+      true,
+      true
+    ]
+  },
+  "1b_route_keeps_state": {
+    "passed": true,
+    "state_after_fix": "fixed",
+    "state_after_roundtrip": "fixed",
+    "same_widget_instance": true,
+    "window_count": 1
+  },
+  "2_zero_internal_leak": {
+    "passed": true,
+    "scanned": 543,
+    "forbidden_patterns": 25,
+    "hits": []
+  },
+  "3_tokens_aligned": {
+    "passed": true,
+    "py_token_count": 71,
+    "css_token_count": 71,
+    "per_group": {
+      "COLORS": 34,
+      "FONT_SIZE": 9,
+      "SPACE": 10,
+      "RADIUS": 5,
+      "LINE_HEIGHT": 3,
+      "FONT_WEIGHT": 4,
+      "SHADOW": 4
+    },
+    "diffs": [],
+    "missing_in_css": [],
+    "extra_in_css": [],
+    "source": "FixText_V1_设计系统_薄地基.html"
+  },
+  "4_construct_and_screenshots": {
+    "passed": true,
+    "window_title": "FixText V1",
+    "stack_pages": 7,
+    "screenshots": [
+      {
+        "key": "home",
+        "file": "screenshots/01_home_overview.png",
+        "bytes": 119856
+      },
+      {
+        "key": "import",
+        "file": "screenshots/02_entry1_import.png",
+        "bytes": 115352
+      },
+      {
+        "key": "oneclick",
+        "file": "screenshots/03_entry2_oneclick.png",
+        "bytes": 108818
+      },
+      {
+        "key": "check",
+        "file": "screenshots/04_entry3_check.png",
+        "bytes": 157396
+      },
+      {
+        "key": "vocab",
+        "file": "screenshots/05_entry4_vocab.png",
+        "bytes": 110374
+      },
+      {
+        "key": "export",
+        "file": "screenshots/06_entry5_export.png",
+        "bytes": 107418
+      },
+      {
+        "key": "history",
+        "file": "screenshots/07_entry6_history.png",
+        "bytes": 108240
+      }
+    ]
+  },
+  "summary": {
+    "passed": true,
+    "checks": {
+      "1 六入口可达且状态清晰": true,
+      "2 内部目录概念零露出": true,
+      "3 令牌值与设计地基一致": true,
+      "4 主窗口可构造 + 六页截图": true
+    }
+  }
+}
