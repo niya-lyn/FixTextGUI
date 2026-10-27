@@ -26,15 +26,56 @@ import pytest  # noqa: E402
 # ---------------------------------------------------------------------------
 
 def test_bookmap_report_carries_entry_preview():
-    """bookmap 阶段必须把抽出的词条带进报告，界面才有真数据可展示。"""
-    from fixtext_pipeline.stages.bookmap import ENTRY_PREVIEW_MAX, BookMapStage
+    """bookmap 阶段必须把抽出的词条**全量**带进报告，界面才有真数据可展示。
 
-    assert ENTRY_PREVIEW_MAX >= 1
+    M3-T3.3 改口径：过去 ``ENTRY_PREVIEW_MAX = 20`` 让报告只带前 20 条，
+    引擎抽出几千条而界面只显示 20 条——「整组加入」也就只写进 20 条，
+    属于静默丢条。现在上限改为 0（不截断），并带条数守恒硬门禁。
+    """
+    import fixtext_pipeline.stages.bookmap as bm
+
+    assert bm.ENTRY_PREVIEW_MAX == 0, "预览不得截断：上限必须是 0"
     src = (IK / "pipeline" / "fixtext_pipeline" / "stages" / "bookmap.py").read_text(
         encoding="utf-8")
     assert '"entry_preview"' in src, "报告必须带 entry_preview 字段"
-    assert "ENTRY_PREVIEW_MAX" in src, "预览必须按上限截断，不能把几千条塞进报告"
-    assert hasattr(BookMapStage, "run")
+    assert '"entries_file"' in src and "book_entries.json" in src, \
+        "必须另落一份全量清单 book_entries.json"
+    assert "_assert_no_truncation" in src and '"truncated": False' in src, \
+        "必须有条数守恒门禁，且报告明示未截断"
+    assert hasattr(bm.BookMapStage, "run")
+
+
+def test_entry_preview_is_complete_and_deduped():
+    """预览 = 引擎产物按（改前+改后）去重后的全量清单，count 之和 == 原始条数。"""
+    import fixtext_pipeline.stages.bookmap as bm
+
+    raw = [
+        {"before": "帝国双璧掏心置腹", "after": "帝国双璧推心置腹"},
+        {"before": "帝国双璧掏心置腹", "after": "帝国双璧推心置腹"},
+        {"before": "帝国双璧掏心置腹", "after": "帝国双璧推心置腹"},
+        {"before": "血染亚得里亚海", "after": "血染亚的里亚海"},
+        {"before": "   ", "after": "x"},
+    ]
+    rows = bm._enrich_entries(raw)
+    assert len(rows) == 2, f"去重后应剩 2 条，实际 {[r['before'] for r in rows]}"
+    assert [r["count"] for r in rows] == [3, 1], "出现次数必须是真实抽中次数"
+    assert bm._count_unique({"k": raw}) == 2
+    # 条数守恒门禁：count 之和 == 引擎原始有效条数（空改前已被丢弃）
+    bm._assert_no_truncation({"k": raw}, {"k": rows})
+    # 截断一条就必须报错
+    with pytest.raises(Exception):
+        bm._assert_no_truncation({"k": raw}, {"k": rows[:1]})
+
+
+def test_entry_type_classification():
+    """类型只看形态：错字 / 缺字漏字 / 其他，不猜语义。"""
+    import fixtext_pipeline.stages.bookmap as bm
+
+    assert bm.classify_entry("掏心置腹", "推心置腹") == "错词校正"
+    assert bm.classify_entry("试探性的问道", "试探性地问道") == "错词校正"
+    assert bm.classify_entry("短", "长得多的一串") == "缺字漏字"
+    assert bm.classify_entry("同一串", "同一串") == "其他"
+    assert bm.classify_entry("", "x") == "其他"
 
 
 # ---------------------------------------------------------------------------
