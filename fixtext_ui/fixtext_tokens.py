@@ -178,7 +178,7 @@ ENTRIES = [
         ],
     ),
     dict(
-        key="vocab", icon="📚", label="词库管理", status="building",
+        key="vocab", icon="📚", label="词库管理", status="ready",
         short="查词、查重、删除、合并，改动前先给你看清单",
         what=[
             "在这里查一个词会被换成什么，也可以往词库里加你自己的词。",
@@ -196,7 +196,7 @@ ENTRIES = [
         ],
     ),
     dict(
-        key="history", icon="🕓", label="历史记录", status="building",
+        key="history", icon="🕓", label="历史记录", status="ready",
         short="每次校正都留一条记录，能退回到任一次",
         what=[
             "每校正一本书记一条：书名、时间、改了多少处。",

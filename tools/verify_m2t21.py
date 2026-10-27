@@ -274,12 +274,11 @@ def main() -> int:
     )
 
     # 占位页上的「去用检查问题」按钮：真实点击应切到检查问题页
-    # 【M2-T2.5 集成调整】原脚本点的是「导入书籍」页——合并后该页已换成真实
-    # 导入模块（T2.2），不再有占位 CTA。改点仍然是占位页的历史记录页，
-    # 断言语义不变（占位页的「现在可以先去这里」必须真能跳转）。
-    win.go("history")
+    # 【M2-T2.6】词库管理 / 历史记录 已换成真模块（v4 增强移植），占位页只剩
+    # 「导出结果」。断言语义不变：占位页的「现在可以先去这里」必须真能跳转。
+    win.go("export")
     QApplication.processEvents()
-    bpage = win.page("history")
+    bpage = win.page("export")
     jump_btn = None
     for b in bpage.findChildren(QPushButton):
         if "检查问题" in b.text():
@@ -313,13 +312,19 @@ def main() -> int:
         opened = {"n": 0}
 
         def _close():
-            # 【M2-T2.5】顶栏 ⚙ 合并后打开的是模态 SettingsDialog（QDialog），
-            # 原探针只关 QMessageBox 会卡死在 exec()；两类都关。
-            from PySide6.QtWidgets import QDialog
+            # 【M2-T2.6】顶栏三个按钮现在分别是：⚙ 模态设置窗、? 模态帮助窗、
+            # ☰ 下拉菜单（QMenu，不是窗口）。三类都要能识别并关闭，
+            # 否则 exec() 会把自动化卡死。
+            from PySide6.QtWidgets import QDialog, QMenu
             for w in QApplication.topLevelWidgets():
                 if isinstance(w, (QMessageBox, QDialog)) and w.isVisible():
                     opened["n"] += 1
                     w.close()
+            # QMenu 是挂在主窗口下的子部件，不在 topLevelWidgets 里，单独扫。
+            for menu in win.findChildren(QMenu):
+                if menu.isVisible():
+                    opened["n"] += 1
+                    menu.close()
 
         QTimer.singleShot(120, _close)
         QTest.mouseClick(btn, Qt.MouseButton.LeftButton)

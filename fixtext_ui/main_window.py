@@ -33,15 +33,16 @@ chrome 上。合并口径如下：
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QPoint, Qt, Signal
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout,
     QPushButton, QLabel, QStackedWidget, QFrame, QScrollArea,
-    QMessageBox, QDialog, QSizePolicy,
+    QMessageBox, QDialog, QMenu, QSizePolicy,
 )
 
 from fixtext_tokens import (
@@ -49,8 +50,10 @@ from fixtext_tokens import (
     READY_KEYS, STATUS_TEXT, WINDOW_H, WINDOW_MIN_H, WINDOW_MIN_W, WINDOW_W,
     c, sp, r, fs, px, FONT_WEIGHT,
 )
-from fixtext_widgets import Card, Pill, hline
+from fixtext_widgets import Card, Modal, Pill, Switch, hline
 from check_module import CheckModule
+from history_module import HistoryModule
+from vocab_module import VocabModule
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 QSS_PATH = os.path.join(HERE, "fixtext.qss")
@@ -391,12 +394,23 @@ class SettingsDialog(QDialog):
         root.addWidget(title)
 
         sub = QLabel(
-            "现在能调的就下面这一项。校正用的词库、进度提示这些由软件按默认方式处理，"
+            "下面这些设置改了就生效。校正用的词库、进度提示这些由软件按默认方式处理，"
             "不影响正常使用。"
         )
         sub.setWordWrap(True)
         sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
         root.addWidget(sub)
+
+        self.basis_sw = Switch(checked=False)
+        self.basis_sw.toggled.connect(self._on_basis)
+        bcard = Card("界面", "控制每个模块页是否显示设计依据标注")
+        brow = QHBoxLayout()
+        blab = QLabel("为所有模块显示设计依据")
+        blab.setStyleSheet(f"font-size:{fs('md')};color:{c('neutral.800')}")
+        brow.addWidget(blab, 1)
+        brow.addWidget(self.basis_sw)
+        bcard.body_l.addLayout(brow)
+        root.addWidget(bcard)
 
         card = Card("诊断日志", "出问题时把这里的文件发给技术支持，能定位得更快")
         self.log_hint = QLabel(self._log_hint_text())
@@ -432,6 +446,12 @@ class SettingsDialog(QDialog):
         close_btn.clicked.connect(self.accept)
         foot.addWidget(close_btn)
         root.addLayout(foot)
+
+    def _on_basis(self, on: bool):
+        """把开关状态同步给主窗口，由它联动各模块页。"""
+        win = self.parent()
+        if win is not None and hasattr(win, "apply_basis"):
+            win.apply_basis(on)
 
     # -- 日志目录状态 --------------------------------------------------
     def _log_hint_text(self) -> str:
@@ -500,6 +520,8 @@ class MainWindow(QMainWindow):
         self.import_module = None
         self.oneclick_module = None
         self.check_module = None
+        self.vocab_module = None
+        self.history_module = None
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -605,6 +627,12 @@ class MainWindow(QMainWindow):
             if key == "check":
                 self.check_module = CheckModule()
                 page = self.check_module
+            elif key == "vocab":
+                self.vocab_module = VocabModule()
+                page = self.vocab_module
+            elif key == "history":
+                self.history_module = HistoryModule()
+                page = self.history_module
             elif key in ("import", "oneclick"):
                 page = self._module_host()
             else:
@@ -757,42 +785,101 @@ class MainWindow(QMainWindow):
             return self.oneclick_module
         if key == "check" and self.check_module is not None:
             return self.check_module
+        if key == "vocab" and self.vocab_module is not None:
+            return self.vocab_module
+        if key == "history" and self.history_module is not None:
+            return self.history_module
         return self._content_slot(key)
 
     # ------------------------------------------------------------------ 顶栏动作
 
     def _act_settings(self):
+        """设置：诊断日志目录 + 全局「显示设计依据」联动。"""
         dlg = SettingsDialog(self)
         dlg.exec()
 
+    def apply_basis(self, on: bool):
+        """全局「显示设计依据」：联动所有已挂载模块页右上角的同款开关。"""
+        for mod in (self.import_module, self.oneclick_module, self.check_module,
+                    self.vocab_module, self.history_module):
+            cb = getattr(mod, "basis_cb", None)
+            if cb is not None and cb.isChecked() != on:
+                cb.setChecked(on)
+
     def _act_help(self):
-        _dialog(self, "帮助", [
-            "三步就能走完一本书：",
-            "1. 导入书籍：把 TXT 或 EPUB 拖进窗口。\n"
-            "2. 一键校正：排版、词库替换、标点统一一次跑完。\n"
-            "3. 导出结果：导出干净的 TXT，EPUB 进来的还原成 EPUB。\n\n"
-            "想逐处确认引号，去「检查问题」；每一步的细节都写在对应页面里。",
-        ])
+        """帮助：六个入口各自负责什么（等权，没有先后）。"""
+        m = Modal(icon="?", title="帮助")
+        m.add_note("FixText V1 把电子书校对收敛成六个入口，点左边导航或首页卡片就能进去；"
+                   "六者等权，没有先后顺序。", "info")
+        for entry in ENTRIES:
+            row = QWidget()
+            rl = QHBoxLayout(row)
+            rl.setContentsMargins(0, 0, 0, 0)
+            name = QLabel(f"{entry['icon']}  {entry['label']}")
+            name.setStyleSheet(f"font-size:{fs('md')};color:{c('neutral.800')}")
+            rl.addWidget(name)
+            rl.addStretch(1)
+            desc = QLabel(entry["short"])
+            desc.setWordWrap(True)
+            desc.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('sm')}")
+            rl.addWidget(desc, 2)
+            m.add_widget(row)
+        m.add_note("每个模块页右上角的「显示设计依据」开关，会在相关元素旁标注对应的设计条款；"
+                   "也可以在「设置」里一次全部打开。", "info")
+        m.add_foot("关闭", kind="ghost")
+        m.exec()
 
     def _act_more(self):
-        box = QMessageBox(self)
-        box.setWindowTitle("更多")
-        box.setIcon(QMessageBox.Icon.Information)
-        box.setText("想去的页面：")
-        box.setInformativeText("也可以直接点左边的六个入口。")
-        home_btn = box.addButton("回到首页概览", QMessageBox.ButtonRole.ActionRole)
-        about_btn = box.addButton("关于 FixText", QMessageBox.ButtonRole.ActionRole)
-        box.addButton("关闭", QMessageBox.ButtonRole.RejectRole)
-        box.exec()
-        if box.clickedButton() is home_btn:
-            self.go(HOME_KEY)
-        elif box.clickedButton() is about_btn:
-            _dialog(self, "关于", [
-                f"{APP_NAME} · {APP_TITLE}",
-                "一个面向写作者的文本校对工具：导入一本书，一键校正，"
-                "逐处检查引号，导出干净文件。\n\n"
-                "软件只读取你交给它的书，不会改动你的原文件。",
-            ])
+        """菜单：重新生成样式表 / 打开设计依据目录 / 关于。"""
+        menu = QMenu(self)
+        a_regen = menu.addAction("重新生成样式表")
+        a_regen.triggered.connect(self._regen_qss)
+        a_open = menu.addAction("打开设计依据目录")
+        a_open.triggered.connect(self._open_reference)
+        menu.addSeparator()
+        a_about = menu.addAction("关于 FixText V1")
+        a_about.triggered.connect(self._about)
+        btn = self.sender()
+        anchor = btn if isinstance(btn, QPushButton) else self
+        menu.exec(anchor.mapToGlobal(QPoint(0, anchor.height())))
+
+    def _regen_qss(self):
+        """按设计令牌重新生成界面样式表。"""
+        script = os.path.join(HERE, "build_qss.py")
+        try:
+            subprocess.run([sys.executable, script], check=True, timeout=30,
+                           stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+            self._flash("✓", "样式表已重新生成",
+                        "已按设计令牌重写界面样式，重新打开窗口即可看到。", "info")
+        except Exception as e:  # noqa: BLE001
+            self._flash("!", "样式表生成失败", f"这次没能生成：{e}", "warn")
+
+    def _open_reference(self):
+        """打开设计依据目录（界面令牌与设计快照所在处）。"""
+        ref = PKG_ROOT / "reference"
+        try:
+            if sys.platform == "win32":
+                os.startfile(str(ref))  # type: ignore[attr-defined]
+                self._flash("✓", "已打开设计依据目录", str(ref), "info")
+            else:
+                self._flash("ℹ", "设计依据目录", str(ref), "info")
+        except Exception as e:  # noqa: BLE001
+            self._flash("!", "没法自动打开目录",
+                        f"你可以照这个位置自己找过去：{ref}（{e}）", "warn")
+
+    def _about(self):
+        self._flash("ℹ", "关于 FixText V1",
+                    "FixText V1 · 面向写作者的电子书排版校正工具。\n"
+                    "六个入口：导入书籍、一键校正、检查问题、词库管理、导出结果、历史记录。\n"
+                    "软件只读取你交给它的书，不会改动你的原文件。", "info")
+
+    def _flash(self, icon: str, title: str, msg: str, kind: str = "info"):
+        """轻量结果提示（重新生成 / 打开目录 / 关于 的反馈）。"""
+        m = Modal(icon=icon, title=title, min_width=460)
+        m.add_note(msg, kind)
+        m.add_foot("知道了", kind="ghost")
+        m.exec()
 
     # ------------------------------------------------------------------ 快捷键
 
