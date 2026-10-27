@@ -1,0 +1,71 @@
+{
+  "samples": [
+    {
+      "file": "a_utf8_lf.txt",
+      "bytes": 274898,
+      "expected": "utf-8",
+      "note": "原文转 LF",
+      "source": "nahan.txt"
+    },
+    {
+      "file": "b_utf8_bom.txt",
+      "bytes": 274901,
+      "expected": "utf-8",
+      "note": "UTF-8 带 BOM",
+      "source": "nahan.txt"
+    },
+    {
+      "file": "c_utf8_crlf.txt",
+      "bytes": 281093,
+      "expected": "utf-8",
+      "note": "UTF-8 + CRLF",
+      "source": "nahan.txt"
+    },
+    {
+      "file": "d_gbk_crlf.txt",
+      "bytes": 201631,
+      "expected": "gbk",
+      "note": "GBK 编码 + CRLF（Windows 常见）",
+      "source": "nahan.txt",
+      "dropped_chars": 58
+    },
+    {
+      "file": "e_gbk_lf.txt",
+      "bytes": 195436,
+      "expected": "gbk",
+      "note": "GBK 编码 + LF",
+      "source": "nahan.txt",
+      "dropped_chars": 58
+    },
+    {
+      "file": "f_gb18030_4byte.txt",
+      "bytes": 195467,
+      "expected": "gb18030",
+      "note": "GB18030 含 4 字节字符（GBK 无法编码）",
+      "source": "nahan.txt",
+      "dropped_chars": 58
+    },
+    {
+      "file": "g_mixed_newline.txt",
+      "bytes": 277995,
+      "expected": "utf-8",
+      "note": "CRLF 与 LF 混用",
+      "source": "nahan.txt"
+    },
+    {
+      "file": "h_big5.txt",
+      "bytes": 38560,
+      "expected": "big5",
+      "note": "繁体 Big5 编码",
+      "source": "nahan.txt",
+      "dropped_chars": 188
+    },
+    {
+      "file": "i_empty.txt",
+      "bytes": 0,
+      "expected": "utf-8",
+      "note": "空文件",
+      "source": "nahan.txt"
+    }
+  ]
+}
