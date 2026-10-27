@@ -38,6 +38,19 @@ sys.path.insert(0, PKG)
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+# 【M2-T2.8】首次向导并入后，主窗口构造尾部会用 singleShot 自动弹一次模态向导；
+# 自动化脚本跑的是「六个入口 / 顶栏 / 截图」这些既有行为，必须先标成「已看过」，
+# 否则 exec() 会把事件循环永久卡住（模态对话期间 processEvents 不返回）。
+def _mark_wizard_seen():
+    try:
+        from PySide6.QtCore import QSettings
+        s = QSettings("FixText", "V1")
+        s.setValue("wizardSeen", "1")
+        s.sync()
+    except Exception:                                       # noqa: BLE001
+        pass
+
+
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication, QLabel, QPushButton, QAbstractButton, QWidget,
 )
@@ -198,6 +211,7 @@ def shot(win, key: str, filename: str) -> str:
 def main() -> int:
     os.makedirs(SHOTS, exist_ok=True)
     app = QApplication(sys.argv)
+    _mark_wizard_seen()          # 【M2-T2.8】不让首启向导卡住自动化
     M.load_qss(app)
     win = M.MainWindow()
     win.resize(T.WINDOW_W, T.WINDOW_H)

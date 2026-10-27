@@ -32,6 +32,18 @@ sys.path.insert(0, str(PKG))
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+# 【M2-T2.8】首次向导并入后，主窗口构造尾部会 singleShot 弹一次模态向导，
+# 自动化脚本必须先标「已看过」，否则 exec() 卡住事件循环。
+def _mark_wizard_seen():
+    try:
+        from PySide6.QtCore import QSettings
+        s = QSettings("FixText", "V1")
+        s.setValue("wizardSeen", "1")
+        s.sync()
+    except Exception:                                       # noqa: BLE001
+        pass
+
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QDialog, QListWidget
@@ -157,6 +169,7 @@ def main() -> int:
     ok = True
 
     app = QApplication.instance() or QApplication([])
+    _mark_wizard_seen()          # 【M2-T2.8】不让首启向导卡住自动化
     M.load_qss(app)
     win = M.MainWindow(WS)
     win.resize(M.WINDOW_W if hasattr(M, "WINDOW_W") else 1280, 820)
