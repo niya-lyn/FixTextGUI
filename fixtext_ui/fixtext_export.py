@@ -339,6 +339,57 @@ def resolve_source(record: dict | None,
     return src
 
 
+def resolve_source_from_run(run_dir: str | Path,
+                            summary: dict | None = None,
+                            pipeline_root: str | Path | None = None) -> ExportSource:
+    """只凭一个运行目录重建导出源（**重启进程后仍可用**）。
+
+    历史页的「重新导出」不能依赖本会话的导入记录：用户重启程序后，
+    导入记录可能已经不在了，但那次运行的产物还在磁盘上。所以这里不碰
+    导入记录，直接从运行摘要 + 目录内真实文件定位：
+
+    1. 摘要 ``artifacts`` 段里的校正后正文（收尾时回传的绝对路径）；
+    2. 摘要 ``artifacts.ledger`` + ``source_epub`` → 可还原成电子书；
+    3. 摘要路径失效时，枚举运行目录里真实存在的文本兜底。
+
+    返回的 ``text_path`` 为空表示这次运行没有可导出的正文。
+    """
+    run = Path(run_dir) if run_dir else None
+    src = ExportSource(pipeline_root=str(pipeline_root or ""))
+    if run is None or not run.is_dir():
+        return src
+
+    data = summary or load_run_summary(run) or {}
+    artifacts = data.get("artifacts") or {}
+    src.run_dir = str(run)
+    src.title = str(data.get("title") or data.get("book") or run.name)
+    src.author = str(data.get("author") or "")
+
+    after = str(artifacts.get("after_text") or "")
+    if after and Path(after).exists():
+        src.text_path = after
+    else:
+        cands = [p for p in _enumerate_stage_text(run, "03_replace", "after")
+                 if p.suffix.lower() == ".txt"]
+        if cands:
+            src.text_path = str(max(cands, key=lambda p: p.stat().st_size))
+            src.resolve_notes.append("摘要里的产物路径不可用，按运行目录里的正文定位")
+
+    before = str(artifacts.get("before_text") or "")
+    if before and Path(before).exists():
+        src.before_text = before
+    ledger = str(artifacts.get("ledger") or "")
+    if ledger and Path(ledger).exists():
+        src.ledger_path = ledger
+    template = str(data.get("source_epub") or "")
+    if template and Path(template).exists() and src.ledger_path:
+        src.source_kind = "epub"
+        src.template_epub = template
+
+    src.corrected = bool(src.text_path)
+    return src
+
+
 def load_run_summary(workdir: str | Path) -> dict | None:
     """读一次校正的运行摘要（没有就返回 None）。"""
     p = Path(workdir) / "report" / "ui_run_summary.json"

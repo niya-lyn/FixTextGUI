@@ -7,19 +7,35 @@
 """
 import os
 import sys
+from pathlib import Path
 
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, _HERE)
 sys.path.insert(0, os.environ.get(
     "FIXTEXT_UI_DIR",
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fixtext_ui")))
+    os.path.join(_HERE, "..", "fixtext_ui")))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtWidgets import QApplication, QMessageBox  # noqa: E402
 
+import tempfile  # noqa: E402
+
 import check_module as cm  # noqa: E402
+import fixtext_check as fc  # noqa: E402
+import _fixture_run as fxr  # noqa: E402
 
 
 app = QApplication(sys.argv)
+
+# T2.10：检查页的问题清单只来自真实运行的引号报告，冒烟脚本先注入一份
+# 真实跑出来的 108 条事件（tests/samples/fixture_quote_report.json），
+# 不再依赖模块内的演示数据。
+_root = Path(tempfile.mkdtemp(prefix="smoke_check_"))
+_run = fxr.build_run(_root)
+_report = fc.load_report(_run)
+
 mod = cm.CheckModule()
 mod.show()  # offscreen 下让 isVisible 反映显隐状态
+mod.set_report(_report)
 
 
 # 1) save_and_next 入栈 + 撤销回退
@@ -45,16 +61,23 @@ affected = mod._affected_single()
 print("批量受影响处数:", len(affected))
 assert affected, "应检出至少 1 处单引号"
 idx, _p = affected[0]
-orig_hl = mod.probs[idx]["hl"]
-assert "‘" in orig_hl or "’" in orig_hl, "受影响处原文本应含单引号"
+ctx_keys = ("pre", "hl", "post")
+orig_ctx = {k: mod.probs[idx][k] for k in ctx_keys}
+orig_text = "".join(orig_ctx[k] for k in ctx_keys)
+assert "‘" in orig_text or "’" in orig_text, "受影响处原文本应含单引号"
 mod.batch_op()
 cm.QMessageBox.exec = orig_exec
 assert mod.undo and mod.undo[-1].get("batch"), "批量操作应推入批量撤销记录"
 assert mod.undo[-1]["items"][0]["i"] == idx
-assert "“" in mod.probs[idx]["hl"], "批量后单引号应转为双引号"
+new_text = "".join(mod.probs[idx][k] for k in ctx_keys)
+# 真实条目里这个位置的引号可能是左单引号也可能是右单引号，
+# 断言「单引号消失 + 换成双引号」，而不是只认 «「“」。
+assert "‘" not in new_text and "’" not in new_text, "批量后不应残留单引号"
+assert "“" in new_text or "”" in new_text, "批量后应换成双引号"
 mod.undo_last()
-assert mod.probs[idx]["hl"] == orig_hl, "撤销批量应整体回退原文"
+assert {k: mod.probs[idx][k] for k in ctx_keys} == orig_ctx, "撤销批量应整体回退原文"
 print("批量操作入栈 + 撤销整体回退 OK")
 
 
+fxr.cleanup(_root)
 print("CHECK_SMOKE_OK")

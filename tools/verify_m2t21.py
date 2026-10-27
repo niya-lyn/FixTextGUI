@@ -354,7 +354,22 @@ def main() -> int:
     )
 
     # 面板路由不丢状态：在「检查问题」里修一处，切走再切回，状态仍在
+    # T2.10：检查页的问题清单只来自真实运行的引号报告，这里先注入一份
+    # 真实跑出来的事件（tests/samples），再验状态保持。
     chk = win.page("check")
+    try:
+        import sys as _sys
+        _sys.path.insert(0, os.path.join(PKG, "tests"))
+        import _fixture_run as _fxr  # noqa: WPS433
+        import fixtext_check as _fc  # noqa: WPS433
+        import tempfile as _tf
+        _probe_root = _tf.mkdtemp(prefix="verify_check_")
+        from pathlib import Path as _P
+        _probe_run = _fxr.build_run(_P(_probe_root) / "seed")
+        chk.set_report(_fc.load_report(_probe_run))
+    except Exception as exc:  # noqa: BLE001 - 注入失败要留证据，不能静默跳过
+        report["1b_route_keeps_state"] = dict(
+            passed=False, error=f"注入真实检查结果失败: {exc}")
     chk.select(0)
     chk.fix_here()
     fixed_after_fix = chk.probs[0].get("state")

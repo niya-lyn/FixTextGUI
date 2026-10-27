@@ -386,12 +386,18 @@ class HistoryModule(QWidget):
         self._poll_export(t, holder)
 
     def _do_export(self, run_dir: str, ctx: dict) -> object:
-        """真实导出：定位那次运行的正文，产出可交付文件。"""
+        """真实导出：定位那次运行的正文，产出可交付文件。
+
+        取源优先走「只凭运行目录重建」——这样**重启进程后**（导入记录已不在）
+        重新导出照样能跑；只有在拿不到运行摘要时才退回导入记录那条老路。
+        """
         import fixtext_export as fx
 
         pipeline_root = ctx.get("pipeline_root") or ""
         summary = fx.load_run_summary(run_dir)
-        source = fx.resolve_source(ctx.get("import_record"), summary, pipeline_root)
+        source = fx.resolve_source_from_run(run_dir, summary, pipeline_root)
+        if not source.text_path:
+            source = fx.resolve_source(ctx.get("import_record"), summary, pipeline_root)
         fmt = "epub" if source.can_restore_epub else "txt"
         out_dir = Path(ctx.get("out_dir") or (Path(run_dir) / "reexport"))
         stamp = time.strftime("%Y%m%d_%H%M%S")

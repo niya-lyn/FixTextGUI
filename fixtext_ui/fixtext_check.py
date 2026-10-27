@@ -199,13 +199,13 @@ def load_report(run_dir: str | Path) -> dict[str, Any]:
     run_dir = Path(run_dir)
     report_path, summary_path = _pick_quote_files(run_dir)
     if report_path is None:
-        return _empty(f"这次运行没有留下引号检查报告（{QUOTE_STAGE_DIR} 目录为空）。",
+        return _empty("这次运行没有留下引号检查结果（那一阶段没有产出报告）。",
                       run_dir=run_dir)
 
     try:
         payload = json.loads(report_path.read_text(encoding="utf-8"))
     except Exception as exc:  # noqa: BLE001 - 坏文件按人话原因返回，不抛栈
-        return _empty(f"引号检查报告读不出来：{exc.__class__.__name__}。",
+        return _empty("这次运行留下的引号检查结果读不出来，可能文件已损坏。",
                       run_dir=run_dir)
 
     events = payload.get("events") or []

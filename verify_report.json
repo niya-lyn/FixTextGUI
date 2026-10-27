@@ -37,7 +37,7 @@
         "page_visible": true,
         "page_size": [
           1018,
-          1230
+          1231
         ],
         "passed": true
       },
@@ -56,7 +56,7 @@
         "page_visible": true,
         "page_size": [
           1018,
-          1319
+          1358
         ],
         "passed": true
       },
@@ -113,7 +113,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          697
+          576
         ],
         "passed": true
       }
@@ -161,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 1542,
+    "scanned": 2109,
     "forbidden_patterns": 25,
     "hits": []
   },
@@ -201,12 +201,12 @@
       {
         "key": "oneclick",
         "file": "screenshots/03_entry2_oneclick.png",
-        "bytes": 148998
+        "bytes": 148959
       },
       {
         "key": "check",
         "file": "screenshots/04_entry3_check.png",
-        "bytes": 147993
+        "bytes": 149292
       },
       {
         "key": "vocab",
@@ -221,7 +221,7 @@
       {
         "key": "history",
         "file": "screenshots/07_entry6_history.png",
-        "bytes": 157310
+        "bytes": 131603
       }
     ]
   },
