@@ -63,7 +63,7 @@
       {
         "key": "vocab",
         "label": "词库管理",
-        "status": "building",
+        "status": "ready",
         "clicked_by_mouse": true,
         "stack_current_is_page": true,
         "active_count": 1,
@@ -71,11 +71,11 @@
         "topbar_where": "📚  词库管理",
         "topbar_follows": true,
         "rail_tag_matches_status": true,
-        "page_class": "BuildingPage",
+        "page_class": "VocabModule",
         "page_visible": true,
         "page_size": [
           1028,
-          436
+          600
         ],
         "passed": true
       },
@@ -101,7 +101,7 @@
       {
         "key": "history",
         "label": "历史记录",
-        "status": "building",
+        "status": "ready",
         "clicked_by_mouse": true,
         "stack_current_is_page": true,
         "active_count": 1,
@@ -109,11 +109,11 @@
         "topbar_where": "🕓  历史记录",
         "topbar_follows": true,
         "rail_tag_matches_status": true,
-        "page_class": "BuildingPage",
+        "page_class": "HistoryModule",
         "page_visible": true,
         "page_size": [
           1028,
-          436
+          697
         ],
         "passed": true
       }
@@ -161,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 967,
+    "scanned": 1352,
     "forbidden_patterns": 25,
     "hits": []
   },
@@ -191,37 +191,37 @@
       {
         "key": "home",
         "file": "screenshots/01_home_overview.png",
-        "bytes": 116257
+        "bytes": 114834
       },
       {
         "key": "import",
         "file": "screenshots/02_entry1_import.png",
-        "bytes": 93200
+        "bytes": 91366
       },
       {
         "key": "oneclick",
         "file": "screenshots/03_entry2_oneclick.png",
-        "bytes": 153158
+        "bytes": 151367
       },
       {
         "key": "check",
         "file": "screenshots/04_entry3_check.png",
-        "bytes": 150629
+        "bytes": 148924
       },
       {
         "key": "vocab",
         "file": "screenshots/05_entry4_vocab.png",
-        "bytes": 109260
+        "bytes": 168866
       },
       {
         "key": "export",
         "file": "screenshots/06_entry5_export.png",
-        "bytes": 106161
+        "bytes": 108491
       },
       {
         "key": "history",
         "file": "screenshots/07_entry6_history.png",
-        "bytes": 106808
+        "bytes": 158246
       }
     ]
   },
