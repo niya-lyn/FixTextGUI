@@ -34,8 +34,8 @@ from fixtext_widgets import hline
 # ---------------------------------------------------------------------------
 
 SAMPLE = {
-    "name": "《星河彼端》.epub",
-    "size": "18.4 MB",
+    "name": "示例书.epub",
+    "size": "4.4 MB",
     "enc": "UTF-8",
     "encHint": "已是 UTF-8，无需转换",
 }
@@ -53,7 +53,7 @@ STEP_BODY = [
             "编码自动识别并转为 UTF-8，全程人话提示，不弹命令行窗口。",
             "导入即复制到工作区，原文件保持只读——随时能回到这一刻。",
         ],
-        "sample": f"已附带示例书：{SAMPLE['name']}（也可选《旧巷杂记》.txt）",
+        "sample": f"已附带示例书：{SAMPLE['name']}（TXT 书也能导入，编码自动识别）",
     },
     {
         "bullets": [
