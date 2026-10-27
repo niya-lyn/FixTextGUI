@@ -161,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 1499,
+    "scanned": 1527,
     "forbidden_patterns": 25,
     "hits": []
   },
