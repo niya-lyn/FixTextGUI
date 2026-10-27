@@ -52,6 +52,7 @@ from fixtext_tokens import (
 )
 from fixtext_widgets import Card, Modal, Pill, Switch, hline
 from check_module import CheckModule
+from export_module import ExportModule
 from history_module import HistoryModule
 from vocab_module import VocabModule
 
@@ -522,6 +523,9 @@ class MainWindow(QMainWindow):
         self.check_module = None
         self.vocab_module = None
         self.history_module = None
+        self.export_module = None
+        #: 最近一次导入记录（导出页要拿它推导「这本书能不能还原成电子书」）
+        self._import_record: dict | None = None
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -633,6 +637,9 @@ class MainWindow(QMainWindow):
             elif key == "history":
                 self.history_module = HistoryModule()
                 page = self.history_module
+            elif key == "export":
+                self.export_module = ExportModule()
+                page = self.export_module
             elif key in ("import", "oneclick"):
                 page = self._module_host()
             else:
@@ -707,6 +714,9 @@ class MainWindow(QMainWindow):
         host.layout().addWidget(module)
         host.layout().addStretch(1)
         self.oneclick_module = module
+        # 校正完成 → 导出页拿到可导出的产物；「去导出」→ 真的跳到导出页
+        module.correctionDone.connect(self._on_correction_done)
+        module.gotoExport.connect(lambda: self.go("export"))
         return module
 
     def _wire_book_ready(self):
@@ -721,10 +731,33 @@ class MainWindow(QMainWindow):
         只有 EPUB 且在「直接处理」路径下才有可还原的书；TXT / 先转 TXT 的
         EPUB 没有可还原的原书，这时不注入上下文，一键校正页会自己给出人话引导。
         """
+        self._import_record = self._read_import_record(text_path)
+        self._sync_export(None)
         ctx = self.build_run_context(text_path)
         if ctx is None:
             return
         self.oneclick_module.set_run_context(ctx)
+
+    @staticmethod
+    def _read_import_record(text_path: str) -> dict | None:
+        """读导入记录（导出页要靠它判断这本书能不能还原成电子书）。"""
+        try:
+            import json
+            record = Path(text_path).resolve().parent / "import.json"
+            return json.loads(record.read_text(encoding="utf-8"))
+        except Exception:
+            return None
+
+    def _sync_export(self, run: dict | None) -> None:
+        """把「当前书 + 最近一次校正」同步给导出页。"""
+        if self.export_module is None:
+            return
+        self.export_module.set_context(
+            self._import_record, run, str(PKG_ROOT / "pipeline"))
+
+    def _on_correction_done(self, summary: dict) -> None:
+        """校正完成 → 导出页立刻知道有可导出的产物。"""
+        self._sync_export(summary)
 
     def build_run_context(self, text_path: str) -> dict | None:
         """由导入结果推导一次校正所需的路径（真实文件，不做假运行）。"""
@@ -789,6 +822,8 @@ class MainWindow(QMainWindow):
             return self.vocab_module
         if key == "history" and self.history_module is not None:
             return self.history_module
+        if key == "export" and self.export_module is not None:
+            return self.export_module
         return self._content_slot(key)
 
     # ------------------------------------------------------------------ 顶栏动作
@@ -801,7 +836,7 @@ class MainWindow(QMainWindow):
     def apply_basis(self, on: bool):
         """全局「显示设计依据」：联动所有已挂载模块页右上角的同款开关。"""
         for mod in (self.import_module, self.oneclick_module, self.check_module,
-                    self.vocab_module, self.history_module):
+                    self.vocab_module, self.history_module, self.export_module):
             cb = getattr(mod, "basis_cb", None)
             if cb is not None and cb.isChecked() != on:
                 cb.setChecked(on)

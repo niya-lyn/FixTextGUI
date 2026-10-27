@@ -18,7 +18,7 @@ import shutil
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame,
     QComboBox, QLineEdit, QCheckBox, QDialog, QSizePolicy,
@@ -112,6 +112,11 @@ def _fmt_num(v) -> str:
 # ---------------------------------------------------------------------------
 
 class OneClickModule(QWidget):
+
+    #: 校正完成 → 运行摘要（含工作目录），导出页据此判断「有可导出的产物」
+    correctionDone = Signal(object)
+    #: 「去导出」→ 主窗口切到导出页
+    gotoExport = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -621,6 +626,10 @@ class OneClickModule(QWidget):
     def _on_succeeded(self, summary: dict):
         self._summary = summary
         self._outcome = "ok"
+        try:
+            self.correctionDone.emit(summary)
+        except Exception:
+            pass
         if self._dlg is not None:
             self._dlg.live_finish()
 
@@ -763,8 +772,7 @@ class OneClickModule(QWidget):
         report = QPushButton("📄 查看替换报告")
         report.setObjectName("BtnPrimary")
         report.setCursor(Qt.CursorShape.PointingHandCursor)
-        report.clicked.connect(
-            lambda: self._toast("替换报告已留存（表格 / 文本），可在导出页查看"))
+        report.clicked.connect(self._goto_export_report)
         acts.addWidget(report)
 
         undo = QPushButton("↺ 恢复到校正前")
@@ -776,7 +784,7 @@ class OneClickModule(QWidget):
         go = QPushButton("📤 去导出")
         go.setObjectName("BtnOutline")
         go.setCursor(Qt.CursorShape.PointingHandCursor)
-        go.clicked.connect(lambda: self._toast("已跳转导出结果（原型示意）"))
+        go.clicked.connect(self.gotoExport.emit)
         acts.addWidget(go)
 
         acts.addStretch(1)
@@ -789,6 +797,14 @@ class OneClickModule(QWidget):
         return acts
 
     # ------------------------------------------------------------ 专有词条弹窗
+
+    def _goto_export_report(self):
+        """替换统计在导出时自动附上（排期 V1.1：报告不做界面呈现）。"""
+        try:
+            self.gotoExport.emit()
+        except Exception:
+            pass
+        self._toast("导出时会自动附上替换统计（文本 / 表格）")
 
     def _open_book_words(self):
         dlg = QDialog(self)
