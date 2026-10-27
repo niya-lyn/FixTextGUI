@@ -276,10 +276,17 @@ def _empty(reason: str, run_dir: Path | None = None) -> dict[str, Any]:
 
 
 def _book_name(report_path: Path) -> str:
+    """书名优先取运行摘要里记录的用户书名，取不到才退回报告文件名。"""
     stem = report_path.name
     if stem.endswith(".report.json"):
         stem = stem[: -len(".report.json")]
-    return stem
+    summary = Path(report_path).parent.parent / "report" / "ui_run_summary.json"
+    try:
+        data = json.loads(summary.read_text(encoding="utf-8"))
+    except Exception:
+        return stem
+    title = str(data.get("title") or data.get("book") or "").strip()
+    return title or stem
 
 
 # ---------------------------------------------------------------------------
