@@ -161,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 1527,
+    "scanned": 1542,
     "forbidden_patterns": 25,
     "hits": []
   },
@@ -201,7 +201,7 @@
       {
         "key": "oneclick",
         "file": "screenshots/03_entry2_oneclick.png",
-        "bytes": 150453
+        "bytes": 148998
       },
       {
         "key": "check",
