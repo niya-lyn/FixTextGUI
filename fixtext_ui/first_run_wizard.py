@@ -78,6 +78,30 @@ STEP_BODY = [
 # 步骤指示条（自含，不依赖 import_module）
 # ---------------------------------------------------------------------------
 
+def _clear_layout(layout) -> None:
+    """递归清空一个布局：控件解父子后 deleteLater，子布局同样递归。
+
+    只按 `item.widget()` 清是不够的——`_render_step` 里的「步骤标题行」是
+    `addLayout(hl)` 进去的**嵌套布局**，`item.widget()` 对它返回 None，
+    于是旧标题的 `QLabel` 一路留着，翻页后新标题直接盖在旧标题上
+    （实测截图里出现过「第 2 步 · 处理」和「第 1 步 · 导入」叠字）。
+    """
+    while layout.count():
+        item = layout.takeAt(0)
+        w = item.widget()
+        if w is not None:
+            w.setParent(None)
+            w.deleteLater()
+            continue
+        child = item.layout()
+        if child is not None:
+            _clear_layout(child)
+            child.deleteLater()
+        spacer = item.spacerItem()
+        if spacer is not None:
+            del spacer
+
+
 class _StepBar(QWidget):
     """水平步骤指示：已完成=绿、当前=主色、未到=中性，节点间连线同步着色。"""
 
@@ -235,13 +259,8 @@ class FirstRunWizard(QDialog):
         return body
 
     def _render_step(self):
-        # 清空面板（先解除子控件父子关系再删，避免重渲染叠加）
-        while self.panel_l.count():
-            item = self.panel_l.takeAt(0)
-            w = item.widget()
-            if w is not None:
-                w.setParent(None)
-                w.deleteLater()
+        # 清空面板（递归清，避免重渲染叠加）
+        _clear_layout(self.panel_l)
 
         icon, name, tagline = STEPS[self.step]
         data = STEP_BODY[self.step]
