@@ -187,7 +187,7 @@ ENTRIES = [
         ],
     ),
     dict(
-        key="export", icon="📤", label="导出结果", status="building",
+        key="export", icon="📤", label="导出结果", status="ready",
         short="导出干净的 TXT，EPUB 进来的还原回 EPUB",
         what=[
             "导出一份干净文本，可以直接丢进常见阅读器。",
