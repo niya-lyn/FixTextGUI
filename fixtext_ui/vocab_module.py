@@ -175,6 +175,7 @@ class VocabModule(QWidget):
         root.setSpacing(16)
 
         root.addWidget(self._header())
+        root.addWidget(hline())
         root.addWidget(self._banner())
         root.addWidget(self._layout_grid())
 
@@ -209,6 +210,25 @@ class VocabModule(QWidget):
         right.setSpacing(14)
         right.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+        # v3 布局对齐：浅色安全徽标 + 浅色图标按钮（页头控件变体）
+        safe = QLabel("  安全保护已开启")
+        safe.setObjectName("SafeBadge")
+        safe.setCursor(Qt.CursorShape.PointingHandCursor)
+        safe.setToolTip("词库的每一步改动都先留还原点，删错了、合并错了都能退回去")
+        safe.setStyleSheet(
+            f"color:{c('success')};background:{c('success.bg')};"
+            f"border:1px solid {c('success.border')};"
+            f"border-radius:{r('full')};padding:6px 12px;"
+            f"font-size:{fs('xs')};font-weight:700")
+        right.addWidget(safe)
+
+        self.hist_btn = self._head_icon_btn("🕑", "历史与快照",
+                                            lambda: self._snap_card.setVisible(
+                                                not self._snap_card.isVisible()))
+        right.addWidget(self.hist_btn)
+        self.undo_btn = self._head_icon_btn("↩", "撤销上一步（Ctrl+Z）", self._undo)
+        right.addWidget(self.undo_btn)
+
         self.basis_cb = QCheckBox("显示设计依据")
         self.basis_cb.setCursor(Qt.CursorShape.PointingHandCursor)
         self.basis_cb.toggled.connect(self._toggle_basis)
@@ -231,16 +251,27 @@ class VocabModule(QWidget):
             sl.addWidget(b)
         right.addWidget(seg)
 
-        self._snap_toggle = QPushButton("🕑 快照")
-        self._snap_toggle.setObjectName("BtnOutline")
-        self._snap_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._snap_toggle.clicked.connect(
-            lambda: self._snap_card.setVisible(not self._snap_card.isVisible()))
-        right.addWidget(self._snap_toggle)
-
         hl.addLayout(right)
         self._set_tier_active("all")
         return w
+
+    def _head_icon_btn(self, glyph: str, tip: str, slot) -> QPushButton:
+        """页头浅色图标按钮（v3 词库页头控件变体：neutral 底、hover 转 primary）。"""
+        b = QPushButton(glyph)
+        b.setObjectName("HeadIconBtn")
+        b.setFixedSize(34, 34)
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.setToolTip(tip)
+        b.setAccessibleName(tip)
+        b.setStyleSheet(
+            f"QPushButton#HeadIconBtn{{background:{c('neutral.100')};"
+            f"color:{c('neutral.700')};border:1px solid {c('neutral.200')};"
+            f"border-radius:{r('md')};font-size:15px}}"
+            f"QPushButton#HeadIconBtn:hover{{background:{c('primary.50')};"
+            f"color:{c('primary.700')};border-color:{c('primary.200')}}}"
+            f"QPushButton#HeadIconBtn:pressed{{background:{c('primary.100')}}}")
+        b.clicked.connect(slot)
+        return b
 
     def _set_tier_active(self, t: str):
         for key, b in self._tier_btns.items():
