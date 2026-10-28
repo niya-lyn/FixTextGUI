@@ -812,6 +812,24 @@ class MainWindow(QMainWindow):
             str(runs_root if runs_root is not None else PKG_ROOT / "runs"))
         self.history_module.refresh()
 
+    @staticmethod
+    def _pick_engine() -> Path | None:
+        """取本平台的替换引擎（全窗口唯一入口，勿在别处再写文件名）。
+
+        Windows 上必须拿 ``.exe``；照旧写死 Linux 文件名会让
+        ``exists()`` 照样为真（那个文件真在包里），一路放行到执行时
+        才炸 ``WinError 193``。所以这里统一走 engine_selector 的平台判断。
+        """
+        import sys as _sys
+
+        pipeline_root = str(PKG_ROOT / "pipeline")
+        if pipeline_root not in _sys.path:
+            _sys.path.insert(0, pipeline_root)
+        from fixtext_pipeline.engine_selector import select_engine
+
+        return select_engine(PKG_ROOT / "pipeline" / "vendor" / "fixtext"
+                             / "engine" / "go_src" / "bin")
+
     def _book_runs_root(self) -> Path | None:
         """当前书专属的运行目录（runs/<书 id>）；没有当前书时为 None。"""
         if not self._current_text_path:
@@ -862,8 +880,7 @@ class MainWindow(QMainWindow):
             return
         pipeline_root = str(PKG_ROOT / "pipeline")
         rules = PKG_ROOT / "data" / "rules"
-        engine = (PKG_ROOT / "pipeline" / "vendor" / "fixtext" / "engine"
-                  / "go_src" / "bin" / "replace_by_go-linux-amd64")
+        engine = self._pick_engine()
         # 这本书的目录（M4-EX.3b）：历史页重新导出成功后，导出记录写到这里
         book_dir = ""
         if self._import_record:
@@ -877,7 +894,7 @@ class MainWindow(QMainWindow):
             "baseline_sha256": str((run or {}).get("restored_sha256") or ""),
             "rules_before": str(rules / "before.json"),
             "rules_after": str(rules / "after.json"),
-            "engine_path": str(engine),
+            "engine_path": str(engine or ""),
             "book_dir": book_dir,
         })
 
@@ -944,12 +961,12 @@ class MainWindow(QMainWindow):
             return None
 
         pipeline = PKG_ROOT / "pipeline"
-        engine = (pipeline / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
-                  / "replace_by_go-linux-amd64")
-        rules = PKG_ROOT / "data" / "rules"
+        engine = self._pick_engine()
         # M4-T4.2：不再要求 Go 引擎存在才建运行上下文——引擎被删 / 被杀软
         # 隔离时，一键校正会走降级确认（Python 引擎不需要 Go 二进制）；
         # 这里只挡词库缺失（两个引擎都绕不开词库）。
+        # M4-T4.1c：引擎路径按平台取（engine_selector），取不到时留空串，
+        # 由 oneclick 的 go_engine_status 判为不可用后走降级确认。
         if not (rules / "before.json").exists():
             return None
 

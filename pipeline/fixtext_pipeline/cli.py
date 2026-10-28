@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from . import engine_selector
 from .config import LAYOUT_PROFILES, STAGE_META, PipelineConfig
 
 EXIT_OK = 0
@@ -50,13 +51,22 @@ def _product_root() -> Path:
 
 
 def discover_engine() -> Path | None:
-    """找 Go 引擎：先看 vendor，再看 PATH。"""
+    """找 Go 引擎：按本平台取 vendor 里的那一个，取不到再看 PATH。
+
+    注意**不要**写成「把两个平台的文件名都试一遍、谁先存在用谁」：
+    包里两个引擎是并存的，先试 Linux 会让 Windows 拿到 ELF，最终在执行时
+    报 ``WinError 193``。平台判断统一交给 ``engine_selector``。
+    """
     root = _product_root()
-    for rel in (_ENGINE_REL, _ENGINE_REL_WIN):
-        candidate = root / "vendor" / rel
-        if candidate.is_file():
-            return candidate
-    for name in ("replace_by_go", "replace_by_go-linux-amd64"):
+    bin_dir = root / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
+    picked = engine_selector.select_engine(bin_dir)
+    if picked is not None:
+        return picked
+    # 兜底：PATH 里装了同名引擎（开发机上常见）
+    names = (engine_selector.WINDOWS_NAME, engine_selector.LINUX_NAME) \
+        if sys.platform == "win32" else \
+        (engine_selector.LINUX_NAME, engine_selector.WINDOWS_NAME)
+    for name in ("replace_by_go",) + names:
         found = shutil_which(name)
         if found:
             return Path(found)
