@@ -329,6 +329,8 @@ def main() -> int:
             # 【M2-T2.6】顶栏三个按钮现在分别是：⚙ 模态设置窗、? 模态帮助窗、
             # ☰ 下拉菜单（QMenu，不是窗口）。三类都要能识别并关闭，
             # 否则 exec() 会把自动化卡死。
+            # 【M4-EX.2a】⚙ 已经不是模态窗，而是「跳到设置页」的路由跳转：
+            # 探针改为「点击后主窗当前页是否变成设置页」。
             from PySide6.QtWidgets import QDialog, QMenu
             for w in QApplication.topLevelWidgets():
                 if isinstance(w, (QMessageBox, QDialog)) and w.isVisible():
@@ -339,6 +341,12 @@ def main() -> int:
                 if menu.isVisible():
                     opened["n"] += 1
                     menu.close()
+
+        if btn.objectName() == "TopAct" and "设置" in (btn.toolTip() or ""):
+            QTest.mouseClick(btn, Qt.MouseButton.LeftButton)
+            QApplication.processEvents()
+            from fixtext_tokens import SETTINGS_KEY
+            return getattr(win, "current_key", None) == SETTINGS_KEY
 
         QTimer.singleShot(120, _close)
         QTest.mouseClick(btn, Qt.MouseButton.LeftButton)
