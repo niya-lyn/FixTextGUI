@@ -56,8 +56,17 @@ def main() -> int:
         error_center = None
 
     if error_center is not None:
+        # M4-EX.2a：日志目录 / 留痕开关优先取设置页保存的值，未配置用包内默认
         try:
-            error_center.init(str(HERE / "logs"))
+            import fixtext_settings as app_settings   # noqa: PLC0415
+            _log_dir = app_settings.log_dir()
+            _diag = app_settings.diag_enabled()
+        except Exception:                              # noqa: BLE001
+            _log_dir, _diag = None, True
+        try:
+            error_center.init(
+                str(_log_dir) if _log_dir is not None else str(HERE / "logs"),
+                enabled=_diag)
         except Exception:
             pass
         try:

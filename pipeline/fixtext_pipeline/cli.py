@@ -117,27 +117,17 @@ def parse_layout_overrides(items: list[str] | None) -> dict[str, Any]:
 def cmd_run(args: argparse.Namespace) -> int:
     rules_before, rules_after = resolve_rules(args)
 
-    # M4-T4.2：替换引擎选择。--replace-engine 显式指定优先；缺省读持久化
-    # 配置键 ``engine``（环境变量 FIXTEXT_ENGINE 可临时覆盖），默认 go。
-    from .engine_choice import get_engine_choice
-    replace_engine = getattr(args, "replace_engine", None) or get_engine_choice()
-
     engine = Path(args.engine) if args.engine else discover_engine()
     if engine is None:
-        # Python 引擎模式不要求 Go 二进制存在；Go 模式在下面按缺失报错
-        engine = _product_root() / "vendor" / _ENGINE_REL
-    if replace_engine == "go":
-        if not Path(args.engine or "").is_file() and args.engine:
-            print(f"错误：Go 引擎不存在：{engine}", file=sys.stderr)
-            return EXIT_USAGE
-        if not args.engine and not engine.is_file():
-            print(
-                "错误：找不到 Go 引擎二进制。请用 --engine 指定，或把引擎放到 "
-                f"{_product_root() / 'vendor' / _ENGINE_REL}；"
-                "也可用 --replace-engine python 改走 Python 替换引擎（较慢）。",
-                file=sys.stderr,
-            )
-            return EXIT_USAGE
+        print(
+            "错误：找不到 Go 引擎二进制。请用 --engine 指定，或把引擎放到 "
+            f"{_product_root() / 'vendor' / _ENGINE_REL}",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
+    if not engine.is_file():
+        print(f"错误：Go 引擎不存在：{engine}", file=sys.stderr)
+        return EXIT_USAGE
 
     stages = tuple(s.strip() for s in (args.stages or "").split(",") if s.strip())
     unknown = [s for s in stages if s not in STAGE_META]
@@ -151,7 +141,6 @@ def cmd_run(args: argparse.Namespace) -> int:
         rules_before=rules_before,
         rules_after=rules_after,
         engine_path=engine,
-        engine=replace_engine,
         replace_count=args.replace_count,
         engine_timeout_s=args.engine_timeout,
         layout_profile=args.layout_profile,
@@ -228,23 +217,14 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         print(f"词库规则          : {exc}")
         problems.append(str(exc))
 
-    # Go 引擎（M4-T4.2：配置选 python 时缺失只作提示，不算问题）
-    from .engine_choice import get_engine_choice
-    chosen = get_engine_choice()
-    print(f"替换引擎选择      : {chosen}（配置键 engine，缺省 go）")
+    # Go 引擎
     engine = Path(args.engine) if args.engine else discover_engine()
     if engine is None:
         print("Go 引擎           : 未找到")
-        if chosen == "go":
-            problems.append("找不到 Go 引擎二进制")
-        else:
-            print("                  : 当前选 Python 引擎，仅作提示")
+        problems.append("找不到 Go 引擎二进制")
     elif not engine.is_file():
         print(f"Go 引擎           : 缺失 -> {engine}")
-        if chosen == "go":
-            problems.append(f"Go 引擎不存在：{engine}")
-        else:
-            print("                  : 当前选 Python 引擎，仅作提示")
+        problems.append(f"Go 引擎不存在：{engine}")
     else:
         mode = engine.stat().st_mode
         executable = os.access(engine, os.X_OK)
@@ -254,16 +234,6 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         )
         if not executable and os.name != "nt":
             print("                  : 缺执行位，运行时会自动补 chmod +x")
-
-    # Python 引擎依赖（M4-T4.2）
-    try:
-        import ahocorasick  # noqa: F401
-
-        print("Python 引擎依赖   : pyahocorasick 已安装")
-    except ImportError:
-        print("Python 引擎依赖   : 缺失（pyahocorasick，--replace-engine python 需要）")
-        if chosen == "python":
-            problems.append("缺少 pyahocorasick（Python 替换引擎依赖）")
 
     # lxml
     try:
@@ -327,11 +297,6 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--rules-before", help="before.json 路径（与 --rules-after 成对）")
     run_p.add_argument("--rules-after", help="after.json 路径（与 --rules-before 成对）")
     run_p.add_argument("--engine", help="Go 引擎二进制路径（默认自动发现 vendor 里的）")
-    run_p.add_argument(
-        "--replace-engine", choices=("go", "python"), default=None,
-        help="替换引擎（M4-T4.2）：go=Go 引擎（默认），python=Python greedy 引擎"
-             "（较慢）；缺省读配置键 engine（FIXTEXT_ENGINE 可临时覆盖）",
-    )
     run_p.add_argument("--layout-profile", default="html-safe", choices=sorted(LAYOUT_PROFILES))
     run_p.add_argument(
         "--layout-option",

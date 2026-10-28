@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy, QScrollArea,
 )
 
+import fixtext_settings as app_settings
 from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO
 from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal
 
@@ -142,7 +143,8 @@ class VocabModule(QWidget):
         super().__init__(parent)
 
         # ---- 数据：唯一入口，界面自己不拼路径、不直接写文件 ----
-        self.store = VocabStore()
+        # 存储位置由设置页决定（未配置时 None = 包内默认树）
+        self.store = VocabStore(custom_path=app_settings.vocab_custom_file())
 
         # ---- 状态 ----
         self.tier = "all"          # all / custom / builtin
@@ -870,6 +872,14 @@ class VocabModule(QWidget):
                 self._selected.discard(e["id"])
         self._render_entries()
         self._update_sel_state()
+
+    def reload_store(self):
+        """设置里改了自定义词库存储位置后：按新位置重建数据入口并整页重渲染。"""
+        self.store = VocabStore(custom_path=app_settings.vocab_custom_file())
+        self._selected.clear()
+        self._merge_sel = None
+        self._page = 0
+        self._render_all()
 
     def set_tier(self, t: str):
         self.tier = t

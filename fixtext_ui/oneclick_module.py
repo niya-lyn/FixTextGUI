@@ -15,7 +15,6 @@ FixText V1 · 一键校正模块（Qt 移植）
 from __future__ import annotations
 
 import shutil
-import sys
 import time
 from pathlib import Path
 
@@ -28,7 +27,6 @@ from PySide6.QtWidgets import (
 from fixtext_tokens import c, r, fs, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, hline,
-    ConfirmDialog,
 )
 from fixtext_worker import CorrectionJob, CorrectionWorker, HUMAN_STAGES
 
@@ -569,12 +567,7 @@ class OneClickModule(QWidget):
         )
 
     def do_correction(self):
-        """真实执行：M1 编排器六阶段在后台线程跑，进度弹窗事件驱动。
-
-        M4-T4.2：启动前按配置键 ``engine`` 选引擎；计划走 Go 且引擎
-        文件不可用（缺失 / 无法启动 / 被杀软隔离）时，先弹人话确认再
-        决定是否改走 Python 引擎——用户拒绝则明确报错，不硬跑。
-        """
+        """真实执行：M1 编排器六阶段在后台线程跑，进度弹窗事件驱动。"""
         if self._running:
             return
         if not self.run_context:
@@ -582,77 +575,6 @@ class OneClickModule(QWidget):
             return
 
         ctx = self.run_context
-        engine = self._planned_engine(ctx)
-        if engine == "go":
-            ec = self._engine_choice_mod(ctx)
-            ok, reason = ec.go_engine_status(ctx["engine_path"])
-            if not ok:
-                if self._confirm_engine_fallback(reason):
-                    engine = "python"      # 只本次生效，不写回设置
-                else:
-                    self._clear_result()
-                    self._toast(
-                        "校正未开始：校正引擎不可用（"
-                        + self._sanitized_reason(reason)
-                        + "）。可重试，或在设置里改用 Python 备用引擎。"
-                    )
-                    return
-        self._start_correction(ctx, engine_override=engine)
-
-    # ---------------------------------------------------------- 引擎选择
-
-    @staticmethod
-    def _engine_choice_mod(ctx: dict):
-        """把 pipeline 目录挂进 sys.path 后取 engine_choice 数据层。
-
-        界面模块不依赖 Qt 之外的写入：引擎键的持久化读写统一走
-        ``fixtext_pipeline.engine_choice``（契约键 ``engine``，与设置页
-        M4-EX.2a 共用），这里只是读。
-        """
-        root = str(Path(str(ctx["pipeline_root"])).resolve())
-        if root not in sys.path:
-            sys.path.insert(0, root)
-        from fixtext_pipeline import engine_choice
-        return engine_choice
-
-    def _planned_engine(self, ctx: dict) -> str:
-        """本次计划用的引擎：配置键 ``engine``（默认 go）。"""
-        try:
-            return self._engine_choice_mod(ctx).get_engine_choice()
-        except Exception:
-            return "go"
-
-    @staticmethod
-    def _sanitized_reason(reason: str) -> str:
-        """把引擎状态原因里的内部文件名截掉（不进界面文案）。"""
-        return reason.split("：", 1)[0] if "：" in reason else reason
-
-    def _confirm_engine_fallback(self, reason: str) -> bool:
-        """Go 引擎不可用时的人话降级确认（M4-T4.2 §3.3）。
-
-        明示耗时量级差异（Python 引擎较慢，大部头书约数十秒）；
-        返回 True = 用户同意本次改走 Python 引擎。
-        """
-        dlg = ConfirmDialog(
-            icon="⚠️",
-            title="校正引擎没有就绪",
-            note=(
-                "检测到：" + self._sanitized_reason(reason) + "。\n\n"
-                "可以改用 Python 备用引擎完成这次校正——校正结果与平时"
-                "完全一致，只是速度较慢：大部头书大约需要数十秒"
-                "（平时一般只要几秒）。\n\n"
-                "这次的选择只对本次校正生效，不会改动设置里的长期选择。"
-            ),
-            note_kind="warn",
-            confirm_text="改用 Python 引擎，继续校正",
-            parent=self,
-        )
-        return dlg.exec() == QDialog.DialogCode.Accepted
-
-    # ---------------------------------------------------------- 执行主体
-
-    def _start_correction(self, ctx: dict, *, engine_override: str | None = None):
-        """跑一次六阶段校正（engine_override 显式指定时只本次生效）。"""
         from PySide6.QtWidgets import QDialog
 
         runs_root = Path(ctx["runs_root"])
@@ -679,8 +601,6 @@ class OneClickModule(QWidget):
                                if ctx.get("custom_vocab_path") else None),
             derived_rules_dir=(Path(str(ctx["derived_rules_dir"]))
                                if ctx.get("derived_rules_dir") else None),
-            # M4-T4.2：本次运行的替换引擎（None = 读配置；降级确认后传 python）
-            engine=engine_override,
         )
         worker = CorrectionWorker(job)
         self._worker = worker
@@ -706,13 +626,12 @@ class OneClickModule(QWidget):
         worker.succeeded.connect(self._on_succeeded)
         worker.failed.connect(self._on_failed)
         worker.cancelled.connect(self._on_cancelled)
-        worker.engine_failed.connect(self._on_engine_failed)
 
         worker.start()
         dlg.start_live(worker.snapshot)
         dlg.exec()
 
-        # exec 返回 = 弹窗已关（完成/取消/失败/降级确认，四条路都汇聚到这里）
+        # exec 返回 = 弹窗已关（完成/取消/失败三条路都汇聚到这里）
         self._running = False
         self.run_btn.setEnabled(True)
         self._worker = None
@@ -721,10 +640,6 @@ class OneClickModule(QWidget):
         if self._outcome == "ok" and self._summary is not None:
             self._render_result(self._summary)
             self._toast("校正完成，已生成替换报告")
-        elif self._outcome == "fallback":
-            # 用户已确认降级：本次改走 Python 引擎重跑（不改长期设置）
-            self._clear_result()
-            self._start_correction(ctx, engine_override="python")
         elif self._outcome == "failed":
             self._clear_result()
             self._toast(self._fail_message or "校正未完成，可重试")
@@ -747,24 +662,6 @@ class OneClickModule(QWidget):
     def _on_failed(self, message: str):
         self._outcome = "failed"
         self._fail_message = message
-        if self._dlg is not None:
-            self._dlg.reject()
-
-    def _on_engine_failed(self, reason: str):
-        """Go 引擎在运行中不可用（M4-T4.2 §3.3）：弹降级确认。
-
-        确认 → 本次改走 Python 引擎重跑；拒绝 → 明确报错，不硬跑。
-        此时后台线程已结束、半成品已由 worker 清理，弹窗可以安全关闭。
-        """
-        if self._confirm_engine_fallback(reason):
-            self._outcome = "fallback"
-        else:
-            self._outcome = "failed"
-            self._fail_message = (
-                "校正未完成：校正引擎不可用（"
-                + self._sanitized_reason(reason)
-                + "）。可在设置里改用 Python 备用引擎后重试。"
-            )
         if self._dlg is not None:
             self._dlg.reject()
 

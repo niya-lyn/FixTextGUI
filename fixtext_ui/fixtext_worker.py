@@ -172,10 +172,6 @@ class CorrectionJob:
         rules_before/after  词库规则 JSON
         engine_path     Go 引擎二进制
         pipeline_root   fixtext_pipeline 产品目录（含 fixtext_pipeline/ 与 vendor/）
-        engine          本次运行用的替换引擎（``go``|``python``）。
-                        None = 读持久化配置（契约键 ``engine``，默认 ``go``）；
-                        降级路径确认后由界面显式传 ``python``——只影响本次
-                        运行，不写回设置（M4-T4.2 §3.3）。
     """
 
     def __init__(self, *, epub: Path, workdir: Path, rules_before: Path,
@@ -183,7 +179,6 @@ class CorrectionJob:
                  title: str = "", author: str = "", source_epub: Path | None = None,
                  custom_vocab_path: Path | None = None,
                  derived_rules_dir: Path | None = None,
-                 engine: str | None = None,
                  on_stage_started: Callable[[int], None] | None = None,
                  on_stage_finished: Callable[[int, float], None] | None = None):
         self.epub = Path(epub)
@@ -201,11 +196,6 @@ class CorrectionJob:
         #: 测试 / 便携场景可指到临时子树，绝不碰交付包自带的用户区。
         self.custom_vocab_path = Path(custom_vocab_path) if custom_vocab_path else None
         self.derived_rules_dir = Path(derived_rules_dir) if derived_rules_dir else None
-        #: 本次运行的替换引擎（M4-T4.2）。None = 启动时读配置键 ``engine``；
-        #: 界面降级确认后显式传 ``python``（只本次生效，不写回设置）。
-        self.engine = engine
-        #: 实际用上的引擎（run() 里回填，供测试 / 证据核对）
-        self.engine_used: str | None = None
         self._on_stage_started = on_stage_started
         self._on_stage_finished = on_stage_finished
 
@@ -300,19 +290,12 @@ class CorrectionJob:
         from fixtext_pipeline.logsetup import StageLogger, capture_output
         from fixtext_pipeline.stages import STAGES
 
-        # 本次运行的替换引擎（M4-T4.2）：显式指定优先（降级确认后的
-        # ``python`` 只本次生效），否则读持久化配置键 ``engine``（默认 go）。
-        from fixtext_pipeline.engine_choice import get_engine_choice
-        engine = self.engine if self.engine is not None else get_engine_choice()
-        self.engine_used = engine
-
         cfg = PipelineConfig(
             epub=self.epub,
             workdir=self.workdir,
             rules_before=self.rules_before,
             rules_after=self.rules_after,
             engine_path=self.engine_path,
-            engine=engine,
             replace_count=2,
             layout_profile="html-safe",
             stages=tuple(s["key"] for s in HUMAN_STAGES),
@@ -334,14 +317,6 @@ class CorrectionJob:
         # 把引擎客户端的 subprocess 换成可取消代理（只影响本进程内的调用）
         import fixtext.engine.client as _engine_client
         _engine_client.subprocess = _SubprocessProxy(self)
-
-        # Python 引擎在进程内跑（没有子进程可杀）：挂协作式取消钩子，
-        # 跑完（含取消 / 失败）立刻注销，不影响后续别的调用方。
-        py_cancel_hook_installed = False
-        if engine == "python":
-            from fixtext.engine import py_engine
-            py_engine.set_cancel_check(lambda: self.cancel_requested)
-            py_cancel_hook_installed = True
 
         self._run_started_at = self._now()
         self._run_started_wall = time.time()
@@ -373,10 +348,6 @@ class CorrectionJob:
         except CorrectionCancelled:
             self._cleanup()
             raise
-        finally:
-            if py_cancel_hook_installed:
-                from fixtext.engine import py_engine
-                py_engine.set_cancel_check(None)
 
         return self._build_summary(cfg)
 
@@ -413,7 +384,6 @@ class CorrectionJob:
             "chapters": merge.get("chapters"),
             "layout_changed": layout.get("changed"),
             "replace_rules": replace.get("rules"),
-            "replace_engine": replace.get("engine") or self.engine_used,
             "replace_chars_in": replace.get("chars_in"),
             "replace_chars_out": replace.get("chars_out"),
             "quote_errors": quote.get("error_count"),
@@ -500,9 +470,6 @@ class CorrectionWorker(QObject):
         succeeded(summary)      全部完成（summary 见 ``CorrectionJob._build_summary``）
         failed(message)         阶段失败（message 已是人话）
         cancelled()             取消完成，工作区已清理干净
-        engine_failed(reason)   Go 引擎不可用（M4-T4.2 降级触发）——工作线程
-                                已结束、半成品已清理，由界面弹确认：用户同意
-                                则改走 Python 引擎重跑本次校正，拒绝则明确报错
     """
 
     stage_started = Signal(int)
@@ -510,7 +477,6 @@ class CorrectionWorker(QObject):
     succeeded = Signal(object)
     failed = Signal(str)
     cancelled = Signal()
-    engine_failed = Signal(str)
 
     def __init__(self, job: CorrectionJob, parent=None):
         super().__init__(parent)
@@ -547,18 +513,6 @@ class CorrectionWorker(QObject):
             self.cancelled.emit()
             return
         except Exception as exc:  # noqa: BLE001 - 界面兜底：任何阶段异常都归成人话
-            # Go 引擎不可用（M4-T4.2 §3.3）：单独分流——半成品清理后发
-            # engine_failed，由界面弹「改用 Python 引擎」确认，不当普通失败。
-            try:
-                from fixtext_pipeline.stages.replace import GoEngineUnavailableError
-            except ImportError:                       # pragma: no cover
-                GoEngineUnavailableError = ()          # type: ignore[assignment]
-            if GoEngineUnavailableError and isinstance(exc, GoEngineUnavailableError):
-                self.job._cleanup()
-                # 原因已是人话（"Go 引擎不存在：…可在设置里改用 Python…"），
-                # 界面的降级确认弹窗直接用，不再叠加"校正未完成"前缀
-                self.engine_failed.emit(str(exc))
-                return
             # 没预期到的异常：归类 → 写诊断日志 → 人话错误卡（跨线程自动投递）。
             if error_center is not None:
                 try:

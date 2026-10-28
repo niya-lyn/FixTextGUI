@@ -21,12 +21,16 @@ FixText V1 · 复用部件库（Qt）
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QSize, Signal, QTimer
+from PySide6.QtCore import (
+    QAbstractAnimation, QEasingCurve, QPropertyAnimation, Qt, QSize, Signal,
+    QTimer,
+)
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtWidgets import (
     QFrame, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QAbstractButton, QSizePolicy, QDialog, QProgressBar, QPushButton,
 )
+from PySide6.QtWidgets import QGraphicsOpacityEffect
 
 from fixtext_tokens import c, sp, r, fs, FONT_WEIGHT, FONT_MONO
 
@@ -803,3 +807,37 @@ class Modal(QDialog):
             btn.clicked.connect(self.accept)
         self.fl.addWidget(btn)
         return btn
+
+
+# ---------------------------------------------------------------------------
+# 卡片级联入场（v3 质感层 cardIn 的 Qt 等效）
+# ---------------------------------------------------------------------------
+
+def cascade_in(widgets, *, step_ms: int = 55, dur_ms: int = 420) -> None:
+    """一组部件错落淡入：第 i 张延迟 i*step_ms，dur_ms 内淡入到不透明。
+
+    原型用 CSS animation cardIn .42s backwards + 每张 55ms 延迟；Qt 侧用
+    QGraphicsOpacityEffect + QPropertyAnimation 等效表达。动画结束后摘掉
+    effect，避免常驻图形效果影响后续渲染。
+    """
+    for i, w in enumerate(widgets):
+        if w is None or not w.isVisible():
+            continue
+        eff = QGraphicsOpacityEffect(w)
+        eff.setOpacity(0.0)
+        w.setGraphicsEffect(eff)
+        anim = QPropertyAnimation(eff, b"opacity", w)
+        anim.setDuration(dur_ms)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        def _done(target=w):
+            target.setGraphicsEffect(None)
+
+        anim.finished.connect(_done)
+        QTimer.singleShot(i * step_ms, anim.start)
+        # 引用挂到部件上，防止局部变量回收导致动画中途失效
+        if not hasattr(w, "_cascade_anims"):
+            w._cascade_anims = []
+        w._cascade_anims.append(anim)
