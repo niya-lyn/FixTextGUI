@@ -9,7 +9,12 @@
 - 界面永远只拿人话文案；本模块产物仅供「设置 → 打开诊断日志目录」与支持排障。
 
 线程安全：单进程内加锁写（Qt 主线程 / worker 线程都会写）。
-初始化：``init(log_dir)``；未初始化时写到系统临时目录下的 ``fixtext-diag``。
+初始化：``init(log_dir)``。
+
+M4-T4.4 写路径收口：**未初始化时不再落到系统临时目录**，而是落到包内
+``<包根>/logs/``（与主入口 ``main_app.py`` 的 ``init(HERE/"logs")`` 同一落点），
+环境变量 ``FIXTEXT_LOG_DIR`` 仍可显式覆盖。这样「日志」只可能出现在
+workspace / runs / logs / 用户导出目录这四类位置里。
 """
 
 from __future__ import annotations
@@ -17,12 +22,15 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import os
+from pathlib import Path
 import sys
-import tempfile
 import threading
 
 _ROTATE_BYTES = 2 * 1024 * 1024  # 单文件 2MB 滚动
 _keep = 1
+
+#: 包根（本包 ``fixtext_error_center/`` 的上一层）
+PKG_ROOT = Path(__file__).resolve().parent.parent
 
 _lock = threading.Lock()
 _log_dir: str | None = None
@@ -40,7 +48,7 @@ def init(log_dir: str | None = None, enabled: bool = True) -> str:
         if base:
             _log_dir = base
         else:
-            _log_dir = os.path.join(tempfile.gettempdir(), "fixtext-diag")
+            _log_dir = str(PKG_ROOT / "logs")
     os.makedirs(_log_dir, exist_ok=True)
     return _log_dir
 
