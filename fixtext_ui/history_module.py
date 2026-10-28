@@ -37,7 +37,7 @@ from PySide6.QtWidgets import (
 import fixtext_history as histdata
 import fixtext_run_snapshot as snapshot
 from fixtext_tokens import c, fs, FONT_WEIGHT
-from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal
+from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal, EmptyState
 
 
 # 列表列宽比例（头行与数据行共用，保证对齐）。操作列右对齐。
@@ -177,8 +177,19 @@ class HistoryModule(QWidget):
         root.setSpacing(16)
 
         root.addWidget(self._header())
-        root.addWidget(self._task_card())
-        root.addWidget(self._snap_card())
+
+        # 无任务空状态（原型 v3 §4）：还没有校正历史时整页内容区换成
+        # 这条引导；由真实状态触发（磁盘扫描结果为空）。
+        self.empty_state = EmptyState(
+            "🕓", "还没有校正历史",
+            "完成一次校正后，任务会自动出现在这里，可随时恢复任意时间点或重新导出。"
+            "当前页面在有任务状态下展示；无任务时仅显示此引导。")
+        root.addWidget(self.empty_state)
+
+        self._task_w = self._task_card()
+        self._snap_w = self._snap_card()
+        root.addWidget(self._task_w)
+        root.addWidget(self._snap_w)
 
         self.legend = _label(
             "勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。清理历史是破坏性操作，"
@@ -299,15 +310,16 @@ class HistoryModule(QWidget):
         self._table_body.addWidget(hline())
 
         if not self.tasks:
-            empty = _label(
-                "还没有校正记录。去「一键校正」跑一次，这里就会按时间留一条。",
-                size="sm", color="neutral.500", wrap=True)
-            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty.setContentsMargins(0, 28, 0, 28)
-            self._table_body.addWidget(empty)
+            # 空状态（原型 v3 §4）：任务表与快照面板都收起，整页只留引导
+            self._task_w.setVisible(False)
+            self._snap_w.setVisible(False)
+            self.empty_state.setVisible(True)
             if hasattr(self, "clear_btn"):
                 self.clear_btn.setEnabled(False)
             return
+        self._task_w.setVisible(True)
+        self._snap_w.setVisible(True)
+        self.empty_state.setVisible(False)
         if hasattr(self, "clear_btn"):
             self.clear_btn.setEnabled(True)
 

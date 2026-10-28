@@ -43,7 +43,7 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import FONT_MONO, c, fs, r, sp
-from fixtext_widgets import Card, Pill, hline
+from fixtext_widgets import Card, Pill, hline, EmptyState
 
 import fixtext_import as fi
 from fixtext_import import messages as M
@@ -743,6 +743,17 @@ class ImportModule(QWidget):
         self.workspace_card.body_l.addLayout(wrow)
         root.addWidget(self.workspace_card)
 
+        # 无书空状态（原型 v3 §4，导入页口径）：工作区还没有书时，
+        # 工作区卡换成这条引导；主按钮就是本页真实的选文件入口
+        # （原型此位是「导入示例书」按钮，真实应用没有演示书，改接真实入口）。
+        self.empty_state = EmptyState(
+            "📥", "还没有导入的书",
+            "本页默认即空状态：顶部拖放区 + 选择文件按钮就是导入入口。"
+            "导入完成后，结果卡会替换此引导。",
+            primary="📥 选择文件导入")
+        self.empty_state.primaryClicked.connect(self._choose_file)
+        root.addWidget(self.empty_state)
+
         root.addStretch(1)
         self._refresh_workspace()
         self._render_step()
@@ -992,6 +1003,9 @@ class ImportModule(QWidget):
     def _refresh_workspace(self) -> None:
         n_books, size = fi.workspace_usage(self.workspace)
         mb = size / (1024 * 1024)
+        # 空状态（原型 v3 §4）：无书时工作区卡换成统一空状态引导
+        self.workspace_card.setVisible(bool(n_books))
+        self.empty_state.setVisible(not n_books)
         if n_books:
             self.workspace_label.setText(f"工作区里已有 {n_books} 本书，共约 {mb:.1f} MB。")
         else:

@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
 
 from fixtext_tokens import c, r, fs, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
-    Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, hline,
+    Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline,
 )
 from fixtext_worker import CorrectionJob, CorrectionWorker, HUMAN_STAGES
 
@@ -141,10 +141,23 @@ class OneClickModule(QWidget):
         root.setSpacing(16)
 
         root.addWidget(self._header())
-        root.addWidget(self._book_bar())
-        root.addWidget(self._hero())
-        root.addWidget(self._fmt_card())
-        root.addWidget(self._adv_card())
+
+        # 无书空状态（原型 v3 §4）：无运行上下文时整页只显示这条引导，
+        # 有书后恢复常规布局。由真实状态触发（run_context 是否注入）。
+        self.empty_state = EmptyState(
+            "⚡", "还没有可校正的书",
+            "请先导入一本书，才能跑「一键校正」。"
+            "当前页面在有书状态下展示；无书时仅显示此引导。")
+        root.addWidget(self.empty_state)
+
+        self._book_w = self._book_bar()
+        self._hero_w = self._hero()
+        self._fmt_w = self._fmt_card()
+        self._adv_w = self._adv_card()
+        root.addWidget(self._book_w)
+        root.addWidget(self._hero_w)
+        root.addWidget(self._fmt_w)
+        root.addWidget(self._adv_w)
 
         self.result_slot = QVBoxLayout()
         self.result_slot.setContentsMargins(0, 0, 0, 0)
@@ -166,6 +179,19 @@ class OneClickModule(QWidget):
         self.status.setSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         root.addWidget(self.status, 0, Qt.AlignmentFlag.AlignLeft)
+        self._apply_book_presence()
+
+    def _apply_book_presence(self) -> None:
+        """按「有没有一本书可校正」切换整页布局（真实状态触发，无假数据）。"""
+        has_book = self.run_context is not None
+        for w in (self._book_w, self._hero_w, self._fmt_w, self._adv_w,
+                  self.legend):
+            w.setVisible(has_book)
+        for i in range(self.result_slot.count()):
+            item = self.result_slot.itemAt(i)
+            if item.widget() is not None:
+                item.widget().setVisible(has_book)
+        self.empty_state.setVisible(not has_book)
 
     # ------------------------------------------------------------------ 头部
 
@@ -226,13 +252,17 @@ class OneClickModule(QWidget):
         hl.addWidget(self.book_pill)
         return bar
 
-    def set_run_context(self, ctx: dict) -> None:
+    def set_run_context(self, ctx: dict | None) -> None:
         """注入一次真实校正所需的全部路径（由导入流程或测试调用）。
 
         ctx 字段：epub / pipeline_root / rules_before / rules_after /
         engine_path / runs_root / title（可选，书名显示用）
+        传 None 表示清空（回到无书空状态）。
         """
-        self.run_context = dict(ctx)
+        self.run_context = dict(ctx) if ctx else None
+        if not ctx:
+            self._apply_book_presence()
+            return
         ref = ctx.get("epub") or ctx.get("plain_source") or ""
         title = ctx.get("title") or Path(str(ref)).stem
         suffix = (ctx.get("suffix") or Path(str(ref)).suffix or "").lower()
@@ -246,6 +276,7 @@ class OneClickModule(QWidget):
             f"color:{c('success')};background:{c('success.bg')};"
             f"border-radius:{r('full')};padding:2px 9px;"
             f"font-size:{fs('xs')};font-weight:700")
+        self._apply_book_presence()
 
     # ------------------------------------------------------------ 主按钮 hero
 

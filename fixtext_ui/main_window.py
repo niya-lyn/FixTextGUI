@@ -437,6 +437,20 @@ class MainWindow(QMainWindow):
             return
         self._open_wizard()
 
+    def _wire_empty_state(self, module, *, primary_to_import: bool = True) -> None:
+        """空状态双按钮接线（原型 v3 §4 统一口径）。
+
+        主按钮「去导入第一本书」→ 跳导入页；导入页自己的空状态主按钮
+        就是选文件入口（模块内已接 ``_choose_file``），不再跳转。
+        次按钮「打开新手向导」→ 弹新手向导。
+        """
+        es = getattr(module, "empty_state", None)
+        if es is None:
+            return
+        if primary_to_import:
+            es.primaryClicked.connect(lambda: self.go("import"))
+        es.secondaryClicked.connect(self._open_wizard)
+
     def _open_wizard(self) -> None:
         """弹出新手向导（首启触发，或 ☰ 菜单里重新观看）。"""
         w = FirstRunWizard(self)
@@ -542,6 +556,8 @@ class MainWindow(QMainWindow):
             else:
                 page = BuildingPage(entry)
                 page.action_requested.connect(self.go)
+            if key in ("check", "history", "export"):
+                self._wire_empty_state(page)
             wrapped = self._wrap(page)
             self.pages[key] = wrapped
             self.stack.addWidget(wrapped)
@@ -613,6 +629,8 @@ class MainWindow(QMainWindow):
         # 整个窗口接受拖放，拖进来自动切到导入页
         install_global_drop(self, module, goto_page=self.go)
         self.import_module = module
+        # 空状态次按钮（打开新手向导）；主按钮已由模块内接 _choose_file
+        self._wire_empty_state(module, primary_to_import=False)
         return module
 
     def mount_oneclick(self):
@@ -631,6 +649,7 @@ class MainWindow(QMainWindow):
         module.gotoExport.connect(lambda: self.go("export"))
         # 本书专有词条（真实抽出）→ 词库管理页确认后加入
         module.bookWordsReady.connect(self._on_book_words_ready)
+        self._wire_empty_state(module)
         return module
 
     def _on_book_words_ready(self, words, book_title: str):

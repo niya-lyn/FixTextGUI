@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 
 import fixtext_check as checkdata
 from fixtext_tokens import c, sp, r, fs, FONT_MONO, FONT_WEIGHT
-from fixtext_widgets import Card, Switch, Pill, FieldRow, hline, px
+from fixtext_widgets import Card, Switch, Pill, FieldRow, EmptyState, hline, px
 
 
 # ---------------------------------------------------------------------------
@@ -184,14 +184,37 @@ class CheckModule(QWidget):
         root.setSpacing(px(sp("4")))
 
         root.addWidget(self._head())
-        root.addWidget(self._bookbar())
-        root.addWidget(self._stats_bar())
-        root.addLayout(self._columns())
-        root.addWidget(self._action_bar())
-        root.addWidget(self._rules_card())
-        root.addWidget(self._batch_card())
+
+        # 无数据空状态（原型 v3 §4）：还没有可检查的书（未跑过校正）时
+        # 整页内容区换成这条引导；由真实状态触发（report 是否注入）。
+        self.empty_state = EmptyState(
+            "🔍", "还没有可检查的书",
+            "请先导入一本书并完成校正，之后才能逐处检查标点与引号问题。"
+            "当前页面在有书状态下展示；无书时仅显示此引导。")
+        root.addWidget(self.empty_state)
+
+        # 常规内容区：有报告才显示
+        self._content_w = QWidget()
+        cl = QVBoxLayout(self._content_w)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(px(sp("4")))
+        cl.addWidget(self._bookbar())
+        cl.addWidget(self._stats_bar())
+        cl.addLayout(self._columns())
+        cl.addWidget(self._action_bar())
+        cl.addWidget(self._rules_card())
+        cl.addWidget(self._batch_card())
+        root.addWidget(self._content_w)
+
         root.addWidget(self._legend())
         root.addWidget(self._status_label())
+        self._apply_data_presence()
+
+    def _apply_data_presence(self) -> None:
+        """按「有没有一次真实检查结果」切换布局（真实状态触发，无假数据）。"""
+        has = self.has_data
+        self._content_w.setVisible(has)
+        self.empty_state.setVisible(not has)
 
     def _head(self) -> QWidget:
         w = QWidget()
@@ -558,6 +581,7 @@ class CheckModule(QWidget):
             self._page = page
 
     def render(self):
+        self._apply_data_presence()
         self._follow_cursor()
         self._render_checks()
         self._render_probs()

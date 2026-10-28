@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
 
 from fixtext_export import ExportOutcome, ExportSource, export_book, resolve_source
 from fixtext_tokens import FONT_WEIGHT, c, fs, r
-from fixtext_widgets import Card, ConfirmDialog, Pill, RadioCard, hline
+from fixtext_widgets import Card, ConfirmDialog, Pill, RadioCard, EmptyState, hline
 
 try:
     import fixtext_error_center as error_center
@@ -111,14 +111,29 @@ class ExportModule(QWidget):
         root.setSpacing(16)
 
         root.addWidget(self._header())
-        root.addWidget(self._book_bar())
-        root.addWidget(self._target_card())
-        root.addWidget(self._meta_card())
-        root.addWidget(self._dir_card())
-        root.addWidget(self._status_card())
-        root.addLayout(self._actions())
-        root.addWidget(self._result_card())
-        root.addStretch(1)
+
+        # 无书空状态（原型 v3 §4）：还没有可导出的书时整页内容区换成
+        # 这条引导；由真实状态触发（source 是否就绪）。
+        self.empty_state = EmptyState(
+            "📤", "还没有可导出的书",
+            "请先导入并完成校正，才能导出干净文件。"
+            "当前页面在有书状态下展示；无书时仅显示此引导。")
+        root.addWidget(self.empty_state)
+
+        # 常规内容区：有书才显示
+        self._content_w = QWidget()
+        cl = QVBoxLayout(self._content_w)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setSpacing(16)
+        cl.addWidget(self._book_bar())
+        cl.addWidget(self._target_card())
+        cl.addWidget(self._meta_card())
+        cl.addWidget(self._dir_card())
+        cl.addWidget(self._status_card())
+        cl.addLayout(self._actions())
+        cl.addWidget(self._result_card())
+        cl.addStretch(1)
+        root.addWidget(self._content_w)
 
         self.refresh()
 
@@ -331,6 +346,10 @@ class ExportModule(QWidget):
     def refresh(self) -> None:
         src = self.source
         has_book = bool(src and src.text_path and Path(src.text_path).exists())
+
+        # 无书空状态 / 常规内容区切换（真实状态触发）
+        self._content_w.setVisible(has_book)
+        self.empty_state.setVisible(not has_book)
 
         # 书源条
         if has_book:
