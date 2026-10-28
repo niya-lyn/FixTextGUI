@@ -261,41 +261,125 @@ def main() -> int:
                engine_path=str(ENGINE))
     hist.set_export_ctx(dict(ctx, import_record=None, out_dir=str(out_dir),
                              baseline_sha256=BASE_SHA))
+    # 走真实界面路径（_run_continue → 后台线程 → _poll_continue 收尾），
+    # 不要直接调 _do_continue：后者只是干活，撤销记录是在 _poll_continue 里
+    # 登记进撤销栈的，绕过它 S5 就没有可撤销的「继续」这一步。
+    _capt: dict = {}
+    _orig_do_continue = hist._do_continue
+
+    def _do_and_capture(snap_dir, job_ctx):
+        out = _orig_do_continue(snap_dir, job_ctx)
+        _capt["out"] = out
+        return out
+
+    hist._do_continue = _do_and_capture
     t0 = time.monotonic()
-    cont = hist._do_continue(cur["snapshot_dir"], dict(ctx))
+    try:
+        hist._run_continue(cur, dict(ctx))
+        wait_until(lambda: ("out" in _capt and not hist._resuming), 600)
+    finally:
+        hist._do_continue = _orig_do_continue
     cont_s = round(time.monotonic() - t0, 2)
+    cont = _capt.get("out") or {}
     stages = {k: dict(status=v.get("status"), elapsed_s=v.get("elapsed_s"),
                       summary=v.get("summary"))
-              for k, v in (cont["report"].get("stages") or {}).items()}
-    work = Path(cont["work_dir"])
-    new_epub = list((work / "06_restore").glob("*.epub"))
+              for k, v in ((cont.get("report") or {}).get("stages") or {}).items()}
+    work = Path(cont.get("work_dir") or "")
+    new_epub = list((work / "06_restore").glob("*.epub")) if work.is_dir() else []
     cont_sha = snap.sha256_file(new_epub[0]) if new_epub else ""
     skipped = [k for k, v in stages.items() if v["status"] == "skipped"]
-    print(f"[S4] 续跑 {cont_s}s（退出码 {cont['exit_code']}）：跳过 {skipped}；"
+    print(f"[S4] 续跑 {cont_s}s（退出码 {cont.get('exit_code')}）：跳过 {skipped}；"
           f"其余 {[(k, v['elapsed_s']) for k, v in stages.items() if v['status'] == 'done']}；"
-          f"成品 sha={cont_sha[:12]} 与基线一致={cont_sha == BASE_SHA}")
-    s4_ok = (cont["exit_code"] == 0 and skipped == ["merge", "layout", "replace"]
-             and cont_sha == BASE_SHA)
-    report["s4_resume"] = dict(seconds=cont_s, exit_code=cont["exit_code"],
+          f"成品 sha={cont_sha[:12]} 与基线一致={cont_sha == BASE_SHA}；"
+          f"撤销栈 {len(hist._undo_stack)} 项")
+    s4_ok = (cont.get("exit_code") == 0 and skipped == ["merge", "layout", "replace"]
+             and cont_sha == BASE_SHA and len(hist._undo_stack) >= 1)
+    report["s4_resume"] = dict(seconds=cont_s, exit_code=cont.get("exit_code"),
                                skipped=skipped, stages=stages,
                                restored_sha256=cont_sha,
                                equals_baseline=cont_sha == BASE_SHA,
+                               undo_stack_depth=len(hist._undo_stack),
                                work_dir=str(work))
     ok = ok and s4_ok
 
     # ---------------- S5 恢复可撤销 ----------------
-    # 撤销前先把「恢复前」的事实记下来（这里是未指定）
-    before_undo_cur = snap.current_state(runs_root)
-    hist._undo()
-    QApplication.processEvents()
-    after_undo_cur = snap.current_state(runs_root)
-    print(f"[S5] 撤销：恢复前指针={before_undo_cur.get('point') if before_undo_cur else None}，"
-          f"撤销后指针={after_undo_cur.get('point') if after_undo_cur else None}，"
-          f"提示=「{hist._active_hint.text()}」")
-    s5_ok = after_undo_cur is None and after_undo_cur == before_undo_cur
-    report["s5_undo"] = dict(before=before_undo_cur, after=after_undo_cur,
-                             hint=hist._active_hint.text(),
-                             export_btn_enabled=hist.export_ws_btn.isEnabled())
+    # 判据 = 「回到被撤销那一步操作之前的现场」：
+    #   · 指针里的 prev_snapshot 就是那步操作前的现场 → 撤销后必须落到这个目录上，
+    #     且时点(meta.point)与之一致；
+    #   · prev_snapshot 为空 = 那步操作前是「未指定」→ 撤销后也应回到「未指定」。
+    # 原断言 `after is None and after == before` 两项互斥：只有 before 也是 None 时
+    # 才可能成立；过去是靠 _adopt_workspace 漏写 snapshot_dir 让 current_state() 恒返回
+    # None 才"凑巧通过"，修掉该产品缺陷后必然恒假，产品本身行为是对的。
+    #
+    # 本场景撤销栈里有两步可撤销操作（S2 的「恢复」+ S4 的「继续」），所以这里连撤两次：
+    #   1) 撤销「继续」→ 回到 S4 续跑前 = 恢复点（replace）
+    #   2) 撤销「恢复」→ 回到 S2 恢复前 = 未指定
+    def _read_point_of(snap_dir: str):
+        try:
+            return str(json.loads((Path(snap_dir) / snap.META_FILE)
+                                  .read_text(encoding="utf-8")).get("point") or "") or None
+        except Exception:                                # noqa: BLE001
+            return None
+
+    def _undo_once(label: str) -> dict:
+        pre = snap.current_state(runs_root)
+        prev_dir = str((pre or {}).get("prev_snapshot") or "")
+        before = None
+        if prev_dir:
+            before = dict(snapshot_dir=prev_dir, point=_read_point_of(prev_dir))
+        hist._undo()
+        QApplication.processEvents()
+        after = snap.current_state(runs_root)
+        after_dir = str((after or {}).get("snapshot_dir") or "")
+        after_point = str((after or {}).get("point") or "") or None
+        pre_dir = str((pre or {}).get("snapshot_dir") or "")
+        if before is None:
+            step_ok = after is None
+            rule = "撤销前是「未指定」→ 撤销后应为「未指定」"
+        else:
+            step_ok = (after is not None and after_dir == before["snapshot_dir"]
+                       and after_point == before["point"])
+            rule = "撤销后指针 = 被撤销操作之前的现场（目录 + 时点一致）"
+        # 撤销必须真的动了指针，否则"什么都没做"也能满足上面的相等
+        moved = (pre_dir != after_dir)
+        return dict(label=label, rule=rule,
+                    pre_undo_point=str((pre or {}).get("point") or "") or None,
+                    pre_undo_snapshot_dir=pre_dir,
+                    before=before,
+                    before_point=(before or {}).get("point"),
+                    before_snapshot_dir=prev_dir,
+                    after=after, after_point=after_point,
+                    after_snapshot_dir=after_dir,
+                    point_matches_before=(after_point == (before or {}).get("point")),
+                    dir_matches_before=(after_dir == prev_dir),
+                    moved=moved, hint=hist._active_hint.text(),
+                    export_btn_enabled=hist.export_ws_btn.isEnabled(),
+                    passed=bool(step_ok and moved))
+
+    s5a = _undo_once("撤销「继续」→ 回到恢复点")
+    s5b = _undo_once("撤销「恢复」→ 回到恢复前")
+    print(f"[S5] {s5a['label']}：撤销前指针={s5a['pre_undo_point']}"
+          f"（{Path(s5a['pre_undo_snapshot_dir']).name}），"
+          f"撤销后指针={s5a['after_point']}"
+          f"（{s5a['after_snapshot_dir'] and Path(s5a['after_snapshot_dir']).name}），"
+          f"应回到={s5a['before_point']}，一致={s5a['passed']}")
+    print(f"[S5] {s5b['label']}：撤销前指针={s5b['pre_undo_point']}，"
+          f"撤销后指针={s5b['after_point']}，应为未指定={s5b['after'] is None}，"
+          f"判据={s5b['rule']}，通过={s5b['passed']}，"
+          f"提示=「{s5b['hint']}」")
+    s5_ok = bool(s5a["passed"] and s5b["passed"])
+    report["s5_undo"] = dict(
+        rule="撤销 = 回到被撤销操作之前的现场；未指定则回到未指定",
+        # 顶层 before/after 取「撤销回到恢复前」这一跳的真实值（非空、可直接核对）
+        before=s5a["before"], after=s5a["after"],
+        before_point=s5a["before_point"], after_point=s5a["after_point"],
+        before_snapshot_dir=s5a["before_snapshot_dir"],
+        after_snapshot_dir=s5a["after_snapshot_dir"],
+        point_matches_before=s5a["point_matches_before"],
+        dir_matches_before=s5a["dir_matches_before"],
+        hint=s5a["hint"], export_btn_enabled=s5a["export_btn_enabled"],
+        step1_undo_continue=s5a, step2_undo_restore=s5b,
+        passed=s5_ok)
     ok = ok and s5_ok
 
     # 再恢复一次，供 S6 / S8 用（重启后仍要看到当前工作区）
