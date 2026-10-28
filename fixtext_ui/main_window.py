@@ -424,9 +424,9 @@ class MainWindow(QMainWindow):
         self.mount_import(self.workspace)
         self.mount_oneclick()
         self._wire_book_ready()
-        # M4-EX.3a：启动即按持久化的选择恢复「当前书」（重启保持）
+        # M4-EX.3a：启动即按持久化的选择恢复「当前书」（重启保持）；
+        # 恢复过程里会顺带按当前书重挂载各数据页（3b）
         self._restore_current_book()
-        self._load_history()
 
         self._bind_shortcuts()
         self.go(HOME_KEY)
@@ -681,7 +681,7 @@ class MainWindow(QMainWindow):
         if self.import_module is None or self.oneclick_module is None:
             return
         self.import_module.bookReady.connect(self._on_book_ready)
-        # 书架里换当前书（M4-EX.3a）：顶栏跟着换，其它页数据仍按各自原逻辑
+        # 书架里换当前书（M4-EX.3a 引入；3b 起四页数据跟着换书）
         self.import_module.currentBookChanged.connect(self._on_current_book_changed)
 
     def _restore_current_book(self) -> None:
@@ -690,9 +690,10 @@ class MainWindow(QMainWindow):
         current = resolve_current_book(self._workspace_root(), books)
         if current is None:
             self._apply_current_book(None, "")
-            return
-        self._apply_current_book(current.record, current.text_path)
-        self._sync_export(None)
+        else:
+            self._apply_current_book(current.record, current.text_path)
+        # 启动即按当前书把各数据页挂载到位（3b：历史 / 检查 / 导出从一开始就按书）
+        self._reload_book_pages()
 
     def _workspace_root(self) -> Path:
         """工作区根目录（与导入模块同一口径）。"""
@@ -701,23 +702,22 @@ class MainWindow(QMainWindow):
         return Path(self.workspace) if self.workspace else PKG_ROOT / "workspace"
 
     def _apply_current_book(self, record: dict | None, text_path: str) -> None:
-        """把「当前书」落到窗口状态：顶栏书名 + 导出/历史/校正用的记录与路径。
-
-        只改顶栏与上下文引用；各页展示的数据仍按各自原逻辑（按书联动是 3b）。
-        """
+        """把「当前书」落到窗口状态：顶栏书名 + 导出/历史/校正用的记录与路径。"""
         self._import_record = record
         self._current_text_path = str(text_path or "")
         title = str((record or {}).get("title") or "")
         self.book_chip.set_book(title or None)
 
     def _on_current_book_changed(self, text_path: str):
-        """书架里换了当前书：只把窗口侧的当前书记录与顶栏书名换掉。
+        """书架里换了当前书（M4-EX.3b）：四页数据即时跟着换。
 
-        各页展示的数据不动（按书联动是 3b）——所以这里**不**重新推给导出页 /
-        历史页，避免出现「其余页面看起来也换了书」的假象。
+        换书不只换顶栏——一键校正的运行上下文、历史页的记录、检查页的
+        问题列表、导出页的最近产物全部按新书重挂载；新书没有记录时各页
+        走自己的空状态，**不会**把上一本书的数据留在页面上。
         """
         record = self._read_import_record(text_path) if text_path else None
         self._apply_current_book(record, text_path)
+        self._reload_book_pages()
 
     def _on_book_ready(self, text_path: str):
         """导入完成的接力：这本书即成为当前书，并把运行上下文交给一键校正页。
@@ -734,12 +734,7 @@ class MainWindow(QMainWindow):
         # 书架重排：这一行现在应显示「当前」，其它行回到「设为当前」
         if self.import_module is not None:
             self.import_module.refresh_shelf()
-        self._sync_export(None)
-        self._refresh_export_ctx(None)
-        ctx = self.build_run_context(text_path)
-        if ctx is None:
-            return
-        self.oneclick_module.set_run_context(ctx)
+        self._reload_book_pages()
 
     @staticmethod
     def _read_import_record(text_path: str) -> dict | None:
@@ -781,12 +776,53 @@ class MainWindow(QMainWindow):
         self.check_module.set_report(report)
 
     def _load_history(self) -> None:
-        """历史页接上运行目录：启动即按磁盘扫一遍（重启后历史还在）。"""
+        """历史页接上**当前书**的运行目录（M4-EX.3b：runs 按书隔离）。"""
+        runs_root = self._book_runs_root()
         if self.history_module is None:
             return
-        self.history_module.set_runs_root(str(PKG_ROOT / "runs"))
-        self._refresh_export_ctx(None)
+        self.history_module.set_runs_root(
+            str(runs_root if runs_root is not None else PKG_ROOT / "runs"))
         self.history_module.refresh()
+
+    def _book_runs_root(self) -> Path | None:
+        """当前书专属的运行目录（runs/<书 id>）；没有当前书时为 None。"""
+        if not self._current_text_path:
+            return None
+        book_id = Path(self._current_text_path).resolve().parent.name
+        return (PKG_ROOT / "runs" / book_id) if book_id else None
+
+    def _latest_run_summary(self, runs_root: Path | None) -> dict | None:
+        """当前书最近一次校正的运行摘要（没有记录就是 None，不编数据）。"""
+        if runs_root is None or not runs_root.is_dir():
+            return None
+        import fixtext_history as histdata
+        import fixtext_export as fx
+
+        for rec in histdata.scan_runs(runs_root):
+            summary = fx.load_run_summary(rec["run_dir"])
+            if summary:
+                summary.setdefault("workdir", rec["run_dir"])
+                return summary
+        return None
+
+    def _reload_book_pages(self) -> None:
+        """当前书一变，四个数据页全部按这本书重挂载（M4-EX.3b 切换即时刷新）。
+
+        一键校正拿到新书的运行上下文（下次校正作用于新书）；历史页扫这本书
+        自己的运行目录；检查页与导出页挂这本书最近一次校正的结果。没有当前
+        书或这本书还没有记录时，各页走自己的空状态——切换后页面上不允许
+        留着另一本书的数据。
+        """
+        runs_root = self._book_runs_root()
+        latest = self._latest_run_summary(runs_root)
+        if self.oneclick_module is not None:
+            ctx = (self.build_run_context(self._current_text_path)
+                   if self._current_text_path else None)
+            self.oneclick_module.set_run_context(ctx)
+        self._load_history()
+        self._sync_check(latest)
+        self._sync_export(latest)
+        self._refresh_export_ctx(latest)
 
     def _refresh_export_ctx(self, run: dict | None) -> None:
         """把「重新导出 / 快照恢复 / 从时点继续」要用的上下文交给历史页。
@@ -888,7 +924,9 @@ class MainWindow(QMainWindow):
             rules_before=str(rules / "before.json"),
             rules_after=str(rules / "after.json"),
             engine_path=str(engine),
-            runs_root=str(PKG_ROOT / "runs"),
+            # M4-EX.3b：运行目录按书隔离（runs/<书 id>）——历史、快照、
+            # 「当前工作区」指针全部跟着 runs_root 走，一处注入即全书隔离。
+            runs_root=str(PKG_ROOT / "runs" / book_dir.name),
             title=title,
             author=str(meta.get("author") or ""),
             suffix=Path(original).suffix.lower(),
