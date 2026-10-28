@@ -31,7 +31,8 @@ from PySide6.QtWidgets import (
     QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy, QScrollArea,
 )
 
-from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO
+import fixtext_settings as app_settings
+from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
 from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal
 
 from fixtext_vocab import (
@@ -142,7 +143,8 @@ class VocabModule(QWidget):
         super().__init__(parent)
 
         # ---- 数据：唯一入口，界面自己不拼路径、不直接写文件 ----
-        self.store = VocabStore()
+        # 存储位置由设置页决定（未配置时 None = 包内默认树）
+        self.store = VocabStore(custom_path=app_settings.vocab_custom_file())
 
         # ---- 状态 ----
         self.tier = "all"          # all / custom / builtin
@@ -173,6 +175,7 @@ class VocabModule(QWidget):
         root.setSpacing(16)
 
         root.addWidget(self._header())
+        root.addWidget(hline())
         root.addWidget(self._banner())
         root.addWidget(self._layout_grid())
 
@@ -207,6 +210,25 @@ class VocabModule(QWidget):
         right.setSpacing(14)
         right.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+        # v3 布局对齐：浅色安全徽标 + 浅色图标按钮（页头控件变体）
+        safe = QLabel("  安全保护已开启")
+        safe.setObjectName("SafeBadge")
+        safe.setCursor(Qt.CursorShape.PointingHandCursor)
+        safe.setToolTip("词库的每一步改动都先留还原点，删错了、合并错了都能退回去")
+        safe.setStyleSheet(
+            f"color:{c('success')};background:{c('success.bg')};"
+            f"border:1px solid {c('success.border')};"
+            f"border-radius:{r('full')};padding:6px 12px;"
+            f"font-size:{fs('xs')};font-weight:700")
+        right.addWidget(safe)
+
+        self.hist_btn = self._head_icon_btn("🕑", "历史与快照",
+                                            lambda: self._snap_card.setVisible(
+                                                not self._snap_card.isVisible()))
+        right.addWidget(self.hist_btn)
+        self.undo_btn = self._head_icon_btn("↩", "撤销上一步（Ctrl+Z）", self._undo)
+        right.addWidget(self.undo_btn)
+
         self.basis_cb = QCheckBox("显示设计依据")
         self.basis_cb.setCursor(Qt.CursorShape.PointingHandCursor)
         self.basis_cb.toggled.connect(self._toggle_basis)
@@ -229,16 +251,27 @@ class VocabModule(QWidget):
             sl.addWidget(b)
         right.addWidget(seg)
 
-        self._snap_toggle = QPushButton("🕑 快照")
-        self._snap_toggle.setObjectName("BtnOutline")
-        self._snap_toggle.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._snap_toggle.clicked.connect(
-            lambda: self._snap_card.setVisible(not self._snap_card.isVisible()))
-        right.addWidget(self._snap_toggle)
-
         hl.addLayout(right)
         self._set_tier_active("all")
         return w
+
+    def _head_icon_btn(self, glyph: str, tip: str, slot) -> QPushButton:
+        """页头浅色图标按钮（v3 词库页头控件变体：neutral 底、hover 转 primary）。"""
+        b = QPushButton(glyph)
+        b.setObjectName("HeadIconBtn")
+        b.setFixedSize(34, 34)
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.setToolTip(tip)
+        b.setAccessibleName(tip)
+        b.setStyleSheet(
+            f"QPushButton#HeadIconBtn{{background:{c('neutral.100')};"
+            f"color:{c('neutral.700')};border:1px solid {c('neutral.200')};"
+            f"border-radius:{r('md')};font-size:{ICON_GLYPH_SIZE}}}"
+            f"QPushButton#HeadIconBtn:hover{{background:{c('primary.50')};"
+            f"color:{c('primary.700')};border-color:{c('primary.200')}}}"
+            f"QPushButton#HeadIconBtn:pressed{{background:{c('primary.100')}}}")
+        b.clicked.connect(slot)
+        return b
 
     def _set_tier_active(self, t: str):
         for key, b in self._tier_btns.items():
@@ -870,6 +903,14 @@ class VocabModule(QWidget):
                 self._selected.discard(e["id"])
         self._render_entries()
         self._update_sel_state()
+
+    def reload_store(self):
+        """设置里改了自定义词库存储位置后：按新位置重建数据入口并整页重渲染。"""
+        self.store = VocabStore(custom_path=app_settings.vocab_custom_file())
+        self._selected.clear()
+        self._merge_sel = None
+        self._page = 0
+        self._render_all()
 
     def set_tier(self, t: str):
         self.tier = t

@@ -26,6 +26,19 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
 @pytest.fixture(scope="session", autouse=True)
+def _isolated_settings(tmp_path_factory):
+    """M4-EX.2a：设置文件指到会话临时目录。
+
+    设置页（词库位置 / 日志目录 / 引擎 / 开关）全部落在 settings.ini，
+    测试必须与包内真实配置隔离，否则上一次人工验收留下的值会串进用例。
+    """
+    target = tmp_path_factory.mktemp("settings") / "settings.ini"
+    os.environ["FIXTEXT_SETTINGS_FILE"] = str(target)
+    yield
+    os.environ.pop("FIXTEXT_SETTINGS_FILE", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
 def qapp():
     """合并包内 Qt 一定可用：整轮测试共用一个离屏 QApplication。
 

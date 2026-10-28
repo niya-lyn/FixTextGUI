@@ -47,15 +47,18 @@ from PySide6.QtWidgets import (
 
 from fixtext_tokens import (
     APP_TITLE, APP_NAME, ENTRIES, ENTRY_BY_KEY, HOME_KEY, RAIL_WIDTH,
-    READY_KEYS, STATUS_TEXT, WINDOW_H, WINDOW_MIN_H, WINDOW_MIN_W, WINDOW_W,
+    READY_KEYS, SETTINGS_KEY, STATUS_TEXT, WINDOW_H, WINDOW_MIN_H,
+    WINDOW_MIN_W, WINDOW_W, CONTENT_MAX_W,
     c, sp, r, fs, px, FONT_WEIGHT,
 )
+import fixtext_settings as app_settings
 from fixtext_settings import AppSettings as QSettings   # M4-T4.4：设置落用户区
-from fixtext_widgets import Card, Modal, Pill, Switch, hline
+from fixtext_widgets import Card, Modal, Pill, Switch, cascade_in, hline
 from first_run_wizard import FirstRunWizard
 from check_module import CheckModule
 from export_module import ExportModule
 from history_module import HistoryModule
+from settings_module import SettingsModule
 from vocab_module import VocabModule
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -367,144 +370,9 @@ def _dialog(parent, title: str, lines: list[str]):
     box.exec()
 
 
-# ---------------------------------------------------------------------------
-# 设置对话框（含「打开诊断日志目录」——T2.4 的 open_log_dir）
-# ---------------------------------------------------------------------------
-
-class SettingsDialog(QDialog):
-    """设置面板（M2 阶段只做已落地的项：诊断日志目录）。
-
-    没有可选项时装样子不如不装：这里只放真实可用的动作，并用一句话说明
-    其余设置项为什么现在没有（由软件按默认方式处理，不影响正常使用）。
-    """
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("设置")
-        self.setObjectName("SettingsDialog")
-        self.setMinimumWidth(520)
-        self._toast = None
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(20, 20, 20, 20)
-        root.setSpacing(px(sp("3")))
-
-        title = QLabel("设置")
-        title.setStyleSheet(
-            f"color:{c('neutral.900')};font-size:{fs('lg')};"
-            f"font-weight:{FONT_WEIGHT['bold']}"
-        )
-        root.addWidget(title)
-
-        sub = QLabel(
-            "下面这些设置改了就生效。校正用的词库、进度提示这些由软件按默认方式处理，"
-            "不影响正常使用。"
-        )
-        sub.setWordWrap(True)
-        sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
-        root.addWidget(sub)
-
-        self.basis_sw = Switch(checked=False)
-        self.basis_sw.toggled.connect(self._on_basis)
-        bcard = Card("界面", "控制每个模块页是否显示设计依据标注")
-        brow = QHBoxLayout()
-        blab = QLabel("为所有模块显示设计依据")
-        blab.setStyleSheet(f"font-size:{fs('md')};color:{c('neutral.800')}")
-        brow.addWidget(blab, 1)
-        brow.addWidget(self.basis_sw)
-        bcard.body_l.addLayout(brow)
-        root.addWidget(bcard)
-
-        card = Card("诊断日志", "出问题时把这里的文件发给技术支持，能定位得更快")
-        self.log_hint = QLabel(self._log_hint_text())
-        self.log_hint.setWordWrap(True)
-        self.log_hint.setStyleSheet(
-            f"color:{c('neutral.700')};font-size:{fs('sm')}"
-        )
-        card.body_l.addWidget(self.log_hint)
-
-        row = QHBoxLayout()
-        row.setSpacing(10)
-        self.open_btn = QPushButton("打开诊断日志目录")
-        self.open_btn.setObjectName("BtnOutline")
-        self.open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.open_btn.clicked.connect(self.open_log_dir)
-        row.addWidget(self.open_btn)
-        row.addStretch(1)
-        card.body_l.addLayout(row)
-
-        self.feedback = QLabel("")
-        self.feedback.setWordWrap(True)
-        self.feedback.setVisible(False)
-        card.body_l.addWidget(self.feedback)
-        root.addWidget(card)
-
-        root.addStretch(1)
-
-        foot = QHBoxLayout()
-        foot.addStretch(1)
-        close_btn = QPushButton("关闭")
-        close_btn.setObjectName("BtnSecondary")
-        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        close_btn.clicked.connect(self.accept)
-        foot.addWidget(close_btn)
-        root.addLayout(foot)
-
-    def _on_basis(self, on: bool):
-        """把开关状态同步给主窗口，由它联动各模块页。"""
-        win = self.parent()
-        if win is not None and hasattr(win, "apply_basis"):
-            win.apply_basis(on)
-
-    # -- 日志目录状态 --------------------------------------------------
-    def _log_hint_text(self) -> str:
-        if error_center is None:
-            return "诊断日志功能没有装好，这一项暂时用不了；不影响正常使用。"
-        try:
-            where = error_center.log_dir()
-        except Exception:
-            return "诊断日志目录还没准备好，第一次出错的时候会自动建好。"
-        return f"诊断日志存在这台电脑的这个位置：{where}"
-
-    def open_log_dir(self):
-        """打开诊断日志目录（T2.4 qt_bridge.open_log_dir）。"""
-        self.feedback.setVisible(False)
-        if error_center is None:
-            self._say("诊断日志功能没有装好，这一项暂时用不了。", "warn")
-            return
-        try:
-            from fixtext_error_center.qt_bridge import open_log_dir
-        except Exception:
-            self._say("诊断日志功能没有装好，这一项暂时用不了。", "warn")
-            return
-        ok = False
-        try:
-            ok = bool(open_log_dir())
-        except Exception:
-            ok = False
-        if ok:
-            self._say("已经在文件管理器里打开诊断日志目录。", "ok")
-        else:
-            self._say(
-                "没能自动打开文件夹。你可以照着上面那行位置自己找过去。", "warn")
-
-    def _say(self, text: str, kind: str):
-        palette = {
-            "warn": ("warning.bg", "warning", "neutral.200"),
-            "ok": ("success.bg", "success", "success.bg"),
-        }
-        bg, fg, border = palette.get(kind, palette["warn"])
-        self.feedback.setText(text)
-        self.feedback.setStyleSheet(
-            f"background:{c(bg)};color:{c(fg)};border:1px solid {c(border)};"
-            f"border-radius:{r('md')};padding:8px 10px;font-size:{fs('sm')}"
-        )
-        self.feedback.setVisible(True)
-
-
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------
 # 主窗口
-# ---------------------------------------------------------------------------
+# --------------------------------------------------------------------
 
 class MainWindow(QMainWindow):
 
@@ -526,6 +394,8 @@ class MainWindow(QMainWindow):
         self.vocab_module = None
         self.history_module = None
         self.export_module = None
+        self.settings_module = None
+        self._content_inners: list = []
         #: 最近一次导入记录（导出页要拿它推导「这本书能不能还原成电子书」）
         self._import_record: dict | None = None
 
@@ -551,6 +421,10 @@ class MainWindow(QMainWindow):
 
         self._bind_shortcuts()
         self.go(HOME_KEY)
+
+        # M4-EX.2a：上次会话留下的「显示设计依据」状态，启动即恢复
+        if app_settings.show_basis():
+            self.apply_basis(True)
 
         # 首次使用向导（T2.8 并入）：首启自动弹出一次，之后不再自动弹
         QTimer.singleShot(0, self._maybe_first_run)
@@ -671,6 +545,14 @@ class MainWindow(QMainWindow):
             wrapped = self._wrap(page)
             self.pages[key] = wrapped
             self.stack.addWidget(wrapped)
+        # 设置页（M4-EX.2a）：不在左轨六入口里，由顶栏 ⚙ 进入的平级路由页
+        self.settings_module = SettingsModule()
+        self.settings_module.basis_changed.connect(self.apply_basis)
+        self.settings_module.vocab_dir_changed.connect(self.reload_vocab_store)
+        self.settings_module.engine_changed.connect(self._on_engine_changed)
+        self.pages[SETTINGS_KEY] = self._wrap(self.settings_module)
+        self.stack.addWidget(self.pages[SETTINGS_KEY])
+
         # 检查页「＋词库」走词库页同一个写入口（T3.1 五操作同一入口）：
         # 加入天然可撤销、天然查重，不另起一套写盘路径。
         if self.check_module is not None and self.vocab_module is not None:
@@ -710,6 +592,9 @@ class MainWindow(QMainWindow):
         il.addWidget(widget)
         il.addStretch(1)
         sa.setWidget(inner)
+        if not hasattr(self, "_content_inners"):
+            self._content_inners = []
+        self._content_inners.append((sa, inner))
         return sa
 
     # ------------------------------------------------------------------ 挂载
@@ -910,10 +795,7 @@ class MainWindow(QMainWindow):
         engine = (pipeline / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
                   / "replace_by_go-linux-amd64")
         rules = PKG_ROOT / "data" / "rules"
-        # M4-T4.2：不再要求 Go 引擎存在才建运行上下文——引擎被删 / 被杀软
-        # 隔离时，一键校正会走降级确认（Python 引擎不需要 Go 二进制）；
-        # 这里只挡词库缺失（两个引擎都绕不开词库）。
-        if not (rules / "before.json").exists():
+        if not engine.exists() or not (rules / "before.json").exists():
             return None
 
         title = str(meta.get("title") or Path(original).stem)
@@ -951,10 +833,22 @@ class MainWindow(QMainWindow):
         self.current_key = key
         for k, item in self.rail_items.items():
             item.set_active(k == key)
-        self.where.setText(
-            "首页概览" if key == HOME_KEY else
-            f"{ENTRY_BY_KEY[key]['icon']}  {ENTRY_BY_KEY[key]['label']}"
-        )
+        if key == HOME_KEY:
+            self.where.setText("首页概览")
+        elif key == SETTINGS_KEY:
+            self.where.setText("⚙  设置")
+        else:
+            self.where.setText(
+                f"{ENTRY_BY_KEY[key]['icon']}  {ENTRY_BY_KEY[key]['label']}"
+            )
+        # v3 质感层：切页时页内卡片级联淡入（等效原型 cardIn）
+        if key != getattr(self, "_cascade_last_key", None):
+            target = self.page(key)
+            if target is not None:
+                cards = [w for w in target.findChildren(Card)
+                         if w.isVisible() and w.graphicsEffect() is None]
+                cascade_in(cards)
+        self._cascade_last_key = key
         self.brand.setProperty("home", "true" if key == HOME_KEY else "false")
         self.brand.style().unpolish(self.brand)
         self.brand.style().polish(self.brand)
@@ -977,14 +871,15 @@ class MainWindow(QMainWindow):
             return self.history_module
         if key == "export" and self.export_module is not None:
             return self.export_module
+        if key == SETTINGS_KEY and self.settings_module is not None:
+            return self.settings_module
         return self._content_slot(key)
 
     # ------------------------------------------------------------------ 顶栏动作
 
     def _act_settings(self):
-        """设置：诊断日志目录 + 全局「显示设计依据」联动。"""
-        dlg = SettingsDialog(self)
-        dlg.exec()
+        """设置：跳到设置路由页（M4-EX.2a 起不再弹对话框）。"""
+        self.go(SETTINGS_KEY)
 
     def apply_basis(self, on: bool):
         """全局「显示设计依据」：联动所有已挂载模块页右上角的同款开关。"""
@@ -1084,6 +979,49 @@ class MainWindow(QMainWindow):
         sc = QShortcut(QKeySequence("Ctrl+H"), self)
         sc.setContext(ctx)
         sc.activated.connect(lambda: self.go(HOME_KEY))
+
+    # ------------------------------------------------------------------ 大屏收束
+
+    def resizeEvent(self, event):
+        """v3 质感层：窗口比内容收束宽（1280）更宽时，内容区居中收束。
+
+        原型用 CSS ``.main { max-width:1280px; margin:0 auto }``；Qt 侧在
+        每页滚动区的内容容器上动态加左右留白，宽度不够时回落正常留白（20px）。
+        """
+        super().resizeEvent(event)
+        # viewport 的宽度要等本轮布局走完才更新，延迟一拍再收束
+        QTimer.singleShot(0, self._apply_content_max_width)
+
+    def _apply_content_max_width(self):
+        base = px(sp("5"))                     # 常态内容留白 20px
+        for sa, inner in self._content_inners:
+            vw = sa.viewport().width()
+            if vw <= 0:
+                continue
+            m = max(base, (vw - CONTENT_MAX_W) // 2)
+            lay = inner.layout()
+            lay.setContentsMargins(m, base, m, base)
+
+    # ------------------------------------------------------------------ 词库重载
+
+    def reload_vocab_store(self):
+        """设置里改了自定义词库存储位置后：按新位置重建词库数据入口。
+
+        只换 UI 层的数据入口对象（VocabStore 以显式路径重建），
+        词库读写逻辑本身不动。检查页共享的词库引用一并更新。
+        """
+        if self.vocab_module is None:
+            return
+        try:
+            self.vocab_module.reload_store()
+        except Exception:                              # noqa: BLE001
+            pass
+        if self.check_module is not None:
+            self.check_module.set_vocab_store(self.vocab_module.store)
+
+    def _on_engine_changed(self, value: str):
+        """替换引擎切换（M4-EX.2a 只保存选择；执行逻辑在 M4-T4.2 接线）。"""
+        self._last_engine = value
 
     # ------------------------------------------------------------------ 收尾
 

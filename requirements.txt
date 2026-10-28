@@ -7,7 +7,3 @@ PySide6>=6.5
 
 # XML 解析（EPUB 解包/排版/还原，vendor 的 epubtext 引擎依赖它）
 lxml>=4.9
-
-# Python 替换引擎（M4-T4.2：--replace-engine python / Go 引擎不可用时的降级路径，
-# 全量 Aho-Corasick 匹配 + 贪心选路，与 Go 引擎逐字节等价）。实测版本 2.2.0。
-pyahocorasick>=2.1

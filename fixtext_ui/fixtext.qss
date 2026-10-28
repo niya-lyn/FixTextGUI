@@ -1,6 +1,7 @@
 /* ============================================================
    FixText V1 · 共享样式表（由 build_qss.py 自动生成，勿手改）
-   令牌来源：fixtext_tokens.py（与 薄地基 :root 逐字对应）
+   令牌来源：fixtext_tokens.py（色彩/字号等与 v3 原型 :root 逐字对应；
+   质感层派生常量亦集中于该文件）
    ============================================================ */
 
 QWidget {
@@ -17,8 +18,12 @@ QMainWindow {
 QLabel { background-color: transparent; }
 
 #TopBar {
-    background-color: #15191F;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #1C2230,
+        stop:0.55 #15191F,
+        stop:1 #10141B);
     border: none;
+    border-bottom: 1px solid rgba(255,255,255,.07);
     min-height: 53px;
     max-height: 53px;
 }
@@ -33,14 +38,16 @@ QLabel { background-color: transparent; }
 }
 #Brand:hover { color: #FFFFFF; }
 #TopAct {
-    color: #C2CAD6;
-    background: transparent;
+    color: #FFFFFF;
+    background: rgba(255,255,255,.14);
     border: none;
-    font-size: 16px;
-    padding: 4px 10px;
-    border-radius: 4px;
+    font-size: 15px;
+    padding: 0;
+    min-width: 34px; max-width: 34px; min-height: 34px; max-height: 34px;
+    border-radius: 8px;
 }
-#TopAct:hover { background-color: #333B48; color: #FFFFFF; }
+#TopAct:hover { background: rgba(255,255,255,.22); color: #FFFFFF; }
+#TopAct:pressed { background: #333B48; }
 
 #Rail {
     background-color: #FFFFFF;
@@ -182,6 +189,11 @@ QPushButton:disabled {
     border: 1px solid #F1C4BD;
 }
 #BtnDanger:hover { background-color: #FBEAE8; }
+#BtnSecondary:focus { border: 1px solid #4F59C0; }
+#BtnOutline:focus { border: 1px solid #4F59C0; }
+#BtnDanger:focus { border: 1px solid #4F59C0; }
+#BtnGhost:focus { border: 1px solid #C0C6EE; }
+#BtnPrimary:focus { background-color: #3F48A2; }
 
 QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox {
     background-color: #FFFFFF;
@@ -214,11 +226,13 @@ QCheckBox::indicator:checked { image: url(data:image/svg+xml;base64,PHN2ZyB4bWxu
 
 QTableWidget, QTreeWidget, QListWidget {
     background-color: #FFFFFF;
+    alternate-background-color: #F7F8FA;
     border: 1px solid #DDE2EA;
     border-radius: 8px;
     gridline-color: #EEF1F5;
     font-size: 13px;
 }
+QTableWidget::item:hover, QListWidget::item:hover { background-color: #EEF0FB; }
 QHeaderView::section {
     background-color: #F7F8FA;
     color: #4A5363;
@@ -228,6 +242,12 @@ QHeaderView::section {
     font-weight: 600;
 }
 QTableWidget::item:selected, QListWidget::item:selected { background-color: #EEF0FB; color: #2B3169; }
+
+QFrame#PathRow {
+    background-color: #F7F8FA;
+    border: 1px dashed #DDE2EA;
+    border-radius: 8px;
+}
 
 #Badge {
     color: #333B83;

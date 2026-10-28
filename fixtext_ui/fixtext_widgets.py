@@ -21,12 +21,17 @@ FixText V1 · 复用部件库（Qt）
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QSize, Signal, QTimer
+from PySide6.QtCore import (
+    QAbstractAnimation, QEasingCurve, QPropertyAnimation, Qt, QSize, Signal,
+    QTimer,
+)
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtWidgets import (
     QFrame, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QAbstractButton, QSizePolicy, QDialog, QProgressBar, QPushButton,
 )
+from PySide6.QtWidgets import QGraphicsOpacityEffect
+from PySide6.QtWidgets import QGraphicsDropShadowEffect
 
 from fixtext_tokens import c, sp, r, fs, FONT_WEIGHT, FONT_MONO
 
@@ -333,6 +338,84 @@ class RadioCard(QFrame):
     def mousePressEvent(self, event):
         self.chosen.emit(self.value)
         super().mousePressEvent(event)
+
+
+class EmptyState(QFrame):
+    """统一空状态（原型 v3 更新记录 §4 口径）。
+
+    结构对齐原型 ``.empty-state``：图标（es-ico，54px 圆角底 + sh-sm 阴影）/
+    标题（es-t，fs-md 加粗）/ 描述（es-d，fs-xs 灰字，最宽 440px 自动换行）/
+    双按钮居中（es-acts，主按钮 BtnPrimary + 次按钮 BtnGhost）。
+    没有收起按钮（§4 明确去掉）。按钮点击经 primaryClicked /
+    secondaryClicked 交给外层接线（去导入页 / 打开新手向导），
+    控件本身不持有业务逻辑。
+    """
+
+    primaryClicked = Signal()
+    secondaryClicked = Signal()
+
+    def __init__(self, icon: str, title: str, desc: str, *,
+                 primary: str | None = "📥 去导入第一本书",
+                 secondary: str | None = "🧭 打开新手向导",
+                 parent=None):
+        super().__init__(parent)
+        self.setObjectName("EmptyState")
+        # 原型：background neutral-50 / 1px dashed neutral-300 / 圆角 r-lg
+        self.setStyleSheet(
+            f"QFrame#EmptyState{{background:{c('neutral.50')};"
+            f"border:1px dashed {c('neutral.300')};"
+            f"border-radius:{r('lg')}}}")
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(24, 36, 24, 36)
+        root.setSpacing(10)
+
+        ico = QLabel(icon)
+        ico.setFixedSize(54, 54)
+        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # 原型 es-ico：primary-100 底 + primary-700 字色 + 14px 圆角
+        ico.setStyleSheet(
+            f"background:{c('primary.100')};color:{c('primary.700')};"
+            f"border-radius:14px;font-size:26px")
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(3)
+        shadow.setOffset(1, 1)
+        shadow.setColor(QColor(21, 25, 31, 15))  # sh-sm 的 rgba(21,25,31,.06)
+        ico.setGraphicsEffect(shadow)
+        root.addWidget(ico, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        t = QLabel(title)
+        t.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        t.setStyleSheet(
+            f"color:{c('neutral.800')};font-size:{fs('md')};"
+            f"font-weight:{FONT_WEIGHT['bold']}")
+        root.addWidget(t, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        d = QLabel(desc)
+        d.setWordWrap(True)
+        d.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        d.setMaximumWidth(440)
+        d.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        root.addWidget(d, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        if primary or secondary:
+            acts = QWidget()
+            al = QHBoxLayout(acts)
+            al.setContentsMargins(0, 4, 0, 0)  # 原型 es-acts 的 margin-top:4px
+            al.setSpacing(10)
+            if primary:
+                b1 = QPushButton(primary)
+                b1.setObjectName("BtnPrimary")
+                b1.setCursor(Qt.CursorShape.PointingHandCursor)
+                b1.clicked.connect(lambda _=False: self.primaryClicked.emit())
+                al.addWidget(b1)
+            if secondary:
+                b2 = QPushButton(secondary)
+                b2.setObjectName("BtnGhost")
+                b2.setCursor(Qt.CursorShape.PointingHandCursor)
+                b2.clicked.connect(lambda _=False: self.secondaryClicked.emit())
+                al.addWidget(b2)
+            root.addWidget(acts, 0, Qt.AlignmentFlag.AlignHCenter)
 
 
 class ProgressDialog(QDialog):
@@ -803,3 +886,37 @@ class Modal(QDialog):
             btn.clicked.connect(self.accept)
         self.fl.addWidget(btn)
         return btn
+
+
+# ---------------------------------------------------------------------------
+# 卡片级联入场（v3 质感层 cardIn 的 Qt 等效）
+# ---------------------------------------------------------------------------
+
+def cascade_in(widgets, *, step_ms: int = 55, dur_ms: int = 420) -> None:
+    """一组部件错落淡入：第 i 张延迟 i*step_ms，dur_ms 内淡入到不透明。
+
+    原型用 CSS animation cardIn .42s backwards + 每张 55ms 延迟；Qt 侧用
+    QGraphicsOpacityEffect + QPropertyAnimation 等效表达。动画结束后摘掉
+    effect，避免常驻图形效果影响后续渲染。
+    """
+    for i, w in enumerate(widgets):
+        if w is None or not w.isVisible():
+            continue
+        eff = QGraphicsOpacityEffect(w)
+        eff.setOpacity(0.0)
+        w.setGraphicsEffect(eff)
+        anim = QPropertyAnimation(eff, b"opacity", w)
+        anim.setDuration(dur_ms)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        def _done(target=w):
+            target.setGraphicsEffect(None)
+
+        anim.finished.connect(_done)
+        QTimer.singleShot(i * step_ms, anim.start)
+        # 引用挂到部件上，防止局部变量回收导致动画中途失效
+        if not hasattr(w, "_cascade_anims"):
+            w._cascade_anims = []
+        w._cascade_anims.append(anim)
