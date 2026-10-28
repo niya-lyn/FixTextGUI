@@ -74,11 +74,16 @@ def _atomic_write(path: Path, raw: bytes) -> None:
             fh.flush()
             os.fsync(fh.fileno())
         os.replace(tmp, path)
-        dir_fd = os.open(str(path.parent), os.O_RDONLY)
-        try:
-            os.fsync(dir_fd)
-        finally:
-            os.close(dir_fd)
+        # 【M3-EX.1c】目录 fsync 只在类 Unix 上做。Windows 不允许把目录当文件
+        # 打开（os.open(目录) 抛 PermissionError），而这条语句在 finally 之外，
+        # 会连带把已经成功的写入报成失败——新增/合并/删除/恢复默认/撤销全废。
+        # 数据本身在 os.replace 时已落盘，跳过目录 fsync 不影响可靠性。
+        if os.name != "nt":
+            dir_fd = os.open(str(path.parent), os.O_RDONLY)
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
     finally:
         if tmp.exists():
             try:
