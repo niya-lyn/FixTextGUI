@@ -736,6 +736,7 @@ def export_book(source: ExportSource,
         body = clean_text(text_raw, source.ledger_path)
         main.write_text(body, encoding="utf-8", newline="\n")
         outcome.main_file = str(main)
+        outcome.sha256 = _sha256_file(main)
         outcome.notes.append("正文已去掉内部标记，可以直接用文本阅读器打开。")
     else:
         main = out / f"{safe}.epub"
