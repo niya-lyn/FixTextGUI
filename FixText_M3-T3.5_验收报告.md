@@ -393,15 +393,20 @@ evidence/ + screenshots/ 文件总数: 39
 
 ### 8.3 修正后的实跑输出（本次，最终代码上）
 
+命令：`QT_QPA_PLATFORM=offscreen PYTHONPATH=<PySide6 site-packages>:.
+/usr/local/bin/python3.12 tools/accept_t34.py`，实得 `exit=0`，证据落盘
+`evidence/accept_t34.json`（mtime 2026-10-28 08:41:48）。
+
 ```
-[S0] 导入 1.25s → 校正 19.95s：788 章 / 5100 命中 / sha=717fdfcee76f
+[S0] 导入 1.14s → 校正 19.81s：788 章 / 5100 命中 / sha=717fdfcee76f
 [S1] 阶段点：5/5 可用 → [('导入合并完成', True), ('排版完成', True), ('替换完成', True), ('引号检查完成', True), ('还原完成', True)]
-[S2] 恢复「替换完成」：工作正文 sha=7e31c7361687bee5…，阶段产物 sha=7e31c7361687bee5…，一致=True，逐项比对 7/7 相等
+[S2] 恢复「替换完成」：工作正文 sha=b1e74d8fa14c5b91…，阶段产物 sha=b1e74d8fa14c5b91…，一致=True，逐项比对 7/7 相等
 [S3] 从恢复点导出 炮火弧线.epub：sha=717fdfcee76fe3ee…，与基线一致=True，命中 5100
-[S4] 续跑 9.64s（退出码 0）：跳过 ['merge', 'layout', 'replace']；其余 [('quote', 1.168), ('bookmap', 0.932), ('restore', 2.877)]；成品 sha=717fdfcee76f 与基线一致=True；撤销栈 1 项
-[S5] 撤销「继续」→ 回到恢复点：撤销前指针=restore（work-20261028_082916），撤销后指针=replace（snap-run-1793147328528-replace-20261028-082908），应回到=replace，一致=True
-[S5] 撤销「恢复」→ 回到恢复前：撤销前指针=replace，撤销后指针=None，应为未指定=True，判据=撤销前是「未指定」→ 撤销后应为「未指定」，通过=True，提示=「当前工作区：未指定（保持「导入后」状态）」
-[S6] 重启后：历史 1 条，阶段点 5/5 可用，当前工作区=replace，提示=「当前工作区：《炮火弧线》 · 替换完成（2026-10-28 08:29 恢复）」
+[S4] 续跑 9.57s（退出码 0）：跳过 ['merge', 'layout', 'replace']；其余 [('quote', 1.151), ('bookmap', 0.891), ('restore', 2.936)]；成品 sha=717fdfcee76f 与基线一致=True；撤销栈 2 项
+[S5] 撤销「继续」→ 回到恢复点：撤销前指针=restore（work-20261028_084133），撤销后指针=replace（snap-run-1793148066305-replace-20261028-084126），应回到=replace，判据=撤销后指针 = 被撤销操作之前的现场（目录 + 时点一致），指针确有变化=True，通过=True
+[S5] 撤销「恢复」→ 回到恢复前：撤销前指针=replace（snap-run-1793148066305-replace-20261028-084126），撤销后指针=None（），应回到=None，判据=撤销前是「未指定」→ 撤销后应为「未指定」，指针确有变化=True，通过=True
+[S5] 撤到底：栈深(撤销前)=2 → 现=0，当前工作区=None，回到恢复前(未指定)=True，提示=「当前工作区：未指定（保持「导入后」状态）」
+[S6] 重启后：历史 1 条，阶段点 5/5 可用，当前工作区=replace，提示=「当前工作区：《炮火弧线》 · 替换完成（2026-10-28 08:41 恢复）」
 [S7] 恢复确认弹窗：《炮火弧线》（2026-10-27 23:34）在这次处理里留下了 5 个可恢复的时点。…；写明影响范围+可撤销=True，确认按钮=True
 [S8] 界面：行内「恢复」入口=True，重新导出=True，当前工作区提示=True，导出/续跑按钮可用=True
 [S9b] 历史页「降级」口径复扫：36 条文本，命中 0
@@ -410,14 +415,39 @@ evidence/ + screenshots/ 文件总数: 39
 验收通过 → evidence/accept_t34.json
 ```
 
-真实退出码 **exit=0**。`evidence/accept_t34.json` 中 `passed=true`，`s5_undo` 顶层
-`before`/`after` 是**真实值**（`before_point=replace`、`after_point=replace`，
+`evidence/accept_t34.json` 中 `passed=true`，`s5_undo` 顶层 `before`/`after` 是**真实值**
+（不是两个 null）：`before_point=replace`、`after_point=replace`，
 `before_snapshot_dir == after_snapshot_dir` 即
-`…/snap-run-1793147328528-replace-20261028-082908`），不是两个 null；
-两步撤销明细分别在 `step1_undo_continue` / `step2_undo_restore` 里各存一份完整前后状态。
-同一脚本连跑两次（08:24 / 08:29）均 exit 0，结论可复现。
+`…/_snapshots/snap-run-1793148066305-replace-20261028-084126`，
+`point_matches_before=True`、`dir_matches_before=True`、
+`undo_stack_depth_before=2 → undo_stack_depth_after=0`、
+`back_to_state_before_restore=True`。两步撤销明细分别在
+`step1_undo_continue` / `step2_undo_restore` 里各存一份完整前后状态。
+
+复现性另经三处独立实跑确认：本目录两次（08:35 / 08:41）与**干净解包目录**
+（`/tmp/v2check2`，从 v2 包解出）一次，均 `exit=0`。
+干净解包那次尤其重要——它暴露了本脚本的一条异步等待竞态（详见 §8.4），修正后才稳定。
 
 `tests/test_t34_snapshot.py` 单独复跑：**10 passed / 38.85s**（原取消语义用例仍绿）。
+
+### 8.4 同卡内另修的两处脚本缺陷（只动 `tools/accept_t34.py`）
+
+改写断言后第一次实跑仍 `exit=1`，定位到两处验收脚本自身的取数缺陷（都不是产品行为）：
+
+**① S4 绕过真实界面路径。** 原脚本直接 `cont = hist._do_continue(cur["snapshot_dir"], ctx)`，
+只负责"干活"。而撤销记录是在 `_poll_continue`（后台线程结束后的 QTimer 回调）里才
+`append` 进 `_undo_stack` 的，绕过它栈里根本没有可撤销的「继续」这一步，S5 第二跳
+自然失败（实测：`撤销前指针=replace，撤销后指针=replace，应为未指定=False`）。
+改为走真实路径 `hist._run_continue(cur, ctx)`，并用 wrapper 捕获返回值。
+
+**② 等待判据存在竞态。** 只等 `_capt["out"]` 存在是不够的——wrapper 里一赋值就有了，
+而撤销栈的 `append` 发生在之后的 QTimer 回调里。该竞态在本目录靠时序侥幸通过，
+在干净解包目录（`/tmp/v2check2`）稳定复现失败：撤销栈只到 1 项，第一跳撤销就吃掉了
+S2 的「恢复」记录，第二跳栈空。判据补上 `len(hist._undo_stack) > _depth0`（`_depth0`
+为 S4 前栈深）后稳定。**这也是为什么本次必须从干净解包目录再验一遍——同一个脚本在
+两个目录里跑出不同结论，只能是脚本自身不确定。**
+
+两处都是"验的路径/时序不对"，不是产品行为不对；`fixtext_ui/` 与 `pipeline/` 一行未动。
 
 ---
 
