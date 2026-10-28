@@ -5,14 +5,14 @@ FixText V1 · 自定义词库 → 替换规则桥接（M3-T3.7）
 M3 独立质检 B 册的 P0：用户在「我的词库」里新增 / 合并 / 删除自定义词之后，
 下一次校正是**不生效**的——因为替换阶段只读随包发布的
 ``data/rules/before.json`` + ``after.json``，而自定义词存在
-``workspace/vocab/custom_vocab.json``，两者之间没有任何桥接。
+``<包根>/workspace/vocab/custom_vocab.json``，两者之间没有任何桥接。
 
 本模块补上这道桥，规则是硬的：
 
 * **随包发布的词库原件只读**：``data/rules/*.json`` 一个字节都不改写，
   这里只做"读"。
 * **派生物落 workspace**：每次运行前把「当前生效的通用词库 + 自定义词」
-  合成为一份派生规则，写在用户区（``workspace/vocab/derived_rules/``），
+  合成为一份派生规则，写在用户区（``<包根>/workspace/vocab/derived_rules/``），
   替换阶段读的就是这份派生文件。
 * **合成结果稳定可复现**：同一份输入永远得到同样的字节，于是引擎指纹里
   只要纳入派生文件与合成键的 sha，规则一改指纹必变，不会误判缓存命中。
@@ -317,7 +317,7 @@ def _read_meta(path: Path) -> dict:
 def default_custom_path() -> Path:
     """FixText 用户区里的自定义词库位置（与词库模块同一棵树，唯一一份）。
 
-    用户区不在 pipeline 包内，而在界面产品的 ``workspace/vocab/`` 下；
+    用户区不在 pipeline 包内，而在包根的 ``workspace/vocab/`` 下；
     这里按包根推算，避免出现"第二份自定义词库"。
     """
     return _ui_workspace() / "vocab" / "custom_vocab.json"
@@ -329,7 +329,10 @@ def default_derived_dir() -> Path:
 
 
 def _ui_workspace() -> Path:
-    """用户区根目录。包内布局固定，见模块 docstring 的目录说明。"""
-    root = Path(__file__).resolve().parents[2]          # 产品包根
-    ui_ws = root / "fixtext_ui" / "workspace"
-    return ui_ws if ui_ws.is_dir() or not (root / "workspace").is_dir() else (root / "workspace")
+    """用户区根目录 = **包根** ``workspace/``（M4-T4.4 写路径收口）。
+
+    早期版本把用户区放在代码目录 ``fixtext_ui/workspace/``，与主入口
+    ``main_app.py`` 建在包根的 ``workspace/`` 分裂成两棵；现在统一到包根这一棵，
+    代码目录里不再出现用户数据。
+    """
+    return Path(__file__).resolve().parents[2] / "workspace"

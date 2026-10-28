@@ -1045,6 +1045,9 @@ def install_global_drop(window, module: ImportModule, goto_page=None) -> None:
 
 
 def default_workspace() -> Path:
-    """工作区位置：程序目录下 `workspace/`（绿色分发时可整体搬走）。"""
-    here = Path(__file__).resolve().parent
-    return here / "workspace"
+    """工作区位置：包根下 `workspace/`（M4-T4.4 统一用户区，绿色分发时可整体搬走）。
+
+    原实现返回 fixtext_ui/workspace，会让「书籍导入副本」和「我的词库」
+    落在两个不同的用户区目录里；统一到 <包根>/workspace。
+    """
+    return Path(__file__).resolve().parent.parent / "workspace"

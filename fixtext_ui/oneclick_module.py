@@ -596,6 +596,11 @@ class OneClickModule(QWidget):
             title=str(ctx.get("title") or ""),
             author=str(ctx.get("author") or ""),
             source_epub=Path(str(ctx.get("epub") or source_epub)),
+            # 用户区里的自定义词库 / 派生规则（显式给，不依赖下游推算）
+            custom_vocab_path=(Path(str(ctx["custom_vocab_path"]))
+                               if ctx.get("custom_vocab_path") else None),
+            derived_rules_dir=(Path(str(ctx["derived_rules_dir"]))
+                               if ctx.get("derived_rules_dir") else None),
         )
         worker = CorrectionWorker(job)
         self._worker = worker

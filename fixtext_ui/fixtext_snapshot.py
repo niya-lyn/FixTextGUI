@@ -28,7 +28,7 @@ T3.1 的撤销栈在内存里：程序一关，还原点全没，用户再也回
 
 目录
 ----
-默认 ``workspace/vocab/snapshots/``——与自定义词库（``custom_vocab.json``）同属
+默认 ``<包根>/workspace/vocab/snapshots/``——与自定义词库（``custom_vocab.json``）同属
 用户区、不同子目录；与内置词库（``data/rules/``）完全分离。界面只显示
 「历史与快照」，不出现任何路径。
 """

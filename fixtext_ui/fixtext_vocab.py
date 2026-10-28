@@ -11,9 +11,9 @@ FixText V1 · 词库真实数据层（M3-T3.1 / M3-T3.2）
   每条规则占同一下标，所属分级由 ``builtin_tiers.bin``（每条 1 字节：
   ``1`` 常规校正 / ``2`` 标点规范 / ``3`` 繁简转换）给出，出处与校验值见
   ``builtin_index_meta.json``。出厂文件**永不改写**；程序运行时读的是可写工作副本
-  ``workspace/vocab/rules/``（首次需要时才由出厂文件复制而来），
+  ``<包根>/workspace/vocab/rules/``（首次需要时才由出厂文件复制而来），
   「恢复默认词库」就是把工作副本逐字节还原为出厂内容。
-* **自定义词库（可写）**：独立的 ``workspace/vocab/custom_vocab.json``，与内置词库
+* **自定义词库（可写）**：独立的 ``<包根>/workspace/vocab/custom_vocab.json``，与内置词库
   既不在同一目录、也不是同一份文件；界面只显示友好名「我的词库」，不露路径。
 
 写入安全
@@ -51,8 +51,10 @@ BUILTIN_MARKS = "builtin_marks.json"
 BUILTIN_META = "builtin_index_meta.json"
 BUILTIN_FILES = (BUILTIN_BEFORE, BUILTIN_AFTER, BUILTIN_TIERS, BUILTIN_MARKS, BUILTIN_META)
 
-#: 用户区目录（与内置词库 ``data/rules/`` 完全不同的一棵子树）
-CUSTOM_DIR = HERE / "workspace" / "vocab"
+#: 用户区目录（与内置词库 ``data/rules/`` 完全不同的一棵子树）。
+#: M4-T4.4：用户区统一在**包根** ``workspace/`` 下，不再落在代码目录
+#: ``fixtext_ui/workspace/``——代码目录只放程序，用户数据跟着包根走。
+CUSTOM_DIR = PKG_ROOT / "workspace" / "vocab"
 CUSTOM_FILE = "custom_vocab.json"
 #: 内置词库的可写工作副本（只在「恢复默认」等需要改写时才用）
 WORK_RULES_DIR = "rules"
