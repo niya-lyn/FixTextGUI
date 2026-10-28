@@ -177,6 +177,8 @@ class CorrectionJob:
     def __init__(self, *, epub: Path, workdir: Path, rules_before: Path,
                  rules_after: Path, engine_path: Path, pipeline_root: Path,
                  title: str = "", author: str = "", source_epub: Path | None = None,
+                 custom_vocab_path: Path | None = None,
+                 derived_rules_dir: Path | None = None,
                  on_stage_started: Callable[[int], None] | None = None,
                  on_stage_finished: Callable[[int, float], None] | None = None):
         self.epub = Path(epub)
@@ -190,6 +192,10 @@ class CorrectionJob:
         self.rules_after = Path(rules_after)
         self.engine_path = Path(engine_path)
         self.pipeline_root = Path(pipeline_root)
+        #: 「我的词库」自定义词与派生规则落点（M3-T3.7）。None = 用产品里的默认位置；
+        #: 测试 / 便携场景可指到临时子树，绝不碰交付包自带的用户区。
+        self.custom_vocab_path = Path(custom_vocab_path) if custom_vocab_path else None
+        self.derived_rules_dir = Path(derived_rules_dir) if derived_rules_dir else None
         self._on_stage_started = on_stage_started
         self._on_stage_finished = on_stage_finished
 
@@ -296,6 +302,9 @@ class CorrectionJob:
             resume=False,   # 界面每次都是全新运行；断点续跑属引擎命令行的能力
             force=False,
             keep_going=False,
+            # 自定义词生效（M3-T3.7）：把「我的词库」交给替换阶段合成派生规则
+            custom_vocab_path=self.custom_vocab_path,
+            derived_rules_dir=self.derived_rules_dir,
         )
 
         # 准备目录（与编排器 _prepare 相同的布局）

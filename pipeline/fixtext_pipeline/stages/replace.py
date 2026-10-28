@@ -9,6 +9,17 @@ T0.3 的 ``fixtext.engine`` 集成层——
 
 替换趟数 ``count`` 默认 2，与上游 ``TextFixer`` 的 ``$replaceCount = 2`` 一致。
 
+自定义词生效（M3-T3.7）
+-----------------------
+**不直接读随包发布的词库原件**：运行前先用
+:mod:`fixtext_pipeline.vocab_bridge` 把「当前生效的通用词库 + 我的词库里的
+自定义词」合成为派生的 ``before.json`` / ``after.json``（落在用户区，
+出厂文件一个字节都不动），本阶段读的是这份派生文件。于是用户在词库里
+新增 / 合并 / 删除的词，下一次校正真正被引擎用上。
+
+派生文件的两份 sha **进入阶段指纹**：规则一变指纹就变，断点恢复不会因为
+「状态还是 done」而误判缓存命中、拿旧正文当新结果。
+
 替换完成后做一次 **边界完整性复检**：用账本严格切分替换后的 TXT，
 标记一旦被词条打坏，切分就会失败，阶段直接报错而不是把坏文本往下传。
 """
@@ -21,6 +32,7 @@ from typing import Any
 
 from ..config import dump_json
 from ..state import sha256_file
+from .. import vocab_bridge
 from .base import Stage, StageError
 
 
@@ -36,11 +48,52 @@ class ReplaceStage(Stage):
             self.cfg.stage_dir(self.name) / "replace_report.json",
         ]
 
+    # ---- 派生规则（M3-T3.7）----
+
+    def derived_rules(self) -> dict:
+        """生成（或复用）本次运行要用的派生规则，返回桥接摘要。
+
+        派生文件落在用户区 ``workspace/vocab/derived_rules/``，**不碰**
+        ``data/rules/*.json``。生成失败按失败处理：宁可这里报错，也不让
+        用户的自定义词在一次"看起来成功"的运行里被静默丢掉。
+        """
+        try:
+            return vocab_bridge.write_derived_rules(
+                self.cfg.rules_before,
+                self.cfg.rules_after,
+                self.cfg.custom_vocab_path,
+                self.cfg.derived_rules_dir,
+            )
+        except vocab_bridge.DerivedRulesError as exc:
+            raise StageError(f"替换规则无法就绪：{exc}") from exc
+
+    def active_rules_paths(self) -> tuple[Path | None, Path | None]:
+        """当前生效的规则文件：有派生文件就用派生文件，否则退回随包原件。
+
+        ``fingerprint()`` 不能抛异常（编排器把它当"是否跳过"的判据，抛了会
+        让整段流程失败），所以这里读不到派生摘要时退化为 None，指纹退回
+        用原件 sha —— 真的缺文件时 ``run()`` 会自己报错。
+        """
+        try:
+            meta = self.derived_rules()
+        except StageError:
+            return None, None
+        before = Path(str(meta.get("before_path") or ""))
+        after = Path(str(meta.get("after_path") or ""))
+        if before.is_file() and after.is_file():
+            return before, after
+        return None, None
+
     def fingerprint(self) -> str:
+        before, after = self.active_rules_paths()
+        # 规则一律按**实际生效的那一份**取 sha：自定义词一改，派生文件就变，
+        # 指纹随之变，断点恢复才不会拿旧正文当新结果。
+        rules_sha = sha256_file(before) if before else sha256_file(self.cfg.rules_before)
+        rules_after_sha = sha256_file(after) if after else sha256_file(self.cfg.rules_after)
         return self.fingerprint_of(
             f"input={sha256_file(self.cfg.layout_text())}",
-            f"rules={sha256_file(self.cfg.rules_before)}",
-            f"rules_after={sha256_file(self.cfg.rules_after)}",
+            f"rules={rules_sha}",
+            f"rules_after={rules_after_sha}",
             f"count={self.cfg.replace_count}",
             f"engine={sha256_file(self.cfg.engine_path) if self.cfg.engine_path.exists() else 'missing'}",
         )
@@ -60,7 +113,30 @@ class ReplaceStage(Stage):
             engine_path.chmod(engine_path.stat().st_mode | 0o111)
             self.log.log(f"[replace] 已补执行位：{engine_path}")
 
-        rules = RuleSet.from_files(self.cfg.rules_before, self.cfg.rules_after)
+        # 自定义词生效：运行前合成派生规则，本阶段只读派生文件
+        derived = self.derived_rules()
+        rule_before = Path(str(derived["before_path"]))
+        rule_after = Path(str(derived["after_path"]))
+        if not (rule_before.is_file() and rule_after.is_file()):
+            raise StageError("替换规则未就绪（派生规则文件缺失）")
+        self.log.log(
+            f"[replace] 派生规则：通用 {derived.get('base_rules')} 条 + "
+            f"自定义生效 {derived.get('custom_applied')} 条 "
+            f"= {derived.get('total_rules')} 条"
+            + (f"（复用上次结果）" if derived.get("reused") else "")
+        )
+        if derived.get("custom_error"):
+            self.log.log(f"[replace][WARN] {derived['custom_error']}")
+        if derived.get("skipped_empty") or derived.get("skipped_identity") \
+                or derived.get("skipped_duplicate"):
+            self.log.log(
+                "[replace][WARN] 有自定义词未参与替换："
+                f"空值 {len(derived.get('skipped_empty') or [])} / "
+                f"原词等于替换值 {len(derived.get('skipped_identity') or [])} / "
+                f"同原词重复 {len(derived.get('skipped_duplicate') or [])}"
+            )
+
+        rules = RuleSet.from_files(rule_before, rule_after)
         self.log.log(
             f"[replace] 规则载入完成：{len(rules)} 条（去重前 {rules.unique_before}），"
             f"替换趟数 {self.cfg.replace_count}"
@@ -113,6 +189,17 @@ class ReplaceStage(Stage):
             )
 
         report = {
+            # 派生规则摘要（M3-T3.7）：自定义词是否真的参与了这次替换
+            "derived_rules": {
+                k: derived.get(k) for k in (
+                    "compose_key", "base_rules", "custom_input", "custom_applied",
+                    "total_rules", "reused", "custom_error", "skipped_empty",
+                    "skipped_identity", "skipped_duplicate", "short_custom",
+                    "applied_words", "derived_before_sha256",
+                    "derived_after_sha256", "base_before_sha256",
+                    "base_after_sha256", "custom_sha256",
+                )
+            },
             "engine_path": str(engine_path),
             "engine_stdout": result.engine_stdout,
             "rules": result.rules,

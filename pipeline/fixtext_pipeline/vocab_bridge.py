@@ -1,0 +1,335 @@
+"""
+FixText V1 · 自定义词库 → 替换规则桥接（M3-T3.7）
+==================================================
+
+M3 独立质检 B 册的 P0：用户在「我的词库」里新增 / 合并 / 删除自定义词之后，
+下一次校正是**不生效**的——因为替换阶段只读随包发布的
+``data/rules/before.json`` + ``after.json``，而自定义词存在
+``workspace/vocab/custom_vocab.json``，两者之间没有任何桥接。
+
+本模块补上这道桥，规则是硬的：
+
+* **随包发布的词库原件只读**：``data/rules/*.json`` 一个字节都不改写，
+  这里只做"读"。
+* **派生物落 workspace**：每次运行前把「当前生效的通用词库 + 自定义词」
+  合成为一份派生规则，写在用户区（``workspace/vocab/derived_rules/``），
+  替换阶段读的就是这份派生文件。
+* **合成结果稳定可复现**：同一份输入永远得到同样的字节，于是引擎指纹里
+  只要纳入派生文件与合成键的 sha，规则一改指纹必变，不会误判缓存命中。
+
+合成语义（**自定义词优先**）
+----------------------------
+引擎按规则数组的先后顺序做前缀匹配（前一条命中就不再尝试后面的），所以数组
+顺序就是优先级。派生文件的排列是：
+
+1. **自定义词整体前置**，且自定义词之间**长词优先**（按原词长度降序、同长度按
+   词条号升序），于是用户明确加的长词不会被内置短词抢先吃掉；
+2. 其后原样接上通用词库，内置规则之间的相对顺序一个都不动。
+
+因此用户加「萧衍 → 萧彦」这类词，一定能在下一趟替换里命中；而内置词库
+304,255 条的既有行为（含替换命中数）在自定义词为空时**逐字节不变**——
+空自定义词时派生文件内容与出厂内容完全一致，这是可自证的。
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import tempfile
+import time
+from pathlib import Path
+from typing import Any, Iterable
+
+#: 派生规则文件名（与出厂同名，但落在用户区，不是同一棵树）
+DERIVED_BEFORE = "before.json"
+DERIVED_AFTER = "after.json"
+DERIVED_META = "derived_meta.json"
+
+#: workspace 下的派生目录名（放在「我的词库」旁边的子目录里）
+DERIVED_SUBDIR = "derived_rules"
+
+
+class DerivedRulesError(RuntimeError):
+    """派生规则无法生成（调用方应降级为「用随包词库」并如实标注）。"""
+
+
+# ---------------------------------------------------------------------------
+# 小工具
+# ---------------------------------------------------------------------------
+
+def sha256_bytes(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+def sha256_file(path: Path | str) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _read_bytes(path: Path) -> bytes | None:
+    try:
+        return path.read_bytes()
+    except (OSError, ValueError):
+        return None
+
+
+def _atomic_write(path: Path, raw: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix=".dfr-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(raw)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def _load_string_array(path: Path, label: str) -> list[str]:
+    raw = _read_bytes(path)
+    if raw is None:
+        raise DerivedRulesError(f"{label}不存在或读不到：{path.name}")
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise DerivedRulesError(f"{label}不是合法规则文件：{path.name}（{type(exc).__name__}）") from exc
+    if not isinstance(data, list) or any(not isinstance(x, str) for x in data):
+        raise DerivedRulesError(f"{label}的顶层不是字符串数组：{path.name}")
+    return data
+
+
+# ---------------------------------------------------------------------------
+# 读自定义词
+# ---------------------------------------------------------------------------
+
+def load_custom_entries(path: Path | str) -> tuple[list[dict], str]:
+    """读自定义词库；返回 (词条列表, 错误说明)。
+
+    读不到 / 解析不了时**不抛异常**：校正不该因为词库文件坏了就跑不起来，
+    调用方按"没有自定义词"继续，并把 ``error`` 如实写进运行摘要。
+    """
+    p = Path(path)
+    raw = _read_bytes(p)
+    if raw is None:
+        return [], ""
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        return [], f"自定义词库无法解析（{type(exc).__name__}），本次按空词库处理"
+    entries = data.get("entries") if isinstance(data, dict) else None
+    if not isinstance(entries, list):
+        return [], "自定义词库结构异常，本次按空词库处理"
+    return [e for e in entries if isinstance(e, dict)], ""
+
+
+# ---------------------------------------------------------------------------
+# 合成
+# ---------------------------------------------------------------------------
+
+def compose(before: Iterable[str], after: Iterable[str],
+            entries: Iterable[dict]) -> dict:
+    """把通用词库与自定义词合成为一份派生规则（纯计算，不落盘）。
+
+    返回 ``before`` / ``after`` 两个等长数组与一份统计，统计里的每个"跳过"
+    都带原因——不静默丢条。
+    """
+    base_before = list(before)
+    base_after = list(after)
+    if len(base_before) != len(base_after):
+        raise DerivedRulesError(
+            f"通用词库两侧条数不一致（{len(base_before)} vs {len(base_after)}）")
+    if not base_before:
+        raise DerivedRulesError("通用词库为空，无法生成替换规则")
+
+    picked: list[tuple[str, str, int]] = []
+    skipped_empty: list[dict] = []
+    skipped_identity: list[dict] = []
+    skipped_duplicate: list[dict] = []
+    seen: dict[str, dict] = {}
+
+    # 长词优先：同前缀时先给长词机会，避免被短自定义词整段吃掉
+    ordered = sorted(
+        (e for e in entries if isinstance(e, dict)),
+        key=lambda e: (-len(str(e.get("word") or "").strip()),
+                       int(e.get("id") or 0) if str(e.get("id") or "0").lstrip("-").isdigit() else 0),
+    )
+
+    for e in ordered:
+        word = str(e.get("word") or "").strip()
+        value = str(e.get("value") or "").strip()
+        rid = e.get("id")
+        if not word or not value:
+            skipped_empty.append(dict(word=word, value=value, id=rid,
+                                      reason="原词或替换值为空"))
+            continue
+        if word == value:
+            # 原词与替换值相同：这条规则什么都不会改，却会占住这个原词，
+            # 把通用词库里更长的同类规则挡在后面——必须跳过并说清楚。
+            skipped_identity.append(dict(word=word, value=value, id=rid,
+                                         reason="原词与替换值相同，不会产生任何修改"))
+            continue
+        if word in seen:
+            kept = seen[word]
+            skipped_duplicate.append(dict(
+                word=word, value=value, id=rid,
+                kept_value=kept["value"], kept_id=kept["id"],
+                reason=f"同一个原词只保留一条（已保留替换值为「{kept['value']}」的那条）"))
+            continue
+        seen[word] = dict(word=word, value=value, id=rid)
+        picked.append((word, value, rid if isinstance(rid, int) else 0))
+
+    new_before = [w for w, _v, _i in picked] + base_before
+    new_after = [v for _w, v, _i in picked] + base_after
+
+    short_words = [w for w, _v, _i in picked if len(w) <= 1]
+    return dict(
+        before=new_before,
+        after=new_after,
+        stats=dict(
+            base_rules=len(base_before),
+            custom_input=len([e for e in entries if isinstance(e, dict)]),
+            custom_applied=len(picked),
+            total_rules=len(new_before),
+            skipped_empty=skipped_empty,
+            skipped_identity=skipped_identity,
+            skipped_duplicate=skipped_duplicate,
+            short_custom=short_words,
+            applied_words=[dict(word=w, value=v, id=i) for w, v, i in picked],
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 落盘（带缓存：输入没变就不重写）
+# ---------------------------------------------------------------------------
+
+def compose_key(base_before_raw: bytes, base_after_raw: bytes,
+                custom_raw: bytes) -> str:
+    """合成键：三份输入的 sha 揉在一起，输入一变键就变。"""
+    h = hashlib.sha256()
+    for part in (base_before_raw, base_after_raw, custom_raw):
+        h.update(hashlib.sha256(part).digest())
+    return h.hexdigest()
+
+
+def write_derived_rules(base_before: Path | str, base_after: Path | str,
+                        custom_path: Path | str | None,
+                        out_dir: Path | str) -> dict:
+    """生成派生规则文件（落在 ``out_dir``），返回一份可直接进报告的摘要。
+
+    幂等：三份输入都没变时复用已有文件，不重写（派生目录不会被无意义的
+    写操作搅得时间戳乱跳）。返回的 ``before_path`` / ``after_path`` 就是
+    替换阶段应当使用的规则文件。
+    """
+    base_before = Path(base_before)
+    base_after = Path(base_after)
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+
+    before_raw = _read_bytes(base_before)
+    after_raw = _read_bytes(base_after)
+    if before_raw is None or after_raw is None:
+        raise DerivedRulesError("随包词库文件缺失，无法生成替换规则")
+
+    custom_raw = _read_bytes(Path(custom_path)) if custom_path else None
+    if custom_raw is None:
+        custom_raw = b""          # 没有自定义词库 = 空输入，不是错误
+
+    key = compose_key(before_raw, after_raw, custom_raw)
+    meta_path = out / DERIVED_META
+    d_before = out / DERIVED_BEFORE
+    d_after = out / DERIVED_AFTER
+
+    cached = _read_meta(meta_path)
+    reusable = (
+        cached.get("compose_key") == key
+        and d_before.is_file() and d_after.is_file()
+        and cached.get("derived_before_sha256") == sha256_file(d_before)
+        and cached.get("derived_after_sha256") == sha256_file(d_after)
+    )
+    if reusable:
+        out_meta = dict(cached)
+        out_meta.update(reused=True,
+                        before_path=str(d_before), after_path=str(d_after),
+                        meta_path=str(meta_path))
+        return out_meta
+
+    base_b = _load_string_array(base_before, "通用词库（替换前）")
+    base_a = _load_string_array(base_after, "通用词库（替换后）")
+    entries, custom_error = load_custom_entries(custom_path) if custom_path else ([], "")
+
+    composed = compose(base_b, base_a, entries)
+    new_before = composed["before"]
+    new_after = composed["after"]
+
+    raw_before = json.dumps(new_before, ensure_ascii=False).encode("utf-8")
+    raw_after = json.dumps(new_after, ensure_ascii=False).encode("utf-8")
+    _atomic_write(d_before, raw_before)
+    _atomic_write(d_after, raw_after)
+
+    meta = dict(
+        product="FixText",
+        kind="derived_rules",
+        version=1,
+        compose_key=key,
+        generated_at=time.strftime("%Y-%m-%dT%H:%M:%S"),
+        base_before=str(base_before),
+        base_after=str(base_after),
+        base_before_sha256=sha256_bytes(before_raw),
+        base_after_sha256=sha256_bytes(after_raw),
+        custom_source=str(custom_path) if custom_path else "",
+        custom_sha256=sha256_bytes(custom_raw) if custom_raw else "",
+        custom_error=custom_error,
+        derived_before=str(d_before),
+        derived_after=str(d_after),
+        derived_before_sha256=sha256_bytes(raw_before),
+        derived_after_sha256=sha256_bytes(raw_after),
+        reused=False,
+        before_path=str(d_before),
+        after_path=str(d_after),
+        meta_path=str(meta_path),
+        **composed["stats"],
+    )
+    _atomic_write(meta_path, json.dumps(meta, ensure_ascii=False, indent=2).encode("utf-8"))
+    return meta
+
+
+def _read_meta(path: Path) -> dict:
+    raw = _read_bytes(path)
+    if raw is None:
+        return {}
+    try:
+        data = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def default_custom_path() -> Path:
+    """FixText 用户区里的自定义词库位置（与词库模块同一棵树，唯一一份）。
+
+    用户区不在 pipeline 包内，而在界面产品的 ``workspace/vocab/`` 下；
+    这里按包根推算，避免出现"第二份自定义词库"。
+    """
+    return _ui_workspace() / "vocab" / "custom_vocab.json"
+
+
+def default_derived_dir() -> Path:
+    """派生规则的默认落点：workspace 下「我的词库」旁边的子目录。"""
+    return _ui_workspace() / "vocab" / DERIVED_SUBDIR
+
+
+def _ui_workspace() -> Path:
+    """用户区根目录。包内布局固定，见模块 docstring 的目录说明。"""
+    root = Path(__file__).resolve().parents[2]          # 产品包根
+    ui_ws = root / "fixtext_ui" / "workspace"
+    return ui_ws if ui_ws.is_dir() or not (root / "workspace").is_dir() else (root / "workspace")

@@ -128,6 +128,10 @@ class PipelineConfig:
     force: bool = False
     #: 失败时是否继续跑后面的阶段
     keep_going: bool = False
+    #: 「我的词库」自定义词文件（M3-T3.7）；None = 用产品用户区里的默认位置
+    custom_vocab_path: Path | None = None
+    #: 派生规则落点（M3-T3.7）；None = 用产品用户区里的默认位置
+    derived_rules_dir: Path | None = None
 
     def __post_init__(self) -> None:
         self.epub = Path(self.epub).expanduser().resolve()
@@ -135,6 +139,12 @@ class PipelineConfig:
         self.rules_before = Path(self.rules_before).expanduser().resolve()
         self.rules_after = Path(self.rules_after).expanduser().resolve()
         self.engine_path = Path(self.engine_path).expanduser().resolve()
+        # 用户区路径：显式给了就按给的（便携 / 测试），否则按产品默认位置
+        from . import vocab_bridge as _vb
+        self.custom_vocab_path = (Path(self.custom_vocab_path).expanduser().resolve()
+                                  if self.custom_vocab_path else _vb.default_custom_path())
+        self.derived_rules_dir = (Path(self.derived_rules_dir).expanduser().resolve()
+                                  if self.derived_rules_dir else _vb.default_derived_dir())
         if self.layout_profile not in LAYOUT_PROFILES:
             raise ValueError(
                 f"未知排版档案 {self.layout_profile!r}，可选：{sorted(LAYOUT_PROFILES)}"
@@ -203,6 +213,8 @@ class PipelineConfig:
             "rules_after": str(self.rules_after),
             "engine_path": str(self.engine_path),
             "replace_count": self.replace_count,
+            "custom_vocab_path": str(self.custom_vocab_path),
+            "derived_rules_dir": str(self.derived_rules_dir),
             "engine_timeout_s": self.engine_timeout_s,
             "layout_profile": self.layout_profile,
             "layout_overrides": self.layout_overrides,
@@ -222,6 +234,8 @@ class PipelineConfig:
             rules_after=Path(raw["rules_after"]),
             engine_path=Path(raw["engine_path"]),
             replace_count=int(raw.get("replace_count", 2)),
+            custom_vocab_path=Path(raw["custom_vocab_path"]) if raw.get("custom_vocab_path") else None,
+            derived_rules_dir=Path(raw["derived_rules_dir"]) if raw.get("derived_rules_dir") else None,
             engine_timeout_s=float(raw.get("engine_timeout_s", 1800.0)),
             layout_profile=str(raw.get("layout_profile", "html-safe")),
             layout_overrides=dict(raw.get("layout_overrides", {})),
