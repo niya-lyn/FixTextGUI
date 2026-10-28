@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 import fixtext_settings as app_settings
-from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO
+from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
 from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal
 
 from fixtext_vocab import (
@@ -266,7 +266,7 @@ class VocabModule(QWidget):
         b.setStyleSheet(
             f"QPushButton#HeadIconBtn{{background:{c('neutral.100')};"
             f"color:{c('neutral.700')};border:1px solid {c('neutral.200')};"
-            f"border-radius:{r('md')};font-size:15px}}"
+            f"border-radius:{r('md')};font-size:{ICON_GLYPH_SIZE}}}"
             f"QPushButton#HeadIconBtn:hover{{background:{c('primary.50')};"
             f"color:{c('primary.700')};border-color:{c('primary.200')}}}"
             f"QPushButton#HeadIconBtn:pressed{{background:{c('primary.100')}}}")
