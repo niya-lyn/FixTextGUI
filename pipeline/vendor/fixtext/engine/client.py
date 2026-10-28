@@ -1,8 +1,13 @@
 """Go 引擎子进程客户端：把 EngineRequest 落成一次真实进程调用。
 
-只读保护（承接排期 2.3）：引擎是**原地改写**语义（os.WriteFile 回写目标路径），
-所以本客户端永远先把内容复制到一次性临时工作区，引擎只许碰临时副本；
-唯一例外是显式 `OutputMode.IN_PLACE`——那是调用方明确要求覆盖原文件的行为。
+只读保护（承接排期 2.3，M4-T4.4 写路径审计）：
+引擎本身是**原地改写**语义（os.WriteFile 回写目标路径），所以本客户端永远先把
+内容复制到一次性临时工作区，引擎只许碰临时副本。
+
+`OutputMode.IN_PLACE` 会把结果写回**输入文件本身**——如果输入就是用户的书，
+那就等于直接改用户原文件。产品链路里没有任何地方用它（替换阶段走 FILE 模式，
+结果落在本次运行目录）。M4-T4.4 起它**默认被拒绝**，必须由调用方显式设
+``FIXTEXT_ALLOW_IN_PLACE=1`` 才放行，避免这条路径被无意重启用成越界写。
 
 错误归类顺序（与 errors.map_engine_stderr 对齐）：
     找不到引擎 → E1001
@@ -254,6 +259,18 @@ class GoEngineClient:
                     {"path": str(dst), "os_error": str(exc)},
                 ) from exc
         else:  # IN_PLACE
+            if os.environ.get("FIXTEXT_ALLOW_IN_PLACE") != "1":
+                # 越界写防线：默认不允许把结果写回输入文件（那可能是用户原书）
+                raise EngineError(
+                    EngineErrorCode.ARGUMENT_INVALID,
+                    "原地覆盖输入文件已被禁用（只读保护）",
+                    {
+                        "input_path": str(request.input_path),
+                        "output_mode": request.output_mode.value,
+                        "hint": "产品链路请用 OutputMode.FILE 把结果落到本次运行目录；"
+                                "确需原地覆盖时显式设 FIXTEXT_ALLOW_IN_PLACE=1",
+                    },
+                )
             dst = Path(request.input_path)  # type: ignore[arg-type]
             try:
                 tmp = dst.with_name(dst.name + ".fixtext-tmp")
