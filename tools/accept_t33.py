@@ -11,8 +11,15 @@
     S6  空状态：无词条时只给人话，不渲染空表格
 
 用法：
-    python3.12 tools/accept_t33.py            # 跑全部尚未完成的段
+    python3.12 tools/accept_t33.py            # 跑全部尚未完成的段（可续跑）
     python3.12 tools/accept_t33.py S3         # 只跑某一段
+    python3.12 tools/accept_t33.py --fresh    # 丢掉已有证据，七段全量重跑
+
+【M4-T4.4】去短路：以前「证据已存在且七段全满」时 wanted 为空，脚本 0 秒直接
+打印 ALL PASS 而**一条验证都没执行**。现在：
+* 不给段名 ⇒ 强制七段全跑（不再按 stages_done 做增量跳过）；
+* --fresh 额外先删证据文件、清空 cases / stages_done，从零跑一遍；
+* 断言只在本次真的执行过的段上聚合，且 `executed_this_run` 必须覆盖七段。
 前置：tools/_t33_prepare_run.py 已跑过一次真实六阶段（runs/t33_real）。
 """
 
@@ -474,20 +481,33 @@ STAGES = dict(S0=stage_s0, S1=stage_s1, S2=stage_s2,
 
 
 def main(argv: list[str]) -> int:
-    state = load_state()
+    fresh = "--fresh" in argv
+    argv = [a for a in argv if a != "--fresh"]
+    if fresh:
+        # 丢掉上一轮证据，从零开始（保证本轮 ALL PASS 不是读出来的旧结论）
+        if OUT.exists():
+            OUT.unlink()
+        state = dict(cases=[], stages_done=[], executed_since_fresh=[])
+        print("--- --fresh：已清除既有证据，七段全量重跑 ---", flush=True)
+    else:
+        state = load_state()
     facts = engine_facts()
     state["n_raw"] = facts["raw_total"]
     state["n_unique"] = facts["n_unique"]
     state["count_sum"] = facts["count_sum"]
     state["run_summary"] = facts["run_summary"]
-    wanted = [a for a in argv if a in STAGES] or [
-        k for k in STAGES if k not in state["stages_done"]]
+    # 去短路：不给段名就七段全跑（原实现在证据全满时 wanted 为空、
+    # 不执行任何验证就打印 ALL PASS）。
+    wanted = [a for a in argv if a in STAGES] or list(STAGES)
+    state.setdefault("executed_since_fresh", [])
     for key in wanted:
         print(f"--- {key} ---", flush=True)
         try:
             STAGES[key](state, facts)
             if key not in state["stages_done"]:
                 state["stages_done"].append(key)
+            if key not in state["executed_since_fresh"]:
+                state["executed_since_fresh"].append(key)
         except Exception:                                   # noqa: BLE001
             check(state, f"{key} 段执行异常", False,
                   traceback.format_exc().splitlines()[-1][:300])
@@ -496,10 +516,21 @@ def main(argv: list[str]) -> int:
               flush=True)
     save_state(state)
     bad = [c["case"] for c in state["cases"] if not c["ok"]]
+    ran_all = set(state.get("executed_since_fresh") or []) >= set(STAGES)
+    if not ran_all:
+        print(f"\n=== 未执行全部七段（自 --fresh 起实跑 "
+              f"{sorted(state.get('executed_since_fresh') or [])}），"
+              f"结论不予采信 ===", flush=True)
+        return 1
     print("\n=== " + ("ALL PASS" if not bad else "FAIL: " + "；".join(bad)) +
-          f" · {sum(1 for c in state['cases'] if c['ok'])}/{len(state['cases'])} ===",
+          f" · {sum(1 for c in state['cases'] if c['ok'])}/{len(state['cases'])}"
+          f" · 自 --fresh 起实跑 {len(state['executed_since_fresh'])}/7 段 ===",
           flush=True)
-    return 0 if not bad and state["all_pass"] else 1
+    return 0 if not bad and state["all_pass"] and ran_all else 1
+
+# 说明：executed_since_fresh 记在状态文件里、由 --fresh 清零 —— ALL PASS 只有在
+# 自上一次 --fresh 起七个段全部真实执行过才会打印；沙箱单次命令有时限，
+# 一个 fresh 会话允许跨多次进程调用续完（每段仍各执行一次，不重复不跳过）。
 
 
 if __name__ == "__main__":

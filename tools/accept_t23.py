@@ -239,6 +239,10 @@ def _stages_reached(events: list[dict]) -> dict:
 def main() -> int:
     EVID.mkdir(parents=True, exist_ok=True)
     RUNS_ROOT.mkdir(parents=True, exist_ok=True)
+    # 【M4-T4.4】幂等：先记下场景开始前 runs 目录里已有的目录名，之后只看
+    # 「本次新增的目录」——上一轮成功运行留下的同名工作区不算本轮残留，
+    # 于是本脚本连跑多次结果一致（以前用「允许名单」判残留，第二轮必假失败）。
+    pre_existing_dirs = {d.name for d in RUNS_ROOT.iterdir() if d.is_dir()}
     BASELINE_SHA = sha256_file(BASELINE_EPUB)
     original_sha_before = sha256_file(EPUB)
     all_texts: list[str] = []
@@ -298,9 +302,11 @@ def main() -> int:
     all_texts += [e["ui_step"] for e in b["events"]]
     all_texts += [e["ui_eta"] for e in b["events"]]
 
-    # 取消后：runs_root 里只允许保留「成功运行」的工作区，不允许有任何取消残留
-    allowed = {Path(a["workdir"]).name}
-    leftovers = [p.name for p in RUNS_ROOT.iterdir() if p.name not in allowed]
+    # 取消后：本轮新增的目录里只允许保留「成功运行」的工作区，不允许有取消残留。
+    # 判据是「场景前集合的差集」——既排除历史遗留，也排除本轮自己的成功运行。
+    allowed_b = {Path(a["workdir"]).name}
+    newcomers_b = {d.name for d in RUNS_ROOT.iterdir() if d.is_dir()} - pre_existing_dirs
+    leftovers = sorted(newcomers_b - allowed_b)
     assert not leftovers, f"取消后 runs 目录残留: {leftovers}"
 
     # ---- 场景 B2：取消后完整重跑（sha256 对照）----
@@ -322,8 +328,9 @@ def main() -> int:
     all_texts += c["dialog_texts"]
     all_texts += [e["ui_step"] for e in c["events"]]
     all_texts += [e["ui_eta"] for e in c["events"]]
-    leftovers_c = [p.name for p in RUNS_ROOT.iterdir()
-                   if p.name not in {Path(a["workdir"]).name, Path(b2["workdir"]).name}]
+    allowed_c = {Path(a["workdir"]).name, Path(b2["workdir"]).name}
+    newcomers_c = {d.name for d in RUNS_ROOT.iterdir() if d.is_dir()} - pre_existing_dirs
+    leftovers_c = sorted(newcomers_c - allowed_c)
     assert not leftovers_c, f"取消后 runs 目录残留: {leftovers_c}"
 
     # ---- 场景 C2：再复跑一次对照 ----
@@ -379,6 +386,12 @@ def main() -> int:
             "all_equal": sha_a == BASELINE_SHA == sha_b2 == sha_c2,
         },
         "original_epub_untouched": original_sha_before == original_sha_after,
+        "idempotency": {
+            "pre_existing_runs_dirs": sorted(pre_existing_dirs),
+            "new_runs_dirs_after_b": sorted(newcomers_b),
+            "new_runs_dirs_after_c": sorted(newcomers_c),
+            "judgement": "只对「场景前集合的差集」判残留，历史目录不参与",
+        },
         "original_epub_sha256": original_sha_after,
         "leak_scan": {
             "texts_scanned": len(all_texts),
