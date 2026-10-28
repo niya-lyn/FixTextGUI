@@ -74,7 +74,13 @@ def test_empty_history_gives_human_hint(tmp_path, qapp):
     mod.refresh()
     assert mod.row_count == 0
     texts = [l.text() for l in mod.findChildren(QLabel)]
-    assert any("还没有校正记录" in t for t in texts), "空状态要给人话引导"
+    # M4-EX.2b：空状态换成原型 v3 §4 统一形态（标题 + 引导文案 + 双按钮）
+    assert any("还没有校正历史" in t for t in texts), "空状态要给人话引导"
+    assert any("完成一次校正后" in t for t in texts), "空状态要说明怎么走出空状态"
+    # 空状态把任务表与快照面板收起，只留引导
+    assert not mod._task_w.isVisibleTo(mod), "无任务时任务表应收起"
+    assert not mod._snap_w.isVisibleTo(mod), "无任务时快照面板应收起"
+    assert mod.empty_state.isVisibleTo(mod), "无任务时显示统一空状态"
     # 旧演示数据里的书名一个都不能出现
     for fake in ("星河彼端", "旧巷杂记", "灯下漫笔"):
         assert not any(fake in t for t in texts), f"不得残留假数据：{fake}"

@@ -310,16 +310,24 @@ class HistoryModule(QWidget):
         self._table_body.addWidget(hline())
 
         if not self.tasks:
-            # 空状态（原型 v3 §4）：任务表与快照面板都收起，整页只留引导
-            self._task_w.setVisible(False)
-            self._snap_w.setVisible(False)
-            self.empty_state.setVisible(True)
+            # 空状态（原型 v3 §4）：任务表与快照面板都收起，整页只留引导。
+            # 构造期（_task_card 内部首渲染）时宿主还没赋值，用 getattr 兜过。
+            task_w = getattr(self, "_task_w", None)
+            snap_w = getattr(self, "_snap_w", None)
+            es = getattr(self, "empty_state", None)
+            if task_w is not None:
+                task_w.setVisible(False)
+            if snap_w is not None:
+                snap_w.setVisible(False)
+            if es is not None:
+                es.setVisible(True)
             if hasattr(self, "clear_btn"):
                 self.clear_btn.setEnabled(False)
             return
-        self._task_w.setVisible(True)
-        self._snap_w.setVisible(True)
-        self.empty_state.setVisible(False)
+        if getattr(self, "_task_w", None) is not None:
+            self._task_w.setVisible(True)
+            self._snap_w.setVisible(True)
+            self.empty_state.setVisible(False)
         if hasattr(self, "clear_btn"):
             self.clear_btn.setEnabled(True)
 
