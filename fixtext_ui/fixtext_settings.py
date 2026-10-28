@@ -43,3 +43,88 @@ class AppSettings(QSettings):
 
     def __init__(self, *args, **kwargs):        # noqa: D401 - 参数仅为调用形态兼容
         super().__init__(str(settings_path()), QSettings.Format.IniFormat)
+
+
+# ---------------------------------------------------------------------------
+# 设置页持久化键（M4-EX.2a）
+# ---------------------------------------------------------------------------
+# 值统一存字符串（IniFormat 下布尔也走 "1"/"0"，避免 true/false 方言问题）。
+
+KEY_ENGINE = "engine"            # 替换引擎：go | python（默认 go）
+KEY_VOCAB_DIR = "vocabDir"       # 自定义词库存储位置（空串 = 包内默认）
+KEY_LOG_DIR = "logDir"           # 诊断日志目录（空串 = 包内默认目录）
+KEY_DIAG_ENABLED = "diagEnabled" # 出错时自动保留现场（默认开）
+KEY_SHOW_BASIS = "showBasis"     # 显示设计依据（默认关）
+
+#: 与 M4-T4.2（引擎双轨）的对接契约：取值只有这两个，默认 go。
+ENGINE_CHOICES = ("go", "python")
+ENGINE_DEFAULT = "go"
+
+
+def _get(key: str, default: str = "") -> str:
+    s = AppSettings()
+    v = s.value(key, default)
+    return str(v) if v is not None else default
+
+
+def _set(key: str, value: str) -> None:
+    s = AppSettings()
+    s.setValue(key, str(value))
+    s.sync()
+
+
+def engine() -> str:
+    """替换引擎选择（go / python）。非契约取值一律回落 go。"""
+    v = _get(KEY_ENGINE, ENGINE_DEFAULT)
+    return v if v in ENGINE_CHOICES else ENGINE_DEFAULT
+
+
+def set_engine(v: str) -> None:
+    if v not in ENGINE_CHOICES:
+        return
+    _set(KEY_ENGINE, v)
+
+
+def vocab_dir() -> Path | None:
+    """自定义词库存储位置；未配置（空）返回 None = 包内默认。"""
+    v = _get(KEY_VOCAB_DIR).strip()
+    return Path(v) if v else None
+
+
+def set_vocab_dir(p: str | Path | None) -> None:
+    _set(KEY_VOCAB_DIR, str(p).strip() if p else "")
+
+
+def vocab_custom_file() -> Path | None:
+    """按当前设置算「我的词库」文件位置（设置空时 None = 走包内默认）。"""
+    d = vocab_dir()
+    if d is None:
+        return None
+    from fixtext_vocab import CUSTOM_FILE    # 延迟导入：文件名常量只此一份
+    return d / CUSTOM_FILE
+
+
+def log_dir() -> Path | None:
+    """诊断日志目录；未配置（空）返回 None，即用包内默认目录。"""
+    v = _get(KEY_LOG_DIR).strip()
+    return Path(v) if v else None
+
+
+def set_log_dir(p: str | Path | None) -> None:
+    _set(KEY_LOG_DIR, str(p).strip() if p else "")
+
+
+def diag_enabled() -> bool:
+    return _get(KEY_DIAG_ENABLED, "1") == "1"
+
+
+def set_diag_enabled(on: bool) -> None:
+    _set(KEY_DIAG_ENABLED, "1" if on else "0")
+
+
+def show_basis() -> bool:
+    return _get(KEY_SHOW_BASIS, "0") == "1"
+
+
+def set_show_basis(on: bool) -> None:
+    _set(KEY_SHOW_BASIS, "1" if on else "0")
