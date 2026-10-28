@@ -216,9 +216,19 @@ def main() -> int:
     ok = ok and ctx_ready and result.epub_mode == "direct"
 
     # ---- 2. 一键校正：排版阶段取消 → 脏状态检查 ----
-    before_runs = set(p.name for p in RUNS_ROOT.iterdir())
+    # M4-EX.3b 起 runs 根下是按书分的目录（runs/<书id>/run-*），书目录容器
+    # 本身保留是正确行为；要清理的是半成品 run-* 目录，因此按 run 级比较。
+    def _run_entries():
+        entries = set()
+        for book_dir in RUNS_ROOT.iterdir():
+            if book_dir.is_dir():
+                for run_dir in book_dir.iterdir():
+                    if run_dir.is_dir():
+                        entries.add(f"{book_dir.name}/{run_dir.name}")
+        return entries
+    before_runs = _run_entries()
     r1 = run_correction_with_click(win, cancel_at_stage=1)
-    leftover = [p.name for p in RUNS_ROOT.iterdir() if p.name not in before_runs]
+    leftover = sorted(_run_entries() - before_runs)
     cancel_clean = (r1["outcome"] == "cancelled" and not leftover)
     print(f"[2] 取消场景：outcome={r1['outcome']} {r1['total_s']}s，"
           f"runs 残留 = {leftover}，无脏状态 = {cancel_clean}")
