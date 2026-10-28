@@ -49,6 +49,70 @@ QLabel { background-color: transparent; }
 #TopAct:hover { background: rgba(255,255,255,.22); color: #FFFFFF; }
 #TopAct:pressed { background: #333B48; }
 
+#BookChip {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #FFFFFF,
+        stop:1 #F1F3F8);
+    border: 1px solid rgba(255,255,255,.20);
+    border-radius: 999px;
+    min-height: 34px; max-height: 34px;
+    max-width: 320px;
+}
+#BookChip:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+        stop:0 #FFFFFF,
+        stop:1 #F1F3F8);
+    border: 1px solid #9AA3E2;
+}
+#BookChip:focus { border: 1px solid #4F59C0; }
+#BookChip[empty="true"] {
+    border: 1px solid rgba(255,255,255,.22);
+    background: transparent;
+}
+#BookChip QLabel { background: transparent; }
+
+#ShelfRow {
+    background-color: #FFFFFF;
+    border: none;
+}
+#ShelfRow[separator="true"] {
+    border-top: 1px solid #EEF1F5;
+}
+#ShelfRow:hover {
+    background-color: #F7F8FA;
+}
+#ShelfRow[current="true"] {
+    background-color: #EEF0FB;
+    border-left: 3px solid #4F59C0;
+    padding-left: 9px;
+}
+#ShelfRow QLabel { background: transparent; }
+#ShelfBadge {
+    color: #FFFFFF;
+    background-color: #15803D;
+    border-radius: 999px;
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+#BtnSetCurrent {
+    color: #333B83;
+    background-color: #EEF0FB;
+    border: 1px solid #C0C6EE;
+    border-radius: 999px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+#BtnSetCurrent:hover {
+    background-color: #4F59C0;
+    color: #FFFFFF;
+    border: 1px solid #4F59C0;
+}
+#BtnSetCurrent:focus {
+    border: 1px solid #4F59C0;
+}
+
 #Rail {
     background-color: #FFFFFF;
     border: none;

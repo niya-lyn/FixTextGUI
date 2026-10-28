@@ -42,11 +42,13 @@ from PySide6.QtWidgets import (
     QRadioButton, QVBoxLayout, QWidget,
 )
 
-from fixtext_tokens import FONT_MONO, c, fs, r, sp
+from fixtext_tokens import FONT_MONO, c, fs, px, r, sp
 from fixtext_widgets import Card, Pill, hline, EmptyState
 
 import fixtext_import as fi
+import fixtext_shelf as shelf_data
 from fixtext_import import messages as M
+from fixtext_shelf_ui import ShelfPanel
 
 #: 人话错误体系（T2.4）。合并后各页错误出口统一走这里：
 #: 已判定的人话错误仍用页内提示条（用户不需要点掉弹窗才能继续），
@@ -557,6 +559,7 @@ class ImportModule(QWidget):
     """「导入书籍」模块页。"""
 
     bookReady = Signal(str)      # 导入完成 → book.txt 绝对路径（供后续模块接力）
+    currentBookChanged = Signal(str)   # 书架里切换了当前书 → 该书 book.txt 路径
 
     STEPS_TXT = ["选择文件", "导入"]
     STEPS_EPUB = ["选择文件", "处理方式", "章节预览"]
@@ -729,11 +732,20 @@ class ImportModule(QWidget):
         safety.body_l.addWidget(body)
         root.addWidget(safety)
 
-        # ---- 工作区状态 ----
-        self.workspace_card = Card("工作区", "")
+        # ---- 工作区书架（原型 v3 §6）----
+        # 多书：这里列出工作区里真实的书，行内「设为当前」切换要校对的书。
+        # 数据源就是工作区现有的副本（不新增导入副本机制），没有书时本卡收起、
+        # 换成下面的统一空状态。
+        self.workspace_card = Card("工作区书架", "")
         self.workspace_label = QLabel("")
+        self.workspace_label.setWordWrap(True)
         self.workspace_label.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
         self.workspace_card.body_l.addWidget(self.workspace_label)
+        self.workspace_card.body_l.addSpacing(px(sp("3")))
+        self.shelf = ShelfPanel(self.workspace)
+        self.shelf.currentChanged.connect(self._on_shelf_current_changed)
+        self.workspace_card.body_l.addWidget(self.shelf)
+        self.workspace_card.body_l.addSpacing(px(sp("3")))
         wrow = QHBoxLayout()
         wrow.addStretch(1)
         open_ws = QPushButton("打开工作区")
@@ -1001,15 +1013,39 @@ class ImportModule(QWidget):
             self._show_notice("打不开文件夹。工作区在程序目录下的 workspace 里。", "info")
 
     def _refresh_workspace(self) -> None:
+        """刷新书架：工作区里有书就展示列表，没有就换成空状态引导。
+
+        数量与占用取自工作区真实目录（与 ``workspace_usage`` 同一判据），
+        书架行本身由 ``ShelfPanel`` 按真实导入记录渲染。
+        """
+        books = self.shelf.books()
         n_books, size = fi.workspace_usage(self.workspace)
-        mb = size / (1024 * 1024)
         # 空状态（原型 v3 §4）：无书时工作区卡换成统一空状态引导
         self.workspace_card.setVisible(bool(n_books))
         self.empty_state.setVisible(not n_books)
         if n_books:
-            self.workspace_label.setText(f"工作区里已有 {n_books} 本书，共约 {mb:.1f} MB。")
+            self.shelf.refresh(books)
+            self.workspace_label.setText(
+                shelf_data.shelf_caption(n_books, size)
+                + " 在列表里点「设为当前」，切换要校对的书。")
         else:
-            self.workspace_label.setText("工作区还是空的，导入第一本书后就会出现在这里。")
+            self.workspace_label.setText(
+                "工作区还是空的，导入第一本书后就会出现在这里。")
+
+    def _on_shelf_current_changed(self, book_id: str) -> None:
+        """书架里换了当前书：告诉外层（顶栏书名跟着换，各页数据本卡不动）。"""
+        book = shelf_data.find_book(self.workspace, book_id)
+        if book is None:
+            return
+        self.currentBookChanged.emit(book.text_path)
+
+    def current_book(self):
+        """当前书（数据层对象）；没有书时 None。"""
+        return self.shelf.current_book()
+
+    def refresh_shelf(self) -> None:
+        """重扫工作区并重排书架（导入完成 / 外部改了当前书后调用）。"""
+        self._refresh_workspace()
 
     def shutdown(self) -> None:
         """窗口关闭时调用：取消后台任务，避免线程未结束时退出。"""

@@ -14,9 +14,10 @@ FixText V1 · 共享 QSS 生成器
 
 from fixtext_tokens import (
     COLORS, FONT_SANS, FONT_MONO, FONT_SIZE, FONT_WEIGHT, LINE_HEIGHT,
-    SPACE, RADIUS, SHADOW, c, sp, r, fs,
+    SPACE, RADIUS, SHADOW, c, sp, r, fs, px,
     TOPBAR_GRADIENT_TOP, TOPBAR_GRADIENT_BOTTOM, TOPBAR_EDGE,
     TOPBAR_ICON_BG, TOPBAR_ICON_BG_HOVER, ICON_GLYPH_SIZE, MICRO_TAG_SIZE,
+    BOOKCHIP_H, BOOKCHIP_MAX_W, BOOKCHIP_GRADIENT_BOTTOM, BOOKCHIP_EDGE,
 )
 
 # 取值便捷
@@ -84,6 +85,80 @@ def build() -> str:
     q.append("}")
     q.append(f"#TopAct:hover {{ background: {TOPBAR_ICON_BG_HOVER}; color: {c('neutral.0')}; }}")
     q.append(f"#TopAct:pressed {{ background: {c('neutral.700')}; }}")
+    q.append("")
+
+    # ---- 顶栏「当前书」胶囊（M4-EX.3a；原型 v3 §6 .book-chip）--------
+    # 深色顶栏上的高对比胶囊：白到浅灰渐变 + 半透明白描边 + 微投影；
+    # 悬停变主色描边并轻微上浮，聚焦补主色环（与其它按钮的焦点口径一致）。
+    q.append("#BookChip {")
+    q.append("    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,")
+    q.append(f"        stop:0 {c('neutral.0')},")
+    q.append(f"        stop:1 {BOOKCHIP_GRADIENT_BOTTOM});")
+    q.append(f'    border: 1px solid {BOOKCHIP_EDGE};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    min-height: {BOOKCHIP_H}px; max-height: {BOOKCHIP_H}px;')
+    q.append(f'    max-width: {BOOKCHIP_MAX_W}px;')
+    q.append("}")
+    q.append("#BookChip:hover {")
+    q.append(f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,")
+    q.append(f"        stop:0 {c('neutral.0')},")
+    q.append(f"        stop:1 {BOOKCHIP_GRADIENT_BOTTOM});")
+    q.append(f'    border: 1px solid {c("primary.300")};')
+    q.append("}")
+    q.append(f"#BookChip:focus {{ border: 1px solid {c('primary.500')}; }}")
+    # 空态：没有书时压低存在感（中性描边），但仍可点、仍有胶囊形态
+    q.append("#BookChip[empty=\"true\"] {")
+    q.append(f'    border: 1px solid {TOPBAR_ICON_BG_HOVER};')
+    q.append("    background: transparent;")
+    q.append("}")
+    q.append("#BookChip QLabel { background: transparent; }")
+    q.append("")
+
+    # ---- 导入页书架（M4-EX.3a；原型 v3 §6 .ws-row）--------------------
+    # 行：白底，隔行有分隔线；当前行浅主色底 + 左侧主色条（Qt 无 ::border，
+    # 用左边框实现并补偿内边距，保证文字与非当前行左对齐）。
+    q.append("#ShelfRow {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    border: none;')
+    q.append("}")
+    q.append("#ShelfRow[separator=\"true\"] {")
+    q.append(f'    border-top: 1px solid {c("neutral.100")};')
+    q.append("}")
+    q.append("#ShelfRow:hover {")
+    q.append(f'    background-color: {c("neutral.50")};')
+    q.append("}")
+    q.append("#ShelfRow[current=\"true\"] {")
+    q.append(f'    background-color: {c("primary.50")};')
+    q.append(f'    border-left: 3px solid {c("primary.500")};')
+    q.append(f"    padding-left: {px(sp('3')) - 3}px;")
+    q.append("}")
+    q.append("#ShelfRow QLabel { background: transparent; }")
+    q.append("#ShelfBadge {")
+    q.append(f'    color: {c("neutral.0")};')
+    q.append(f'    background-color: {c("success")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    padding: 0 {sp("2")};')
+    q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
+    q.append("}")
+    # 行内「设为当前」= 该书架的主操作按钮（描边胶囊，悬停转主色实底）
+    q.append("#BtnSetCurrent {")
+    q.append(f'    color: {c("primary.700")};')
+    q.append(f'    background-color: {c("primary.50")};')
+    q.append(f'    border: 1px solid {c("primary.200")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    padding: 0 {sp("3")};')
+    q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
+    q.append("}")
+    q.append("#BtnSetCurrent:hover {")
+    q.append(f'    background-color: {c("primary.500")};')
+    q.append(f'    color: {c("neutral.0")};')
+    q.append(f'    border: 1px solid {c("primary.500")};')
+    q.append("}")
+    q.append("#BtnSetCurrent:focus {")
+    q.append(f'    border: 1px solid {c("primary.500")};')
+    q.append("}")
     q.append("")
 
     # ---- 左轨（中性-0，right border）----------------------------------

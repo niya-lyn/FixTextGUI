@@ -166,6 +166,24 @@ ICON_GLYPH_SIZE = "15px"
 #: 左轨「建设中」小标签字号（原型 .n-tag font-size:10px）
 MICRO_TAG_SIZE = "10px"
 
+# ---- M4-EX.3a 书架 / 顶栏「当前书」------------------------------------
+# 值取自原型 v3 §6：.book-chip（高 34 / 上限 320px / 白到浅灰渐变）与
+# .ws-row（状态位 60px、操作位 96px 固定宽度）。
+#: 顶栏当前书胶囊高度（原型 .book-chip height:34px）
+BOOKCHIP_H = 34
+#: 胶囊宽度上限（原型 .book-chip max-width:320px）
+BOOKCHIP_MAX_W = 320
+#: 胶囊渐变下端（原型 linear-gradient(180deg,#FFFFFF 0%,#F1F3F8 100%)）
+BOOKCHIP_GRADIENT_BOTTOM = "#F1F3F8"
+#: 胶囊描边（原型 1px solid rgba(255,255,255,.20)，深色顶栏上的高光边）
+BOOKCHIP_EDGE = "rgba(255,255,255,.20)"
+#: 书架行高与两处固定槽位宽度（原型 .ws-row / .ws-status / .ws-act）
+SHELF_ROW_H = 58
+SHELF_STATUS_W = 60
+SHELF_ACTION_W = 96
+#: 「当前」徽标高度（与行内「设为当前」按钮等高，互换不抖）
+SHELF_BADGE_H = 24
+
 
 # ---------------------------------------------------------------------------
 # 六入口定义（左轨常驻顺序 = 本表顺序，共 6 项）

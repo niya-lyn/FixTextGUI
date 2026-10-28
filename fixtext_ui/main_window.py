@@ -54,6 +54,10 @@ from fixtext_tokens import (
 import fixtext_settings as app_settings
 from fixtext_settings import AppSettings as QSettings   # M4-T4.4：设置落用户区
 from fixtext_widgets import Card, Modal, Pill, Switch, cascade_in, hline
+from fixtext_shelf import resolve_current as resolve_current_book
+from fixtext_shelf import list_books as list_shelf_books
+from fixtext_shelf import set_current_book_id
+from fixtext_shelf_ui import BookChip
 from first_run_wizard import FirstRunWizard
 from check_module import CheckModule
 from export_module import ExportModule
@@ -396,8 +400,11 @@ class MainWindow(QMainWindow):
         self.export_module = None
         self.settings_module = None
         self._content_inners: list = []
-        #: 最近一次导入记录（导出页要拿它推导「这本书能不能还原成电子书」）
+        #: 当前书（导入记录）：M4-EX.3a 起由用户在书架上的选择驱动，
+        #: 不再等于「最近导入的那本」；启动时按设置恢复，没有设置才用最近导入。
         self._import_record: dict | None = None
+        #: 当前书对应的正文路径（供后续模块接力 / 恢复运行上下文）
+        self._current_text_path: str = ""
 
         central = QWidget()
         self.setCentralWidget(central)
@@ -417,6 +424,8 @@ class MainWindow(QMainWindow):
         self.mount_import(self.workspace)
         self.mount_oneclick()
         self._wire_book_ready()
+        # M4-EX.3a：启动即按持久化的选择恢复「当前书」（重启保持）
+        self._restore_current_book()
         self._load_history()
 
         self._bind_shortcuts()
@@ -480,6 +489,14 @@ class MainWindow(QMainWindow):
         self.where = QLabel("")
         self.where.setObjectName("TopWhere")
         tl.addWidget(self.where)
+
+        # M4-EX.3a：当前书常驻显示。只展示，不在这里切换——
+        # 点击跳到「导入书籍」页的书架去选（用户约束：其它页只展示不提供切换）。
+        # 没书时给中性占位文案「未选择书」，点击行为一致。
+        self.book_chip = BookChip()
+        self.book_chip.setAccessibleName("当前要校对的书，点击前往导入书籍切换")
+        self.book_chip.clicked.connect(lambda: self.go("import"))
+        tl.addWidget(self.book_chip, 0, Qt.AlignmentFlag.AlignVCenter)
 
         tl.addStretch(1)
         for glyph, title, slot in (
@@ -664,14 +681,59 @@ class MainWindow(QMainWindow):
         if self.import_module is None or self.oneclick_module is None:
             return
         self.import_module.bookReady.connect(self._on_book_ready)
+        # 书架里换当前书（M4-EX.3a）：顶栏跟着换，其它页数据仍按各自原逻辑
+        self.import_module.currentBookChanged.connect(self._on_current_book_changed)
+
+    def _restore_current_book(self) -> None:
+        """启动时恢复当前书：设置里记的那本 → 否则最近导入的那本 → 否则没有。"""
+        books = list_shelf_books(self._workspace_root())
+        current = resolve_current_book(self._workspace_root(), books)
+        if current is None:
+            self._apply_current_book(None, "")
+            return
+        self._apply_current_book(current.record, current.text_path)
+        self._sync_export(None)
+
+    def _workspace_root(self) -> Path:
+        """工作区根目录（与导入模块同一口径）。"""
+        if self.import_module is not None:
+            return Path(self.import_module.workspace)
+        return Path(self.workspace) if self.workspace else PKG_ROOT / "workspace"
+
+    def _apply_current_book(self, record: dict | None, text_path: str) -> None:
+        """把「当前书」落到窗口状态：顶栏书名 + 导出/历史/校正用的记录与路径。
+
+        只改顶栏与上下文引用；各页展示的数据仍按各自原逻辑（按书联动是 3b）。
+        """
+        self._import_record = record
+        self._current_text_path = str(text_path or "")
+        title = str((record or {}).get("title") or "")
+        self.book_chip.set_book(title or None)
+
+    def _on_current_book_changed(self, text_path: str):
+        """书架里换了当前书：只把窗口侧的当前书记录与顶栏书名换掉。
+
+        各页展示的数据不动（按书联动是 3b）——所以这里**不**重新推给导出页 /
+        历史页，避免出现「其余页面看起来也换了书」的假象。
+        """
+        record = self._read_import_record(text_path) if text_path else None
+        self._apply_current_book(record, text_path)
 
     def _on_book_ready(self, text_path: str):
-        """导入完成的接力：把这本书的运行上下文交给一键校正页。
+        """导入完成的接力：这本书即成为当前书，并把运行上下文交给一键校正页。
 
         只有 EPUB 且在「直接处理」路径下才有可还原的书；TXT / 先转 TXT 的
         EPUB 没有可还原的原书，这时不注入上下文，一键校正页会自己给出人话引导。
         """
-        self._import_record = self._read_import_record(text_path)
+        record = self._read_import_record(text_path)
+        # 新导入的书自动设为当前（否则多书之后「导入完直接用」的动线会断）
+        book_id = Path(text_path).resolve().parent.name if text_path else ""
+        if book_id:
+            set_current_book_id(book_id)
+        self._apply_current_book(record, text_path)
+        # 书架重排：这一行现在应显示「当前」，其它行回到「设为当前」
+        if self.import_module is not None:
+            self.import_module.refresh_shelf()
         self._sync_export(None)
         self._refresh_export_ctx(None)
         ctx = self.build_run_context(text_path)
