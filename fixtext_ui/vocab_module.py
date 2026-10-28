@@ -1116,6 +1116,8 @@ class VocabModule(QWidget):
             m.add_widget(holder)
 
         m.add_foot("关闭", "ghost", m.reject)
+        #: 弹窗本体（自检与验收要读它的控件；也避免被提前回收）
+        self._dup_modal = m
         self._dup_view = dict(total=len(groups), shown=len(groups), readonly=True)
         m.show()
         return groups
