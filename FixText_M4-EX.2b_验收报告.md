@@ -1,6 +1,7 @@
 # M4-EX.2b 验收报告 · UI 对齐二：空状态与交互细节
 
-- 基线：M4-EX.2a（git `f2c656b`），本卡在其上 4 条 `M4-EX.2b` 提交
+- 基线：M4-EX.2a（git `f2c656b`），本卡在其上 5 条 `M4-EX.2b` 提交（末条 `ec90b20`
+  为上传前复查发现的空状态文案裁切修复）
 - 设计基准：合并版原型 v3（file_token `TE48bcYVlowWcHxIz11cF8wmnMg`）
   + 更新记录（file_token `EiDebGBaooOqdjx63ylcLJNmnCc` §4 空状态整改 / §5 原型 bug 修复版）
 - 范围纪律：纯 UI 对齐。功能缺陷（假数据、控件未接线）不进本卡，归 M4-EX.4；
@@ -21,6 +22,10 @@
   - 历史页：磁盘扫描 `tasks` 为空 → 任务表 + 快照面板收起
 - **词库页不做空状态**（§4：内置词库随时可用），回归测试断言 `empty_state` 不存在。
 - 主窗口统一接线 `_wire_empty_state`：主按钮 → 跳导入页；次按钮「🧭 打开新手向导」→ 弹向导。
+- **描述文案换行**：原型 es-d 是 440px 内自动换行，不是单行截断。Qt 的 `QLabel`
+  在中文长句上不按换行给 `sizeHint`，加进布局后只分到单行 16px，第二句引导语被裁
+  （本卡上传前复查实测五页全部中招）。改用 `_WrapLabel` 按实际字体度量定高
+  （`setFixedHeight`），并补 1 项负控有效的回归用例 `test_empty_state_desc_not_clipped`。
 
 ### 2. 交互细节（按原型行为对齐，含 §5 修复版）
 - 卡片折叠：走 `Card` 标题行 `mousePressEvent → toggle()`（等效原型 toggleCard 修复版
@@ -77,24 +82,25 @@
 真实移入回收目录，撤销真实恢复。
 
 ### 3. 全量测试
-223 passed（基线 214 + 本卡新增 9），分三批执行
+224 passed（基线 214 + 本卡新增 10），分三批执行
 （`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`，python3.12，offscreen）：
 
 ```
-批次 A（7 文件）: 110 passed in 256.91s
-批次 B（test_ex2b_empty_states + 5 文件）: 56 passed in 17.03s
-批次 C（7 文件）: 57 passed in 157.72s
+批次 A（test_error_center / test_no_jargon / test_t32_vocab_safety / test_encoding）: 95 passed in 273.00s
+批次 B（test_t31_vocab_ui / test_t31_vocab_store / test_first_run_wizard / test_ex2b_empty_states）: 54 passed in 22.05s
+批次 C（test_t37_vocab_bridge / test_t34_snapshot / test_t31_book_words / test_settings_module / test_import / test_t33_book_words_ui / test_export_resolve / test_t210_history / test_t210_check_inject / test_t31_vocab_merge_click / test_t210_reexport_sha）: 75 passed in 137.76s
 ```
 
-- 新增 `tests/test_ex2b_empty_states.py` 9 项：控件形态（双按钮/无收起/信号）、
-  五页真实触发、词库页无空状态、卡片折叠、排版下拉回写。
+- 新增 `tests/test_ex2b_empty_states.py` 10 项：控件形态（双按钮/无收起/信号）、
+  五页真实触发、词库页无空状态、卡片折叠、排版下拉回写、**描述文案不被裁切**
+  （后者经负控验证：移除 `fix_height` 后实测 `16px < 需要 32px` 精确失败）。
 - 既有用例更新 1 处：`test_t210_history.py::test_empty_history_gives_human_hint`
   原断言表内提示「还没有校正记录」，本卡按 §4 新口径改为断言统一空状态
   （标题 + 引导文案 + 任务表/快照面板收起 + 空状态可见）。
 
 ### 4. 证据时间戳
 全部验收证据（`evidence/ex2b/accept.{json,log}`、`screenshots/ex2b/*.png`）
-生成于最后一次改代码提交 `a29b8c4` 之后（验收脚本在提交后重跑，EXIT=0）。
+生成于最后一次改代码提交 `ec90b20` 之后（裁切修复后重跑验收脚本，EXIT=0）。
 
 ## 三、边界与遗留
 - 本卡不碰：词库选择控件/一键校正选项等接线（M4-EX.4）、向导重做（M4-EX.2c）、
