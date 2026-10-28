@@ -158,7 +158,7 @@ class FirstRunWizard(QDialog):
     exported = Signal(str)     # 导出成品文件的绝对路径（供验收与接线）
 
     def __init__(self, import_module=None, oneclick_module=None,
-                 export_module=None, parent=None):
+                 export_module=None, parent=None, has_current_book=False):
         super().__init__(parent)
         self.setWindowTitle("新手向导 · FixText V1")
         self.setModal(True)
@@ -166,8 +166,11 @@ class FirstRunWizard(QDialog):
         self.import_module = import_module
         self.oneclick_module = oneclick_module
         self.export_module = export_module
+        # M4-EX.2c-S5：☰ 重开向导时若已有当前书，直接从第 2 步开始，
+        # 不要求用户再导一次（导入页本身也允许换书）。
+        self.has_current_book = bool(has_current_book)
 
-        self.step = 0
+        self.step = 1 if self.has_current_book else 0
         self._import_result = None
         self._correction = None
         self._export = None
@@ -276,6 +279,16 @@ class FirstRunWizard(QDialog):
         p.setStyleSheet(
             f"color:{c('neutral.700')};font-size:{fs('sm')};line-height:1.7")
         self.panel_l.addWidget(p)
+        if self.has_current_book and self.step == 1:
+            hint = QLabel(
+                "已检测到当前书：向导直接从第 2 步开始，不必重新导入。"
+                "想换一本书，可点「← 返回上一步」。")
+            hint.setWordWrap(True)
+            hint.setObjectName("OnbCurrentBookHint")
+            hint.setStyleSheet(
+                f"background:{c('primary.100')};color:{c('primary.700')};"
+                f"border-radius:{r('md')};padding:8px 10px;font-size:{fs('xs')}")
+            self.panel_l.addWidget(hint)
         self.panel_l.addWidget(hline())
         self.panel_l.addWidget(self._result_block())
         if self._busy:
