@@ -274,9 +274,14 @@ def main() -> int:
 
     hist._do_continue = _do_and_capture
     t0 = time.monotonic()
+    # 等待判据必须同时看「撤销栈确实多了一项」：_capt["out"] 在 wrapper 里
+    # 一赋值就有了，而撤销记录是 _poll_continue 在 QTimer 回调里才 append 的，
+    # 只看 _capt 会提前放行，导致栈里没有可撤销的「继续」这一步（实测踩过）。
+    _depth0 = len(hist._undo_stack)
     try:
         hist._run_continue(cur, dict(ctx))
-        wait_until(lambda: ("out" in _capt and not hist._resuming), 600)
+        wait_until(lambda: ("out" in _capt and not hist._resuming
+                            and len(hist._undo_stack) > _depth0), 600)
     finally:
         hist._do_continue = _orig_do_continue
     cont_s = round(time.monotonic() - t0, 2)
@@ -356,29 +361,42 @@ def main() -> int:
                     export_btn_enabled=hist.export_ws_btn.isEnabled(),
                     passed=bool(step_ok and moved))
 
+    s5_depth = len(hist._undo_stack)
     s5a = _undo_once("撤销「继续」→ 回到恢复点")
     s5b = _undo_once("撤销「恢复」→ 回到恢复前")
-    print(f"[S5] {s5a['label']}：撤销前指针={s5a['pre_undo_point']}"
-          f"（{Path(s5a['pre_undo_snapshot_dir']).name}），"
-          f"撤销后指针={s5a['after_point']}"
-          f"（{s5a['after_snapshot_dir'] and Path(s5a['after_snapshot_dir']).name}），"
-          f"应回到={s5a['before_point']}，一致={s5a['passed']}")
-    print(f"[S5] {s5b['label']}：撤销前指针={s5b['pre_undo_point']}，"
-          f"撤销后指针={s5b['after_point']}，应为未指定={s5b['after'] is None}，"
-          f"判据={s5b['rule']}，通过={s5b['passed']}，"
-          f"提示=「{s5b['hint']}」")
-    s5_ok = bool(s5a["passed"] and s5b["passed"])
+    for step in (s5a, s5b):
+        print(f"[S5] {step['label']}：撤销前指针={step['pre_undo_point']}"
+              f"（{Path(step['pre_undo_snapshot_dir']).name}），"
+              f"撤销后指针={step['after_point']}"
+              f"（{step['after_snapshot_dir'] and Path(step['after_snapshot_dir']).name}），"
+              f"应回到={step['before_point']}，判据={step['rule']}，"
+              f"指针确有变化={step['moved']}，通过={step['passed']}")
+    # 撤销到底 = 回到 S2 恢复之前的状态（本场景恢复前是「未指定」）
+    end_cur = snap.current_state(runs_root)
+    back_to_start = (end_cur is None and not hist._undo_stack)
+    print(f"[S5] 撤到底：栈深(撤销前)={s5_depth} → 现={len(hist._undo_stack)}，"
+          f"当前工作区={((end_cur or {}).get('point'))}，"
+          f"回到恢复前(未指定)={back_to_start}，"
+          f"提示=「{hist._active_hint.text()}」")
+    s5_ok = bool(s5a["passed"] and s5b["passed"] and back_to_start)
     report["s5_undo"] = dict(
         rule="撤销 = 回到被撤销操作之前的现场；未指定则回到未指定",
-        # 顶层 before/after 取「撤销回到恢复前」这一跳的真实值（非空、可直接核对）
+        undo_stack_depth_before=s5_depth,
+        undo_stack_depth_after=len(hist._undo_stack),
+        back_to_state_before_restore=back_to_start,
+        # 顶层 before/after 取「撤销『继续』」这一跳：before/after 都是真实指针
+        # （replace → replace），可直接核对；第二跳的 before 本身是 None（那步操作前
+        # 就是「未指定」），若取它会得到两个 null、看不出撤销到底做了什么。
         before=s5a["before"], after=s5a["after"],
         before_point=s5a["before_point"], after_point=s5a["after_point"],
         before_snapshot_dir=s5a["before_snapshot_dir"],
         after_snapshot_dir=s5a["after_snapshot_dir"],
         point_matches_before=s5a["point_matches_before"],
         dir_matches_before=s5a["dir_matches_before"],
-        hint=s5a["hint"], export_btn_enabled=s5a["export_btn_enabled"],
-        step1_undo_continue=s5a, step2_undo_restore=s5b,
+        # 两跳明细各存一份完整前后状态，证明撤销逐级往回退
+        step1_undo_continue=s5a,
+        step2_undo_restore=s5b,
+        hint=s5b["hint"], export_btn_enabled=s5b["export_btn_enabled"],
         passed=s5_ok)
     ok = ok and s5_ok
 
