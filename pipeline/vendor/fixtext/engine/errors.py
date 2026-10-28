@@ -25,6 +25,7 @@ class EngineErrorCode:
     ENGINE_TIMEOUT = "E1003"
     ENGINE_FAILED = "E1004"
     ENGINE_OUTPUT_UNEXPECTED = "E1005"
+    PY_ENGINE_UNAVAILABLE = "E1006"
 
     # 入参层
     INPUT_MISSING = "E2101"
@@ -66,6 +67,11 @@ ERROR_CATALOG: dict[str, tuple[str, str, str]] = {
         "ENGINE_OUTPUT_UNEXPECTED",
         "引擎退出码为 0，但 stdout 不符合协议摘要行约定",
         "引擎源码被改动或换了实现，需重新对齐协议（见 docs/T0.3-engine-protocol.md）",
+    ),
+    EngineErrorCode.PY_ENGINE_UNAVAILABLE: (
+        "PY_ENGINE_UNAVAILABLE",
+        "Python 替换引擎依赖未安装（pyahocorasick）",
+        "python -m pip install pyahocorasick（requirements.txt 已列，实测 2.2.0）",
     ),
     EngineErrorCode.INPUT_MISSING: ("INPUT_MISSING", "待替换文本文件不存在", "检查路径拼写"),
     EngineErrorCode.INPUT_UNREADABLE: (

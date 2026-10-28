@@ -36,9 +36,18 @@ from .. import vocab_bridge
 from .base import Stage, StageError
 
 
+class GoEngineUnavailableError(StageError):
+    """Go 引擎不可用（缺失 / 无法执行 / 启动失败）——降级路径的触发判据。
+
+    M4-T4.2：worker 捕获本异常后向界面发 ``engine_failed``，由用户决定
+    是否改走 Python 引擎完成本次校正；CLI / 编排器路径则按普通阶段失败
+    报错（明确报错，不硬跑）。
+    """
+
+
 class ReplaceStage(Stage):
     name = "replace"
-    title = "词库替换（T0.3 Go 引擎 + T0.2 词库）"
+    title = "词库替换（T0.3 引擎双轨 + T0.2 词库）"
     depends_on = ("layout",)
 
     def outputs(self) -> list[Path]:
@@ -95,23 +104,40 @@ class ReplaceStage(Stage):
             f"rules={rules_sha}",
             f"rules_after={rules_after_sha}",
             f"count={self.cfg.replace_count}",
-            f"engine={sha256_file(self.cfg.engine_path) if self.cfg.engine_path.exists() else 'missing'}",
+            f"engine={self.cfg.engine}",
+            f"engine_bin={sha256_file(self.cfg.engine_path) if self.cfg.engine_path.exists() else 'missing'}",
         )
 
     def run(self) -> dict[str, Any]:
-        from fixtext.engine import GoEngineClient, EngineRequest, InputMode, OutputMode, RuleSet
+        from fixtext.engine import EngineRequest, InputMode, OutputMode, RuleSet
 
         engine_path = self.cfg.engine_path
-        if not engine_path.exists():
-            raise StageError(f"Go 引擎不存在：{engine_path}")
-        if not engine_path.is_file():
-            raise StageError(f"Go 引擎不是普通文件：{engine_path}")
-        import os
+        if self.cfg.engine == "python":
+            from fixtext.engine.py_engine import PyGreedyEngineClient
 
-        if os.name != "nt" and not os.access(engine_path, os.X_OK):
-            # T0.3 产物解包后不带执行位，这里补上（builder.chmod_executable 同款动作）
-            engine_path.chmod(engine_path.stat().st_mode | 0o111)
-            self.log.log(f"[replace] 已补执行位：{engine_path}")
+            engine_kind = "python"
+        else:
+            from fixtext.engine import GoEngineClient
+
+            engine_kind = "go"
+            # Go 路径的引擎可用性检查：不可用属「降级触发条件」，抛类型化异常
+            # 让 worker / 编排器分流（M4-T4.2 §3.3），不当成普通替换失败。
+            if not engine_path.exists():
+                raise GoEngineUnavailableError(
+                    f"Go 引擎不存在：{engine_path.name}"
+                    "。可在设置里改用 Python 引擎（较慢）后重试。"
+                )
+            if not engine_path.is_file():
+                raise GoEngineUnavailableError(
+                    f"Go 引擎不是普通文件：{engine_path.name}"
+                    "。可在设置里改用 Python 引擎（较慢）后重试。"
+                )
+            import os
+
+            if os.name != "nt" and not os.access(engine_path, os.X_OK):
+                # T0.3 产物解包后不带执行位，这里补上（builder.chmod_executable 同款动作）
+                engine_path.chmod(engine_path.stat().st_mode | 0o111)
+                self.log.log(f"[replace] 已补执行位：{engine_path}")
 
         # 自定义词生效：运行前合成派生规则，本阶段只读派生文件
         derived = self.derived_rules()
@@ -148,7 +174,6 @@ class ReplaceStage(Stage):
         before_path = before_dir / f"{self.cfg.book_stem}.txt"
         after_path = after_dir / f"{self.cfg.book_stem}.txt"
 
-        client = GoEngineClient(engine_path, default_timeout_s=self.cfg.engine_timeout_s)
         request = EngineRequest(
             rules=rules,
             count=self.cfg.replace_count,
@@ -160,14 +185,28 @@ class ReplaceStage(Stage):
             timeout_s=self.cfg.engine_timeout_s,
         )
 
-        self.log.log(f"[replace] 调起 Go 引擎：{engine_path.name}")
+        if engine_kind == "python":
+            client = PyGreedyEngineClient(default_timeout_s=self.cfg.engine_timeout_s)
+            self.log.log("[replace] 调起 Python 替换引擎（pyahocorasick 贪心）")
+        else:
+            client = GoEngineClient(engine_path, default_timeout_s=self.cfg.engine_timeout_s)
+            self.log.log(f"[replace] 调起 Go 引擎：{engine_path.name}")
         response = client.run(request)
         if not response.ok:
             assert response.error is not None
             detail = response.error.as_dict()
             self.log.log(f"[replace][FAIL] {detail['code']} {detail['message']}")
+            if engine_kind == "go" and detail["code"] in ("E1001", "E1002"):
+                # 启动层面失败（含杀软隔离后二进制不可执行）：同降级触发条件
+                raise GoEngineUnavailableError(
+                    f"Go 引擎替换失败：{detail['code']} {detail['message']}；"
+                    f"处置建议：{detail['remedy']}"
+                )
             raise StageError(
                 f"Go 引擎替换失败：{detail['code']} {detail['message']}；"
+                f"处置建议：{detail['remedy']}"
+                if engine_kind == "go" else
+                f"Python 引擎替换失败：{detail['code']} {detail['message']}；"
                 f"处置建议：{detail['remedy']}"
             )
 
@@ -176,7 +215,7 @@ class ReplaceStage(Stage):
         shutil.copyfile(self.cfg.layout_text(), before_path)
 
         self.log.log(
-            f"[replace] 引擎完成：{result.engine_stdout}；"
+            f"[replace] 引擎完成（{engine_kind}）：{result.engine_stdout}；"
             f"字符 {result.chars_in} → {result.chars_out}，"
             f"耗时 {result.elapsed_s:.2f}s"
         )
@@ -200,7 +239,8 @@ class ReplaceStage(Stage):
                     "base_after_sha256", "custom_sha256",
                 )
             },
-            "engine_path": str(engine_path),
+            "engine": engine_kind,
+            "engine_path": str(engine_path) if engine_kind == "go" else result.engine_path,
             "engine_stdout": result.engine_stdout,
             "rules": result.rules,
             "unique_rules": result.unique_rules,
