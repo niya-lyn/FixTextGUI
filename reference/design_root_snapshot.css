@@ -1,13 +1,10 @@
 /* FixText V1 · 设计地基 :root 快照（原样节选，未改任何数值）
  *
- * 来源文件：FixText_V1_合并版_原型.html（v3，M4-EX.2a 起为设计基准）
- * 源文件 MD5：a0c4658297d4a89fa48b2a4afa809dd8
+ * 来源文件：FixText_V1_设计系统_薄地基.html
+ * 源文件 MD5：6faf81eeb24e592a906cb22caf3977e4
  * 节选范围：仅 :root 变量块；变量名与取值逐字保留原文件写法。
  * 用途：交付包脱离原始设计包后，仍可复核「令牌值与设计地基一致」（验收③）。
  * 复核方式：python3 tools/verify_m2t21.py 会自动读取本文件并与 fixtext_tokens.py 比对。
- * 变更说明：M4-EX.2a 前快照取自《薄地基》HTML；v3 更新记录 §1 质感打磨把阴影
- *   扩为六档（新增 xs / primary）并调整了 sm/md/lg/focus 取值，本快照随之更新，
- *   其余令牌（色彩/字号/字重/行高/间距/圆角/字体族）与薄地基完全一致。
  */
 
 :root {
@@ -32,10 +29,8 @@
     --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
     --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px; --sp-16:64px;
     --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-full:999px;
-    --sh-xs:0 1px 2px rgba(21,25,31,.05);
-    --sh-sm:0 1px 2px rgba(21,25,31,.05),0 1px 3px rgba(21,25,31,.06);
-    --sh-md:0 6px 16px rgba(21,25,31,.08),0 2px 4px rgba(21,25,31,.04);
-    --sh-lg:0 24px 48px rgba(21,25,31,.16),0 8px 16px rgba(21,25,31,.08);
-    --sh-primary:0 8px 20px rgba(79,89,192,.34);
-    --sh-focus:0 0 0 3px rgba(79,89,192,.24);
+    --sh-sm:0 1px 2px rgba(21,25,31,.06),0 1px 3px rgba(21,25,31,.08);
+    --sh-md:0 4px 10px rgba(21,25,31,.08),0 2px 4px rgba(21,25,31,.06);
+    --sh-lg:0 12px 28px rgba(21,25,31,.12),0 4px 8px rgba(21,25,31,.06);
+    --sh-focus:0 0 0 3px rgba(79,89,192,.28);
   }
