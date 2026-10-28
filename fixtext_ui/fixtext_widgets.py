@@ -340,6 +340,33 @@ class RadioCard(QFrame):
         super().mousePressEvent(event)
 
 
+class _WrapLabel(QLabel):
+    """定宽自动换行的说明文字（对齐原型 es-d 的 max-width:440px 行为）。
+
+    坑：中文长句上 ``QLabel.sizeHint()`` 不按换行后的行数给高度，且加进布局后
+    Qt 只分到单行高度（实测 h=16，而 440 宽下实际需要 32~48px），后半句引导
+    文案被直接裁掉；覆写 sizeHint / minimumSizeHint 也不被布局采纳。
+    因此这里改走「按实际字体度量算好高度再 setFixedHeight」，排版结果确定。
+    ``fix_height()`` 需在样式（字号）生效后调用。
+    """
+
+    def __init__(self, text: str, width: int, parent=None):
+        super().__init__(text, parent)
+        self.setWordWrap(True)
+        self.setAlignment(Qt.AlignmentFlag.AlignHCenter)
+        self.setFixedWidth(width)
+
+    def fix_height(self) -> int:
+        self.ensurePolished()
+        fm = self.fontMetrics()
+        need = fm.boundingRect(
+            0, 0, self.width(), 100000,
+            int(Qt.TextFlag.TextWordWrap), self.text()).height()
+        need = max(need, fm.lineSpacing())
+        self.setFixedHeight(need)
+        return need
+
+
 class EmptyState(QFrame):
     """统一空状态（原型 v3 更新记录 §4 口径）。
 
@@ -391,11 +418,9 @@ class EmptyState(QFrame):
             f"font-weight:{FONT_WEIGHT['bold']}")
         root.addWidget(t, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        d = QLabel(desc)
-        d.setWordWrap(True)
-        d.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        d.setMaximumWidth(440)
+        d = _WrapLabel(desc, 440)
         d.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        d.fix_height()  # 样式生效后按实际字体度量定高，避免第二句被裁
         root.addWidget(d, 0, Qt.AlignmentFlag.AlignHCenter)
 
         if primary or secondary:

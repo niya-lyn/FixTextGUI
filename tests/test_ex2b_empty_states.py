@@ -168,3 +168,39 @@ def test_fmt_combo_writeback(qapp, tmp_path):
             "排版改动应给出 toast 反馈"
         return
     pytest.fail("一键校正页应至少有一个 dropdown 型排版下拉")
+
+
+def test_empty_state_desc_not_clipped(qapp):
+    """描述文案必须完整显示（原型 es-d 是 440px 内换行，不是单行截断）。
+
+    回归点：中文长句上 QLabel 的 sizeHint 不给换行后的高度，EmptyState 按
+    sizeHint 定高时描述只拿到单行 16px，第二句引导语被裁掉（本卡实测五页全中招）。
+
+    注意：这里必须走真实布局路径——把 EmptyState 放进「布局 + addStretch」的宿主里，
+    让它自己按 sizeHint 决定高度；如果人为 resize 给一大块空间，QLabel 会吸收
+    多余空间把高度撑够，缺陷就被掩盖掉了（那样写出来的用例是假绿的）。
+    """
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QVBoxLayout, QWidget
+    from fixtext_widgets import EmptyState
+
+    desc = ("请先导入一本书，才能跑「一键校正」。"
+            "当前页面在有书状态下展示；无书时仅显示此引导。")
+    host = QWidget()
+    host.resize(720, 500)
+    lay = QVBoxLayout(host)
+    es = EmptyState("⚡", "还没有可校正的书", desc)
+    lay.addWidget(es)
+    lay.addStretch(1)          # 与主窗口 _wrap 的布局一致：空状态按 sizeHint 定高
+    host.show()
+    qapp.processEvents()
+
+    lbl = [l for l in es.findChildren(QLabel) if l.text() == desc][0]
+    need = lbl.fontMetrics().boundingRect(
+        0, 0, lbl.width(), 100000,
+        int(Qt.TextFlag.TextWordWrap), desc).height()
+    assert lbl.height() >= need, (
+        f"描述文案被裁切：实际 {lbl.height()}px < 需要 {need}px")
+    assert lbl.height() >= lbl.fontMetrics().lineSpacing() * 2, \
+        "描述文案应至少容纳两行（两句引导语）"
+    host.hide()
