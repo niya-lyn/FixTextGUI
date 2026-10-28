@@ -23,13 +23,13 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
-    QCheckBox, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
+    QCheckBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QWidget,
 )
 
 from fixtext_export import ExportOutcome, ExportSource, export_book, resolve_source
 from fixtext_tokens import FONT_WEIGHT, c, fs, r
-from fixtext_widgets import Card, Pill, RadioCard, hline
+from fixtext_widgets import Card, ConfirmDialog, Pill, RadioCard, hline
 
 try:
     import fixtext_error_center as error_center
@@ -437,6 +437,34 @@ class ExportModule(QWidget):
 
     # ------------------------------------------------------------------ 导出
 
+    def _export_targets(self, out_dir: str, fmt: str, title: str) -> list[Path]:
+        """这次导出会落到磁盘上的文件（与 fixtext_export 的命名口径一致）。"""
+        import fixtext_export as fx
+
+        safe = fx._safe_name(title or "书籍")
+        ext = "epub" if fmt == "epub" else "txt"
+        return [Path(out_dir) / f"{safe}.{ext}",
+                Path(out_dir) / f"{safe}替换统计.txt",
+                Path(out_dir) / f"{safe}替换统计.csv"]
+
+    def _confirm_overwrite(self, targets: list[Path]) -> bool:
+        """目标文件已存在时要二次确认（M4-T4.4：覆盖导出不是静默动作）。"""
+        existing = [p for p in targets if p.exists()]
+        if not existing:
+            return True
+        names = "；".join(p.name for p in existing)
+        dlg = ConfirmDialog(
+            icon="⚠",
+            title="导出目录里已有同名文件，要覆盖吗？",
+            note=f"下列文件已经存在，继续导出会用新内容覆盖它们：{names}。"
+                 f"覆盖后旧内容不可恢复；原书与你导入的文件不受影响。",
+            note_kind="warn",
+            confirm_text="覆盖导出",
+            confirm_kind="danger",
+            parent=self,
+        )
+        return dlg.exec() == QDialog.DialogCode.Accepted
+
     def export_now(self) -> None:
         if self._running:
             return
@@ -451,6 +479,10 @@ class ExportModule(QWidget):
         fmt = self.target if (self.target == "epub" and src.can_restore_epub) else "txt"
         title = self.title_edit.text().strip() or src.title
         author = self.author_edit.text().strip()
+
+        if not self._confirm_overwrite(self._export_targets(out_dir, fmt, title)):
+            self._toast("已取消，没有覆盖任何文件")
+            return
 
         self._running = True
         self.export_btn.setEnabled(False)
