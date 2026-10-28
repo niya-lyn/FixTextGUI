@@ -59,6 +59,7 @@ ENGINE_CODE_MAP = {
     "E1003": "U-P03",            # ENGINE_TIMEOUT
     "E1004": "U-P02",            # ENGINE_FAILED（非 0 退出 / 被杀）
     "E1005": "U-P02",            # ENGINE_OUTPUT_UNEXPECTED
+    "E1006": "U-P01",            # PY_ENGINE_UNAVAILABLE（pyahocorasick 缺失，M4-T4.2）
     "E1900": "U-P02",            # ENGINE_UNKNOWN（引擎范围内兜底）
     "E2101": "U-I01",            # INPUT_MISSING
     "E2102": "U-I01",            # INPUT_UNREADABLE

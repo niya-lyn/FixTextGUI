@@ -15,8 +15,6 @@ FixText V1 · 共享 QSS 生成器
 from fixtext_tokens import (
     COLORS, FONT_SANS, FONT_MONO, FONT_SIZE, FONT_WEIGHT, LINE_HEIGHT,
     SPACE, RADIUS, SHADOW, c, sp, r, fs,
-    TOPBAR_GRADIENT_TOP, TOPBAR_GRADIENT_BOTTOM, TOPBAR_EDGE,
-    TOPBAR_ICON_BG, TOPBAR_ICON_BG_HOVER, ICON_GLYPH_SIZE, MICRO_TAG_SIZE,
 )
 
 # 取值便捷
@@ -28,8 +26,7 @@ def build() -> str:
 
     q.append("/* ============================================================")
     q.append("   FixText V1 · 共享样式表（由 build_qss.py 自动生成，勿手改）")
-    q.append("   令牌来源：fixtext_tokens.py（色彩/字号等与 v3 原型 :root 逐字对应；")
-    q.append("   质感层派生常量亦集中于该文件）")
+    q.append("   令牌来源：fixtext_tokens.py（与 薄地基 :root 逐字对应）")
     q.append("   ============================================================ */")
     q.append("")
 
@@ -51,39 +48,32 @@ def build() -> str:
     q.append("QLabel { background-color: transparent; }")
     q.append("")
 
-    # ---- 顶栏（v3 质感层：竖直渐变 + 底部高光，53px）------------------
+    # ---- 顶栏（中性-900 深色，53px）-----------------------------------
     q.append("#TopBar {")
-    q.append("    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,")
-    q.append(f"        stop:0 {TOPBAR_GRADIENT_TOP},")
-    q.append(f"        stop:0.55 {c('neutral.900')},")
-    q.append(f"        stop:1 {TOPBAR_GRADIENT_BOTTOM});")
+    q.append(f'    background-color: {c("neutral.900")};')
     q.append(f'    border: none;')
-    q.append(f'    border-bottom: 1px solid {TOPBAR_EDGE};')
     q.append("    min-height: 53px;")
     q.append("    max-height: 53px;")
     q.append("}")
-    q.append(f"#TopBar QWidget {{ background-color: transparent; color: {c('neutral.0')}; }}")
+    q.append("#TopBar QWidget { background-color: transparent; color: #FFFFFF; }")
     q.append("#Brand {")
-    q.append(f'    color: {c("neutral.0")};')
+    q.append("    color: #FFFFFF;")
     q.append("    background: transparent;")
     q.append("    border: none;")
     q.append(f'    font-size: {FONT_SIZE["lg"]};')
     q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
     q.append("    padding: 0 12px;")
     q.append("}")
-    q.append(f"#Brand:hover {{ color: {c('neutral.0')}; }}")
-    # 顶栏图标按钮（☰ / ? / ⚙）：白色半透明底 34×34（原型 .icon-btn）
+    q.append("#Brand:hover { color: #FFFFFF; }")
     q.append("#TopAct {")
-    q.append(f'    color: {c("neutral.0")};')
-    q.append(f'    background: {TOPBAR_ICON_BG};')
+    q.append(f'    color: {c("neutral.300")};')
+    q.append("    background: transparent;")
     q.append("    border: none;")
-    q.append(f'    font-size: {ICON_GLYPH_SIZE};')
-    q.append(f'    padding: 0;')
-    q.append(f'    min-width: 34px; max-width: 34px; min-height: 34px; max-height: 34px;')
-    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append("    font-size: 16px;")
+    q.append(f'    padding: 4px 10px;')
+    q.append(f'    border-radius: {RADIUS["sm"]};')
     q.append("}")
-    q.append(f"#TopAct:hover {{ background: {TOPBAR_ICON_BG_HOVER}; color: {c('neutral.0')}; }}")
-    q.append(f"#TopAct:pressed {{ background: {c('neutral.700')}; }}")
+    q.append(f"#TopAct:hover {{ background-color: {c('neutral.700')}; color: #FFFFFF; }}")
     q.append("")
 
     # ---- 左轨（中性-0，right border）----------------------------------
@@ -165,7 +155,7 @@ def build() -> str:
     q.append(f'    border: 1px solid {c("warning.border")};')
     q.append(f'    border-radius: {RADIUS["full"]};')
     q.append(f'    padding: 0 6px;')
-    q.append(f'    font-size: {MICRO_TAG_SIZE};')
+    q.append(f'    font-size: 10px;')
     q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
     q.append("}")
     q.append("#RailTip {")
@@ -215,7 +205,7 @@ def build() -> str:
     q.append("}")
     q.append("#BtnPrimary {")
     q.append(f'    background-color: {c("primary.500")};')
-    q.append(f'    color: {c("neutral.0")};')
+    q.append("    color: #FFFFFF;")
     q.append("}")
     q.append(f"#BtnPrimary:hover:!pressed {{ background-color: {c('primary.600')}; }}")
     q.append(f"#BtnPrimary:pressed {{ background-color: {c('primary.700')}; }}")
@@ -244,12 +234,6 @@ def build() -> str:
     q.append(f'    border: 1px solid {c("error.border")};')
     q.append("}")
     q.append(f"#BtnDanger:hover {{ background-color: {c('error.bg')}; }}")
-    # v3 焦点环的 Qt 等效：键盘聚焦时同宽描边转主色（不改边框宽度，避免布局抖动）
-    q.append(f"#BtnSecondary:focus {{ border: 1px solid {c('primary.500')}; }}")
-    q.append(f"#BtnOutline:focus {{ border: 1px solid {c('primary.500')}; }}")
-    q.append(f"#BtnDanger:focus {{ border: 1px solid {c('primary.500')}; }}")
-    q.append(f"#BtnGhost:focus {{ border: 1px solid {c('primary.200')}; }}")
-    q.append(f"#BtnPrimary:focus {{ background-color: {c('primary.600')}; }}")
     q.append("")
 
     # ---- 输入控件 ----------------------------------------------------
@@ -285,16 +269,14 @@ def build() -> str:
     q.append(f"QCheckBox::indicator:checked {{ image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTYgMTEuM2wtMy4zLTMuM2EuOTh4Ljk4IDAgMCAxIDEuNC0xLjRMNiA4LjU5bDUuNi01LjU5YTEuMDEgMS4wMSAwIDEgMSAxLjQxIDEuNDFMNiAxMS4zeiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==); }}")
     q.append("")
 
-    # ---- 表格（v3 质感层：斑马纹 + 行悬停）---------------------------
+    # ---- 表格 --------------------------------------------------------
     q.append("QTableWidget, QTreeWidget, QListWidget {")
     q.append(f'    background-color: {c("neutral.0")};')
-    q.append(f'    alternate-background-color: {c("neutral.50")};')
     q.append(f'    border: 1px solid {c("neutral.200")};')
     q.append(f'    border-radius: {RADIUS["md"]};')
     q.append(f'    gridline-color: {c("neutral.100")};')
     q.append(f'    font-size: {FONT_SIZE["sm"]};')
     q.append("}")
-    q.append(f"QTableWidget::item:hover, QListWidget::item:hover {{ background-color: {c('primary.50')}; }}")
     q.append("QHeaderView::section {")
     q.append(f'    background-color: {c("neutral.50")};')
     q.append(f'    color: {c("neutral.600")};')
@@ -304,14 +286,6 @@ def build() -> str:
     q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
     q.append("}")
     q.append(f"QTableWidget::item:selected, QListWidget::item:selected {{ background-color: {c('primary.50')}; color: {c('primary.800')}; }}")
-    q.append("")
-
-    # ---- 设置页路径展示框（原型 .pathrow：浅底虚线框）-----------------
-    q.append("QFrame#PathRow {")
-    q.append(f'    background-color: {c("neutral.50")};')
-    q.append(f'    border: 1px dashed {c("neutral.200")};')
-    q.append(f'    border-radius: {RADIUS["md"]};')
-    q.append("}")
     q.append("")
 
     # ---- 状态徽标 / 标签 ---------------------------------------------

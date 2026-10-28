@@ -387,8 +387,6 @@ class ChapterPane(QWidget):
         self.list.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.list.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.list.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        # v3 质感层：表格斑马纹（配合 QSS 的 alternate-background-color）
-        self.list.setAlternatingRowColors(True)
         # 高度取「整行数 × 行高 + 边框」，避免最后一行被裁掉半截
         self.list.setMinimumHeight(7 * self.ROW_HEIGHT + 8)
         self.list.setMaximumHeight(9 * self.ROW_HEIGHT + 8)

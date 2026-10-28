@@ -112,6 +112,8 @@ class PipelineConfig:
     engine_path: Path
     #: 替换趟数，与上游 TextFixer 的 $replaceCount = 2 一致
     replace_count: int = 2
+    #: 替换引擎（M4-T4.2）：go = Go 子进程（默认），python = 进程内 pyahocorasick 贪心
+    engine: str = "go"
     #: Go 引擎子进程超时（秒）
     engine_timeout_s: float = 1800.0
     #: 排版档案名，见 LAYOUT_PROFILES
@@ -151,6 +153,8 @@ class PipelineConfig:
             )
         if self.replace_count <= 0:
             raise ValueError("replace_count 必须是正整数")
+        from .engine_choice import normalize_choice
+        self.engine = normalize_choice(self.engine)
 
     # ---- 派生路径 ----
 
@@ -213,6 +217,7 @@ class PipelineConfig:
             "rules_after": str(self.rules_after),
             "engine_path": str(self.engine_path),
             "replace_count": self.replace_count,
+            "engine": self.engine,
             "custom_vocab_path": str(self.custom_vocab_path),
             "derived_rules_dir": str(self.derived_rules_dir),
             "engine_timeout_s": self.engine_timeout_s,
@@ -234,6 +239,7 @@ class PipelineConfig:
             rules_after=Path(raw["rules_after"]),
             engine_path=Path(raw["engine_path"]),
             replace_count=int(raw.get("replace_count", 2)),
+            engine=str(raw.get("engine", "go")),
             custom_vocab_path=Path(raw["custom_vocab_path"]) if raw.get("custom_vocab_path") else None,
             derived_rules_dir=Path(raw["derived_rules_dir"]) if raw.get("derived_rules_dir") else None,
             engine_timeout_s=float(raw.get("engine_timeout_s", 1800.0)),
