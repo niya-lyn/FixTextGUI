@@ -292,7 +292,7 @@ def test_window_click_chip_routes_to_import_and_highlights(qapp, ws_two):
 
 
 def test_window_shelf_switch_updates_chip_only(qapp, ws_two):
-    """书架里换书 → 顶栏书名跟着换；不做跨页联动（3b 范围）。"""
+    """书架里换书 → 顶栏书名跟着换（跨页数据联动的断言在 3b 用例里）。"""
     import fixtext_shelf as S
     import main_window as mw
 

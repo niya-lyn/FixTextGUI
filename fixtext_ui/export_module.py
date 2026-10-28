@@ -88,6 +88,10 @@ class ExportWorker(QObject):
 
 class ExportModule(QWidget):
 
+    #: 导出成功且导出状态已落盘（书的导出记录 + 运行摘要）后发出——
+    #: 主窗口据此刷新书架「已导出」标识与历史条目状态（M4-EX.3b）。
+    exportRecorded = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.source: ExportSource | None = None
@@ -519,8 +523,40 @@ class ExportModule(QWidget):
         self.outcome = outcome
         self.export_btn.setEnabled(True)
         self._render_result(outcome)
+        self._record_export(outcome)
         self.refresh()
         self._toast(outcome.message)
+
+    def _record_export(self, outcome: ExportOutcome) -> None:
+        """导出成功的事实落盘（M4-EX.3b）：这本书的导出记录 + 那次运行的状态。
+
+        书架「已导出」标识由书目录里的真实记录驱动，历史条目的导出状态由
+        运行摘要驱动——这里就是导出页这条路的写入方（历史页的重新导出有
+        自己的写点）。记录写不进去不影响导出结果本身，只不亮标识。
+        """
+        import time
+
+        import fixtext_history as histdata
+        import fixtext_shelf as shelf
+
+        recorded = False
+        if self.record:
+            text_path = str(self.record.get("text_path") or "")
+            book_dir = Path(text_path).resolve().parent if text_path else Path()
+            if book_dir.name and (book_dir / shelf.IMPORT_RECORD).exists():
+                shelf.write_export_record(
+                    book_dir, fmt=outcome.fmt, path=outcome.main_file,
+                    sha256=outcome.sha256, hits=outcome.hits)
+                recorded = True
+        run_dir = str((self.run or {}).get("workdir") or "")
+        if run_dir and Path(run_dir).is_dir():
+            histdata.write_run_meta(
+                run_dir,
+                exported_at=time.strftime("%Y-%m-%d %H:%M:%S"),
+                exported_sha256=str(outcome.sha256 or ""))
+            recorded = True
+        if recorded:
+            self.exportRecorded.emit()
 
     def _on_failed(self, message: str) -> None:
         self._running = False

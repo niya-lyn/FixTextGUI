@@ -424,6 +424,7 @@ class MainWindow(QMainWindow):
         self.mount_import(self.workspace)
         self.mount_oneclick()
         self._wire_book_ready()
+        self._wire_export_record()
         # M4-EX.3a：启动即按持久化的选择恢复「当前书」（重启保持）；
         # 恢复过程里会顺带按当前书重挂载各数据页（3b）
         self._restore_current_book()
@@ -684,6 +685,21 @@ class MainWindow(QMainWindow):
         # 书架里换当前书（M4-EX.3a 引入；3b 起四页数据跟着换书）
         self.import_module.currentBookChanged.connect(self._on_current_book_changed)
 
+    def _wire_export_record(self):
+        """导出成功（无论从哪一页）→ 书架「已导出」与历史状态按真实记录刷新。"""
+        if self.export_module is not None:
+            self.export_module.exportRecorded.connect(self._on_export_recorded)
+        if self.history_module is not None:
+            self.history_module.exportFinished.connect(
+                lambda _payload: self._on_export_recorded())
+
+    def _on_export_recorded(self):
+        """导出状态落盘后：重扫书架与历史（都由磁盘上的真实记录驱动）。"""
+        if self.import_module is not None:
+            self.import_module.refresh_shelf()
+        if self.history_module is not None:
+            self.history_module.refresh()
+
     def _restore_current_book(self) -> None:
         """启动时恢复当前书：设置里记的那本 → 否则最近导入的那本 → 否则没有。"""
         books = list_shelf_books(self._workspace_root())
@@ -836,6 +852,12 @@ class MainWindow(QMainWindow):
         rules = PKG_ROOT / "data" / "rules"
         engine = (PKG_ROOT / "pipeline" / "vendor" / "fixtext" / "engine"
                   / "go_src" / "bin" / "replace_by_go-linux-amd64")
+        # 这本书的目录（M4-EX.3b）：历史页重新导出成功后，导出记录写到这里
+        book_dir = ""
+        if self._import_record:
+            bd = Path(str(self._import_record.get("text_path") or "")).resolve().parent
+            if bd.name and (bd / "import.json").exists():
+                book_dir = str(bd)
         self.history_module.set_export_ctx({
             "import_record": self._import_record,
             "pipeline_root": pipeline_root,
@@ -844,6 +866,7 @@ class MainWindow(QMainWindow):
             "rules_before": str(rules / "before.json"),
             "rules_after": str(rules / "after.json"),
             "engine_path": str(engine),
+            "book_dir": book_dir,
         })
 
     def export_out_dir(self) -> Path:

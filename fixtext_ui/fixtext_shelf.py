@@ -9,8 +9,7 @@
   存的是书 id（目录名），重启后按它恢复；找不到这本书时回落到「最近导入的那本」，
   再没有就视为没有当前书。
 - 已导出标识：**只由真实导出记录驱动**——书目录下存在 `exports.json` 才显示。
-  M4-EX.3a 不写这个记录（导出完成写入属 M4-EX.3b），所以这版标识不会出现，
-  不是「先把状态摆上去、数据以后补」。
+  M4-EX.3b 起导出成功会写入这份记录（`write_export_record`），标识随之点亮。
 
 为什么当前书要单独存一份而不是每次现算「最近导入」：导入模块支持多本，
 「最近导入」只是时间顺序，用户选中哪本是他自己的决定，必须在重启后仍然成立。
@@ -19,6 +18,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -27,7 +27,7 @@ import fixtext_settings as app_settings
 
 #: 当前书在设置文件里的键（值是书 id，即工作区里那本书的目录名）
 KEY_CURRENT_BOOK = "currentBook"
-#: 单本书的导出记录文件名（M4-EX.3b 才写入；本卡只读，用来驱动「已导出」标识）
+#: 单本书的导出记录文件名（导出成功后写入，驱动「已导出」标识）
 EXPORT_RECORD = "exports.json"
 #: 导入记录文件名（导入链路固定写这个名字）
 IMPORT_RECORD = "import.json"
@@ -89,6 +89,30 @@ def read_export_record(book_dir: str | Path) -> dict | None:
     except (OSError, json.JSONDecodeError):
         return None
     return data if isinstance(data, dict) else None
+
+
+def write_export_record(book_dir: str | Path, *, fmt: str, path: str,
+                        sha256: str = "", hits: int | None = None) -> dict | None:
+    """导出成功后写这本书的导出记录（书架「已导出」标识的唯一写入方）。
+
+    只记真实发生过的事实：格式 / 成品路径 / 校验值 / 命中数 / 时间，落在
+    书目录下的 ``exports.json``。导出本身已经成功，记录写不进去不该把成功
+    打断——失败时静默返回 None（界面下次导出还有机会再写）。
+    """
+    record = {
+        "exported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "fmt": str(fmt or ""),
+        "path": str(path or ""),
+        "exported_sha256": str(sha256 or ""),
+        "hits": hits if isinstance(hits, int) else None,
+    }
+    try:
+        target = Path(book_dir) / EXPORT_RECORD
+        target.write_text(
+            json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+        return record
+    except (OSError, TypeError):
+        return None
 
 
 def _dir_size(root: Path) -> int:

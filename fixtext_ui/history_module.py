@@ -662,8 +662,31 @@ class HistoryModule(QWidget):
         if sha:
             said += f"（校验值 {sha[:8]}…"
             said += "，与当时一致）" if match else "）"
+        self._record_export_outcome(t, out)
         self._toast(said)
         self.exportFinished.emit((t.get("run_dir"), True, said))
+
+    def _record_export_outcome(self, t: dict, out) -> None:
+        """历史页重新导出成功 → 写这本书的导出记录与该次运行的导出状态。
+
+        与导出页的写点是同一个数据源（书的 exports.json + 运行摘要），
+        这样无论从哪一页导出，书架「已导出」标识和历史条目状态都点亮。
+        """
+        import fixtext_shelf as shelf
+
+        run_dir = str(t.get("run_dir") or "")
+        sha = str(getattr(out, "sha256", "") or "")
+        main_file = str(getattr(out, "main_file", "") or "")
+        fmt = str(getattr(out, "fmt", "") or "")
+        hits = getattr(out, "hits", None)
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        if run_dir and Path(run_dir).is_dir():
+            histdata.write_run_meta(run_dir, exported_at=now, exported_sha256=sha)
+        book_dir = str((self._export_ctx or {}).get("book_dir") or "")
+        if book_dir and Path(book_dir).is_dir():
+            shelf.write_export_record(
+                book_dir, fmt=fmt, path=main_file, sha256=sha,
+                hits=hits if isinstance(hits, int) else None)
 
     def _confirm_export_workspace(self):
         """导出「当前工作区」那一刻的成品（恢复完直接出文件，不用再跑一遍）。"""
