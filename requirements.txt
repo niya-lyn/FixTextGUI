@@ -1,0 +1,9 @@
+# FixText V1 运行时依赖（安装：python -m pip install -r requirements.txt）
+# 仅列运行主程序所需的第三方库；跑测试需要的 pytest 等开发工具不在其列。
+# 实测环境：Python 3.12.11 + PySide6 6.11.2 + lxml 6.0.2（Linux）。
+
+# 桌面界面框架（全部窗口、控件、拖放、后台线程都基于它）
+PySide6>=6.5
+
+# XML 解析（EPUB 解包/排版/还原，vendor 的 epubtext 引擎依赖它）
+lxml>=4.9
