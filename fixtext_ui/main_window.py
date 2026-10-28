@@ -37,7 +37,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QPoint, Qt, Signal, QTimer, QSettings
+from PySide6.QtCore import QPoint, Qt, Signal, QTimer
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout,
@@ -50,6 +50,7 @@ from fixtext_tokens import (
     READY_KEYS, STATUS_TEXT, WINDOW_H, WINDOW_MIN_H, WINDOW_MIN_W, WINDOW_W,
     c, sp, r, fs, px, FONT_WEIGHT,
 )
+from fixtext_settings import AppSettings as QSettings   # M4-T4.4：设置落用户区
 from fixtext_widgets import Card, Modal, Pill, Switch, hline
 from first_run_wizard import FirstRunWizard
 from check_module import CheckModule
@@ -913,6 +914,9 @@ class MainWindow(QMainWindow):
             return None
 
         title = str(meta.get("title") or Path(original).stem)
+        # 用户区（自定义词库 / 派生规则 / 还原点）统一在包根 workspace/ 下，
+        # 显式注入，避免替换阶段按别的推算规则找第二份自定义词库。
+        vocab_dir = PKG_ROOT / "workspace" / "vocab"
         ctx = dict(
             pipeline_root=str(pipeline),
             rules_before=str(rules / "before.json"),
@@ -922,6 +926,8 @@ class MainWindow(QMainWindow):
             title=title,
             author=str(meta.get("author") or ""),
             suffix=Path(original).suffix.lower(),
+            custom_vocab_path=str(vocab_dir / "custom_vocab.json"),
+            derived_rules_dir=str(vocab_dir / "derived_rules"),
         )
         if original.lower().endswith(".epub"):
             ctx["epub"] = str(Path(original))
