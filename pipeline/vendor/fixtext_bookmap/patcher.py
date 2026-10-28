@@ -18,9 +18,8 @@
 from __future__ import annotations
 
 import os
-import shutil
-import subprocess
 
+from ._unidiff import unified_diff_bytes
 from .phpcompat import (
     change_encoding_and_new_line_type,
     php_ltrim,
@@ -40,12 +39,16 @@ class PatchError(RuntimeError):
 
 
 def generate_patch(original_file: str, update_file: str, patch_file: str) -> str:
-    """生成 unified diff 补丁文件。
+    """生成 unified diff 补丁文件（纯 Python 实现，不依赖外部 ``diff`` 命令）。
 
-    与上游 ``Util::generatePatch()`` 一致：执行 ``diff -u <original> <update>``
-    并把标准输出重定向到 ``patch_file``。
+    与上游 ``Util::generatePatch()`` 的差异仅在实现方式：上游执行
+    ``diff -u <original> <update>``，本实现内置等价算法
+    （``_unidiff``，GNU diffutils 3.8 的忠实移植），在无 GNU diff 的
+    平台（如 Windows）上同样可用。生成的 patch 仍被
+    :class:`PatchAnalyzer` 正确解析，两文件完全相同时输出空 patch。
 
-    注意：``diff`` 在两文件存在差异时返回码为 1，属于正常情况，不视为错误。
+    文件头 2 行不带时间戳（``PatchAnalyzer`` 丢弃前 2 行，仅要求存在）；
+    输入按 utf-8 字节流处理。
     """
     if not os.path.exists(original_file) or not os.path.exists(update_file):
         raise PatchError(
@@ -55,23 +58,18 @@ def generate_patch(original_file: str, update_file: str, patch_file: str) -> str
     if os.path.isfile(patch_file):
         os.unlink(patch_file)
 
-    diff_cmd = shutil.which("diff")
-    if diff_cmd is None:
-        raise PatchError(
-            "系统中找不到 diff 命令，无法生成 patch（上游同样依赖 GNU diff）"
-        )
+    with open(original_file, "rb") as fh:
+        data0 = fh.read()
+    with open(update_file, "rb") as fh:
+        data1 = fh.read()
+
+    name0 = os.fsencode(original_file)
+    name1 = os.fsencode(update_file)
+    payload = unified_diff_bytes(data0, data1, name0, name1)
 
     with open(patch_file, "wb") as out:
-        proc = subprocess.run(
-            [diff_cmd, "-u", original_file, update_file],
-            stdout=out,
-            stderr=subprocess.PIPE,
-        )
-    if proc.returncode not in (0, 1):
-        raise PatchError(
-            f"diff 执行失败，返回码 {proc.returncode}: "
-            f"{proc.stderr.decode('utf-8', errors='replace')}"
-        )
+        out.write(payload)
+
     if not os.path.exists(patch_file):
         raise PatchError(f"patch: {patch_file} 生成 patch 失败")
     return patch_file
