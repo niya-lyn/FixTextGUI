@@ -1,90 +1,69 @@
-"""
-FixText V1 · 首次使用向导（T4.3 · P0 五项底线之一）
-=================================================
+"""新手向导（M4-EX.2c · 任务式，替代原只读演示向导）
+==================================================
 
-纯流程壳：三步演示「导入 → 处理 → 导出」，附带示例书，可跳过、可重看。
-本向导**不接入真实逻辑**（导入 / 一键校正 / 导出 的后端由对应模块负责），
-只负责把工作流讲清楚、把示例书指出来、让用户第一次打开就知道怎么走。
+向导不再是「看三条要点」，而是**带着用户真实走完一本书的三步**：
+
+  第 1 步 · 导入   用户点「选择我的书…」→ 系统文件选择对话框 → 真实导入
+                   （复用导入模块的文件汇合入口，与拖放同一条路）
+  第 2 步 · 一键校正 真实跑六阶段校正（自带可视化进度弹窗，可取消且二次确认）
+  第 3 步 · 导出   真实导出干净文件 + 替换统计，历史记录留一条
+
+每一步完成后，向导里显示的是**这一步的真实结果**（书名 / 字数 / 编码 /
+命中数 / 成品文件名），不是固定文案——所以「向导走完」等于「书真的处理好了」。
+
+交互（对齐合并版原型 v3）：
+- 首启自动弹出（主窗口触发）、可跳过、可返回上一步；
+- 按钮左右分栏：左侧「返回上一步 / 跳过」，右侧主操作；
+- 校正取消二次确认（原型 `#corrConfirm`，层级高于校正进度弹窗）；
+- ☰ 菜单可随时重新打开（可重看）。
+
+层级（原型附「层级速查」z-index 表，Qt 侧用窗口栈等效表达）：
+  主界面 1–10 → 向导 45/46（模态窗，一定在主界面之上）
+  → 通用弹窗 50 → 校正取消确认 56（进度弹窗内的遮罩层，一定在弹窗内容之上）
+  → Toast 60 → ☰ 菜单 70（菜单是顶层弹出，盖住向导）
 
 设计约束（与全工程一致）：
-- 只消费 `fixtext_tokens.py` 的令牌，不硬编码颜色 / 尺寸字面值。
+- 只消费 `fixtext_tokens.py` 的令牌，不硬编码颜色 / 尺寸字面量。
 - 内联 QSS 用精确 `#ObjectName` 选择器（避免裸 `QFrame{}` 误伤子 QLabel）。
-- 条款号（§）不进向导常态文案（首-run 向导是「藏内部概念」最前线的页面）。
-- 步骤指示条自含，不依赖 import_module.WizardSteps（保持新文件独立、零改动现有模块）。
+- 条款号（§）与内部术语不进向导文案。
 
-触发 / 重看由 `main_window.py` 负责：
-- 首启（QSettings 无 wizardSeen）→ 自动弹出；
-- ☰ 菜单「新手向导（重新观看）」→ 随时再看。
+只让用户选**自己的书**：原型里的演示样书不作为功能实现。
+测试用的公版样本只是验收输入，不是产品功能。
 """
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QFont
+import time
+from pathlib import Path
+
+from PySide6.QtCore import QEventLoop, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
-    QDialog, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame,
+    QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QProgressBar, QPushButton,
+    QVBoxLayout, QWidget,
 )
 
-from fixtext_tokens import c, sp, r, fs, FONT_WEIGHT
+from fixtext_tokens import c, sp, r, fs
 from fixtext_widgets import hline
 
 
 # ---------------------------------------------------------------------------
-# 静态内容（与导入 / 处理 / 导出 原型同源；示例书取自 import_module.SAMPLES）
+# 三步定义（与原型 ONB_STEPS 同源）
 # ---------------------------------------------------------------------------
-
-SAMPLE = {
-    "name": "示例书.epub",
-    "size": "4.4 MB",
-    "enc": "UTF-8",
-    "encHint": "已是 UTF-8，无需转换",
-}
 
 STEPS = [
-    ("📥", "导入", "把书放进 FixText"),
-    ("⚡", "处理", "一键校正 + 检查问题"),
-    ("📤", "导出", "导出干净电子书"),
+    ("📥", "导入书籍"),
+    ("⚡", "一键校正"),
+    ("📤", "导出结果"),
 ]
 
-STEP_BODY = [
-    {
-        "bullets": [
-            "拖放或选择 TXT / EPUB；也可以直接用我们附带的示例书。",
-            "编码自动识别并转为 UTF-8，全程人话提示，不弹命令行窗口。",
-            "导入即复制到工作区，原文件保持只读——随时能回到这一刻。",
-        ],
-        "sample": f"已附带示例书：{SAMPLE['name']}（TXT 书也能导入，编码自动识别）",
-    },
-    {
-        "bullets": [
-            "一键校正：默认配置直接跑排版 + 替换 + 标点，可中途取消。",
-            "检查问题：引号配对等逐处人工确认，想修哪里点哪里。",
-            "词库管理：检索 / 查重 / 合并，所有改动可撤销、自动留快照。",
-        ],
-        "sample": f"示例书{SAMPLE['name']}会在这里被排版、标点规范化。",
-    },
-    {
-        "bullets": [
-            "导出干净 TXT，或把 EPUB 还原回去直接用阅读器打开。",
-            "每次自动附替换报告（表格 / 文本），无差异则跳过并说明。",
-            "任务自动记入历史记录，任一快照都能一键恢复现场。",
-        ],
-        "sample": f"处理完的{SAMPLE['name']}就能导出成干净的电子书了。",
-    },
-]
+FILE_FILTER = "书籍文件 (*.txt *.epub)"
 
-
-# ---------------------------------------------------------------------------
-# 步骤指示条（自含，不依赖 import_module）
-# ---------------------------------------------------------------------------
 
 def _clear_layout(layout) -> None:
-    """递归清空一个布局：控件解父子后 deleteLater，子布局同样递归。
+    """递归清空布局：控件解父子后 deleteLater，子布局同样递归。
 
-    只按 `item.widget()` 清是不够的——`_render_step` 里的「步骤标题行」是
-    `addLayout(hl)` 进去的**嵌套布局**，`item.widget()` 对它返回 None，
-    于是旧标题的 `QLabel` 一路留着，翻页后新标题直接盖在旧标题上
-    （实测截图里出现过「第 2 步 · 处理」和「第 1 步 · 导入」叠字）。
+    只按 ``item.widget()`` 清不够——标题行是 ``addLayout`` 塞进去的嵌套布局，
+    ``item.widget()`` 对它返回 None，旧标题会一路留着叠在下一页上（真实缺陷）。
     """
     while layout.count():
         item = layout.takeAt(0)
@@ -97,288 +76,552 @@ def _clear_layout(layout) -> None:
         if child is not None:
             _clear_layout(child)
             child.deleteLater()
+            continue
         spacer = item.spacerItem()
         if spacer is not None:
             del spacer
 
 
-class _StepBar(QWidget):
-    """水平步骤指示：已完成=绿、当前=主色、未到=中性，节点间连线同步着色。"""
-
-    def __init__(self, icons, names, parent=None):
-        super().__init__(parent)
-        self._icons = icons
-        self._names = names
-        self._nodes = []
-        self._lines = []
-        self._built = False
-        self.set_steps(0)
-
-    def set_steps(self, current: int):
-        if not self._built:
-            self._build_once()
-        for i, node in enumerate(self._nodes):
-            done = i < current
-            active = i == current
-            self._style_node(node, done, active)
-            if i < len(self._lines):
-                self._lines[i].setStyleSheet(
-                    f"background:{c('success') if done else c('neutral.200')};"
-                    f"border:none")
-
-    def _build_once(self):
-        hl = QHBoxLayout(self)
-        hl.setContentsMargins(0, 0, 0, 0)
-        hl.setSpacing(0)
-        hl.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        n = len(self._names)
-        for i in range(n):
-            node = QWidget()
-            nl = QHBoxLayout(node)
-            nl.setContentsMargins(0, 0, 0, 0)
-            nl.setSpacing(8)
-            nl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            dot = QLabel(self._icons[i])
-            dot.setFixedSize(34, 34)
-            dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            lab = QLabel(self._names[i])
-            nl.addWidget(dot)
-            nl.addWidget(lab)
-            node._dot = dot
-            node._lab = lab
-            self._nodes.append(node)
-            hl.addWidget(node)
-            if i < n - 1:
-                line = QFrame()
-                line.setFixedSize(44, 2)
-                line.setStyleSheet(f"background:{c('neutral.200')};border:none")
-                self._lines.append(line)
-                hl.addWidget(line)
-        self._built = True
-
-    def _style_node(self, node, done: bool, active: bool):
-        dot, lab = node._dot, node._lab
-        if done:
-            dot.setStyleSheet(
-                f"background:{c('success')};color:#fff;border-radius:999px;"
-                f"font-size:16px")
-            lab.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
-        elif active:
-            dot.setStyleSheet(
-                f"background:{c('primary.500')};color:#fff;border-radius:999px;"
-                f"font-size:16px")
-            lab.setStyleSheet(
-                f"color:{c('primary.700')};font-weight:700;font-size:{fs('sm')}")
-        else:
-            dot.setStyleSheet(
-                f"background:{c('neutral.100')};color:{c('neutral.500')};"
-                f"border-radius:999px;font-size:16px")
-            lab.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('sm')}")
-
-
-# ---------------------------------------------------------------------------
-# 向导对话框
-# ---------------------------------------------------------------------------
-
-class FirstRunWizard(QDialog):
-    """首次使用向导：三步演示 + 示例书 + 跳过 / 重看。
-
-    - 完成（「开始使用」accept）后由主窗口跳到「导入书籍」页；
-    - 跳过 / 关闭（reject）后停留在首页，但同样标记为已看过。
-    任何关闭方式都算「已看过」，重新观看走 ☰ 菜单。
-    """
+class _StepBars(QWidget):
+    """三步进度条（原型 `.onb-steps`：每步一根细条，已完成 100%、当前 50%）。"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._bars: list[QProgressBar] = []
+        self._labels: list[QLabel] = []
+        hl = QHBoxLayout(self)
+        hl.setContentsMargins(0, 0, 0, 0)
+        hl.setSpacing(8)
+        for ico, name in STEPS:
+            box = QWidget()
+            bl = QVBoxLayout(box)
+            bl.setContentsMargins(0, 0, 0, 0)
+            bl.setSpacing(6)
+            bar = QProgressBar()
+            bar.setObjectName("OnbBar")
+            bar.setRange(0, 100)
+            bar.setValue(0)
+            bar.setTextVisible(False)
+            bar.setFixedHeight(6)
+            bl.addWidget(bar)
+            lab = QLabel(f"{ico} {name}")
+            lab.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+            bl.addWidget(lab)
+            self._bars.append(bar)
+            self._labels.append(lab)
+            hl.addWidget(box, 1)
+
+    def set_step(self, current: int) -> None:
+        for i, (bar, lab) in enumerate(zip(self._bars, self._labels)):
+            if i < current:
+                state, value = "done", 100
+            elif i == current:
+                state, value = "active", 50
+            else:
+                state, value = "todo", 0
+            bar.setValue(value)
+            fill = {
+                "done": c("success"),
+                "active": c("primary.500"),
+                "todo": c("neutral.200"),
+            }[state]
+            bar.setStyleSheet(
+                f"QProgressBar#OnbBar{{background:{c('neutral.200')};"
+                f"border:none;border-radius:{r('full')}}}"
+                f"QProgressBar#OnbBar::chunk{{background:{fill};"
+                f"border-radius:{r('full')}}}"
+            )
+            if state == "done":
+                lab.setStyleSheet(f"font-size:{fs('xs')};color:{c('success')}")
+            elif state == "active":
+                lab.setStyleSheet(
+                    f"font-size:{fs('xs')};color:{c('primary.700')};font-weight:600")
+            else:
+                lab.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+
+    #: 测试用：读回每根条的百分比
+    def values(self) -> list[int]:
+        return [b.value() for b in self._bars]
+
+
+# ---------------------------------------------------------------------------
+# 向导
+# ---------------------------------------------------------------------------
+
+class FirstRunWizard(QDialog):
+    """任务式新手向导：真实引导用户走完 导入 → 校正 → 导出。
+
+    主窗口负责弹出 / 记住「已看过」/ ☰ 重开；本类只负责把三步做实。
+    完成（accept）后由主窗口跳到「历史记录」页（与原型 finishWizard 一致）。
+    """
+
+    exported = Signal(str)     # 导出成品文件的绝对路径（供验收与接线）
+
+    def __init__(self, import_module=None, oneclick_module=None,
+                 export_module=None, parent=None):
+        super().__init__(parent)
         self.setWindowTitle("新手向导 · FixText V1")
         self.setModal(True)
-        self.setMinimumWidth(660)
-        self.step = 0
-        self._build()
+        self.setMinimumWidth(620)
+        self.import_module = import_module
+        self.oneclick_module = oneclick_module
+        self.export_module = export_module
 
-    # ------------------------------------------------------------------ 构建
-    def _build(self):
+        self.step = 0
+        self._import_result = None
+        self._correction = None
+        self._export = None
+        self._export_path = ""
+        self._busy = False
+        self._error = ""
+
+        self._build()
+        self._render()
+
+    # ---------------------------------------------------------------- 构建
+    def _build(self) -> None:
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
         root.addWidget(self._head())
-        root.addWidget(self._body_panel())
+
+        body = QWidget()
+        bl = QVBoxLayout(body)
+        bl.setContentsMargins(20, 16, 20, 12)
+        bl.setSpacing(12)
+        self.bars = _StepBars()
+        bl.addWidget(self.bars)
+        self.panel = QWidget()
+        self.panel.setObjectName("WizardPanel")
+        self.panel.setStyleSheet(
+            f"QWidget#WizardPanel{{background:{c('neutral.0')};"
+            f"border:1px solid {c('neutral.200')};border-radius:{r('lg')}}}")
+        self.panel_l = QVBoxLayout(self.panel)
+        self.panel_l.setContentsMargins(20, 18, 20, 18)
+        self.panel_l.setSpacing(10)
+        bl.addWidget(self.panel, 1)
+        root.addWidget(body, 1)
+
         root.addWidget(self._foot())
 
     def _head(self) -> QWidget:
         head = QWidget()
         head.setObjectName("ModalHead")
         hl = QHBoxLayout(head)
-        hl.setContentsMargins(20, 18, 20, 18)
-        ico = QLabel("👋")
-        ico.setFixedSize(34, 34)
+        hl.setContentsMargins(20, 16, 20, 16)
+        hl.setSpacing(12)
+        ico = QLabel("🧭")
+        ico.setFixedSize(40, 40)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:9px;font-size:18px")
+            f"border-radius:10px;font-size:20px")
         col = QVBoxLayout()
-        col.setSpacing(3)
-        t = QLabel("欢迎使用 FixText V1")
+        col.setSpacing(2)
+        t = QLabel("新手向导")
         t.setStyleSheet(
             f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
-        s = QLabel(
-            f"用示例书 {SAMPLE['name']} 带你跑通 导入 → 处理 → 导出。"
-            "约 30 秒，看完就能上手。")
-        s.setWordWrap(True)
-        s.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
+        s = QLabel("三步走完一本书的校准")
+        s.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
         col.addWidget(t)
         col.addWidget(s)
         hl.addWidget(ico)
         hl.addLayout(col, 1)
-        hl.addStretch(0)
+        close = QPushButton("×")
+        close.setObjectName("ModalClose")
+        close.setCursor(Qt.CursorShape.PointingHandCursor)
+        close.setFixedSize(30, 30)
+        close.setToolTip("关掉向导（随时可从右上角菜单重新打开）")
+        close.clicked.connect(self._skip_wizard)
+        hl.addWidget(close)
         return head
 
-    def _body_panel(self) -> QWidget:
-        body = QWidget()
-        bl = QVBoxLayout(body)
-        bl.setContentsMargins(20, 18, 20, 18)
-        bl.setSpacing(16)
+    def _foot(self) -> QWidget:
+        foot = QWidget()
+        foot.setObjectName("ModalFoot")
+        self.foot_l = QHBoxLayout(foot)
+        self.foot_l.setContentsMargins(20, 12, 20, 14)
+        self.foot_l.setSpacing(10)
+        self.foot_widget = foot
+        return foot
 
-        self.step_bar = _StepBar(
-            [s[0] for s in STEPS], [s[1] for s in STEPS])
-        bl.addWidget(self.step_bar)
-
-        self.panel = QWidget()
-        self.panel.setObjectName("WizardPanel")
-        self.panel.setStyleSheet(
-            f"QWidget#WizardPanel{{background:{c('neutral.0')};"
-            f"border:1px solid {c('neutral.200')};border-radius:{r('lg')}}}"
-        )
-        self.panel_l = QVBoxLayout(self.panel)
-        self.panel_l.setContentsMargins(24, 22, 24, 22)
-        self.panel_l.setSpacing(0)
-        bl.addWidget(self.panel, 1)
-
-        self._render_step()
-        return body
-
-    def _render_step(self):
-        # 清空面板（递归清，避免重渲染叠加）
+    # ---------------------------------------------------------------- 渲染
+    def _render(self) -> None:
+        self.bars.set_step(self.step)
         _clear_layout(self.panel_l)
 
-        icon, name, tagline = STEPS[self.step]
-        data = STEP_BODY[self.step]
-
-        # 步骤标题行
+        title, desc, ico = self._copy()
         hl = QHBoxLayout()
         hl.setSpacing(12)
-        ico = QLabel(icon)
-        ico.setFixedSize(44, 44)
-        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
+        ic = QLabel(ico)
+        ic.setFixedSize(44, 44)
+        ic.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ic.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
             f"border-radius:12px;font-size:22px")
         col = QVBoxLayout()
         col.setSpacing(2)
-        t = QLabel(f"第 {self.step + 1} 步 · {name}")
+        t = QLabel(title)
+        t.setWordWrap(True)
         t.setStyleSheet(
-            f"font-weight:700;font-size:{fs('xl')};color:{c('neutral.900')}")
-        sub = QLabel(tagline)
-        sub.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('sm')}")
+            f"font-weight:700;font-size:{fs('md')};color:{c('neutral.900')}")
         col.addWidget(t)
-        col.addWidget(sub)
-        hl.addWidget(ico)
+        hl.addWidget(ic)
         hl.addLayout(col, 1)
         self.panel_l.addLayout(hl)
 
-        self.panel_l.addSpacing(14)
+        p = QLabel(desc)
+        p.setWordWrap(True)
+        p.setStyleSheet(
+            f"color:{c('neutral.700')};font-size:{fs('sm')};line-height:1.7")
+        self.panel_l.addWidget(p)
         self.panel_l.addWidget(hline())
-
-        # 要点列表
-        for b in data["bullets"]:
-            self.panel_l.addSpacing(10)
-            self.panel_l.addWidget(self._bullet(b))
-
-        # 示例书提示条
-        self.panel_l.addSpacing(16)
-        note = QLabel("📎 " + data["sample"])
-        note.setWordWrap(True)
-        note.setStyleSheet(
-            f"background:{c('info.bg')};border:1px solid {c('info.border')};"
-            f"color:{c('info')};border-radius:{r('md')};padding:10px 14px;"
-            f"font-size:{fs('sm')}")
-        self.panel_l.addWidget(note)
-
+        self.panel_l.addWidget(self._result_block())
+        if self._busy:
+            self.progress = QProgressBar()
+            self.progress.setObjectName("OnbProgress")
+            self.progress.setRange(0, 100)
+            self.progress.setValue(0)
+            self.progress.setTextVisible(False)
+            self.progress.setFixedHeight(8)
+            self.progress.setStyleSheet(
+                f"QProgressBar#OnbProgress{{background:{c('neutral.200')};"
+                f"border:none;border-radius:{r('full')}}}"
+                f"QProgressBar#OnbProgress::chunk{{background:{c('primary.500')};"
+                f"border-radius:{r('full')}}}")
+            self.panel_l.addWidget(self.progress)
         self.panel_l.addStretch(1)
+        self._render_actions()
 
-    def _bullet(self, text: str) -> QWidget:
-        w = QWidget()
-        hl = QHBoxLayout(w)
-        hl.setContentsMargins(0, 0, 0, 0)
-        hl.setSpacing(10)
-        dot = QLabel("●")
-        dot.setFixedSize(16, 16)
-        dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        dot.setStyleSheet(f"color:{c('primary.500')};font-size:10px")
-        lab = QLabel(text)
-        lab.setWordWrap(True)
-        lab.setStyleSheet(
-            f"color:{c('neutral.700')};font-size:{fs('sm')};line-height:1.6")
-        hl.addWidget(dot)
-        hl.addWidget(lab, 1)
-        return w
+    def _copy(self) -> tuple[str, str, str]:
+        if self.step == 0:
+            return ("第 1 步 · 导入一本书",
+                    "先把要校正的书导入工作区。原文件只读保护，FixText 会在"
+                    "工作区里留下一份副本和初始快照，随时能回到这一刻。",
+                    "📥")
+        if self.step == 1:
+            return ("第 2 步 · 一键校正",
+                    "用默认配置跑完「备份 → 排版 → 词库替换 → 校验」，进度条里"
+                    "每一步都看得到；中途想停可以取消，取消不会留下半成品。",
+                    "⚡")
+        if self.step == 2:
+            return ("第 3 步 · 导出结果",
+                    "导出干净文件，自动附一份替换报告，并在历史记录里留一条任务，"
+                    "以后随时能恢复或重新导出。",
+                    "📤")
+        return ("一本书的校准已完成！",
+                "导入、校正、导出三步都真实完成了，结果分别落在「导入书籍 / "
+                "一键校正 / 导出结果」三页，历史记录也多了一条任务。需要细修"
+                "引号时，可随时进入「检查问题」逐处处理。",
+                "🎉")
 
-    # ------------------------------------------------------------------ 底部
-    def _foot(self) -> QWidget:
-        foot = QWidget()
-        foot.setObjectName("ModalFoot")
-        fl = QHBoxLayout(foot)
-        fl.setContentsMargins(20, 14, 20, 14)
+    # ---- 各步的真实结果 ------------------------------------------------
+    def _result_block(self) -> QWidget:
+        """这一步做完之后的真实结果（没做完就只有一句当步提示）。"""
+        rows: list[str] = []
+        if self.step == 0 and self._import_result is not None:
+            res = self._import_result
+            rows = [
+                f"书名：{getattr(res, 'title', '')}",
+                f"字数：{getattr(res, 'text_chars', 0)} 字"
+                f"（{getattr(res, 'chapters', 0)} 个章节）",
+                f"编码：{getattr(res, 'encoding_label', '')}",
+                "原文件没有被改动（已核对过指纹）"
+                if getattr(res, "source_unchanged", True) else "原文件指纹有变化，请核对",
+            ]
+        elif self.step == 1 and self._correction is not None:
+            summ = self._correction or {}
+            libs = summ.get("libs") or []
+            rows = [
+                f"替换命中：{summ.get('hits', 0)} 处",
+                f"涉及词库：{'；'.join(libs) if libs else '无'}",
+                f"耗时：{summ.get('elapsed_s', 0)} 秒",
+                "引号类问题已同步到「检查问题」页，可逐处处理",
+            ]
+        elif self.step == 2 and self._export is not None:
+            out = self._export
+            rows = [
+                f"成品文件：{Path(out.main_file).name}",
+                f"替换命中：{out.hits} 处",
+                f"替换统计：{Path(out.stats_text).name} / {Path(out.stats_csv).name}",
+                f"保存位置：{Path(out.main_file).parent}",
+            ]
+        elif self.step == 3 and self._export is not None:
+            out = self._export
+            rows = [
+                f"成品文件：{Path(out.main_file).name}（{out.fmt.upper()}）",
+                f"替换命中：{out.hits} 处",
+                f"保存位置：{Path(out.main_file).parent}",
+            ]
 
-        skip = QPushButton("跳过")
-        skip.setObjectName("BtnGhost")
-        skip.setCursor(Qt.CursorShape.PointingHandCursor)
-        skip.clicked.connect(self.reject)  # 跳过 = 不向导，标记已看过（主窗口处理）
-        fl.addWidget(skip)
+        box = QWidget()
+        bl = QVBoxLayout(box)
+        bl.setContentsMargins(0, 0, 0, 0)
+        bl.setSpacing(6)
 
-        fl.addStretch(1)
+        if self._error:
+            err = QLabel("⚠️ " + self._error)
+            err.setWordWrap(True)
+            err.setStyleSheet(
+                f"background:{c('warning.bg')};border:1px solid {c('warning.border')};"
+                f"color:{c('warning')};border-radius:{r('md')};padding:10px 14px;"
+                f"font-size:{fs('sm')}")
+            bl.addWidget(err)
 
-        self._prev = QPushButton("上一步")
-        self._prev.setObjectName("BtnOutline")
+        if rows:
+            ttl = QLabel("✓ 这一步已完成")
+            ttl.setStyleSheet(
+                f"color:{c('success')};font-size:{fs('sm')};font-weight:700")
+            bl.addWidget(ttl)
+            for txt in rows:
+                lab = QLabel(txt)
+                lab.setWordWrap(True)
+                lab.setStyleSheet(
+                    f"color:{c('neutral.700')};font-size:{fs('sm')}")
+                bl.addWidget(lab)
+        elif not self._error and not self._busy:
+            hint = QLabel(self._pending_hint())
+            hint.setWordWrap(True)
+            hint.setStyleSheet(
+                f"background:{c('info.bg')};border:1px solid {c('info.border')};"
+                f"color:{c('info')};border-radius:{r('md')};padding:10px 14px;"
+                f"font-size:{fs('sm')}")
+            bl.addWidget(hint)
+        return box
+
+    def _pending_hint(self) -> str:
+        return {
+            0: "点右下角「选择我的书」，从你自己的电脑里挑一本 TXT 或 EPUB。",
+            1: "准备好后点右下角「开始校正」，全程有进度，随时能取消。",
+            2: "点右下角「导出并生成历史」，成品会存到这本书所在文件夹的"
+               "「导出结果」里。",
+            3: "点下面「完成」回到历史记录，随时能回来查看这次的结果。",
+        }[self.step]
+
+    # ---- 按钮区（左：返回 / 跳过；右：主操作） -------------------------
+    def _render_actions(self) -> None:
+        _clear_layout(self.foot_l)
+        left = QWidget()
+        ll = QHBoxLayout(left)
+        ll.setContentsMargins(0, 0, 0, 0)
+        ll.setSpacing(10)
+
+        self._prev = QPushButton("← 返回上一步")
+        self._prev.setObjectName("BtnGhost")
         self._prev.setCursor(Qt.CursorShape.PointingHandCursor)
         self._prev.clicked.connect(self._go_prev)
-        fl.addWidget(self._prev)
+        self._prev.setVisible(0 < self.step < 3 and not self._busy)
+        ll.addWidget(self._prev)
 
-        self._next = QPushButton("下一步")
-        self._next.setObjectName("BtnPrimary")
-        self._next.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._next.clicked.connect(self._go_next)
-        fl.addWidget(self._next)
+        self._skip = QPushButton("跳过")
+        self._skip.setObjectName("BtnGhost")
+        self._skip.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._skip.clicked.connect(self._skip_wizard)
+        self._skip.setVisible(self.step < 3 and not self._busy)
+        ll.addWidget(self._skip)
 
-        self._sync_foot()
-        return foot
+        self.foot_l.addWidget(left)
+        self.foot_l.addStretch(1)
 
-    def _sync_foot(self):
-        self._prev.setEnabled(self.step > 0)
-        last = self.step >= len(STEPS) - 1
-        self._next.setText("开始使用" if last else "下一步")
+        self._primary = QPushButton(self._primary_text())
+        self._primary.setObjectName("BtnPrimary")
+        self._primary.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._primary.clicked.connect(self._go_next)
+        self._primary.setEnabled(not self._busy)
+        self.foot_l.addWidget(self._primary)
 
-    # ------------------------------------------------------------------ 导航
-    def _go_prev(self):
-        if self.step > 0:
+    def _primary_text(self) -> str:
+        if self._busy:
+            return {0: "正在导入…", 1: "正在校正…", 2: "正在导出…"}.get(
+                self.step, "请稍候…")
+        return {
+            0: "📥 选择我的书…",
+            1: "⚡ 开始校正",
+            2: "📤 导出并生成历史",
+            3: "完成",
+        }[self.step]
+
+    # ---------------------------------------------------------------- 导航
+    def _go_prev(self) -> None:
+        if self.step > 0 and not self._busy:
             self.step -= 1
-            self._refresh()
+            self._error = ""
+            self._render()
 
-    def _go_next(self):
-        if self.step >= len(STEPS) - 1:
-            self.accept()  # 完成 → 主窗口跳到导入页
+    def _go_next(self) -> None:
+        if self._busy:
             return
-        self.step += 1
-        self._refresh()
+        if self.step >= 3:
+            self.accept()
+            return
+        self._error = ""
+        if self.step == 0:
+            self._do_import()
+        elif self.step == 1:
+            self._do_correct()
+        elif self.step == 2:
+            self._do_export()
 
-    def _refresh(self):
-        self.step_bar.set_steps(self.step)
-        self._render_step()
-        self._sync_foot()
+    def _skip_wizard(self) -> None:
+        """跳过 / 关闭：不完成任何一步，主窗口只记「已看过」。"""
+        if self._busy:
+            return
+        self.reject()
 
-    # 供冒烟测试直接驱动（不依赖 exec 阻塞）
-    def go_step(self, i: int):
-        if 0 <= i < len(STEPS):
+    def skip(self) -> None:
+        """测试与主窗口用的显式跳过。"""
+        self._skip_wizard()
+
+    def go_step(self, i: int) -> None:
+        """直接定位到某一步（重看时不会重跑已完成的步骤）。"""
+        if 0 <= i <= 3 and not self._busy:
             self.step = i
-            self._refresh()
+            self._render()
+
+    # ---------------------------------------------------------------- 业务
+    def _set_busy(self, busy: bool) -> None:
+        self._busy = busy
+        self._render()
+
+    def _do_import(self) -> None:
+        """真实导入：文件选择对话框 → 导入模块同一汇合入口 → 等它跑完。"""
+        if self.import_module is None:
+            self._error = "导入功能没准备好，请重开窗口再试。"
+            self._render()
+            return
+        path, _ = QFileDialog.getOpenFileName(
+            self, "选择要导入的书", "", FILE_FILTER)
+        if not path:
+            return                      # 用户在对话框里取消了：留在第 1 步
+        mod = self.import_module
+        self._set_busy(True)
+        mod.take_file(path)             # 与拖放同一个入口，不绕过导入流程
+        # 选好文件后按下本页主按钮：TXT 直接开始导入；EPUB 先到「处理方式」，
+        # 后续由 _advance_import 按它自己的步骤机继续推（不另写一套流程）。
+        mod.click_next()
+        ok = self._pump(lambda: mod.has_finished() or mod.error_text(),
+                        timeout_s=600, on_tick=self._advance_import)
+        self._set_busy(False)
+        if not ok or mod.error_text() or mod.result() is None:
+            self._error = mod.error_text() or "这本书没能导入，换一个文件再试。"
+            self._render()
+            return
+        self._import_result = mod.result()
+        self.step = 1
+        self._render()
+
+    def _advance_import(self) -> None:
+        """按导入模块自己的步骤机往前推（选处理方式 → 看章节 → 开始导入）。
+
+        只在该页主按钮可用、且后台没在跑的时候代点一下：步骤机仍然是导入模块
+        自己那一台，向导不重复实现任何导入逻辑。
+        """
+        mod = self.import_module
+        if mod is None or mod.is_busy():
+            return
+        if mod.step() in (1, 2) and mod.next_enabled():
+            mod.click_next()
+
+    def _do_correct(self) -> None:
+        if self.oneclick_module is None:
+            self._error = "校正功能没准备好，请重开窗口再试。"
+            self._render()
+            return
+        self._set_busy(True)
+        self.oneclick_module.do_correction(confirm_cancel=True)
+        self._set_busy(False)
+        outcome = getattr(self.oneclick_module, "_outcome", None)
+        summary = getattr(self.oneclick_module, "_summary", None)
+        if outcome != "ok" or summary is None:
+            self._error = ("已取消校正，本次没有留下半成品；随时可以再点一次开始。"
+                           if outcome == "cancelled" else
+                           "这次校正没跑完，可以再点一次开始校正。")
+            self._render()
+            return
+        self._correction = summary
+        self.step = 2
+        self._render()
+
+    def _do_export(self) -> None:
+        if self.export_module is None:
+            self._error = "导出功能没准备好，请重开窗口再试。"
+            self._render()
+            return
+        mod = self.export_module
+        self._set_busy(True)
+        mod.export_now()
+        ok = self._pump(lambda: not mod.is_busy() and mod.outcome is not None,
+                        timeout_s=300)
+        self._set_busy(False)
+        outcome = mod.outcome
+        if not ok or outcome is None or not outcome.ok:
+            self._error = "这次导出没能完成，可以回到「导出结果」页看看提示。"
+            self._render()
+            return
+        self._export = outcome
+        self._export_path = str(outcome.main_file or "")
+        self.step = 3
+        self._render()
+        self.exported.emit(self._export_path)
+
+    # ---------------------------------------------------------------- 等待
+    def _pump(self, cond, *, timeout_s: float, on_tick=None) -> bool:
+        """在自己的事件循环里等一个条件成立（不阻塞界面的 sleep 忙等）。
+
+        模态窗里也要能推进：外部（用户点击 / 验收脚本）仍在同一事件循环，
+        所以这里只排队事件、每 50ms 查一次条件，超时就返回 False。
+        """
+        loop = QEventLoop()
+        ok = {"v": False}
+        timer = QTimer()
+        timer.setInterval(50)
+
+        def tick():
+            if on_tick is not None:
+                on_tick()
+            self._sync_progress()
+            if cond():
+                ok["v"] = True
+                loop.quit()
+
+        timer.timeout.connect(tick)
+        timer.start()
+        guard = QTimer()
+        guard.setSingleShot(True)
+        guard.timeout.connect(loop.quit)
+        guard.start(int(max(1.0, timeout_s) * 1000))
+        loop.exec()
+        timer.stop()
+        guard.stop()
+        return ok["v"]
+
+    def _sync_progress(self) -> None:
+        bar = getattr(self, "progress", None)
+        if bar is None:
+            return
+        mod = self.import_module
+        if self.step == 0 and mod is not None:
+            src = getattr(mod, "bar", None)
+            if src is not None and src.maximum() > 0:
+                bar.setValue(int(src.value()))
+
+
+# ---------------------------------------------------------------------------
+# 便利入口（主窗口 / 测试共用）
+# ---------------------------------------------------------------------------
+
+def opens_on_first_run() -> bool:
+    """是否还需要自动弹向导（第一次打开程序）。"""
+    from fixtext_settings import AppSettings
+    return AppSettings().value("wizardSeen", "0") != "1"
+
+
+def mark_seen() -> None:
+    from fixtext_settings import AppSettings
+    s = AppSettings()
+    s.setValue("wizardSeen", "1")
+    s.sync()
+
+
+__all__ = ["FirstRunWizard", "STEPS", "mark_seen", "opens_on_first_run"]

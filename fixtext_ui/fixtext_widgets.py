@@ -465,7 +465,8 @@ class ProgressDialog(QDialog):
     def __init__(self, *, icon: str, title: str, note: str, steps: list,
                  on_finish=None, cancel_text: str = "取消（不留半成品）",
                  finish_text: str = "完成", parent=None,
-                 mode: str = "timer", on_cancel_request=None):
+                 mode: str = "timer", on_cancel_request=None,
+                 confirm_cancel: bool = False):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setModal(True)
@@ -475,6 +476,9 @@ class ProgressDialog(QDialog):
         self._finish_text = finish_text
         self._mode = mode
         self._on_cancel_request = on_cancel_request
+        #: 点「取消」先出二次确认（原型 #corrConfirm），确认放弃才真停
+        self._confirm_cancel = confirm_cancel
+        self._confirm_dlg = None
         self._i = 0
         self._total = sum(s.get("dur", 0) for s in steps)
         self._acc = 0
@@ -731,17 +735,111 @@ class ProgressDialog(QDialog):
         if self._mode == "live" and self._on_cancel_request is not None:
             if self._cancelled or self._closing:
                 return
+            if self._confirm_cancel and not self._ask_confirm_cancel():
+                return                       # 用户选了「继续校正」：什么都不做
             self.live_begin_cancelling()
             self._on_cancel_request()
             return
         self._cancelled = True
         self.reject()
 
+    def _ask_confirm_cancel(self) -> bool:
+        """二次确认（原型层级表：确认层 56 高于进度弹窗 50）。
+
+        以本弹窗为父窗口，一定盖在进度弹窗之上；返回 True 表示用户确认放弃。
+        """
+        dlg = CancelConfirmDialog(parent=self)
+        self._confirm_dlg = dlg
+        try:
+            return dlg.exec() == QDialog.DialogCode.Accepted
+        finally:
+            self._confirm_dlg = None
+
+    def closeEvent(self, event):                 # noqa: N802 - Qt 命名
+        """关窗 / Esc 也走取消路径（含二次确认），避免后台还在跑窗口先没。"""
+        if self._mode == "live" and self._on_cancel_request is not None \
+                and not self._closing:
+            event.ignore()
+            self._cancel()
+            return
+        super().closeEvent(event)
+
 
 
 # ---------------------------------------------------------------------------
 # 确认弹窗 / 通用模态弹窗（M2-T2.6 自 UI v4 骨架提升为共享部件）
 # ---------------------------------------------------------------------------
+
+class CancelConfirmDialog(QDialog):
+    """校正「取消」的二次确认（原型 `#corrConfirm`）。
+
+    文案与原型一致：说明「已自动创建快照、放弃不留半成品」，但当前进度会丢。
+    左侧「继续校正」= 什么都不做继续跑；右侧「确认放弃」= 真的停下并清理。
+    以进度弹窗为父窗口，天然盖在它上面（原型层级表里确认层 56 > 弹窗 50）。
+    """
+
+    TITLE = "确认放弃本次校正？"
+    NOTE = ("校正前已自动创建快照，放弃不会留下任何半成品文件；"
+            "但当前进度将丢失，需要重新运行校正。")
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(self.TITLE)
+        self.setModal(True)
+        self.setMinimumWidth(480)
+        self._build()
+
+    def _build(self) -> None:
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        head = QWidget()
+        head.setObjectName("ModalHead")
+        hl = QHBoxLayout(head)
+        hl.setContentsMargins(18, 16, 18, 16)
+        ico = QLabel("⚠️")
+        ico.setFixedSize(30, 30)
+        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ico.setStyleSheet(
+            f"background:{c('warning.bg')};color:{c('warning')};"
+            f"border-radius:8px;font-size:16px")
+        t = QLabel(self.TITLE)
+        t.setStyleSheet(
+            f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
+        hl.addWidget(ico)
+        hl.addWidget(t)
+        root.addWidget(head)
+
+        body = QWidget()
+        bl = QVBoxLayout(body)
+        bl.setContentsMargins(18, 16, 18, 16)
+        note = QLabel(self.NOTE)
+        note.setWordWrap(True)
+        note.setStyleSheet(
+            f"background:{c('warning.bg')};border:1px solid {c('warning.border')};"
+            f"color:{c('warning')};border-radius:10px;padding:10px 14px;"
+            f"font-size:{fs('sm')}")
+        bl.addWidget(note)
+        root.addWidget(body)
+
+        foot = QWidget()
+        foot.setObjectName("ModalFoot")
+        fl = QHBoxLayout(foot)
+        fl.setContentsMargins(18, 14, 18, 14)
+        fl.addStretch(1)
+        self.resume_btn = QPushButton("继续校正")
+        self.resume_btn.setObjectName("BtnGhost")
+        self.resume_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.resume_btn.clicked.connect(self.reject)
+        fl.addWidget(self.resume_btn)
+        self.confirm_btn = QPushButton("确认放弃")
+        self.confirm_btn.setObjectName("BtnDanger")
+        self.confirm_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.confirm_btn.clicked.connect(self.accept)
+        fl.addWidget(self.confirm_btn)
+        root.addWidget(foot)
+
 
 class ConfirmDialog(QDialog):
     """带「取消 / 确认」的操作确认弹窗，用于破坏性或需二次确认的动作。

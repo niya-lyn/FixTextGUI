@@ -320,7 +320,7 @@ class OneClickModule(QWidget):
             f"#HeroBtn:hover{{background:{c('primary.50')}}}"
             f"#HeroBtn:disabled{{background:rgba(255,255,255,0.55);"
             f"color:{c('primary.500')}}}")
-        self.run_btn.clicked.connect(self.do_correction)
+        self.run_btn.clicked.connect(lambda: self.do_correction())
         hl.addWidget(self.run_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         return hero
 
@@ -597,8 +597,13 @@ class OneClickModule(QWidget):
             author=str(ctx.get("author") or ""),
         )
 
-    def do_correction(self):
-        """真实执行：M1 编排器六阶段在后台线程跑，进度弹窗事件驱动。"""
+    def do_correction(self, *, confirm_cancel: bool = True):
+        """真实执行：M1 编排器六阶段在后台线程跑，进度弹窗事件驱动。
+
+        ``confirm_cancel``（M4-EX.2c）：点「取消」先弹二次确认
+        （原型 `#corrConfirm`）。默认开——主按钮、向导、验收脚本走的都是
+        同一个入口，同一个行为。
+        """
         if self._running:
             return
         if not self.run_context:
@@ -650,6 +655,7 @@ class OneClickModule(QWidget):
             parent=self,
             mode="live",
             on_cancel_request=worker.request_cancel,
+            confirm_cancel=bool(confirm_cancel),
         )
         self._dlg = dlg
         worker.stage_started.connect(dlg.live_stage_started)

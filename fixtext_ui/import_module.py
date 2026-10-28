@@ -7,7 +7,7 @@
     拖放区（全局拖放也落在这里）
       → ① 选择文件
       → ② 处理方式（仅 EPUB：直接处理 / 先转成 TXT）
-      → ③ 章节预览（仅 EPUB：只读列表 + 「顺序有问题」）
+      → ③ 章节预览（仅 EPUB：只读列表）
       → 导入中（步骤化进度 + 取消）
       → 完成（人话提示 + 导入记录明细）
 
@@ -358,9 +358,7 @@ class ChoosePane(QWidget):
 
 
 class ChapterPane(QWidget):
-    """章节预览：只读列表 + 「顺序有问题」反馈入口。"""
-
-    orderFeedback = Signal()
+    """章节预览：只读章节清单（M4-EX.2c 起去掉原型里没有的反馈按钮）。"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -396,17 +394,10 @@ class ChapterPane(QWidget):
         self.list.setMaximumHeight(9 * self.ROW_HEIGHT + 8)
         lay.addWidget(self.list)
 
-        foot = QHBoxLayout()
         self.note = QLabel("")
         self.note.setWordWrap(True)
         self.note.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('xs')}")
-        foot.addWidget(self.note, 1)
-        self.feedback = QPushButton("顺序有问题")
-        self.feedback.setObjectName("BtnOutline")
-        self.feedback.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.feedback.clicked.connect(self.orderFeedback.emit)
-        foot.addWidget(self.feedback)
-        lay.addLayout(foot)
+        lay.addWidget(self.note)
 
     #: 章节行高（px）——固定给值，不依赖 sizeHintForRow（空列表时返回 -1）
     ROW_HEIGHT = 30
@@ -423,7 +414,6 @@ class ChapterPane(QWidget):
             "ok" if preview.order_ok else "warn"))
         # 没有目录信息时才补一句说明；有目录时上方已有提示，不重复
         self.note.setText("" if preview.has_toc else M.epub_no_toc())
-        self.feedback.setEnabled(True)
 
     @staticmethod
     def _pill_style(kind: str) -> str:
@@ -577,6 +567,9 @@ class ImportModule(QWidget):
         self._thread: QThread | None = None
         self._worker: ImportWorker | None = None
         self._step = 0
+        #: 最近一次导入失败 / 取消的人话原因（M4-EX.2c 向导要据此判断成败，
+        #: 不能用提示条是否存在来判断——正常提示也会显示在同一个位置）
+        self._fail_text = ""
 
         self._build()
 
@@ -645,7 +638,6 @@ class ImportModule(QWidget):
         self._panes_l.setSpacing(0)
         self.choose_pane = ChoosePane()
         self.chapter_pane = ChapterPane()
-        self.chapter_pane.orderFeedback.connect(self._order_feedback)
         self.result_pane = ResultPane(on_open_folder=self._open_workspace)
 
         # 本次选中的文件摘要（第 1 步的内容）
@@ -847,6 +839,7 @@ class ImportModule(QWidget):
             return
 
         self._clear_notice()
+        self._fail_text = ""
         self._path = path
         self._kind = kind
         self._preview = None
@@ -936,6 +929,7 @@ class ImportModule(QWidget):
     @Slot(object)
     def _on_finished(self, result) -> None:
         self._stop_thread()
+        self._fail_text = ""
         self._result = result
         self.result_pane.load(result)
         self._step = 4
@@ -953,6 +947,7 @@ class ImportModule(QWidget):
         self.bar.setRange(0, 100)
         self.bar.setValue(0)
         self.step_label.setText("")
+        self._fail_text = str(message or "")
         if detail == "cancelled":
             self._show_notice(message, "info")
         else:
@@ -998,9 +993,6 @@ class ImportModule(QWidget):
                 pass
             self._preview_copy = None
 
-    def _order_feedback(self) -> None:
-        self._show_notice(M.order_feedback_submitted(), "info")
-
     def _open_workspace(self) -> None:
         try:
             if sys.platform.startswith("win"):
@@ -1042,6 +1034,39 @@ class ImportModule(QWidget):
     def current_book(self):
         """当前书（数据层对象）；没有书时 None。"""
         return self.shelf.current_book()
+
+    # ---- 向导外的程序化入口（M4-EX.2c） --------------------------------
+    # 向导只是导入流程的引导层：它需要「选好文件之后」继续推进同一台步骤机，
+    # 所以这里把已有的内部步骤暴露成几个只读/只推进入口，**不新建流程**。
+    def take_file(self, path: str) -> None:
+        """与拖放 / 选择文件同一个汇合入口（向导用它把用户选的书交进来）。"""
+        self._take_file(path)
+
+    def step(self) -> int:
+        return int(self._step)
+
+    def is_busy(self) -> bool:
+        return self._thread is not None
+
+    def has_finished(self) -> bool:
+        return self._step == 4 and self._result is not None
+
+    def next_enabled(self) -> bool:
+        """主按钮此刻能否点（界面上可见 + 可用；不因所在页面暂时不在前台而失效）。"""
+        return bool(self.next_btn.isEnabled()
+                    and self.next_btn.isVisibleTo(self))
+
+    def click_next(self) -> None:
+        """点一下本页自己的主按钮（向导代用户按「下一步 / 开始导入」）。"""
+        if self.next_enabled():
+            self._next()
+
+    def result(self):
+        return self._result
+
+    def error_text(self) -> str:
+        """最近一次导入失败 / 取消的人话原因（没失败时为空格串）。"""
+        return str(self._fail_text or "")
 
     def refresh_shelf(self) -> None:
         """重扫工作区并重排书架（导入完成 / 外部改了当前书后调用）。"""

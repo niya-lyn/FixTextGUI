@@ -1,19 +1,17 @@
-"""M2-T2.8 首次使用向导 · 单元级验证。
+"""M4-EX.2c 任务式新手向导 · 单元级验证（替代 M2-T2.8 的只读演示向导用例）
 
 覆盖：
-  1. 向导本身：三步内容齐、步骤指示条节点数、可前进/后退、完成 accept、跳过 reject
-  2. 向导只消费令牌：源码不出现六位十六进制色值字面量
-  3. 向导文案零技术词：口径与验收脚本 tools/verify_m2t21.py 一致
-     （books / spine / OPF / rules.json 等内部目录与内部术语；
-     编码名 UTF-8 / GBK / GB18030 属用户能听懂的人话，按任务口径不计入）
-  4. 主窗口接线：构造尾部 singleShot 真的会触发、wizardSeen 控首启只弹一次、
-     完成跳「导入书籍」页、跳过留原页但同样记已看过、☰ 菜单里有重看入口
+  1. 向导本体：三步定义、进度条状态、左右分栏按钮、跳 / 返回 / 完成语义
+  2. 「示例书」不再是产品功能：源码里不得出现示例书相关文案与常量
+  3. 只消费设计令牌（不出现六位十六进制色值），文案零内部术语
+  4. 翻页不叠加旧内容（真实缺陷回归：标题行是嵌套布局，曾被漏清）
+  5. 校正取消二次确认：确认层与进度弹窗的关系 + 两个按钮的真实语义
+  6. 主窗口接线：首启自动弹一次、跳过不跳页、完成跳历史页、☰ 重看入口首项
 
-关键防挂死：主窗口构造尾部 `QTimer.singleShot(0, self._maybe_first_run)` 会在
-**之后的**事件循环里触发。若此时 FirstRunWizard 已恢复成真类，模态 `exec()` 会把
-测试进程永久卡住（本文件第一版就卡了 600s）。因此本模块在**会话级**统一把
-`main_window.QSettings` / `main_window.FirstRunWizard` 换成替身，任何时刻都不会
-建出真模态窗；真弹窗路径由 tools/accept_t28.py 在离屏事件循环里跑。
+关键防挂死：主窗口构造尾部 `QTimer.singleShot(0, self._maybe_first_run)`
+会在**之后**的事件循环里触发；若此时 FirstRunWizard 是真类，模态 `exec()`
+会把测试进程卡死。所以本模块在会话级把 `main_window.FirstRunWizard` 换成
+替身；真弹窗与真实三步链路由 `tools/accept_ex2c.py` 在离屏事件循环里跑。
 """
 
 from __future__ import annotations
@@ -26,7 +24,7 @@ import pytest
 
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication, QDialog, QLabel, QMenu, QPushButton
+from PySide6.QtWidgets import QApplication, QDialog, QLabel, QPushButton
 
 TOOLS = Path(__file__).resolve().parent.parent / "tools"
 if str(TOOLS) not in sys.path:
@@ -39,8 +37,15 @@ import verify_m2t21 as V          # 零露出词表以验收脚本为准，不�
 UI_DIR = Path(M.__file__).resolve().parent
 
 
+def _shown(widget) -> bool:
+    """「按当前步骤该不该出现在界面上」——只看 setVisible 的显式位，
+    不要求整个窗口已 show（单元测试不弹真实窗口）。"""
+    return not widget.isHidden()
+
+
 class _FakeSettings:
     """QSettings 替身：只记内存，不落盘（测试不污染真实配置目录）。"""
+
     store: dict[str, str] = {}
 
     def __init__(self, *a, **kw):
@@ -57,12 +62,14 @@ class _FakeSettings:
 
 
 class _FakeWizard:
-    """FirstRunWizard 替身：记录弹了几次，可指定用户点了完成还是跳过。"""
+    """向导替身：记弹了几次，可指定用户点了完成还是跳过。"""
+
     calls = 0
     result = int(QDialog.DialogCode.Accepted)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, **kwargs):
         _FakeWizard.calls += 1
+        _FakeWizard.last_kwargs = dict(kwargs)
 
     def exec(self):
         return _FakeWizard.result
@@ -85,9 +92,8 @@ def main_win(qt_app, tmp_path):
     _FakeWizard.calls = 0
     _FakeWizard.result = int(QDialog.DialogCode.Accepted)
     win = M.MainWindow(tmp_path / "ws")
-    QApplication.processEvents()                     # 消费构造时排队的 singleShot
     QApplication.processEvents()
-    # 兜底：把状态摆到「已看过」，任何后续残留调用都不会再弹
+    QApplication.processEvents()
     _FakeSettings.store = {"wizardSeen": "1"}
     _FakeWizard.calls = 0
     yield win
@@ -96,7 +102,6 @@ def main_win(qt_app, tmp_path):
 
 
 def _texts(root) -> list[str]:
-    """控件树里一切会显示给用户的字符串。"""
     out: list[str] = [root.windowTitle()]
     for w in root.findChildren(QLabel):
         out.append(w.text())
@@ -105,104 +110,106 @@ def _texts(root) -> list[str]:
     return [t for t in out if t]
 
 
-# ---------------------------------------------------------------- 1. 向导本身
+# ------------------------------------------------------- 1. 向导本体（三步）
 
-def test_wizard_has_three_steps(qt_app):
+def test_wizard_has_three_task_steps(qt_app):
     w = W.FirstRunWizard()
-    assert [s[1] for s in W.STEPS] == ["导入", "处理", "导出"]
-    assert len(W.STEP_BODY) == 3
+    assert [s[1] for s in W.STEPS] == ["导入书籍", "一键校正", "导出结果"]
     assert w.step == 0
-    assert len(w.step_bar._nodes) == 3
-    assert "第 1 步 · 导入" in " ".join(_texts(w))
+    assert w.bars.values() == [50, 0, 0]
+    assert "第 1 步 · 导入一本书" in " ".join(_texts(w))
     w.deleteLater()
 
 
-def test_wizard_next_prev_and_finish(qt_app):
-    """真实点击「下一步」走完三步，末步按钮变「开始使用」并 accept。"""
+def test_step_bars_track_current(qt_app):
     w = W.FirstRunWizard()
+    for step, expect in ((1, [100, 50, 0]), (2, [100, 100, 50]),
+                         (3, [100, 100, 100])):
+        w.go_step(step)
+        assert w.bars.values() == expect
+    w.deleteLater()
+
+
+def test_actions_split_left_right(qt_app):
+    """第 1 步：左侧「跳过」、右侧主操作；第 2 步起左侧多一个「返回上一步」。"""
+    w = W.FirstRunWizard()
+    assert w._primary.text() == "📥 选择我的书…"
+    assert not _shown(w._prev)
+    assert _shown(w._skip)
+    w.go_step(1)
+    assert w._primary.text() == "⚡ 开始校正"
+    assert _shown(w._prev) and _shown(w._skip)
+    w.go_step(2)
+    assert w._primary.text() == "📤 导出并生成历史"
+    w.go_step(3)
+    assert w._primary.text() == "完成"
+    assert not _shown(w._prev) and not _shown(w._skip), \
+        "完成页只留「完成」（与原型一致）"
+    w.deleteLater()
+
+
+def test_back_returns_previous_step(qt_app):
+    w = W.FirstRunWizard()
+    w.go_step(2)
+    QTest.mouseClick(w._prev, Qt.MouseButton.LeftButton)
+    assert w.step == 1
+    QTest.mouseClick(w._prev, Qt.MouseButton.LeftButton)
+    assert w.step == 0
+    w.deleteLater()
+
+
+def test_finish_accepts(qt_app):
+    w = W.FirstRunWizard()
+    w.go_step(3)
     accepted = {"n": 0}
     w.accepted.connect(lambda: accepted.__setitem__("n", accepted["n"] + 1))
-
-    assert not w._prev.isEnabled()          # 第一步不能后退
-    for expect_step in (1, 2):
-        QTest.mouseClick(w._next, Qt.MouseButton.LeftButton)
-        assert w.step == expect_step
-    assert w._next.text() == "开始使用"
-    assert w._prev.isEnabled()
-
-    QTest.mouseClick(w._next, Qt.MouseButton.LeftButton)
+    QTest.mouseClick(w._primary, Qt.MouseButton.LeftButton)
     assert accepted["n"] == 1
     assert w.result() == int(QDialog.DialogCode.Accepted)
     w.deleteLater()
 
 
-def test_wizard_prev_works(qt_app):
-    w = W.FirstRunWizard()
-    w.go_step(2)
-    QTest.mouseClick(w._prev, Qt.MouseButton.LeftButton)
-    assert w.step == 1
-    w.deleteLater()
-
-
-def test_wizard_rerender_does_not_stack(qt_app):
-    """翻页重渲染不得叠加旧内容（真实缺陷回归：标题行是嵌套布局，曾被漏清）。
-
-    用户原稿 `_render_step` 只清 `item.widget()`，而「第 N 步 · XX」标题行是
-    `addLayout` 加进去的嵌套布局，`item.widget()` 返回 None → 旧标题留在面板上，
-    截图里能看到「第 2 步 · 处理」和「第 1 步 · 导入」叠字。
-    """
-    app = QApplication.instance()
-    w = W.FirstRunWizard()
-    w.show()
-    for _ in range(3):
-        app.processEvents()
-
-    w.go_step(1)
-    for _ in range(6):
-        app.processEvents()
-    labels = [c.text() for c in w.panel.findChildren(QLabel)]
-    assert not any("第 1 步" in t for t in labels), f"翻到第 2 步仍有第 1 步残留：{labels}"
-    assert any("第 2 步 · 处理" in t for t in labels)
-
-    w.go_step(2)
-    for _ in range(6):
-        app.processEvents()
-    labels = [c.text() for c in w.panel.findChildren(QLabel)]
-    stale = [t for t in labels if "第 1 步" in t or "第 2 步" in t]
-    assert not stale, f"翻到第 3 步仍有旧步骤残留：{stale}"
-    assert sum(1 for t in labels if t.startswith("第 ")) == 1, "标题应只有一条"
-    w.close()
-    w.deleteLater()
-
-
-def test_wizard_skip_rejects(qt_app):
-    """「跳过」= reject（主窗口据此只标已看过、不跳页）。"""
+def test_skip_rejects(qt_app):
+    """跳过 = reject（主窗口据此只记已看过、不跳页）。"""
     w = W.FirstRunWizard()
     seen = {"n": 0}
     w.rejected.connect(lambda: seen.__setitem__("n", seen["n"] + 1))
-    skip = [b for b in w.findChildren(QPushButton) if b.text() == "跳过"][0]
-    QTest.mouseClick(skip, Qt.MouseButton.LeftButton)
+    QTest.mouseClick(w._skip, Qt.MouseButton.LeftButton)
     assert seen["n"] == 1
     assert w.result() == int(QDialog.DialogCode.Rejected)
     w.deleteLater()
 
 
-# ---------------------------------------------------------------- 2. 令牌约束
+def test_step_without_modules_reports_honestly(qt_app):
+    """没有真实模块时不假装完成：给出人话原因，仍停在原步。"""
+    w = W.FirstRunWizard()
+    w._do_import()
+    assert w.step == 0 and "没准备好" in w._error
+    w.deleteLater()
+
+
+# --------------------------------------------- 2. 「示例书」不是要实现的功能
+
+def test_no_sample_book_affordance():
+    """示例书只是原型的演示数据（用户 2026-10-28 明确指出），不得成为功能。"""
+    src = (UI_DIR / "first_run_wizard.py").read_text(encoding="utf-8")
+    for word in ("示例书", "SAMPLE", "星河彼端"):
+        assert word not in src, f"向导里仍残留「{word}」：示例书不是要实现的功能"
+
+
+# ------------------------------------------------------- 3. 令牌与文案约束
 
 def test_wizard_uses_tokens_only():
-    """除三位缩写白（#fff）外的六位色值字面量一律不许出现。"""
     src = (UI_DIR / "first_run_wizard.py").read_text(encoding="utf-8")
     six = re.findall(r"#[0-9a-fA-F]{6}\b", src)
     assert not six, f"向导出现硬编码六位色值：{six}"
     assert "fixtext_tokens" in src and "c(" in src
 
 
-# ---------------------------------------------------------------- 3. 文案零技术词
-
 def test_wizard_texts_have_no_tech_terms(qt_app):
     w = W.FirstRunWizard()
     hits = []
-    for step in range(3):
+    for step in range(4):
         w.go_step(step)
         for t in _texts(w):
             hits += [(step, pat, t[:80])
@@ -211,10 +218,108 @@ def test_wizard_texts_have_no_tech_terms(qt_app):
     w.deleteLater()
 
 
-# ---------------------------------------------------------------- 4. 主窗口接线
+# ---------------------------------------------------- 4. 翻页不叠加旧内容
+
+def test_rerender_does_not_stack(qt_app):
+    app = QApplication.instance()
+    w = W.FirstRunWizard()
+    w.show()
+    for _ in range(3):
+        app.processEvents()
+    w.go_step(1)
+    for _ in range(6):
+        app.processEvents()
+    labels = [c.text() for c in w.panel.findChildren(QLabel)]
+    assert not any("第 1 步" in t for t in labels), f"第 1 步残留：{labels}"
+    w.go_step(2)
+    for _ in range(6):
+        app.processEvents()
+    labels = [c.text() for c in w.panel.findChildren(QLabel)]
+    assert not [t for t in labels if "第 1 步" in t or "第 2 步" in t]
+    w.close()
+    w.deleteLater()
+
+
+def test_result_block_shows_real_facts(qt_app):
+    """每步完成后展示这一步的真实结果，而不是固定文案。"""
+    class _Res:
+        title = "测试书"
+        text_chars = 1234
+        chapters = 7
+        encoding_label = "UTF-8"
+        source_unchanged = True
+
+    w = W.FirstRunWizard()
+    w._import_result = _Res()
+    w.go_step(0)
+    texts = " ".join(_texts(w))
+    assert "测试书" in texts and "1234 字" in texts and "7 个章节" in texts
+    w.deleteLater()
+
+
+# ------------------------------------------------- 5. 校正取消：二次确认
+
+def test_cancel_confirm_dialog_copy_and_buttons(qt_app):
+    from fixtext_widgets import CancelConfirmDialog
+
+    d = CancelConfirmDialog()
+    assert d.windowTitle() == "确认放弃本次校正？"
+    texts = " ".join(_texts(d))
+    assert "继续校正" in texts and "确认放弃" in texts
+    assert "快照" in texts and "半成品" in texts
+    d.deleteLater()
+
+
+def test_cancel_confirm_resume_keeps_running(qt_app):
+    """选「继续校正」= 不取消：进度弹窗不进入取消态。"""
+    from fixtext_widgets import CancelConfirmDialog, ProgressDialog
+
+    dlg = ProgressDialog(icon="⚡", title="t", note="", steps=[dict(name="a", desc="")],
+                         mode="live", on_cancel_request=lambda: None,
+                         confirm_cancel=True)
+    asked = {}
+    from PySide6.QtWidgets import QDialog as _Q
+
+    def fake_exec(self):
+        asked["resume"] = True
+        return int(_Q.DialogCode.Rejected)
+
+    CancelConfirmDialog.exec = fake_exec            # type: ignore[method-assign]
+    dlg._cancel()
+    assert asked, "没有出二次确认"
+    assert dlg._cancelled is False, "选「继续校正」后不应进入取消态"
+    dlg.deleteLater()
+
+
+def test_cancel_confirm_accept_stops(qt_app):
+    """选「确认放弃」= 真的停下并回调清理入口。"""
+    from fixtext_widgets import CancelConfirmDialog, ProgressDialog
+    from PySide6.QtWidgets import QDialog as _Q
+
+    stopped = {"n": 0}
+    dlg = ProgressDialog(icon="⚡", title="t", note="", steps=[dict(name="a", desc="")],
+                         mode="live", on_cancel_request=lambda: stopped.__setitem__(
+                             "n", stopped["n"] + 1),
+                         confirm_cancel=True)
+    CancelConfirmDialog.exec = lambda self: int(_Q.DialogCode.Accepted)  # type: ignore
+    dlg._cancel()
+    assert stopped["n"] == 1
+    assert dlg._cancelled is True
+    dlg.deleteLater()
+
+
+def test_correction_entry_defaults_to_confirm():
+    """主按钮 / 向导走同一个入口，默认就要二次确认（不留一条静默取消的路）。"""
+    import inspect
+
+    import oneclick_module as O
+    sig = inspect.signature(O.OneClickModule.do_correction)
+    assert sig.parameters["confirm_cancel"].default is True
+
+
+# ------------------------------------------------------------- 6. 主窗口接线
 
 def test_qtimer_hook_really_fires(qt_app, tmp_path):
-    """构造尾部 singleShot 不是摆设：建好窗后跑事件循环就应自动弹出。"""
     _FakeSettings.store = {}
     _FakeWizard.calls = 0
     win = M.MainWindow(tmp_path / "ws2")
@@ -222,29 +327,35 @@ def test_qtimer_hook_really_fires(qt_app, tmp_path):
     QApplication.processEvents()
     QApplication.processEvents()
     assert _FakeWizard.calls == 1, "singleShot 没触发向导"
-    assert win.current_key == "import", "完成后应跳到「导入书籍」页"
+    assert win.current_key == "history", "完成后应跳到「历史记录」页"
     assert _FakeSettings.store["wizardSeen"] == "1"
     win.close()
     win.deleteLater()
 
 
+def test_wizard_gets_real_modules(main_win):
+    """向导拿到三个真实模块（它要靠它们把三步做实，不是只读演示）。"""
+    _FakeSettings.store = {}
+    main_win._open_wizard()
+    kwargs = _FakeWizard.last_kwargs
+    assert kwargs.get("import_module") is main_win.import_module
+    assert kwargs.get("oneclick_module") is main_win.oneclick_module
+    assert kwargs.get("export_module") is main_win.export_module
+
+
 def test_first_run_pops_once(main_win):
-    """已看过 → 不再自动弹；把标记清掉 → 再弹一次。"""
     main_win._maybe_first_run()
     assert _FakeWizard.calls == 0, "已看过时不应弹"
-
     _FakeSettings.store = {}
     _FakeWizard.calls = 0
     main_win._maybe_first_run()
     assert _FakeWizard.calls == 1
     assert _FakeSettings.store["wizardSeen"] == "1"
-
     main_win._maybe_first_run()
     assert _FakeWizard.calls == 1, "第二次启动不应再自动弹"
 
 
 def test_skip_stays_and_marks_seen(main_win):
-    """跳过（reject）→ 不跳页，但同样记已看过。"""
     _FakeSettings.store = {}
     _FakeWizard.result = int(QDialog.DialogCode.Rejected)
     before = main_win.current_key
@@ -253,21 +364,18 @@ def test_skip_stays_and_marks_seen(main_win):
     assert _FakeSettings.store["wizardSeen"] == "1"
 
 
-def test_finish_jumps_to_import(main_win):
+def test_finish_jumps_to_history(main_win):
     _FakeSettings.store = {}
     _FakeWizard.result = int(QDialog.DialogCode.Accepted)
     main_win.go("home")
     main_win._open_wizard()
-    assert main_win.current_key == "import"
+    assert main_win.current_key == "history"
     assert _FakeSettings.store["wizardSeen"] == "1"
 
 
 def test_more_menu_has_wizard_entry(main_win, monkeypatch):
-    """☰ 菜单里必须有重看入口（扫真实构建出来的菜单动作文案）。
+    """☰ 菜单里必须有重看入口，且是首项（与用户接线意图一致）。"""
 
-    离屏后端下真弹 QMenu 会抓键盘并阻塞（实测挂死），所以用记录型 QMenu 替身：
-    菜单项仍由 `_act_more()` 自己 addAction 出来，验的是真实构建逻辑。
-    """
     class _FakeMenu:
         instances: list["_FakeMenu"] = []
 
@@ -278,7 +386,8 @@ def test_more_menu_has_wizard_entry(main_win, monkeypatch):
 
         def addAction(self, text=""):
             self.actions.append(text)
-            return type("_A", (), {"triggered": type("_S", (), {"connect": lambda *a, **k: None})()})()
+            return type("_A", (), {"triggered": type(
+                "_S", (), {"connect": lambda *a, **k: None})()})()
 
         def addSeparator(self):
             self.separators.append(len(self.actions))
@@ -288,7 +397,5 @@ def test_more_menu_has_wizard_entry(main_win, monkeypatch):
 
     monkeypatch.setattr(M, "QMenu", _FakeMenu)
     main_win._act_more()
-    assert _FakeMenu.instances, "☰ 没构建菜单"
     texts = _FakeMenu.instances[0].actions
-    assert "新手向导（重新观看）" in texts
-    assert texts[0] == "新手向导（重新观看）", "重看入口应为菜单首项（与用户接线意图一致）"
+    assert texts[0] == "新手向导（重新观看）"

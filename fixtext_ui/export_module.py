@@ -488,6 +488,10 @@ class ExportModule(QWidget):
         )
         return dlg.exec() == QDialog.DialogCode.Accepted
 
+    # ---- 向导之外的只读入口（M4-EX.2c） -------------------------------
+    def is_busy(self) -> bool:
+        return bool(self._running)
+
     def export_now(self) -> None:
         if self._running:
             return

@@ -462,13 +462,23 @@ class MainWindow(QMainWindow):
         es.secondaryClicked.connect(self._open_wizard)
 
     def _open_wizard(self) -> None:
-        """弹出新手向导（首启触发，或 ☰ 菜单里重新观看）。"""
-        w = FirstRunWizard(self)
+        """弹出任务式新手向导（首启触发，或 ☰ 菜单里重新观看）。
+
+        M4-EX.2c：向导不再是只读演示，它带着用户真实走完 导入 → 校正 → 导出，
+        所以要把三个模块的实例交给它（向导只调用既有流程，不新建业务）。
+        完成（accept）后跳到「历史记录」页（与原型 finishWizard 一致）。
+        """
+        w = FirstRunWizard(
+            import_module=self.import_module,
+            oneclick_module=self.oneclick_module,
+            export_module=self.export_module,
+            parent=self,
+        )
         accepted = w.exec() == QDialog.DialogCode.Accepted
         # 任何关闭方式都算已看过（跳过 / 关闭 / 完成一致），先记再看跳转
         QSettings("FixText", "V1").setValue("wizardSeen", "1")
         if accepted:
-            self.go("import")  # 完成 → 跳到「导入书籍」页
+            self.go("history")  # 完成 → 看这次留下的历史记录
 
     # ------------------------------------------------------------------ 顶栏
 
