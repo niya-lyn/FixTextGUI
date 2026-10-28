@@ -8,6 +8,13 @@
 - 语料：《炮火弧线》EPUB，788 章，正文约 499.6 万字
 - 全部数字均自采实跑，来源为 `evidence/` 下各 json 与本次命令输出，未沿用任何一条线的旧证据
 
+> **M3-T3.6 修订说明（2026-10-28）**：本文档在 M3-T3.6 中做了两处更正，产品代码一行未动。
+> ① §8 原标题「十个验收脚本（合并版全部复跑）」与事实不符——多数证据生成于最后一次改产品代码的
+> 提交 `9581884`（06:41:44）之前；现改为如实标注每份证据的生成时间与是否在最终代码上重跑过（§8.1）。
+> ② `tools/accept_t34.py` 的 S5 断言自相矛盾，修复前是靠产品缺陷 `_adopt_workspace` 漏写
+> `snapshot_dir` 才"凑巧通过"；已按真实语义改写并重新生成 `evidence/accept_t34.json`
+> （exit 0，`passed=true`），详见 §8.2 / §8.3。
+
 ---
 
 ## 1. 合并方式
@@ -296,7 +303,7 @@ evidence/ + screenshots/ 文件总数: 39
 |---|---|---|---|
 | `accept_t35` S4 | 676 | 24 项 | **0** |
 | `scan_t29`（全站） | 2153 | 25 项 | **0** |
-| `accept_t34` S9 | 402 | — | **0** |
+| `accept_t34` S9 | 450（M3-T3.6 修正后重跑；修正前为 402） | — | **0** |
 | `accept_t210` | 404 | — | **0** |
 | `accept_t23` | 1575 | — | **0** |
 | `verify_m2t21` | 2799 | 25 项 | **0** |
@@ -306,24 +313,111 @@ evidence/ + screenshots/ 文件总数: 39
 
 ---
 
-## 8. 十个验收脚本（合并版全部复跑）
+## 8. 验收脚本：结果与证据生成时点（口径更正见 §8.1）
 
-| 脚本 | 结果 | 关键数字 |
-|---|---|---|
-| `verify_m2t21` | PASS | 令牌 71 vs 71 差异 0；2799 条文案 / 25 词表 / 命中 0；截图 7 张 |
-| `accept_t23` | PASS | A 全跑 18.19s（layout 9.36 / replace 3.00 / restore 2.87）；B 取消在 replace；B2 复跑；C 取消在 layout；确定性 `all_equal=True`（A vs 基线 / B2 vs A / C2 vs A 全一致）；1575 条文案命中 0 |
-| `accept_t27` | PASS | 788 章；导出 sha `717fdfce…` == 基线；8 项检查全通过 |
-| `accept_t28` | PASS | 向导 69 条文案 / 25 词表 / 命中 0 |
-| `accept_t210` | PASS | 108 处问题 declared==found==108（自动可修 97 / 人工 11）；3 页；重启后记录仍在；重新导出 sha `717fdfce…` == 基线；404 条文案命中 0 |
-| `smoke_e2e` | PASS | 预览 788 行首行「封面」；导入 1.31s；取消 11.23s 无残留；复跑 19.28s；原书未动；错误卡 8 条人话；743 条文案命中 0 |
-| `accept_t31` | PASS | 合并操作 6→1；撤销 `undo_identical=True` |
-| `accept_t32` | PASS | 31 个用例载荷；重启后撤销一致；时间线 12 条渲染 |
-| `accept_t33` | PASS | **18 / 18**；准备运行 19.55s；专有词条 5749 / 声明 5792；788 章；引号 108 处；还原 sha `717fdfce…` |
-| `accept_t34` | PASS | 5/5 阶段点；S2 工作正文 sha `bf7e6b21a2c2e01d…` == 阶段产物；S3 导出 sha `717fdfce…`；S4 续跑 9.35s 跳过 merge/layout/replace；S9 402 条文案命中 0 |
+> **本节的表述在 M3-T3.6 已更正。** 原文标题为「十个验收脚本（合并版全部复跑）」，
+> 与事实不符：多数证据文件生成于最后一次改产品代码的提交之前。详见 §8.1。
 
-外加本卡新增：
-| `tools/accept_t35.py` | **ALL PASS** | 见第 6、7、9 节 |
-| `tools/check_t35_coexist.py` | **ALL PASS** | 见第 1.2 节 |
+| 脚本 | 结果 | 证据生成时间 | 生成时点在最终代码上？ | 小组长在最终代码上独立复跑 |
+|---|---|---|---|---|
+| `verify_m2t21` | PASS | 06:13:05（`verify_report.json`） | 否（早于 `9581884` 06:41:44） | **是，通过** |
+| `accept_t23` | PASS | 06:16:37（`t23_evidence.json`） | 否 | **是，通过** |
+| `accept_t27` | PASS | 06:17:19（`t27_evidence.json`） | 否 | **是，通过** |
+| `accept_t28` | PASS | 06:18:19（`t28_evidence.json`） | 否 | **是，通过** |
+| `accept_t210` | PASS | 06:15:13（`accept_t210.json`） | 否 | **是，通过** |
+| `accept_t31` | PASS | 06:13:10（`t31_vocab_evidence.json`）+ 06:59:33（`t31_tests.txt`） | 数据否 / 测试是 | **是，通过** |
+| `accept_t32` | PASS | 06:13:20（`t32_safety_evidence.json`）+ 07:00:01（`t32_tests.txt`） | 数据否 / 测试是 | **是，通过** |
+| `accept_t33` | PASS | 06:13:51（`t33_accept.json`） | 否 | **是，通过** |
+| `accept_t34` | **PASS（本次修正后）** | 08:24:22（本次重生成） | **是** | 修正前 exit 1；本次修正后 exit 0 |
+| `smoke_e2e` | PASS | 06:59:11（`smoke_e2e.json`） | 是 | **是，通过** |
+| `accept_t35`（本卡新增） | ALL PASS | 06:41:18（`accept_t35.json`） | 否（早于 `9581884` 26 秒） | **是，通过** |
+| `check_t35_coexist`（本卡新增） | ALL PASS | 06:57:05（`t35_coexist_import.json`） | 是 | **是，通过** |
+
+各脚本关键数字（在最终代码上均未变，由小组长独立复跑确认）：
+
+| 脚本 | 关键数字 |
+|---|---|
+| `verify_m2t21` | 令牌 71 vs 71 差异 0；2799 条文案 / 25 词表 / 命中 0；截图 7 张 |
+| `accept_t23` | A 全跑 18.19s（layout 9.36 / replace 3.00 / restore 2.87）；B 取消在 replace；B2 复跑；C 取消在 layout；确定性 `all_equal=True`（A vs 基线 / B2 vs A / C2 vs A 全一致）；1575 条文案命中 0 |
+| `accept_t27` | 788 章；导出 sha `717fdfce…` == 基线；8 项检查全通过 |
+| `accept_t28` | 向导 69 条文案 / 25 词表 / 命中 0 |
+| `accept_t210` | 108 处问题 declared==found==108（自动可修 97 / 人工 11）；3 页；重启后记录仍在；重新导出 sha `717fdfce…` == 基线；404 条文案命中 0 |
+| `smoke_e2e` | 预览 788 行首行「封面」；导入 1.31s；取消 11.23s 无残留；复跑 19.28s；原书未动；错误卡 8 条人话；743 条文案命中 0 |
+| `accept_t31` | 合并操作 6→1；撤销 `undo_identical=True` |
+| `accept_t32` | 31 个用例载荷；重启后撤销一致；时间线 12 条渲染 |
+| `accept_t33` | **18 / 18**；准备运行 19.55s；专有词条 5749 / 声明 5792；788 章；引号 108 处；还原 sha `717fdfce…` |
+| `accept_t34` | 见 §8.2（修正后新证据） |
+
+### 8.1 口径更正：为什么不能说「合并版全部复跑」
+
+最后一次改产品代码的提交是 `9581884`（修 `_adopt_workspace` 缺 `snapshot_dir`），
+时间 **2026-10-28 06:41:44**。而上表中 `verify_m2t21` / `accept_t23` / `accept_t27` /
+`accept_t28` / `accept_t210` / `accept_t31` / `accept_t32` / `accept_t33` / `accept_t35`
+的证据文件，其**生成时间落在 06:13:05 – 06:41:18**，均在 `9581884` **之前**。
+所以「合并版十个脚本全部复跑通过」严格说不成立于最终代码——它们是在修复前那一版上跑出来的。
+
+原表的两个具体问题：
+
+1. **`accept_t34` 当时实际是 exit 1，却被记为 PASS。** 原因是 `tools/accept_t34.py:295`
+   的断言 `s5_ok = after_undo_cur is None and after_undo_cur == before_undo_cur` 自相矛盾
+   （`after is None` 与 `after == before` 只有 `before` 也为 `None` 时才可能同时成立），
+   而该 ok 值没有打印、只压低了最终 `passed`，报告表格又只抄了打印项，于是漏判。详见 §8.2。
+2. 其余脚本的证据确为真实通过，但**属于修复前代码**上的通过。
+
+### 8.2 `accept_t34` 断言修正（M3-T3.6）
+
+**原断言为什么能"通过"**：`9581884` 之前，`_adopt_workspace` 写当前工作区指针时漏了
+`snapshot_dir`，`current_state()` 首判 `if not raw.get("snapshot_dir"): return None`
+直接返回 `None`，于是 `before = None`、`after = None`，两个 `None` 相等，
+`after is None and after == before` **凑巧成立**。也就是说这条「恢复可撤销」的验收，
+当年是靠**被测缺陷本身**放行的。`9581884` 补上 `snapshot_dir` 后，续跑会真实记录当前
+工作区，`before` 不再为 `None`，该断言**必然恒假**。
+
+**修正前的实测复现**（在合并包原样实跑，未改任何代码）：
+
+```
+[S5] 撤销：恢复前指针=restore，撤销后指针=replace，提示=「当前工作区：《炮火弧线》 · 替换完成（2026-10-28 08:14 恢复）」
+验收未通过 → evidence/accept_t34.json   (真实 exit=1，passed=false)
+```
+
+**产品行为本身是对的**（探针实测，非推断）：恢复 → 指针到「替换完成」；撤销 → 回到恢复前。
+
+**修正后按真实语义判**：撤销 = 「回到被撤销那一步操作之前的现场」。指针里的
+`prev_snapshot` 就是那步操作前的现场，撤销后指针必须落到该目录上、且时点（`meta.point`）
+与之一致；`prev_snapshot` 为空则表示那步操作前是「未指定」，撤销后也应为「未指定」。
+另外增加 `moved`（指针确实发生变化）这一项，避免"什么都没做"也能满足相等。
+
+同时修正 S4 的一个取数缺陷：原脚本直接调 `hist._do_continue()` 干活，绕过了真实界面路径
+`_run_continue → 后台线程 → _poll_continue`，而撤销记录正是在 `_poll_continue` 里登记进
+撤销栈的——所以脚本里根本没有可撤销的「继续」这一步。改为走真实路径后，撤销栈才有内容。
+
+### 8.3 修正后的实跑输出（本次，最终代码上）
+
+```
+[S0] 导入 1.25s → 校正 19.95s：788 章 / 5100 命中 / sha=717fdfcee76f
+[S1] 阶段点：5/5 可用 → [('导入合并完成', True), ('排版完成', True), ('替换完成', True), ('引号检查完成', True), ('还原完成', True)]
+[S2] 恢复「替换完成」：工作正文 sha=7e31c7361687bee5…，阶段产物 sha=7e31c7361687bee5…，一致=True，逐项比对 7/7 相等
+[S3] 从恢复点导出 炮火弧线.epub：sha=717fdfcee76fe3ee…，与基线一致=True，命中 5100
+[S4] 续跑 9.64s（退出码 0）：跳过 ['merge', 'layout', 'replace']；其余 [('quote', 1.168), ('bookmap', 0.932), ('restore', 2.877)]；成品 sha=717fdfcee76f 与基线一致=True；撤销栈 1 项
+[S5] 撤销「继续」→ 回到恢复点：撤销前指针=restore（work-20261028_082916），撤销后指针=replace（snap-run-1793147328528-replace-20261028-082908），应回到=replace，一致=True
+[S5] 撤销「恢复」→ 回到恢复前：撤销前指针=replace，撤销后指针=None，应为未指定=True，判据=撤销前是「未指定」→ 撤销后应为「未指定」，通过=True，提示=「当前工作区：未指定（保持「导入后」状态）」
+[S6] 重启后：历史 1 条，阶段点 5/5 可用，当前工作区=replace，提示=「当前工作区：《炮火弧线》 · 替换完成（2026-10-28 08:29 恢复）」
+[S7] 恢复确认弹窗：《炮火弧线》（2026-10-27 23:34）在这次处理里留下了 5 个可恢复的时点。…；写明影响范围+可撤销=True，确认按钮=True
+[S8] 界面：行内「恢复」入口=True，重新导出=True，当前工作区提示=True，导出/续跑按钮可用=True
+[S9b] 历史页「降级」口径复扫：36 条文本，命中 0
+[S9] 零露出：扫描 450 条界面文本，命中 0
+
+验收通过 → evidence/accept_t34.json
+```
+
+真实退出码 **exit=0**。`evidence/accept_t34.json` 中 `passed=true`，`s5_undo` 顶层
+`before`/`after` 是**真实值**（`before_point=replace`、`after_point=replace`，
+`before_snapshot_dir == after_snapshot_dir` 即
+`…/snap-run-1793147328528-replace-20261028-082908`），不是两个 null；
+两步撤销明细分别在 `step1_undo_continue` / `step2_undo_restore` 里各存一份完整前后状态。
+同一脚本连跑两次（08:24 / 08:29）均 exit 0，结论可复现。
+
+`tests/test_t34_snapshot.py` 单独复跑：**10 passed / 38.85s**（原取消语义用例仍绿）。
 
 ---
 
@@ -380,3 +474,14 @@ evidence/ + screenshots/ 文件总数: 39
 - 验收报告：本文档 `FixText_M3-T3.5_验收报告.md`
 - 证据：`evidence/`（含 `accept_t35.json`、`t35_coexist_import.json`、10 个验收脚本证据）+ `screenshots/`（10 张）+ `evidence/t35/`（端到端截图）
 - 新增工具：`tools/accept_t35.py`、`tools/check_t35_coexist.py`、`tools/_shoot_topbar.py`
+
+---
+
+## 13. M3-T3.6 本次改动（验收工具 + 报告口径；产品代码零改动）
+
+- 改的文件只有两个：`tools/accept_t34.py`（S4 改走真实界面路径 + S5 断言按真实语义重写）、
+  本文档（§8 口径更正 + §7.3 数字同步）。
+- `fixtext_ui/`、`pipeline/`、`fixtext_import/`、`fixtext_error_center/` **一行未动**（`git status` 可证）。
+- `evidence/accept_t34.json` 已用新口径重新生成：`passed=true`、真实 exit 0。
+- `tests/test_t34_snapshot.py` 单独复跑 10 passed。
+- 交付包：`FixText_M3-T3.6_验收断言修正_v2.zip`（不覆盖 v1）。
