@@ -154,6 +154,8 @@ class VocabModule(QWidget):
         self._selected: set = set()
         self._pending_add: dict | None = None
         self._merge_sel: list | None = None
+        #: 上次查重清单的口径（total / shown / readonly）——验收与自检读它
+        self._dup_view: dict = dict(total=0, shown=0, readonly=True)
         self._book_words: list = []       # 真实专有词（空则不显示横幅）
         self._book_title = ""
         self._book_checks: list = []
@@ -1058,13 +1060,33 @@ class VocabModule(QWidget):
     # ------------------------------------------------------------------ 查重
 
     def open_dup(self) -> list:
+        """查重清单（M3-T3.7 收口：只读清单，不再给"假按钮"）。
+
+        这里的定位是**看清单**：把「我的词库」里的重复分组、以及与内置词库
+        撞车的条目**全量**列出来，一条不截断；处理动作由工具条上的「合并」
+        「删除选中」执行（各自先预览、二次确认、可撤销）。因此弹窗不再出现
+        「确认后处理」这类会让人以为点了就动手的措辞，底部只留一个「关闭」。
+
+        大于 20 组时不再截断，而是把这部分装进可滚动的清单里——用户能看到
+        全部条目，不需要再去找"查看全部"的入口。
+        """
         groups = self.store.dup_groups()
         if not groups:
+            self._dup_view = dict(total=0, shown=0, readonly=True)
             self._toast("未发现重复词条")
             return groups
-        m = Modal(icon="🔁", title="查重结果（先预览，确认后处理）", parent=self)
-        m.add_note("底线④：查重结果先给预览清单，确认后才执行；处理动作可撤销。", "warn")
-        for g in groups[:20]:
+
+        m = Modal(icon="🔁", title="查重清单（只读，不会改动词库）", parent=self)
+        m.add_note(
+            f"一共 {len(groups)} 组重复或冲突，下面**全部列出**。本窗口只看不改："
+            "要处理请关掉它，用工具条上的「合并」或「删除选中」——那两处会先给"
+            "预览清单、二次确认后才写，做完还能撤销。", "info")
+
+        holder = QWidget()
+        hv = QVBoxLayout(holder)
+        hv.setContentsMargins(0, 0, 0, 0)
+        hv.setSpacing(8)
+        for gi, g in enumerate(groups, start=1):
             box = QFrame()
             box.setObjectName("DupGroup")
             box.setStyleSheet(
@@ -1073,19 +1095,28 @@ class VocabModule(QWidget):
             bl = QVBoxLayout(box)
             bl.setContentsMargins(0, 0, 0, 0)
             bl.setSpacing(8)
-            bl.addWidget(_label(f"{g['kind']}：{g['key']}", size="sm",
+            bl.addWidget(_label(f"{gi}. {g['kind']}：{g['key']}", size="sm",
                                 color="warning", weight="bold"))
             bl.addWidget(_mini_table(
                 ["原词", "替换为", "来源"],
                 [(row["word"], row["value"], TIER_NAMES[row["dict"]]) for row in g["items"]],
                 mono_cols={0, 1}))
-            m.add_widget(box)
-        if len(groups) > 20:
-            m.add_note(f"重复分组较多，这里只列出前 20 组（共 {len(groups)} 组）。", "info")
-        m.add_widget(_label("建议合并同词不同值冲突，或保留其一。可撤销，请放心处理。",
-                            size="sm", color="neutral.500"))
-        m.add_foot("暂时不处理", "ghost", m.reject)
-        m.add_foot("我知道了", "primary", m.accept)
+            hv.addWidget(box)
+        hv.addStretch(1)
+
+        # 组数多时给滚动条（全量都在里面，不是截断）
+        if len(groups) > 3:
+            area = QScrollArea()
+            area.setWidgetResizable(True)
+            area.setFrameShape(QFrame.Shape.NoFrame)
+            area.setMaximumHeight(430)
+            area.setWidget(holder)
+            m.add_widget(area)
+        else:
+            m.add_widget(holder)
+
+        m.add_foot("关闭", "ghost", m.reject)
+        self._dup_view = dict(total=len(groups), shown=len(groups), readonly=True)
         m.show()
         return groups
 
