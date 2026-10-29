@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 #: 阶段名 -> 目录序号与中文标题
 STAGE_META: dict[str, tuple[str, str]] = {
@@ -134,6 +134,9 @@ class PipelineConfig:
     custom_vocab_path: Path | None = None
     #: 派生规则落点（M3-T3.7）；None = 用产品用户区里的默认位置
     derived_rules_dir: Path | None = None
+    #: 协作式取消（界面注入）：返回 True 表示用户已点取消。
+    #: 排版等长循环在章节边界调用；默认 None = 命令行编排器不检查。
+    cancel_check: Callable[[], bool] | None = None
 
     def __post_init__(self) -> None:
         self.epub = Path(self.epub).expanduser().resolve()

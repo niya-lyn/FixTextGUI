@@ -19,7 +19,7 @@ from typing import Any
 
 from ..config import dump_json
 from ..state import sha256_file
-from .base import Stage, StageError
+from .base import Stage, StageCancelled, StageError
 
 
 def _xml_signature(text: str) -> tuple[tuple[str, tuple[str, ...]], ...] | None:
@@ -98,6 +98,11 @@ class LayoutStage(Stage):
         reverted_samples: list[dict[str, str]] = []
 
         for chunk, record in zip(chunks, ledger.chapters):
+            # 章节边界协作取消（M4收尾 P1-7）：每章开始前查一次，避免大书
+            # 排版整段跑完才响应「取消」。命令行未注入 cancel_check 时跳过。
+            check = self.cfg.cancel_check
+            if check is not None and check():
+                raise StageCancelled("已取消：排版在当前章节边界停下")
             original = canonical_body(chunk.body)
             lead = original[: len(original) - len(original.lstrip())]
             try:

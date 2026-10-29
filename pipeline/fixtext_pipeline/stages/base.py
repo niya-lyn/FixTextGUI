@@ -21,6 +21,14 @@ class StageError(RuntimeError):
     """阶段失败：带人类可读原因，编排器据此中止或继续。"""
 
 
+class StageCancelled(StageError):
+    """用户取消：阶段在协作检查点停下（例如排版的章节边界）。
+
+    继承 ``StageError``，命令行编排器会按阶段失败收尾；界面 worker 把它
+    翻译成 ``CorrectionCancelled`` 并删除本次工作目录。
+    """
+
+
 class Stage:
     """阶段基类。"""
 

@@ -8,9 +8,9 @@ FixText V1 · 校正后台执行器（M2-T2.3 可视化进度与取消）
   阶段实现全部复用 ``fixtext_pipeline.stages`` 里的原类。
 * **进度**：阶段开始/结束时发信号；预计剩余时间由「已完成阶段的实际耗时」
   对「参考权重」做比例缩放外推（参考值来自真实大语料的实测耗时）。
-* **取消**：点「取消」立刻置位取消标记并杀掉 Go 引擎子进程（替换阶段）；
-  纯 Python 阶段（排版等）在阶段边界生效。取消后整个工作目录被删除，
-  界面回到可重新开始的干净状态（原书从头到尾只读，天然等于校正前快照）。
+* **取消**：点「取消」立刻置位取消标记；替换阶段杀掉 Go 引擎子进程（约 1 秒内）；
+  排版在**章节边界**响应（``cancel_check``）；其它纯 Python 阶段在阶段边界生效。
+  取消后整个工作目录被删除，界面回到可重新开始的干净状态。
 * **人话步骤**：六阶段的界面文案在本文件 ``HUMAN_STAGES`` 一处定义，
   内部阶段名（merge/layout/…）不进入任何用户可见文案。
 
@@ -329,6 +329,8 @@ class CorrectionJob:
             # 自定义词生效（M3-T3.7）：把「我的词库」交给替换阶段合成派生规则
             custom_vocab_path=self.custom_vocab_path,
             derived_rules_dir=self.derived_rules_dir,
+            # 排版章循环协作取消（P1-7）
+            cancel_check=lambda: self.cancel_requested,
         )
 
         # 准备目录（与编排器 _prepare 相同的布局）
@@ -366,6 +368,12 @@ class CorrectionJob:
                 try:
                     with capture_output(logger):
                         stage_report = stage.run() or {}
+                except Exception as exc:
+                    # 排版等阶段在章节边界抛 StageCancelled → 统一成界面取消
+                    from fixtext_pipeline.stages import StageCancelled
+                    if isinstance(exc, StageCancelled):
+                        raise CorrectionCancelled(str(exc) or "章节边界取消") from exc
+                    raise
                 finally:
                     logger.close()
                 elapsed = round(self._now() - self._stage_started_at, 3)

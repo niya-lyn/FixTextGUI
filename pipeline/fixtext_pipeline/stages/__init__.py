@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .base import Stage, StageError
+from .base import Stage, StageCancelled, StageError
 from .merge import MergeStage
 from .layout import LayoutStage
 from .replace import ReplaceStage
@@ -23,6 +23,7 @@ STAGES = {
 __all__ = [
     "Stage",
     "StageError",
+    "StageCancelled",
     "STAGES",
     "MergeStage",
     "LayoutStage",
