@@ -1,0 +1,15 @@
+{
+  "id": "postfix",
+  "title": "后处理词库",
+  "locked": false,
+  "via_switch": false,
+  "default_on": false,
+  "rule_count": 1296,
+  "vars": {
+    "1.自定义词库.php__postFixMap": 1296
+  },
+  "before_sha256": "269277e5509ad8f9109888e6b59ad42356ff1c2508774d571223e1db4891d08f",
+  "after_sha256": "313be0af1c0ce828ea9536f062b47a4926c7d3ea206b5b67478ee854ca5b79e4",
+  "bag_code": 13,
+  "note": "PHP postFix 阶段；严格路径也会加载。接线时再定是否并进严格轮"
+}

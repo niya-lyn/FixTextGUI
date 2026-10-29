@@ -1,0 +1,15 @@
+{
+  "id": "punctuation",
+  "title": "标点规范",
+  "locked": false,
+  "via_switch": false,
+  "default_on": true,
+  "rule_count": 1,
+  "vars": {
+    "1.自定义词库.php__punctuationMap": 1
+  },
+  "before_sha256": "bcd39eba33d1b345888aa63cbc5a4a60041384e2b7a4c285bbbead4d19cf44ff",
+  "after_sha256": "a89e9edf9ec5bfe5a1c56266abc52c032c5a5a04500d56e9a433ecb89fca5b57",
+  "bag_code": 5,
+  "note": "仅 punctuationMap 源变量；旧 tier=2 里靠 mark 判进「标点」的条目仍留在其来源袋"
+}

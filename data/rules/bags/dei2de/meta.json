@@ -1,0 +1,14 @@
+{
+  "id": "dei2de",
+  "title": "得转的",
+  "locked": false,
+  "via_switch": false,
+  "default_on": false,
+  "rule_count": 607,
+  "vars": {
+    "4.的地得词库.php__dei2deMap": 607
+  },
+  "before_sha256": "afb52891342455e8f7993b490fa08bc7df214db27e8d510c51f1f1611097eefa",
+  "after_sha256": "dc92045a089d3ba603c4e9a337f11bf0c34c67e1e2fa7d829231d6bc3d95b744",
+  "bag_code": 12
+}

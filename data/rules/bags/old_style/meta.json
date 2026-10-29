@@ -1,0 +1,14 @@
+{
+  "id": "old_style",
+  "title": "旧式通假",
+  "locked": false,
+  "via_switch": false,
+  "default_on": false,
+  "rule_count": 1102,
+  "vars": {
+    "1.自定义词库_旧式、通假写法_.php__oldStyleMap": 1102
+  },
+  "before_sha256": "e763b11d566d7870cf978ccbf43c077b79e6bcf06227a83f5afbe8815d70d294",
+  "after_sha256": "46c6ab173f8ef9a808d89cda6486e732e62e73b4636b872f59fed174a913b079",
+  "bag_code": 8
+}

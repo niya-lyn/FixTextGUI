@@ -1,0 +1,255 @@
+{
+  "product": "FixText M5-EX.1 内置词库分袋",
+  "generated_by": "tools/split_rule_bags.py",
+  "source_flat_dir": "_tmp_t02_vocab\\FixText_T0.2_词库迁移_v1\\build\\dictionary\\flat",
+  "rules_before": "FixText_M5-EX.1_运行模式优化_源码\\data\\rules\\before.json",
+  "rules_before_sha256": "e961f82e3cbb41499b41301e04e7a7df7b11e189060064b6edd5af8e881e2c26",
+  "rules_after_sha256": "7dd53ae6fd7770c2362b0a7d893ecf03bc5bba7062f9a0cd2bb07797a76a6131",
+  "rule_count": 304255,
+  "bag_count": 14,
+  "bags_sum": 304255,
+  "bags_bin": {
+    "path": "builtin_bags.bin",
+    "bytes": 304255,
+    "sha256": "83323252c93749c01b63031b8102750f073d3e33cccbf211ba0a39b125bed715",
+    "code_map": {
+      "normal": 1,
+      "preprocess": 2,
+      "strict": 3,
+      "zhuyin": 4,
+      "punctuation": 5,
+      "cjk_recover": 6,
+      "extra": 7,
+      "old_style": 8,
+      "t2s": 9,
+      "txt_format": 10,
+      "ddd": 11,
+      "dei2de": 12,
+      "postfix": 13,
+      "temp": 14
+    }
+  },
+  "defaults_for_main_replace": [
+    "normal",
+    "punctuation",
+    "cjk_recover"
+  ],
+  "switch_only_bags": [
+    "strict",
+    "zhuyin"
+  ],
+  "locked_bags": [
+    "normal"
+  ],
+  "bags": [
+    {
+      "id": "normal",
+      "title": "常规校正",
+      "locked": true,
+      "via_switch": false,
+      "default_on": true,
+      "rule_count": 131692,
+      "vars": {
+        "1.自定义词库.php__normalMap": 131692
+      },
+      "before_sha256": "0a2327e23e768047bfd5911fdc7228217ba31a69ac33c94e82bf1814e3cb174b",
+      "after_sha256": "d51c205e524ff27745a3b6e2a92895504549c6523baa18c7c6961da34e781dc0",
+      "bag_code": 1
+    },
+    {
+      "id": "preprocess",
+      "title": "预处理",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 7970,
+      "vars": {
+        "1.自定义词库.php__preprocessMap": 7938,
+        "1.自定义词库.php__extraPreprocessMap": 32
+      },
+      "before_sha256": "f87a7608777eaaf947974f989596dc32d97159af06f527721bc6b8af80b7e4ea",
+      "after_sha256": "cd0679e067dc51e8c25c12fa47d984221855736d5fa4246831809284f300a25b",
+      "bag_code": 2
+    },
+    {
+      "id": "strict",
+      "title": "严格校正",
+      "locked": false,
+      "via_switch": true,
+      "default_on": false,
+      "rule_count": 3794,
+      "vars": {
+        "1.自定义词库.php__strictMap": 3794
+      },
+      "before_sha256": "3b9513b448db82aa0467af631e37b76777ea41d4d46bac846e5a498a31e7f098",
+      "after_sha256": "ce0013c5bcd0b733d885e08b04cb0af0ed14203cb70bab40bb6863dc21f056dd",
+      "bag_code": 3
+    },
+    {
+      "id": "zhuyin",
+      "title": "生僻字注音",
+      "locked": false,
+      "via_switch": true,
+      "default_on": false,
+      "rule_count": 31979,
+      "vars": {
+        "7.生僻字词库.php__shengpiziMap": 17260,
+        "7.生僻字词库_扩展区_.php__cjkExtMap": 14719
+      },
+      "before_sha256": "ecc94fdebe8c59ed3033427aff192c40bdd37b35c94e7e38b6b466a7e587f5ec",
+      "after_sha256": "4a5c953cf8a50d3da0f4d0a17a177db15c01981d80f4b59662758840c7e5bd70",
+      "bag_code": 4
+    },
+    {
+      "id": "punctuation",
+      "title": "标点规范",
+      "locked": false,
+      "via_switch": false,
+      "default_on": true,
+      "rule_count": 1,
+      "vars": {
+        "1.自定义词库.php__punctuationMap": 1
+      },
+      "before_sha256": "bcd39eba33d1b345888aa63cbc5a4a60041384e2b7a4c285bbbead4d19cf44ff",
+      "after_sha256": "a89e9edf9ec5bfe5a1c56266abc52c032c5a5a04500d56e9a433ecb89fca5b57",
+      "bag_code": 5,
+      "note": "仅 punctuationMap 源变量；旧 tier=2 里靠 mark 判进「标点」的条目仍留在其来源袋"
+    },
+    {
+      "id": "cjk_recover",
+      "title": "CJK 恢复",
+      "locked": false,
+      "via_switch": false,
+      "default_on": true,
+      "rule_count": 643,
+      "vars": {
+        "7.生僻字词库_扩展区_.php__cjkRecoverMap": 643
+      },
+      "before_sha256": "549b2f493dd51eac54a3bcfa3658cbdb1cce13e8616ce2e0282136dbc18b8d02",
+      "after_sha256": "a36a03ad5bf1b3e4f0f56e912d7e7cc6f4087dc94bc6cf5e0ea800c4076aa503",
+      "bag_code": 6
+    },
+    {
+      "id": "extra",
+      "title": "的地得/象像加强",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 19390,
+      "vars": {
+        "1.自定义词库.php__extraMap": 19390
+      },
+      "before_sha256": "48e03c7e2b8875f3d38808f524934b5f712b96347fd3579111c21f4b00c1f485",
+      "after_sha256": "cffdb1c7fc3773233a99d4e0c9af5cb9d9ae23be6e105a9643c289149daa7b96",
+      "bag_code": 7
+    },
+    {
+      "id": "old_style",
+      "title": "旧式通假",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 1102,
+      "vars": {
+        "1.自定义词库_旧式、通假写法_.php__oldStyleMap": 1102
+      },
+      "before_sha256": "e763b11d566d7870cf978ccbf43c077b79e6bcf06227a83f5afbe8815d70d294",
+      "after_sha256": "46c6ab173f8ef9a808d89cda6486e732e62e73b4636b872f59fed174a913b079",
+      "bag_code": 8
+    },
+    {
+      "id": "t2s",
+      "title": "繁简转换",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 4248,
+      "vars": {
+        "2.繁转简词库.php__t2sMap": 3141,
+        "2.繁转简词库.php__t2sRadicalMap": 892,
+        "2.繁转简词库.php__radicalsSupplementMap": 215
+      },
+      "before_sha256": "a9f7bc4e78378022d7620ed377369d0c848954906f5642d5cfa7cd5c5bf37ac5",
+      "after_sha256": "609e5fbd78cd3e0195d478d428ce3cbf74a1ce2f85830a806e791aaa07fe1301",
+      "bag_code": 9
+    },
+    {
+      "id": "txt_format",
+      "title": "txtFormat",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 86917,
+      "vars": {
+        "3.txtFormat 词库.php__txtFormatMap": 86917
+      },
+      "before_sha256": "737d458501df5b097c4dd76c0fa5c086ceb4e2370e12a0af8939a01b79cc8905",
+      "after_sha256": "94e65c652c4fc6e3e5be4980faa5ddb025a58b2f8ae585dad88f43acc83fb499",
+      "bag_code": 10
+    },
+    {
+      "id": "ddd",
+      "title": "的地得",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 14615,
+      "vars": {
+        "4.的地得词库.php__dddMap": 11238,
+        "4.的地得词库.php__accurateDddMap": 3377
+      },
+      "before_sha256": "932cc67b4324988c8ed6160be15ecc308248724cd094d9ce39632c52a3ba703a",
+      "after_sha256": "49c4a87e8a54673236fa96d35bf32f5a0030d6c3df1fc55fb399552f55d3ac22",
+      "bag_code": 11
+    },
+    {
+      "id": "dei2de",
+      "title": "得转的",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 607,
+      "vars": {
+        "4.的地得词库.php__dei2deMap": 607
+      },
+      "before_sha256": "afb52891342455e8f7993b490fa08bc7df214db27e8d510c51f1f1611097eefa",
+      "after_sha256": "dc92045a089d3ba603c4e9a337f11bf0c34c67e1e2fa7d829231d6bc3d95b744",
+      "bag_code": 12
+    },
+    {
+      "id": "postfix",
+      "title": "后处理词库",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 1296,
+      "vars": {
+        "1.自定义词库.php__postFixMap": 1296
+      },
+      "before_sha256": "269277e5509ad8f9109888e6b59ad42356ff1c2508774d571223e1db4891d08f",
+      "after_sha256": "313be0af1c0ce828ea9536f062b47a4926c7d3ea206b5b67478ee854ca5b79e4",
+      "bag_code": 13,
+      "note": "PHP postFix 阶段；严格路径也会加载。接线时再定是否并进严格轮"
+    },
+    {
+      "id": "temp",
+      "title": "临时替换表",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 1,
+      "vars": {
+        "5.临时校对表.php__tempMap": 1
+      },
+      "before_sha256": "03ec3bdf6b81b5ddccfe47886bd27d67566c4449d1147c471863caa2595b19f2",
+      "after_sha256": "03ec3bdf6b81b5ddccfe47886bd27d67566c4449d1147c471863caa2595b19f2",
+      "bag_code": 14
+    }
+  ],
+  "compat": {
+    "full_before_after_kept": true,
+    "note": "全量 before/after.json 仍保留；新链路应改读 bags/ + compose"
+  },
+  "card": "M5-EX.1",
+  "engine_dir": "FixText_M5-EX.1_运行模式优化_源码"
+}

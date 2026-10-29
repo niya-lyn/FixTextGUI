@@ -1,0 +1,14 @@
+{
+  "id": "extra",
+  "title": "的地得/象像加强",
+  "locked": false,
+  "via_switch": false,
+  "default_on": false,
+  "rule_count": 19390,
+  "vars": {
+    "1.自定义词库.php__extraMap": 19390
+  },
+  "before_sha256": "48e03c7e2b8875f3d38808f524934b5f712b96347fd3579111c21f4b00c1f485",
+  "after_sha256": "cffdb1c7fc3773233a99d4e0c9af5cb9d9ae23be6e105a9643c289149daa7b96",
+  "bag_code": 7
+}

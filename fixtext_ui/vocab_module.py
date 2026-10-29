@@ -376,7 +376,11 @@ class VocabModule(QWidget):
         hl = QHBoxLayout(item)
         hl.setContentsMargins(10, 10, 10, 10)
         hl.setSpacing(10)
-        ico = QLabel("✎" if d == "custom" else ("📕" if d == "b1" else "📗" if d == "b2" else "📘"))
+        _ico = {
+            "custom": "✎", "b1": "📕", "b2": "📗", "b3": "📘",
+            "preprocess": "📙", "strict": "📓", "zhuyin": "📒",
+        }.get(d, "📘")
+        ico = QLabel(_ico)
         ico.setFixedSize(22, 22)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setStyleSheet(
@@ -653,7 +657,7 @@ class VocabModule(QWidget):
         """当前选择折算成数据层的检索范围。"""
         if self.dict_ == "custom":
             return "custom"
-        if self.dict_ in ("b1", "b2", "b3"):
+        if self.dict_ in ("b1", "b2", "b3", "preprocess", "strict", "zhuyin"):
             return self.dict_
         if self.tier == "custom":
             return "custom"

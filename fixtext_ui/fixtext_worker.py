@@ -42,20 +42,67 @@ except Exception:                                    # pragma: no cover
 # 人话步骤（六阶段 → 用户能懂的文案）。内部阶段名只存在于本文件的 key 里。
 # ---------------------------------------------------------------------------
 
+#: 阶段键 → 进度条文案（M5-EX.1 可按开关动态增减）
+_STAGE_COPY: dict[str, dict[str, str]] = {
+    "merge": dict(name="读取章节", desc="从 EPUB 提取正文并建立章节清单"),
+    "layout": dict(name="整理排版", desc="标点规范化，逐章保护标签结构"),
+    "replace_preprocess": dict(name="预处理替换", desc="主替换前用预处理词库单独跑一轮"),
+    "replace_strict": dict(name="严格替换", desc="用严格词库单独跑一轮"),
+    "replace": dict(name="词库批量替换", desc="按勾选词库批量替换错词"),
+    "replace_zhuyin": dict(name="生僻字注音", desc="为生僻字补充拼音注音"),
+    "quote": dict(name="检查引号配对", desc="逐章检查引号配对与形态"),
+    "bookmap": dict(name="提取本书专有词", desc="识别本书的人名/地名等专名"),
+    "restore": dict(name="写回校正结果", desc="写回章节并校验与原书一致"),
+}
+
+#: 默认六阶段（无可选轮）；动态列表由 ``build_human_stages`` 生成
 HUMAN_STAGES: list[dict[str, str]] = [
-    dict(key="merge",    name="读取章节",     desc="从 EPUB 提取正文并建立章节清单"),
-    dict(key="layout",   name="整理排版",     desc="标点规范化，逐章保护标签结构"),
-    dict(key="replace",  name="替换词语",     desc="按校正词库批量替换错词"),
-    dict(key="quote",    name="检查标点引号", desc="逐章检查引号配对与形态"),
-    dict(key="bookmap",  name="提取本书专有词", desc="识别本书的人名/地名等专名"),
-    dict(key="restore",  name="生成校正后的 EPUB", desc="写回章节并校验与原书一致"),
+    dict(key=k, **_STAGE_COPY[k])
+    for k in ("merge", "layout", "replace", "quote", "bookmap", "restore")
 ]
+
+
+def build_human_stages(
+    *,
+    skip_layout: bool = False,
+    enable_preprocess: bool = False,
+    enable_strict: bool = False,
+    zhuyin_mode: str = "off",
+) -> list[dict[str, str]]:
+    """按 M5-EX.1 开关拼进度步（与 pipeline ``build_stage_keys`` 顺序一致）。
+
+    不在此 import pipeline：``CorrectionJob`` 构造时可能尚未 bootstrap。
+    """
+    keys: list[str] = ["merge"]
+    if not skip_layout:
+        keys.append("layout")
+    if enable_preprocess:
+        keys.append("replace_preprocess")
+    if enable_strict:
+        keys.append("replace_strict")
+    keys.append("replace")
+    if str(zhuyin_mode) not in ("", "off", "None"):
+        keys.append("replace_zhuyin")
+    keys.extend(["quote", "bookmap", "restore"])
+    out: list[dict[str, str]] = []
+    for k in keys:
+        copy = _STAGE_COPY.get(k) or dict(name=k, desc="")
+        out.append(dict(key=k, name=copy["name"], desc=copy["desc"]))
+    return out
+
 
 #: 参考耗时（秒），来自《炮火弧线》788 章 / 314 万字符真实语料实测，
 #: 用于第一个阶段完成前的初始估算；之后按实际耗时等比例修正。
 REFERENCE_SEC: dict[str, float] = {
-    "merge": 0.82, "layout": 10.92, "replace": 3.05,
-    "quote": 1.28, "bookmap": 0.71, "restore": 2.92,
+    "merge": 0.82,
+    "layout": 10.92,
+    "replace_preprocess": 1.5,
+    "replace_strict": 1.5,
+    "replace": 3.05,
+    "replace_zhuyin": 2.0,
+    "quote": 1.28,
+    "bookmap": 0.71,
+    "restore": 2.92,
 }
 
 
@@ -193,6 +240,11 @@ class CorrectionJob:
                  engine: str | None = None,
                  auto_fix_quotes: bool = False,
                  quotation_rules_path: Path | None = None,
+                 skip_layout: bool = False,
+                 enable_preprocess: bool = False,
+                 enable_strict: bool = False,
+                 zhuyin_mode: str = "off",
+                 selected_bags: tuple[str, ...] | list[str] | None = None,
                  on_stage_started: Callable[[int], None] | None = None,
                  on_stage_finished: Callable[[int, float], None] | None = None):
         self.epub = Path(epub)
@@ -217,6 +269,14 @@ class CorrectionJob:
         #: 本次运行的替换引擎（M4-T4.2）。None = 启动时读配置键 ``engine``；
         #: 界面降级确认后显式传 ``python``（只本次生效，不写回设置）。
         self.engine = engine
+        #: M5-EX.1 运行模式 / 分袋开关
+        self.skip_layout = bool(skip_layout)
+        self.enable_preprocess = bool(enable_preprocess)
+        self.enable_strict = bool(enable_strict)
+        self.zhuyin_mode = str(zhuyin_mode or "off")
+        self.selected_bags: tuple[str, ...] = tuple(
+            selected_bags if selected_bags is not None else ("custom",)
+        )
         #: 实际用上的引擎（run() 里回填，供测试 / 证据核对）
         self.engine_used: str | None = None
         self._on_stage_started = on_stage_started
@@ -232,6 +292,13 @@ class CorrectionJob:
         self.stage_reports: dict[str, dict[str, Any]] = {}
         self._stage_started_at = 0.0
         self._run_started_at = 0.0
+        #: 本次任务的动态进度步（构造时即定，供 ProgressDialog）
+        self.human_stages: list[dict[str, str]] = build_human_stages(
+            skip_layout=self.skip_layout,
+            enable_preprocess=self.enable_preprocess,
+            enable_strict=self.enable_strict,
+            zhuyin_mode=self.zhuyin_mode,
+        )
 
     # ---------------- 取消 ----------------
 
@@ -280,18 +347,24 @@ class CorrectionJob:
         cur_sec = self._current_elapsed_s()
         total_done = done_sec + cur_sec
 
+        stages = self.human_stages
         done_keys = list(elapsed_copy.keys())
         if done_keys:
-            scale = done_sec / max(0.001, sum(REFERENCE_SEC[k] for k in done_keys))
+            scale = done_sec / max(
+                0.001,
+                sum(REFERENCE_SEC.get(k, 2.0) for k in done_keys),
+            )
         else:
             scale = 1.0
-        remaining_keys = [s["key"] for s in HUMAN_STAGES
-                          if s["key"] not in elapsed_copy]
+        remaining_keys = [s["key"] for s in stages if s["key"] not in elapsed_copy]
         # 当前阶段已跑的秒数从「剩余」里扣掉
-        eta = max(0.0, sum(REFERENCE_SEC[k] for k in remaining_keys) * scale - cur_sec)
+        eta = max(
+            0.0,
+            sum(REFERENCE_SEC.get(k, 2.0) for k in remaining_keys) * scale - cur_sec,
+        )
         est_total = total_done + eta
         percent = 0.0 if est_total <= 0 else total_done / est_total * 100
-        if self.current_index >= 0 and self.current_index < len(HUMAN_STAGES) - 1:
+        if self.current_index >= 0 and self.current_index < len(stages) - 1:
             percent = min(percent, 96.0)   # 最后一步完成前不显示满格
         return {
             "percent": round(min(percent, 100.0), 1),
@@ -319,6 +392,7 @@ class CorrectionJob:
         engine = self.engine if self.engine is not None else get_engine_choice()
         self.engine_used = engine
 
+        stages = self.human_stages
         cfg = PipelineConfig(
             epub=self.epub,
             workdir=self.workdir,
@@ -328,7 +402,7 @@ class CorrectionJob:
             engine=engine,
             replace_count=2,
             layout_profile="html-safe",
-            stages=tuple(s["key"] for s in HUMAN_STAGES),
+            stages=tuple(s["key"] for s in stages),
             resume=False,   # 界面每次都是全新运行；断点续跑属引擎命令行的能力
             force=False,
             keep_going=False,
@@ -340,13 +414,18 @@ class CorrectionJob:
             # M4-EX.6-R3：词替换后可选自动修引号（与检查页共用规则文件）
             auto_fix_quotes=self.auto_fix_quotes,
             quotation_rules_path=self.quotation_rules_path,
+            skip_layout=self.skip_layout,
+            enable_preprocess=self.enable_preprocess,
+            enable_strict=self.enable_strict,
+            zhuyin_mode=self.zhuyin_mode,
+            selected_bags=self.selected_bags,
         )
 
         # 准备目录（与编排器 _prepare 相同的布局）
         cfg.workdir.mkdir(parents=True, exist_ok=True)
         cfg.paths.logs.mkdir(parents=True, exist_ok=True)
         cfg.paths.report.mkdir(parents=True, exist_ok=True)
-        for s in HUMAN_STAGES:
+        for s in stages:
             cfg.stage_dir(s["key"]).mkdir(parents=True, exist_ok=True)
 
         # 把引擎客户端的 subprocess 换成可取消代理（只影响本进程内的调用）
@@ -364,7 +443,7 @@ class CorrectionJob:
         self._run_started_at = self._now()
         self._run_started_wall = time.time()
         try:
-            for i, meta in enumerate(HUMAN_STAGES):
+            for i, meta in enumerate(stages):
                 if self.cancel_requested:
                     raise CorrectionCancelled("在阶段开始前取消")
                 key = meta["key"]

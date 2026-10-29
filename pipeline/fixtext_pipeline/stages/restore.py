@@ -40,7 +40,11 @@ class RestoreStage(Stage):
         from epubtext import check_epub, compare_content, restore_epub
 
         text_path = self.cfg.replace_after()
-        ledger_path = self.cfg.stage_dir("layout") / f"{self.cfg.book_stem}.bundle.json"
+        # 跳过排版时账本仍是 merge 产物；有排版则用 layout 副本
+        if self.cfg.skip_layout:
+            ledger_path = self.cfg.merged_ledger()
+        else:
+            ledger_path = self.cfg.stage_dir("layout") / f"{self.cfg.book_stem}.bundle.json"
         out_dir = self.ensure_dir(self.cfg.stage_dir(self.name))
         output = self.cfg.restored_epub()
 

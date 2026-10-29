@@ -1,0 +1,14 @@
+{
+  "id": "strict",
+  "title": "严格校正",
+  "locked": false,
+  "via_switch": true,
+  "default_on": false,
+  "rule_count": 3794,
+  "vars": {
+    "1.自定义词库.php__strictMap": 3794
+  },
+  "before_sha256": "3b9513b448db82aa0467af631e37b76777ea41d4d46bac846e5a498a31e7f098",
+  "after_sha256": "ce0013c5bcd0b733d885e08b04cb0af0ed14203cb70bab40bb6863dc21f056dd",
+  "bag_code": 3
+}

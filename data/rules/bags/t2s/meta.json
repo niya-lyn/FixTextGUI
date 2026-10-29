@@ -1,0 +1,16 @@
+{
+  "id": "t2s",
+  "title": "繁简转换",
+  "locked": false,
+  "via_switch": false,
+  "default_on": false,
+  "rule_count": 4248,
+  "vars": {
+    "2.繁转简词库.php__t2sMap": 3141,
+    "2.繁转简词库.php__t2sRadicalMap": 892,
+    "2.繁转简词库.php__radicalsSupplementMap": 215
+  },
+  "before_sha256": "a9f7bc4e78378022d7620ed377369d0c848954906f5642d5cfa7cd5c5bf37ac5",
+  "after_sha256": "609e5fbd78cd3e0195d478d428ce3cbf74a1ce2f85830a806e791aaa07fe1301",
+  "bag_code": 9
+}

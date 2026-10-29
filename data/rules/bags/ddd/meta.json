@@ -1,0 +1,15 @@
+{
+  "id": "ddd",
+  "title": "的地得",
+  "locked": false,
+  "via_switch": false,
+  "default_on": false,
+  "rule_count": 14615,
+  "vars": {
+    "4.的地得词库.php__dddMap": 11238,
+    "4.的地得词库.php__accurateDddMap": 3377
+  },
+  "before_sha256": "932cc67b4324988c8ed6160be15ecc308248724cd094d9ce39632c52a3ba703a",
+  "after_sha256": "49c4a87e8a54673236fa96d35bf32f5a0030d6c3df1fc55fb399552f55d3ac22",
+  "bag_code": 11
+}

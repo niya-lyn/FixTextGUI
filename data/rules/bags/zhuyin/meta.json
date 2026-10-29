@@ -1,0 +1,15 @@
+{
+  "id": "zhuyin",
+  "title": "生僻字注音",
+  "locked": false,
+  "via_switch": true,
+  "default_on": false,
+  "rule_count": 31979,
+  "vars": {
+    "7.生僻字词库.php__shengpiziMap": 17260,
+    "7.生僻字词库_扩展区_.php__cjkExtMap": 14719
+  },
+  "before_sha256": "ecc94fdebe8c59ed3033427aff192c40bdd37b35c94e7e38b6b466a7e587f5ec",
+  "after_sha256": "4a5c953cf8a50d3da0f4d0a17a177db15c01981d80f4b59662758840c7e5bd70",
+  "bag_code": 4
+}

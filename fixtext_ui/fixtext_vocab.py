@@ -68,15 +68,43 @@ WORK_RULES_DIR = "rules"
 #: 还原点与操作历史
 SNAP_DIR = "snapshots"
 
-#: 分级代号 → 友好名（内置三级 + 自定义）
+#: 分级代号 → 友好名（一键组合可见袋 + 开关独占袋 + 自定义）
 TIER_NAMES = {
     "custom": "我的词库",
     "b1": "常规校正词库",
     "b2": "标点规范词库",
     "b3": "繁简转换词库",
+    "preprocess": "预处理词库",
+    "strict": "严格校正词库",
+    "zhuyin": "生僻字注音词库",
 }
-BUILTIN_TIER_CODE = {"1": "b1", "2": "b2", "3": "b3"}
-TIER_ORDER = ["custom", "b1", "b2", "b3"]
+#: 袋 id → 界面分级码（M5-EX.1 按袋目录展示）
+BAG_TO_TIER = {
+    "normal": "b1",
+    "punctuation": "b2",
+    "t2s": "b3",
+    "preprocess": "preprocess",
+    "strict": "strict",
+    "zhuyin": "zhuyin",
+}
+#: 界面分级码 → 合成 tiers 单字节（仅内存索引；与旧 flat 1/2/3 兼容）
+TIER_TO_BYTE = {
+    "b1": b"1",
+    "b2": b"2",
+    "b3": b"3",
+    "preprocess": b"4",
+    "strict": b"5",
+    "zhuyin": b"6",
+}
+BUILTIN_TIER_CODE = {
+    "1": "b1",
+    "2": "b2",
+    "3": "b3",
+    "4": "preprocess",
+    "5": "strict",
+    "6": "zhuyin",
+}
+TIER_ORDER = ["custom", "b1", "b2", "b3", "preprocess", "strict", "zhuyin"]
 
 #: 词条类型（新增时可选；内置词条的类型取自分级名）
 ENTRY_TYPES = ["错词校正", "角色名", "专有名词", "其他"]
@@ -203,9 +231,66 @@ class BuiltinVocab:
             return self.work_dir
         return self.dir
 
+    def _bags_dir(self) -> Path | None:
+        """出厂或工作副本下的 bags/；有 manifest 才算可用。"""
+        for root in (self.work_dir, self.dir):
+            if root is None:
+                continue
+            cand = Path(root) / "bags"
+            if (cand / "manifest.json").is_file():
+                return cand
+        # 出厂 bags 也可能只在 rules_dir/bags（无工作副本）
+        cand = self.dir / "bags"
+        if (cand / "manifest.json").is_file():
+            return cand
+        return None
+
+    def _load_from_bags(self, bags_dir: Path) -> bool:
+        """按袋目录拼成平行数组 + 分级码（只读展示用）。"""
+        before: list[str] = []
+        after: list[str] = []
+        tier_bytes = bytearray()
+        loaded = 0
+        for bag_id, tier_code in BAG_TO_TIER.items():
+            bpath = bags_dir / bag_id / "before.json"
+            apath = bags_dir / bag_id / "after.json"
+            if not (bpath.is_file() and apath.is_file()):
+                continue
+            try:
+                b = json.loads(bpath.read_text("utf-8"))
+                a = json.loads(apath.read_text("utf-8"))
+            except (OSError, ValueError):
+                continue
+            if not isinstance(b, list) or not isinstance(a, list) or len(b) != len(a):
+                continue
+            marker = TIER_TO_BYTE.get(tier_code, b"1")
+            before.extend(str(x) for x in b)
+            after.extend(str(x) for x in a)
+            tier_bytes.extend(marker * len(b))
+            loaded += 1
+        if loaded == 0 or not before:
+            return False
+        self._before = before
+        self._after = after
+        self._tiers = bytes(tier_bytes)
+        self._source = bags_dir
+        try:
+            self._meta = json.loads((bags_dir / "manifest.json").read_text("utf-8"))
+        except (OSError, ValueError):
+            self._meta = {"source": "bags"}
+        self._meta = dict(self._meta)
+        self._meta["vocab_source"] = "bags"
+        self._available = True
+        return True
+
     def _load(self) -> None:
         self._available = False
         self.error = ""
+        # M5-EX.1：优先按袋目录展示（常规/标点/繁简 + 预处理/严格/注音）
+        bags_dir = self._bags_dir()
+        if bags_dir is not None and self._load_from_bags(bags_dir):
+            return
+
         self._source = self._active_dir()
         before = self._source / BUILTIN_BEFORE
         after = self._source / BUILTIN_AFTER
@@ -356,7 +441,7 @@ class BuiltinVocab:
         return dict(self._meta)
 
     def tier_counts(self) -> dict[str, int]:
-        out = {"b1": 0, "b2": 0, "b3": 0}
+        out = {k: 0 for k in TIER_NAMES if k != "custom"}
         if not self._tiers:
             return out
         counts: dict[int, int] = {}
@@ -365,7 +450,7 @@ class BuiltinVocab:
         for code, n in counts.items():
             key = BUILTIN_TIER_CODE.get(chr(code))
             if key:
-                out[key] += n
+                out[key] = out.get(key, 0) + n
         return out
 
     def tier_of(self, idx: int) -> str:
@@ -413,7 +498,8 @@ class BuiltinVocab:
             return False, f"两侧条数不一致（{n_before} / {n_after}）"
         if not self._tiers or len(self._tiers) != n_before:
             return False, f"分级索引条数与词条不一致（{len(self._tiers or b'')} / {n_before}）"
-        bad = {c for c in set(self._tiers) if c not in (0x31, 0x32, 0x33)}
+        allowed = {ord(k) for k in BUILTIN_TIER_CODE}
+        bad = {c for c in set(self._tiers) if c not in allowed}
         if bad:
             return False, "分级索引含未知取值"
         return True, ""
@@ -721,7 +807,7 @@ class VocabStore:
         scope = scope or "all"
         if scope == "custom":
             return self.custom.search(query, limit=limit, offset=offset)
-        if scope in ("b1", "b2", "b3"):
+        if scope in BAG_TO_TIER.values():
             return self.builtin.search(query, dict_code=scope, limit=limit, offset=offset)
         if scope == "builtin":
             return self.builtin.search(query, limit=limit, offset=offset)

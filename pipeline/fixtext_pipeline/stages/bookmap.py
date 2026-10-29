@@ -136,9 +136,13 @@ class BookMapStage(Stage):
     def fingerprint(self) -> str:
         from ..state import sha256_file
 
+        # 比对用注音前正文（after_raw）；无注音时 after_raw 等同 after
+        after_for_map = self.cfg.replace_after_raw()
+        if not after_for_map.is_file():
+            after_for_map = self.cfg.replace_after()
         return self.fingerprint_of(
             f"before={sha256_file(self.cfg.replace_before())}",
-            f"after={sha256_file(self.cfg.replace_after())}",
+            f"after={sha256_file(after_for_map)}",
             f"add_current_time={self.cfg.bookmap_add_current_time}",
         )
 
@@ -155,7 +159,11 @@ class BookMapStage(Stage):
 
         generator = BookMapGenerator(option=option, map_root=str(map_root))
         before_dir = self.cfg.stage_dir("replace") / "before"
-        after_dir = self.cfg.stage_dir("replace") / "after"
+        # M5-EX.1：bookmap 用注音前 after_raw，避免「字[音]」进专有词差
+        raw_dir = self.cfg.stage_dir("replace") / "after_raw"
+        after_dir = raw_dir if (raw_dir / f"{self.cfg.book_stem}.txt").is_file() else (
+            self.cfg.stage_dir("replace") / "after"
+        )
         self.log.log(f"[bookmap] 比对目录：before={before_dir} / after={after_dir}")
 
         result = generator.generate_book_maps(str(before_dir), str(after_dir))

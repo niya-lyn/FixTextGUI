@@ -1,27 +1,7 @@
-"""阶段 3：词库替换（T0.3 Go 引擎子进程协议 + T0.2 词库）。
+"""词库替换（含 M5-EX.1 分袋多轮）。
 
-**本阶段不实现任何字符串替换逻辑**：规则集、请求、进程调度、错误归类全部走
-T0.3 的 ``fixtext.engine`` 集成层——
-
-    RuleSet.from_files(before.json, after.json)   # 规则
-    EngineRequest(count=2, input_mode=FILE, output_mode=FILE)
-    GoEngineClient.run(request)                    # 真正起子进程
-
-替换趟数 ``count`` 默认 2，与上游 ``TextFixer`` 的 ``$replaceCount = 2`` 一致。
-
-自定义词生效（M3-T3.7）
------------------------
-**不直接读随包发布的词库原件**：运行前先用
-:mod:`fixtext_pipeline.vocab_bridge` 把「当前生效的通用词库 + 我的词库里的
-自定义词」合成为派生的 ``before.json`` / ``after.json``（落在用户区，
-出厂文件一个字节都不动），本阶段读的是这份派生文件。于是用户在词库里
-新增 / 合并 / 删除的词，下一次校正真正被引擎用上。
-
-派生文件的两份 sha **进入阶段指纹**：规则一变指纹就变，断点恢复不会因为
-「状态还是 done」而误判缓存命中、拿旧正文当新结果。
-
-替换完成后做一次 **边界完整性复检**：用账本严格切分替换后的 TXT，
-标记一旦被词条打坏，切分就会失败，阶段直接报错而不是把坏文本往下传。
+主轮仍落在 ``03_replace/``；预处理 / 严格为前置轮；注音在主轮之后写回
+``after``，并把注音前正文存 ``after_raw`` 供 bookmap。
 """
 
 from __future__ import annotations
@@ -30,83 +10,100 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from .. import bags, vocab_bridge
 from ..config import dump_json
 from ..state import sha256_file
-from .. import vocab_bridge
 from .base import Stage, StageError
 
 
 class GoEngineUnavailableError(StageError):
-    """Go 引擎不可用（缺失 / 无法执行 / 启动失败）——降级路径的触发判据。
+    """Go 引擎不可用——降级路径触发判据（M4-T4.2）。"""
 
-    M4-T4.2：worker 捕获本异常后向界面发 ``engine_failed``，由用户决定
-    是否改走 Python 引擎完成本次校正；CLI / 编排器路径则按普通阶段失败
-    报错（明确报错，不硬跑）。
-    """
+
+def _chain_input(cfg, round_id: str) -> Path:
+    """按已启用轮次决定本轮输入文件。"""
+    base = cfg.replace_input_text()
+    if round_id == "preprocess":
+        return base
+    # 严格：若跑过预处理则读预处理产物
+    if round_id == "strict":
+        if cfg.enable_preprocess:
+            return cfg.stage_dir("replace_preprocess") / "after" / f"{cfg.book_stem}.txt"
+        return base
+    # 主轮
+    if round_id == "main":
+        if cfg.enable_strict:
+            return cfg.stage_dir("replace_strict") / "after" / f"{cfg.book_stem}.txt"
+        if cfg.enable_preprocess:
+            return cfg.stage_dir("replace_preprocess") / "after" / f"{cfg.book_stem}.txt"
+        return base
+    # 注音
+    return cfg.replace_after()
 
 
 class ReplaceStage(Stage):
+    """主替换轮（``replace``）。子类改 ``round_id`` / ``name`` / ``title``。"""
+
     name = "replace"
-    title = "词库替换（T0.3 引擎双轨 + T0.2 词库）"
-    depends_on = ("layout",)
+    title = "词库替换（分袋主轮）"
+    depends_on = ("layout",)  # 编排器侧以动态 stages 为准；跳过排版时 worker 不跑 layout
+    round_id = "main"
 
     def outputs(self) -> list[Path]:
-        return [
-            self.cfg.replace_before(),
-            self.cfg.replace_after(),
-            self.cfg.stage_dir(self.name) / "replace_report.json",
-        ]
-
-    # ---- 派生规则（M3-T3.7）----
-
-    def derived_rules(self) -> dict:
-        """生成（或复用）本次运行要用的派生规则，返回桥接摘要。
-
-        派生文件落在用户区 ``workspace/vocab/derived_rules/``，**不碰**
-        ``data/rules/*.json``。生成失败按失败处理：宁可这里报错，也不让
-        用户的自定义词在一次"看起来成功"的运行里被静默丢掉。
-        """
-        try:
-            return vocab_bridge.write_derived_rules(
-                self.cfg.rules_before,
-                self.cfg.rules_after,
-                self.cfg.custom_vocab_path,
-                self.cfg.derived_rules_dir,
-            )
-        except vocab_bridge.DerivedRulesError as exc:
-            raise StageError(f"替换规则无法就绪：{exc}") from exc
-
-    def active_rules_paths(self) -> tuple[Path | None, Path | None]:
-        """当前生效的规则文件：有派生文件就用派生文件，否则退回随包原件。
-
-        ``fingerprint()`` 不能抛异常（编排器把它当"是否跳过"的判据，抛了会
-        让整段流程失败），所以这里读不到派生摘要时退化为 None，指纹退回
-        用原件 sha —— 真的缺文件时 ``run()`` 会自己报错。
-        """
-        try:
-            meta = self.derived_rules()
-        except StageError:
-            return None, None
-        before = Path(str(meta.get("before_path") or ""))
-        after = Path(str(meta.get("after_path") or ""))
-        if before.is_file() and after.is_file():
-            return before, after
-        return None, None
+        if self.round_id == "main":
+            return [
+                self.cfg.replace_before(),
+                self.cfg.replace_after(),
+                self.cfg.stage_dir(self.name) / "replace_report.json",
+            ]
+        out = self.cfg.stage_dir(self.name)
+        return [out / "after" / f"{self.cfg.book_stem}.txt", out / "replace_report.json"]
 
     def fingerprint(self) -> str:
-        before, after = self.active_rules_paths()
-        # 规则一律按**实际生效的那一份**取 sha：自定义词一改，派生文件就变，
-        # 指纹随之变，断点恢复才不会拿旧正文当新结果。
-        rules_sha = sha256_file(before) if before else sha256_file(self.cfg.rules_before)
-        rules_after_sha = sha256_file(after) if after else sha256_file(self.cfg.rules_after)
+        try:
+            inp = _chain_input(self.cfg, self.round_id)
+            inp_sha = sha256_file(inp) if inp.is_file() else "missing"
+        except Exception:
+            inp_sha = "missing"
         return self.fingerprint_of(
-            f"input={sha256_file(self.cfg.layout_text())}",
-            f"rules={rules_sha}",
-            f"rules_after={rules_after_sha}",
+            f"round={self.round_id}",
+            f"input={inp_sha}",
+            f"bags={','.join(self.cfg.selected_bags)}",
+            f"prep={self.cfg.enable_preprocess}",
+            f"strict={self.cfg.enable_strict}",
+            f"zhuyin={self.cfg.zhuyin_mode}",
             f"count={self.cfg.replace_count}",
             f"engine={self.cfg.engine}",
-            f"engine_bin={sha256_file(self.cfg.engine_path) if self.cfg.engine_path.exists() else 'missing'}",
         )
+
+    def _prepare_rules(self) -> dict[str, Any]:
+        derived_root = Path(self.cfg.derived_rules_dir) / f"round_{self.round_id}"
+        if self.round_id == "preprocess":
+            return bags.write_round_rules(
+                ["preprocess"], derived_root, include_custom=False
+            )
+        if self.round_id == "strict":
+            return bags.write_round_rules(
+                ["strict"], derived_root, include_custom=False
+            )
+        if self.round_id == "zhuyin":
+            return bags.write_round_rules(
+                ["zhuyin"], derived_root, include_custom=False
+            )
+        # main
+        ids = bags.main_bag_ids(self.cfg.selected_bags)
+        include_custom = "custom" in self.cfg.selected_bags
+        return bags.write_round_rules(
+            ids,
+            derived_root,
+            custom_path=self.cfg.custom_vocab_path if include_custom else None,
+            include_custom=include_custom,
+        )
+
+    def _replace_count(self) -> int:
+        if self.round_id == "zhuyin":
+            return 1
+        return int(self.cfg.replace_count)
 
     def run(self) -> dict[str, Any]:
         from fixtext.engine import EngineRequest, InputMode, OutputMode, RuleSet
@@ -120,8 +117,6 @@ class ReplaceStage(Stage):
             from fixtext.engine import GoEngineClient
 
             engine_kind = "go"
-            # Go 路径的引擎可用性检查：不可用属「降级触发条件」，抛类型化异常
-            # 让 worker / 编排器分流（M4-T4.2 §3.3），不当成普通替换失败。
             if not engine_path.exists():
                 raise GoEngineUnavailableError(
                     f"Go 引擎不存在：{engine_path.name}"
@@ -135,38 +130,28 @@ class ReplaceStage(Stage):
             import os
 
             if os.name != "nt" and not os.access(engine_path, os.X_OK):
-                # T0.3 产物解包后不带执行位，这里补上（builder.chmod_executable 同款动作）
                 engine_path.chmod(engine_path.stat().st_mode | 0o111)
                 self.log.log(f"[replace] 已补执行位：{engine_path}")
 
-        # 自定义词生效：运行前合成派生规则，本阶段只读派生文件
-        derived = self.derived_rules()
+        derived = self._prepare_rules()
         rule_before = Path(str(derived["before_path"]))
         rule_after = Path(str(derived["after_path"]))
         if not (rule_before.is_file() and rule_after.is_file()):
-            raise StageError("替换规则未就绪（派生规则文件缺失）")
+            raise StageError("替换规则未就绪（分袋派生文件缺失）")
         self.log.log(
-            f"[replace] 派生规则：通用 {derived.get('base_rules')} 条 + "
-            f"自定义生效 {derived.get('custom_applied')} 条 "
-            f"= {derived.get('total_rules')} 条"
-            + (f"（复用上次结果）" if derived.get("reused") else "")
+            f"[replace/{self.round_id}] 规则 {derived.get('total_rules')} 条 "
+            f"（袋 {derived.get('bag_ids')}）"
         )
-        if derived.get("custom_error"):
-            self.log.log(f"[replace][WARN] {derived['custom_error']}")
-        if derived.get("skipped_empty") or derived.get("skipped_identity") \
-                or derived.get("skipped_duplicate"):
-            self.log.log(
-                "[replace][WARN] 有自定义词未参与替换："
-                f"空值 {len(derived.get('skipped_empty') or [])} / "
-                f"原词等于替换值 {len(derived.get('skipped_identity') or [])} / "
-                f"同原词重复 {len(derived.get('skipped_duplicate') or [])}"
-            )
 
         rules = RuleSet.from_files(rule_before, rule_after)
+        count = self._replace_count()
         self.log.log(
-            f"[replace] 规则载入完成：{len(rules)} 条（去重前 {rules.unique_before}），"
-            f"替换趟数 {self.cfg.replace_count}"
+            f"[replace/{self.round_id}] 载入 {len(rules)} 条，趟数 {count}"
         )
+
+        input_path = _chain_input(self.cfg, self.round_id)
+        if not input_path.is_file():
+            raise StageError(f"替换输入不存在：{input_path}")
 
         out_dir = self.ensure_dir(self.cfg.stage_dir(self.name))
         before_dir = self.ensure_dir(out_dir / "before")
@@ -174,11 +159,18 @@ class ReplaceStage(Stage):
         before_path = before_dir / f"{self.cfg.book_stem}.txt"
         after_path = after_dir / f"{self.cfg.book_stem}.txt"
 
+        # 主轮：权威 before 快照；其它轮也落 before 便于排查
+        shutil.copyfile(input_path, before_path)
+        if self.round_id == "zhuyin":
+            # bookmap 用注音前正文（主轮 after），与注音后 after 分离
+            raw_dir = self.ensure_dir(self.cfg.stage_dir("replace") / "after_raw")
+            shutil.copyfile(input_path, raw_dir / f"{self.cfg.book_stem}.txt")
+
         request = EngineRequest(
             rules=rules,
-            count=self.cfg.replace_count,
+            count=count,
             input_mode=InputMode.FILE,
-            input_path=self.cfg.layout_text(),
+            input_path=input_path,
             output_mode=OutputMode.FILE,
             output_path=after_path,
             encoding="utf-8",
@@ -187,56 +179,65 @@ class ReplaceStage(Stage):
 
         if engine_kind == "python":
             client = PyGreedyEngineClient(default_timeout_s=self.cfg.engine_timeout_s)
-            self.log.log("[replace] 调起 Python 替换引擎（pyahocorasick 贪心）")
+            self.log.log(f"[replace/{self.round_id}] Python 引擎")
         else:
             client = GoEngineClient(engine_path, default_timeout_s=self.cfg.engine_timeout_s)
-            self.log.log(f"[replace] 调起 Go 引擎：{engine_path.name}")
+            self.log.log(f"[replace/{self.round_id}] Go 引擎：{engine_path.name}")
         response = client.run(request)
         if not response.ok:
             assert response.error is not None
             detail = response.error.as_dict()
             self.log.log(f"[replace][FAIL] {detail['code']} {detail['message']}")
             if engine_kind == "go" and detail["code"] in ("E1001", "E1002"):
-                # 启动层面失败（含杀软隔离后二进制不可执行）：同降级触发条件
                 raise GoEngineUnavailableError(
                     f"Go 引擎替换失败：{detail['code']} {detail['message']}；"
                     f"处置建议：{detail['remedy']}"
                 )
             raise StageError(
-                f"Go 引擎替换失败：{detail['code']} {detail['message']}；"
-                f"处置建议：{detail['remedy']}"
-                if engine_kind == "go" else
-                f"Python 引擎替换失败：{detail['code']} {detail['message']}；"
-                f"处置建议：{detail['remedy']}"
+                f"{'Go' if engine_kind == 'go' else 'Python'} 引擎替换失败："
+                f"{detail['code']} {detail['message']}；处置建议：{detail['remedy']}"
             )
 
         result = response.result
         assert result is not None
-        shutil.copyfile(self.cfg.layout_text(), before_path)
+        zhuyin_report: dict[str, Any] | None = None
+        if self.round_id == "zhuyin":
+            text = after_path.read_text(encoding="utf-8")
+            from .. import zhuyin_post
+
+            mode = self.cfg.zhuyin_mode if self.cfg.zhuyin_mode != "off" else "0"
+            text2, zhuyin_report = zhuyin_post.apply(text, mode)
+            after_path.write_text(text2, encoding="utf-8", newline="\n")
+            # 同步到主轮 after，供 quote/restore
+            main_after = self.cfg.replace_after()
+            main_after.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(after_path, main_after)
+
+        if self.round_id == "main":
+            integrity = self._check_boundaries(after_path)
+            if not integrity["ok"]:
+                raise StageError(
+                    "替换后边界完整性复检失败："
+                    + "；".join(integrity["problems"][:5])
+                )
+            # 无注音时 after_raw = after，方便 bookmap 统一读
+            if str(self.cfg.zhuyin_mode) in ("", "off", "None"):
+                raw_dir = self.ensure_dir(self.cfg.stage_dir("replace") / "after_raw")
+                shutil.copyfile(after_path, raw_dir / f"{self.cfg.book_stem}.txt")
+        else:
+            integrity = {"ok": True, "chapters": 0, "problems": []}
 
         self.log.log(
-            f"[replace] 引擎完成（{engine_kind}）：{result.engine_stdout}；"
-            f"字符 {result.chars_in} → {result.chars_out}，"
-            f"耗时 {result.elapsed_s:.2f}s"
+            f"[replace/{self.round_id}] 完成：字符 {result.chars_in} → {result.chars_out}，"
+            f"{result.elapsed_s:.2f}s"
         )
-
-        integrity = self._check_boundaries(after_path)
-        if not integrity["ok"]:
-            raise StageError(
-                "替换后边界完整性复检失败："
-                + "；".join(integrity["problems"][:5])
-            )
-
         report = {
-            # 派生规则摘要（M3-T3.7）：自定义词是否真的参与了这次替换
+            "round": self.round_id,
             "derived_rules": {
-                k: derived.get(k) for k in (
-                    "compose_key", "base_rules", "custom_input", "custom_applied",
-                    "total_rules", "reused", "custom_error", "skipped_empty",
-                    "skipped_identity", "skipped_duplicate", "short_custom",
-                    "applied_words", "derived_before_sha256",
-                    "derived_after_sha256", "base_before_sha256",
-                    "base_after_sha256", "custom_sha256",
+                k: derived.get(k)
+                for k in (
+                    "bag_ids", "base_rules", "custom_input", "custom_applied",
+                    "total_rules", "custom_error", "include_custom",
                 )
             },
             "engine": engine_kind,
@@ -254,25 +255,31 @@ class ReplaceStage(Stage):
             "changed": result.changed,
             "engine_elapsed_s": round(result.elapsed_s, 3),
             "before_path": str(before_path),
-            "after_path": str(after_path),
+            "after_path": str(
+                self.cfg.replace_after() if self.round_id == "zhuyin" else after_path
+            ),
             "before_sha256": sha256_file(before_path),
             "after_sha256": sha256_file(after_path),
             "boundary_check": integrity,
+            "zhuyin": zhuyin_report,
         }
         dump_json(out_dir / "replace_report.json", report)
         return report
 
     def _check_boundaries(self, text_path: Path) -> dict[str, Any]:
-        """用账本严格切分替换后的 TXT，确认边界标记没被打坏。"""
         from epubtext.bundle import Ledger, split_bundle
 
         problems: list[str] = []
         chunks: list[Any] = []
-        ledger = Ledger.load(self.cfg.stage_dir("layout") / f"{self.cfg.book_stem}.bundle.json")
+        if self.cfg.skip_layout:
+            ledger_path = self.cfg.merged_ledger()
+        else:
+            ledger_path = self.cfg.stage_dir("layout") / f"{self.cfg.book_stem}.bundle.json"
+        ledger = Ledger.load(ledger_path)
         try:
             text = text_path.read_text(encoding="utf-8")
             chunks = split_bundle(text, ledger, strict=True)
-        except Exception as exc:  # noqa: BLE001 - 任何切分失败都是边界被破坏
+        except Exception as exc:  # noqa: BLE001
             problems.append(f"切分失败：{exc.__class__.__name__}: {exc}")
 
         if not problems and len(chunks) != len(ledger.chapters):
@@ -282,3 +289,24 @@ class ReplaceStage(Stage):
             "chapters": len(chunks),
             "problems": problems,
         }
+
+
+class ReplacePreprocessStage(ReplaceStage):
+    name = "replace_preprocess"
+    title = "预处理替换"
+    round_id = "preprocess"
+    depends_on = ("merge",)
+
+
+class ReplaceStrictStage(ReplaceStage):
+    name = "replace_strict"
+    title = "严格替换"
+    round_id = "strict"
+    depends_on = ("merge",)
+
+
+class ReplaceZhuyinStage(ReplaceStage):
+    name = "replace_zhuyin"
+    title = "生僻字注音"
+    round_id = "zhuyin"
+    depends_on = ("replace",)

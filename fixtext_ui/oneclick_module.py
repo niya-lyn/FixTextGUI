@@ -30,7 +30,7 @@ from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline,
     ConfirmDialog,
 )
-from fixtext_worker import CorrectionJob, CorrectionWorker, HUMAN_STAGES
+from fixtext_worker import CorrectionJob, CorrectionWorker
 
 
 # ---------------------------------------------------------------------------
@@ -62,17 +62,19 @@ FMT_ITEMS = [
          kind="switch", on=False),
 ]
 
-MAPS = [
-    ("常规校正", "默认组合，覆盖常见错词与标点"),
-    ("严格校正", "规则更紧，减少漏替"),
-    ("繁简转换", "繁体转简体专用"),
-    ("标点规范", "仅做全半角与引号统一"),
-    ("专有名词", "人名 / 地名 / 书名"),
-    ("生僻字注音", "配合子模式使用"),
-    ("网络用语", "口语化词归一"),
-    ("古籍整理", "竖排与异体字"),
-    ("同义词", "表述统一"),
-    ("自定义组合", "用户在词库管理拼装"),
+#: 一键组合可勾选袋（常规锁定；预处理/严格/注音走独立开关，不在此列）
+BAG_CHECKS = [
+    ("b1", "常规校正词库", True, True),       # code, label, default_on, locked
+    ("custom", "我的词库", True, False),
+    ("b2", "标点规范词库", False, False),
+    ("b3", "繁简转换词库", False, False),
+]
+
+ZHUYIN_OPTS = [
+    ("0", "每个生僻字只注音一次", ""),
+    ("1", "给文本中所有位置的生僻字注音", "同一个字注音多次"),
+    ("2", "每个字只注音一次，且多音字只取第一种读音", ""),
+    ("3", "所有位置都注音，且多音字只取第一种读音", ""),
 ]
 
 ENGINES = [
@@ -457,13 +459,13 @@ class OneClickModule(QWidget):
 
     def _adv_card(self) -> Card:
         card = Card(
-            "高级选项", "运行模式 / 子模式 / 词库组合 / 引擎",
+            "高级选项", "运行模式 / 预处理 / 严格模式 / 注音 / 词库组合",
             collapsible=True, open_=False,
             basis="§2.7.2 · 高级选项收进面板",
         )
         self.basis_labels.append(card.basis)
 
-        # —— 运行模式
+        # —— 运行模式（完整 / 跳过排版）
         card.body_l.addLayout(self._opt_label("运行模式", "主按钮之外才用到"))
         row = QHBoxLayout()
         row.setContentsMargins(0, 8, 0, 0)
@@ -471,7 +473,7 @@ class OneClickModule(QWidget):
         self.rd_full = RadioCard(
             "完整流程（默认）", "备份 → 排版 → 词库替换 → 校验，一条龙", "full")
         self.rd_skip = RadioCard(
-            "跳过预处理", "不做排版，直接用词库校正（展开子模式）", "skip")
+            "跳过排版", "不做排版，直接用词库校正", "skip")
         self.rd_full.chosen.connect(self.set_mode)
         self.rd_skip.chosen.connect(self.set_mode)
         self.rd_full.set_selected(True)
@@ -479,21 +481,63 @@ class OneClickModule(QWidget):
         row.addWidget(self.rd_skip, 1)
         card.body_l.addLayout(row)
 
-        self.sub_panel = self._sub_panel()
-        self.sub_panel.setVisible(False)
-        card.body_l.addWidget(self.sub_panel)
+        card.body_l.addWidget(hline())
+
+        # —— 预处理 / 严格 / 注音（默认关；开则各插独占轮）
+        card.body_l.addLayout(self._opt_label("预处理", "默认关闭"))
+        self.sw_preprocess = Switch(False)
+        card.body_l.addWidget(FieldRow(
+            None,
+            "主替换前先用预处理词库单独跑一轮（轻量纠错，非排版）",
+            "",
+            control=self.sw_preprocess,
+            name_width=320,
+        ))
+
+        card.body_l.addLayout(self._opt_label("严格模式", "默认关闭"))
+        self.sw_strict = Switch(False)
+        card.body_l.addWidget(FieldRow(
+            None,
+            "用严格词库（strictMap）单独跑一轮，规则更紧",
+            "",
+            control=self.sw_strict,
+            name_width=320,
+        ))
+
+        card.body_l.addLayout(self._opt_label("生僻字注音", "默认关闭"))
+        self.sw_zhuyin = Switch(False)
+        self.sw_zhuyin.toggled.connect(self._on_zhuyin_toggled)
+        card.body_l.addWidget(FieldRow(
+            None,
+            "为生僻字补充拼音注音",
+            "",
+            control=self.sw_zhuyin,
+            name_width=320,
+        ))
+        self.zhu_panel = self._zhuyin_opts_panel()
+        self.zhu_panel.setVisible(False)
+        card.body_l.addWidget(self.zhu_panel)
+        self.zhuyin_mode = "0"
 
         card.body_l.addWidget(hline())
 
-        # —— 词库
-        card.body_l.addLayout(self._opt_label("使用哪套词库"))
-        self.map_box = QComboBox()
-        self.map_box.addItems(
-            [f"{n} — {d}" for n, d in MAPS])
-        self.map_box.setCursor(Qt.CursorShape.PointingHandCursor)
-        card.body_l.addWidget(self.map_box)
+        # —— 词库多选（常规锁定）
+        card.body_l.addLayout(self._opt_label("使用哪套词库", "可多选"))
+        self.bag_checks: dict[str, QCheckBox] = {}
+        bags_wrap = QFrame()
+        bl = QVBoxLayout(bags_wrap)
+        bl.setContentsMargins(0, 4, 0, 0)
+        bl.setSpacing(6)
+        for code, label, on, locked in BAG_CHECKS:
+            cb = QCheckBox(label + ("（锁定）" if locked else ""))
+            cb.setChecked(on)
+            cb.setEnabled(not locked)
+            cb.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.bag_checks[code] = cb
+            bl.addWidget(cb)
+        card.body_l.addWidget(bags_wrap)
         card.body_l.addWidget(self._hint(
-            "共 10 组，带人话说明，默认「常规校正」。V1 主按钮不询问此组合。"))
+            "「常规校正词库」默认启用且锁定不可取消；其余词库可勾选组合使用，默认「我的词库」。"))
         card.body_l.addWidget(self._basis("§2.2 · 主按钮不询问词库组合"))
 
         card.body_l.addWidget(hline())
@@ -527,6 +571,32 @@ class OneClickModule(QWidget):
             "默认关闭：校正只做词库替换与校验，引号问题留待「检查问题」逐处处理。"))
         return card
 
+    def _zhuyin_opts_panel(self) -> QFrame:
+        panel = QFrame()
+        panel.setObjectName("ZhuPanel")
+        panel.setStyleSheet(
+            f"#ZhuPanel{{background:{c('neutral.50')};border:1px dashed "
+            f"{c('neutral.200')};border-radius:10px}}")
+        pl = QVBoxLayout(panel)
+        pl.setContentsMargins(14, 12, 14, 12)
+        pl.setSpacing(8)
+        self._zhu_radios: dict[str, RadioCard] = {}
+        for code, title, desc in ZHUYIN_OPTS:
+            rd = RadioCard(title, desc or " ", code)
+            rd.chosen.connect(self._set_zhuyin_mode)
+            self._zhu_radios[code] = rd
+            pl.addWidget(rd)
+        self._zhu_radios["0"].set_selected(True)
+        return panel
+
+    def _on_zhuyin_toggled(self, on: bool) -> None:
+        self.zhu_panel.setVisible(bool(on))
+
+    def _set_zhuyin_mode(self, mode: str) -> None:
+        self.zhuyin_mode = str(mode)
+        for code, rd in self._zhu_radios.items():
+            rd.set_selected(code == mode)
+
     def _on_auto_fix_quote_toggled(self, on: bool) -> None:
         import fixtext_settings as _settings
         _settings.set_auto_fix_quote(bool(on))
@@ -546,63 +616,32 @@ class OneClickModule(QWidget):
         hl.addStretch(1)
         return hl
 
-    def _sub_panel(self) -> QFrame:
-        panel = QFrame()
-        panel.setObjectName("SubPanel")
-        panel.setStyleSheet(
-            f"#SubPanel{{background:{c('neutral.50')};border:1px dashed "
-            f"{c('neutral.200')};border-radius:10px}}")
-        pl = QVBoxLayout(panel)
-        pl.setContentsMargins(14, 12, 14, 12)
-        pl.setSpacing(8)
-
-        pl.addLayout(self._sub_line(
-            "词库严格度", ["常规", "严格"], on_change=None))
-
-        pl.addLayout(self._sub_line(
-            "生僻字注音",
-            ["不注音", "仅注一次", "所有位置", "取第一读音", "多音字拆分"],
-            on_change=self._zhu_changed))
-
-        self.zhu_map_row = QWidget()
-        self.zhu_map_row.setVisible(False)
-        zl = QHBoxLayout(self.zhu_map_row)
-        zl.setContentsMargins(0, 0, 0, 0)
-        zl.setSpacing(12)
-        zl.addWidget(_label("拆分用词库", size="sm", weight="semibold"))
-        self.zhu_map_box = QComboBox()
-        self.zhu_map_box.addItems(["生僻字注音词库", "自定义组合", "专有名词"])
-        zl.addWidget(self.zhu_map_box, 1)
-        pl.addWidget(self.zhu_map_row)
-
-        pl.addWidget(self._hint("多音字拆分需先选词库。"))
-        pl.addWidget(self._basis(
-            "子模式的实质选项必须能被用户直接选用 · §2.7.2"))
-        return panel
-
-    def _sub_line(self, name: str, opts: list[str], on_change) -> QHBoxLayout:
-        hl = QHBoxLayout()
-        hl.setContentsMargins(0, 0, 0, 0)
-        hl.setSpacing(12)
-        lab = _label(name, size="sm", weight="semibold")
-        lab.setMinimumWidth(96)
-        hl.addWidget(lab)
-        box = QComboBox()
-        box.addItems(opts)
-        box.setCursor(Qt.CursorShape.PointingHandCursor)
-        if on_change:
-            box.currentTextChanged.connect(on_change)
-        hl.addWidget(box, 1)
-        return hl
-
-    def _zhu_changed(self, value: str):
-        self.zhu_map_row.setVisible(value == "多音字拆分")
-
     def set_mode(self, mode: str):
         self.mode = mode
         self.rd_full.set_selected(mode == "full")
         self.rd_skip.set_selected(mode == "skip")
-        self.sub_panel.setVisible(mode == "skip")
+
+    def _run_options(self) -> dict:
+        """从高级选项控件收集 M5-EX.1 运行参数。"""
+        bags = ["b1"]  # 锁定
+        for code, _label, _on, locked in BAG_CHECKS:
+            if locked:
+                continue
+            cb = self.bag_checks.get(code)
+            if cb is not None and cb.isChecked():
+                bags.append(code)
+        zhu = "off"
+        if getattr(self, "sw_zhuyin", None) is not None and self.sw_zhuyin.isChecked():
+            zhu = str(getattr(self, "zhuyin_mode", "0") or "0")
+        return dict(
+            skip_layout=(self.mode == "skip"),
+            enable_preprocess=bool(
+                getattr(self, "sw_preprocess", None) and self.sw_preprocess.isChecked()),
+            enable_strict=bool(
+                getattr(self, "sw_strict", None) and self.sw_strict.isChecked()),
+            zhuyin_mode=zhu,
+            selected_bags=tuple(bags),
+        )
 
     # -------------------------------------------------------------- 执行流程
 
@@ -727,6 +766,7 @@ class OneClickModule(QWidget):
         from fixtext_quotation_rules_path import quotation_rules_path_for
 
         rules_path = quotation_rules_path_for(ctx)
+        opts = self._run_options()
         job = CorrectionJob(
             epub=source_epub,
             workdir=workdir,
@@ -748,6 +788,12 @@ class OneClickModule(QWidget):
             # M4-EX.6-R3：高级选项「自动修复引号问题」
             auto_fix_quotes=_settings.auto_fix_quote(),
             quotation_rules_path=rules_path,
+            # M5-EX.1：运行模式 / 分袋 / 注音
+            skip_layout=bool(opts["skip_layout"]),
+            enable_preprocess=bool(opts["enable_preprocess"]),
+            enable_strict=bool(opts["enable_strict"]),
+            zhuyin_mode=str(opts["zhuyin_mode"]),
+            selected_bags=tuple(opts["selected_bags"]),
         )
         worker = CorrectionWorker(job)
         self._worker = worker
@@ -760,7 +806,7 @@ class OneClickModule(QWidget):
             icon="⚡",
             title=f"正在校正《{book}》",
             note="校正过程中原书保持只读；随时可取消，取消后不留下半成品。",
-            steps=[dict(name=s["name"], desc=s["desc"]) for s in HUMAN_STAGES],
+            steps=[dict(name=s["name"], desc=s["desc"]) for s in job.human_stages],
             cancel_text="取消（不留半成品）",
             finish_text="校正完成",
             parent=self,

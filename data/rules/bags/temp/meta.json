@@ -1,0 +1,14 @@
+{
+  "id": "temp",
+  "title": "临时替换表",
+  "locked": false,
+  "via_switch": false,
+  "default_on": false,
+  "rule_count": 1,
+  "vars": {
+    "5.临时校对表.php__tempMap": 1
+  },
+  "before_sha256": "03ec3bdf6b81b5ddccfe47886bd27d67566c4449d1147c471863caa2595b19f2",
+  "after_sha256": "03ec3bdf6b81b5ddccfe47886bd27d67566c4449d1147c471863caa2595b19f2",
+  "bag_code": 14
+}

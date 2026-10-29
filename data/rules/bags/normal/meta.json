@@ -1,0 +1,14 @@
+{
+  "id": "normal",
+  "title": "常规校正",
+  "locked": true,
+  "via_switch": false,
+  "default_on": true,
+  "rule_count": 131692,
+  "vars": {
+    "1.自定义词库.php__normalMap": 131692
+  },
+  "before_sha256": "0a2327e23e768047bfd5911fdc7228217ba31a69ac33c94e82bf1814e3cb174b",
+  "after_sha256": "d51c205e524ff27745a3b6e2a92895504549c6523baa18c7c6961da34e781dc0",
+  "bag_code": 1
+}

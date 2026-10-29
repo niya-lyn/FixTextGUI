@@ -27,7 +27,10 @@ from typing import Any, Callable
 STAGE_META: dict[str, tuple[str, str]] = {
     "merge": ("01_merge", "EPUB 合并（T1.3）"),
     "layout": ("02_layout", "排版（T1.2）"),
-    "replace": ("03_replace", "词库替换（T0.3 Go 引擎 + T0.2 词库）"),
+    "replace_preprocess": ("02b_replace_preprocess", "预处理替换（M5-EX.1）"),
+    "replace_strict": ("02c_replace_strict", "严格替换（M5-EX.1）"),
+    "replace": ("03_replace", "词库替换（T0.3 Go 引擎 + 分袋）"),
+    "replace_zhuyin": ("03b_replace_zhuyin", "生僻字注音（M5-EX.1）"),
     "quote": ("04_quote", "引号检查（T1.4）"),
     "bookmap": ("05_bookmap", "专有词库生成（T1.5）"),
     "restore": ("06_restore", "EPUB 还原与校验（T1.3）"),
@@ -141,6 +144,17 @@ class PipelineConfig:
     auto_fix_quotes: bool = False
     #: 引号修复规则 JSON（R2 用户区）；None = 全开默认，不强制读盘
     quotation_rules_path: Path | None = None
+    #: M5-EX.1：跳过排版（完整流程 / 跳过排版）
+    skip_layout: bool = False
+    #: M5-EX.1：预处理 / 严格 开关
+    enable_preprocess: bool = False
+    enable_strict: bool = False
+    #: 注音档：``off`` 或 ``0``/``1``/``2``/``3``（对齐原型）
+    zhuyin_mode: str = "off"
+    #: 主替换勾选的 UI 袋码（含 custom / b2 / b3；b1 始终锁定）
+    selected_bags: tuple[str, ...] = ("custom",)
+    #: 当前替换轮次（由具体 Replace*Stage 类设置，编排器可忽略）
+    replace_round: str = "main"
 
     def __post_init__(self) -> None:
         self.epub = Path(self.epub).expanduser().resolve()
@@ -194,11 +208,21 @@ class PipelineConfig:
     def layout_text(self) -> Path:
         return self.stage_dir("layout") / f"{self.book_stem}.txt"
 
+    def replace_input_text(self) -> Path:
+        """替换链的起点正文：有排版用排版，跳过排版用合并结果。"""
+        if self.skip_layout:
+            return self.merged_text()
+        return self.layout_text()
+
     def replace_before(self) -> Path:
         return self.stage_dir("replace") / "before" / f"{self.book_stem}.txt"
 
     def replace_after(self) -> Path:
         return self.stage_dir("replace") / "after" / f"{self.book_stem}.txt"
+
+    def replace_after_raw(self) -> Path:
+        """注音前正文（供 bookmap）；无注音轮时与 ``replace_after`` 相同语义由调用方保证。"""
+        return self.stage_dir("replace") / "after_raw" / f"{self.book_stem}.txt"
 
     def quote_report_txt(self) -> Path:
         return self.stage_dir("quote") / f"{self.book_stem}.report.txt"
@@ -240,6 +264,11 @@ class PipelineConfig:
             "quotation_rules_path": (
                 str(self.quotation_rules_path) if self.quotation_rules_path else None
             ),
+            "skip_layout": bool(self.skip_layout),
+            "enable_preprocess": bool(self.enable_preprocess),
+            "enable_strict": bool(self.enable_strict),
+            "zhuyin_mode": str(self.zhuyin_mode),
+            "selected_bags": list(self.selected_bags),
         }
 
     @staticmethod
@@ -260,7 +289,48 @@ class PipelineConfig:
             layout_overrides=dict(raw.get("layout_overrides", {})),
             bookmap_add_current_time=bool(raw.get("bookmap_add_current_time", False)),
             stages=tuple(raw.get("stages", ("merge", "layout", "replace", "quote", "bookmap", "restore"))),
+            skip_layout=bool(raw.get("skip_layout", False)),
+            enable_preprocess=bool(raw.get("enable_preprocess", False)),
+            enable_strict=bool(raw.get("enable_strict", False)),
+            zhuyin_mode=str(raw.get("zhuyin_mode", "off")),
+            selected_bags=tuple(raw.get("selected_bags", ("custom",))),
         )
+
+
+def build_stage_keys(
+    *,
+    skip_layout: bool = False,
+    enable_preprocess: bool = False,
+    enable_strict: bool = False,
+    zhuyin_mode: str = "off",
+) -> tuple[str, ...]:
+    """按 M5-EX.1 开关拼出实际要跑的阶段键。"""
+    keys: list[str] = ["merge"]
+    if not skip_layout:
+        keys.append("layout")
+    if enable_preprocess:
+        keys.append("replace_preprocess")
+    if enable_strict:
+        keys.append("replace_strict")
+    keys.append("replace")
+    if str(zhuyin_mode) not in ("", "off", "None"):
+        keys.append("replace_zhuyin")
+    keys.extend(["quote", "bookmap", "restore"])
+    return tuple(keys)
+
+
+#: 阶段键 → 进度条人话文案（与 fixtext_worker 对齐，便于单测）
+HUMAN_STAGE_LABELS: dict[str, str] = {
+    "merge": "读取章节",
+    "layout": "整理排版",
+    "replace_preprocess": "预处理替换",
+    "replace_strict": "严格替换",
+    "replace": "词库批量替换",
+    "replace_zhuyin": "生僻字注音",
+    "quote": "检查引号配对",
+    "bookmap": "提取本书专有词",
+    "restore": "写回校正结果",
+}
 
 
 def dump_json(path: Path, payload: Any) -> Path:

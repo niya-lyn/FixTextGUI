@@ -1,0 +1,14 @@
+{
+  "id": "txt_format",
+  "title": "txtFormat",
+  "locked": false,
+  "via_switch": false,
+  "default_on": false,
+  "rule_count": 86917,
+  "vars": {
+    "3.txtFormat 词库.php__txtFormatMap": 86917
+  },
+  "before_sha256": "737d458501df5b097c4dd76c0fa5c086ceb4e2370e12a0af8939a01b79cc8905",
+  "after_sha256": "94e65c652c4fc6e3e5be4980faa5ddb025a58b2f8ae585dad88f43acc83fb499",
+  "bag_code": 10
+}

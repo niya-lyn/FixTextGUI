@@ -1,0 +1,14 @@
+{
+  "id": "cjk_recover",
+  "title": "CJK 恢复",
+  "locked": false,
+  "via_switch": false,
+  "default_on": true,
+  "rule_count": 643,
+  "vars": {
+    "7.生僻字词库_扩展区_.php__cjkRecoverMap": 643
+  },
+  "before_sha256": "549b2f493dd51eac54a3bcfa3658cbdb1cce13e8616ce2e0282136dbc18b8d02",
+  "after_sha256": "a36a03ad5bf1b3e4f0f56e912d7e7cc6f4087dc94bc6cf5e0ea800c4076aa503",
+  "bag_code": 6
+}
