@@ -327,3 +327,110 @@ def apply_marks(data: dict[str, Any], marks: dict[str, str]) -> dict[str, Any]:
         if state in ("fixed", "skip"):
             it["state"] = state
     return data
+
+
+# ---------------------------------------------------------------------------
+# M4-EX.6-R2：直接扫描当前书文本（不读校正报告）
+# ---------------------------------------------------------------------------
+
+def _ensure_quotation_vendor() -> None:
+    """把 pipeline/vendor 挂进 path，供 QuotationChecker / Fixer 导入。"""
+    import sys
+
+    try:
+        from fixtext_paths import pkg_root
+        root = pkg_root()
+    except Exception:  # pragma: no cover
+        root = Path(__file__).resolve().parent.parent
+    vendor = root / "pipeline" / "vendor"
+    if vendor.is_dir() and str(vendor) not in sys.path:
+        sys.path.insert(0, str(vendor))
+
+
+def infer_rule_id(msg: str, kind: str = "") -> str | None:
+    """报错文案 / 分类 → R1 修复规则 id（关开关时排除建议与批量）。"""
+    text = str(msg or "")
+    k = str(kind or "")
+    if "嵌套了独立双引号" in text or "应规范使用单引号" in text or k == "双套双引号":
+        return "nested_doubles"
+    if "写反" in text:
+        return "reverted_quotations"
+    if "连续" in text and "同向" in text:
+        return "repeated_quotations"
+    if "句尾" in text and "右双" in text:
+        return "sole_right_double"
+    if "句尾" in text and "右单" in text:
+        return "sole_right_single"
+    if k == "缺左引号" or "缺左双引号" in text or "缺左引号" in text:
+        return "missing_left_double"
+    if k == "缺右引号" or "缺右双引号" in text or "缺右引号" in text:
+        return "missing_right_double"
+    if "孤立右双" in text:
+        return "sole_right_double"
+    if "孤立右单" in text:
+        return "sole_right_single"
+    return None
+
+
+def scan_text(
+    text: str,
+    *,
+    book: str = "",
+    source_path: str = "",
+) -> dict[str, Any]:
+    """扫描整书文本，产出与 ``load_report`` 同结构的检查页数据。
+
+    不读校正流水线报告；条目来自 ``QuotationChecker.check_text``。
+    """
+    _ensure_quotation_vendor()
+    from fixtext_quotation.checker import check_text  # noqa: WPS433
+
+    errors = check_text(text or "")
+    lines = (text or "").split("\n")
+    items: list[dict[str, Any]] = []
+    for e in errors:
+        line_no = int(e.line)
+        char = int(e.char)
+        msg = str(e.msg or "")
+        kind, advice, action = classify(msg)
+        raw = lines[line_no - 1] if 0 < line_no <= len(lines) else ""
+        line_text = raw.replace("\r", "")
+        pre, hl, post = _slice_context(line_text, char)
+        rid = infer_rule_id(msg, kind)
+        item = dict(
+            line=line_no, char=char, msg=msg,
+            type=kind, advice=advice, action=action,
+            pre=pre, hl=hl, post=post, state=None,
+            rule_id=rid,
+        )
+        if action:
+            item["fix"] = apply_action(item)
+        items.append(item)
+
+    items.sort(key=lambda it: (_ORDER.get(it["type"], 99), it["line"]))
+    found = len(items)
+    return {
+        "ok": True,
+        "reason": "",
+        "book": book or "",
+        "run_dir": "",
+        "checked_file": source_path or "",
+        "chars": len(text or ""),
+        "declared": found,
+        "found": found,
+        "consistent": True,
+        "auto_fixable": sum(1 for it in items if it.get("action")),
+        "manual": sum(1 for it in items if not it.get("action")),
+        "pages": 0,
+        "items": items,
+    }
+
+
+def scan_file(path: str | Path, *, book: str = "") -> dict[str, Any]:
+    """读文件再 ``scan_text``。"""
+    p = Path(path)
+    try:
+        text = p.read_text(encoding="utf-8")
+    except Exception as exc:  # noqa: BLE001
+        return _empty(f"读不到当前书的正文：{exc}")
+    return scan_text(text, book=book or p.stem, source_path=str(p))

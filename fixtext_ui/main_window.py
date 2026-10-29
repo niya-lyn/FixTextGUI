@@ -853,19 +853,23 @@ class MainWindow(QMainWindow):
 
     # --------------------------------------------------- 检查页 / 历史页 接线（T2.10）
 
-    def _sync_check(self, run: dict | None) -> None:
-        """读这次运行目录里的引号检查报告，注入检查页（不显示任何假条目）。"""
+    def _sync_check(self, run: dict | None = None) -> None:
+        """M4-EX.6-R2：检查页挂当前书正文，自扫不读校正报告。
+
+        ``run`` 参数保留以兼容校正完成回调；检查页不再注入报告。
+        """
         if self.check_module is None:
             return
-        import fixtext_check as checkdata
-
-        run_dir = str((run or {}).get("workdir") or "")
-        if not run_dir:
-            self.check_module.set_empty()
+        path = str(getattr(self, "_current_text_path", "") or "")
+        if not path:
+            self.check_module.set_book("", "")
             return
-        report = checkdata.load_report(run_dir)
-        self.check_module.set_marks(checkdata.load_marks(run_dir))
-        self.check_module.set_report(report)
+        rec = self._import_record or {}
+        title = str(rec.get("title") or Path(path).parent.name)
+        ext = str(rec.get("source_suffix") or "txt")
+        self.check_module.set_book(
+            path, title, book_ext=ext,
+            rules_dir=self._workspace_root())
 
     def _load_history(self) -> None:
         """历史页接上**当前书**的运行目录（M4-EX.3b：runs 按书隔离）。"""
