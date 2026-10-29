@@ -21,13 +21,15 @@ import os
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QCheckBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QWidget,
 )
 
 from fixtext_export import ExportOutcome, ExportSource, export_book, resolve_source
+from fixtext_paths import default_export_dir
 from fixtext_tokens import FONT_WEIGHT, c, fs, r
 from fixtext_widgets import Card, ConfirmDialog, Pill, RadioCard, EmptyState, hline
 
@@ -414,11 +416,10 @@ class ExportModule(QWidget):
         else:
             self.meta_hint.setText("导入一本书后，这里会自动填上书名与作者。")
 
-        # 目录：默认导到「导入文件夹旁边的导出结果」；不把绝对路径写进
-        # 可见的输入框（零露出口径），只有用户自己选的目录才显示完整路径。
+        # 目录：默认包根下「导出/」（M5-EX.2 / BUG-3）；用户自选仍优先。
+        # 默认路径不写进输入框（零露出口径），只有用户自己选的才显示。
         if has_book:
-            base = Path(src.text_path).parent
-            self._default_out_dir = str(base / "导出结果")
+            self._default_out_dir = str(default_export_dir())
         else:
             self._default_out_dir = ""
 
@@ -449,13 +450,14 @@ class ExportModule(QWidget):
             # 用户自己选的目录：只显示文件夹名，不透出绝对路径（零露出口径）
             self.dir_hint.setText(f"会导出到文件夹「{Path(out_dir).name}」")
         elif out_dir:
-            self.dir_hint.setText("没有另选目录时，导出到导入文件夹旁边的「导出结果」。")
+            self.dir_hint.setText(
+                "没有另选目录时，默认导出到程序目录下的「导出」文件夹。")
         else:
             self.dir_hint.setText("选好目录后就能导出。")
         self.export_btn.setEnabled(True)
 
     def _resolve_out_dir(self) -> str:
-        """导出目录：优先用户选的，否则默认「导入文件夹/导出结果」。"""
+        """导出目录：优先用户选的，否则包根「导出/」。"""
         return self.dir_edit.text().strip() or self._default_out_dir
 
     # ------------------------------------------------------------------ 导出
@@ -590,6 +592,13 @@ class ExportModule(QWidget):
         add(f"替换命中数：{outcome.hits}", color="neutral.800")
         add(f"涉及词库：{'；'.join(outcome.libs) if outcome.libs else '无'}")
 
+        open_btn = QPushButton("📂 打开所在文件夹")
+        open_btn.setObjectName("BtnOutline")
+        open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        folder = str(Path(outcome.main_file).resolve().parent)
+        open_btn.clicked.connect(lambda _=False, p=folder: self._open_folder(p))
+        self.result_box.addWidget(open_btn)
+
         if outcome.fmt == "epub" and outcome.structure:
             st = outcome.structure
             add(f"电子书结构校验：{'通过' if st.get('ok') else '未通过'}", color="neutral.800")
@@ -606,10 +615,20 @@ class ExportModule(QWidget):
     # ------------------------------------------------------------------ 杂项
 
     def _pick_dir(self) -> None:
-        current = self.dir_edit.text().strip()
+        current = (self.dir_edit.text().strip()
+                   or self._default_out_dir
+                   or str(default_export_dir()))
         path = QFileDialog.getExistingDirectory(self, "选择导出目录", current)
         if path:
             self.dir_edit.setText(path)
+
+    @staticmethod
+    def _open_folder(path: str) -> None:
+        """在系统文件管理器中打开导出目录。"""
+        p = Path(path)
+        if not p.is_dir():
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(p.resolve())))
 
     def _sync_meta(self) -> None:
         self.refresh()

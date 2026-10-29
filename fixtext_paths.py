@@ -28,3 +28,10 @@ def pkg_root() -> Path:
     if is_frozen():
         return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parent
+
+
+def default_export_dir() -> Path:
+    """默认导出目录：包根下的 ``导出/``（与 workspace / runs 同级）。"""
+    out = pkg_root() / "导出"
+    out.mkdir(parents=True, exist_ok=True)
+    return out
