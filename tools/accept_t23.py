@@ -105,6 +105,8 @@ def run_scenario(app, name: str, *, cancel_at_stage: int | None = None,
     t0 = time.monotonic()
     state = {
         "t_cancel_click": None,
+        "t_confirm_click": None,
+        "t_confirm_scheduled": False,
         "t_cancelled_signal": None,
         "workdir": None,
         "dialog_texts": set(),
@@ -142,11 +144,30 @@ def run_scenario(app, name: str, *, cancel_at_stage: int | None = None,
     def watch_cancel():
         w = mod._worker
         dlg = mod._dlg
-        if w is None or dlg is None or state["t_cancel_click"] is not None:
+        if w is None or dlg is None:
+            return
+        # 【M4-EX.2c 适配】取消按钮自本卡起会先弹「确认放弃本次校正确认？」
+        # 模态框（CancelConfirmDialog）。老脚本只点 cancel 不点确认，会卡在
+        # dialog.exec() 的嵌套事件循环里直到脚本超时——这里补上「点确认放弃」。
+        # 两个点击都必须经 QTimer.singleShot(0, ...) 派发：在定时器槽里直接
+        # QTest.mouseClick 会同步进入 exec()，把本槽和后续轮询一起卡住。
+        from PySide6.QtCore import QTimer as _QTimer
+        confirm = getattr(dlg, "_confirm_dlg", None)
+        if confirm is not None and not state["t_confirm_scheduled"]:
+            btn = getattr(confirm, "confirm_btn", None)
+            if btn is not None:
+                state["t_confirm_scheduled"] = True
+                state["t_confirm_click"] = time.monotonic()
+                _QTimer.singleShot(
+                    0, lambda b=btn: QTest.mouseClick(b, Qt.MouseButton.LeftButton))
+            return
+        if state["t_cancel_click"] is not None:
             return
         if w.job.current_index == cancel_at_stage:
             state["t_cancel_click"] = time.monotonic()
-            QTest.mouseClick(dlg.cancel_btn, Qt.MouseButton.LeftButton)
+            btn2 = dlg.cancel_btn
+            _QTimer.singleShot(
+                0, lambda b=btn2: QTest.mouseClick(b, Qt.MouseButton.LeftButton))
 
     def on_stage_started(i):
         stage_marks[f"s{i}"] = {"start": round(time.monotonic() - t0, 3)}
@@ -194,11 +215,17 @@ def run_scenario(app, name: str, *, cancel_at_stage: int | None = None,
         "events": events,       # 全量采样，供证据引用
     }
     if state["t_cancel_click"] is not None:
-        result["cancel_close_latency_s"] = round(
-            t_end - state["t_cancel_click"], 3)
+        # 【M4-EX.2c 适配】现在取消是两段：点「取消」→ 确认框 → 点「确认放弃」。
+        # 以「确认放弃」为计时起点，才反映真实的取消生效延迟。
+        t_effective = state["t_confirm_click"] or state["t_cancel_click"]
+        result["confirm_dialog_shown"] = state["t_confirm_click"] is not None
+        result["confirm_click_latency_s"] = (
+            round(state["t_confirm_click"] - state["t_cancel_click"], 3)
+            if state["t_confirm_click"] else None)
+        result["cancel_close_latency_s"] = round(t_end - t_effective, 3)
         if state["t_cancelled_signal"] is not None:
             result["cancel_signal_latency_s"] = round(
-                state["t_cancelled_signal"] - state["t_cancel_click"], 3)
+                state["t_cancelled_signal"] - t_effective, 3)
     # 界面文本采集（模块控件树 + 弹窗打开期间采到的全量文本）
     result["module_texts"] = collect_texts(mod)
     result["dialog_texts"] = sorted(state["dialog_texts"])

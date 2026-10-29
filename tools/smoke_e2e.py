@@ -117,7 +117,7 @@ def run_correction_with_click(win, cancel_at_stage: int | None):
     """
     mod = win.oneclick_module
     events = []
-    state = {"cancel_click": None, "cancelled": None}
+    state = {"cancel_click": None, "confirm_scheduled": False, "cancelled": None}
 
     def poll():
         w = mod._worker
@@ -134,11 +134,26 @@ def run_correction_with_click(win, cancel_at_stage: int | None):
     def watch_cancel():
         w = mod._worker
         dlg = mod._dlg
-        if w is None or dlg is None or state["cancel_click"] is not None:
+        if w is None or dlg is None:
+            return
+        # 【M4-EX.2c 适配】取消会先弹「确认放弃本次校正？」模态框
+        # （CancelConfirmDialog）；不点它就会卡在 exec() 直到超时。两个点击
+        # 都用 QTimer.singleShot(0) 派发，避免在定时器槽里同步进入 exec()。
+        confirm = getattr(dlg, "_confirm_dlg", None)
+        if confirm is not None and not state["confirm_scheduled"]:
+            btn = getattr(confirm, "confirm_btn", None)
+            if btn is not None:
+                state["confirm_scheduled"] = True
+                QTimer.singleShot(
+                    0, lambda b=btn: QTest.mouseClick(b, Qt.MouseButton.LeftButton))
+            return
+        if state["cancel_click"] is not None:
             return
         if w.job.current_index == cancel_at_stage:
             state["cancel_click"] = time.monotonic()
-            QTest.mouseClick(dlg.cancel_btn, Qt.MouseButton.LeftButton)
+            btn2 = dlg.cancel_btn
+            QTimer.singleShot(
+                0, lambda b=btn2: QTest.mouseClick(b, Qt.MouseButton.LeftButton))
 
     poller = QTimer(); poller.setInterval(100); poller.timeout.connect(poll)
     if cancel_at_stage is not None:
