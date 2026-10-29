@@ -102,10 +102,12 @@ print("@@RESULT@@" + json.dumps({
     "key": w.current_key,
 }, ensure_ascii=False))
 """
+    from accept_env import qt_site_packages  # noqa: PLC0415
+    qsite = qt_site_packages()
     env = dict(os.environ)
     env.update({
         "FX_PKG": str(pkg), "FX_WS": str(ws), "QT_QPA_PLATFORM": "offscreen",
-        "FX_Q": "/home/gem/.aily/.cli/qtenv/lib/python3.12/site-packages",
+        "FX_Q": qsite,
     })
     proc = subprocess.run([sys.executable, "-c", code], env=env,
                           capture_output=True, text=True, timeout=180)
@@ -126,8 +128,12 @@ def main() -> int:
         shutil.rmtree(out)
     out.mkdir(parents=True, exist_ok=True)
 
-    sys.path[:0] = [str(pkg), str(pkg / "fixtext_ui"),
-                    "/home/gem/.aily/.cli/qtenv/lib/python3.12/site-packages"]
+    from accept_env import qt_site_packages  # noqa: PLC0415
+    _path_front = [str(pkg), str(pkg / "fixtext_ui")]
+    _q = qt_site_packages()
+    if _q:
+        _path_front.append(_q)
+    sys.path[:0] = _path_front
 
     tmp = Path(tempfile.mkdtemp(prefix="ex3a_"))
     ws = tmp / "workspace"

@@ -79,7 +79,13 @@ class _FakeWizard:
 def _no_real_wizard():
     """整个会话都不允许建出真模态向导（含构造尾部残留的 singleShot）。"""
     monkeypatch = pytest.MonkeyPatch()
-    monkeypatch.setattr(M, "QSettings", _FakeSettings)
+    # P2-6：主窗口经 mark_seen / opens_on_first_run 写 wizardSeen，不再直写 QSettings
+    monkeypatch.setattr(
+        M, "opens_on_first_run",
+        lambda: _FakeSettings.store.get("wizardSeen", "0") != "1")
+    monkeypatch.setattr(
+        M, "mark_seen",
+        lambda: _FakeSettings.store.__setitem__("wizardSeen", "1"))
     monkeypatch.setattr(M, "FirstRunWizard", _FakeWizard)
     yield
     monkeypatch.undo()

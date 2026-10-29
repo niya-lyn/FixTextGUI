@@ -34,7 +34,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 HERE = Path(__file__).resolve().parent
 DEFAULT_PKG = HERE.parent
-QENV = "/home/gem/.aily/.cli/qtenv/lib/python3.12/site-packages"
+# 跨平台探测 PySide6（勿写死 /home/gem/...）
+sys.path.insert(0, str(HERE))
+from accept_env import qt_site_packages  # noqa: E402
+QENV = qt_site_packages()
 
 CHECKS: list[tuple[str, str, bool, str]] = []
 

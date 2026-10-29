@@ -198,17 +198,23 @@ def main() -> int:
     )
     checks["passed"] = bool(ok)
     text = json.dumps(checks, ensure_ascii=False, indent=2)
-    print(text)
-    # 窗口程序（console=False）的 stdout 在 Windows 上不一定接到控制台，
-    # 所以额外支持把结果直接写进文件：`--self-check-out <路径>`。
+    # 先落盘再 print（P2-7）：绿色版 console=False 时 stdout 常接不到，
+    # 文件才是可靠证据；print 失败不能挡退码。
     argv = sys.argv[1:]
+    out_err = ""
     if "--self-check-out" in argv:
         i = argv.index("--self-check-out")
         if i + 1 < len(argv):
             try:
                 Path(argv[i + 1]).write_text(text, encoding="utf-8")
             except Exception as exc:                     # noqa: BLE001
-                print(f"（结果文件写入失败：{type(exc).__name__}: {exc}）")
+                out_err = f"（结果文件写入失败：{type(exc).__name__}: {exc}）"
+    try:
+        print(text)
+        if out_err:
+            print(out_err)
+    except Exception:                                   # noqa: BLE001
+        pass
     return 0 if ok else 1
 
 

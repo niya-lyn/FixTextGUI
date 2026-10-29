@@ -34,16 +34,22 @@ HERE = Path(__file__).resolve().parent
 PKG = HERE.parent
 EVID = PKG / "evidence"
 RUNS = PKG.parent / "t37_runs"
-BASELINE = Path(os.environ.get("FIXTEXT_T37_BASELINE", "/tmp/m37_baseline"))
 BOOK = PKG / "tests" / "samples" / "book_paohuo.epub"
-ENGINE_REL = Path("pipeline/vendor/fixtext/engine/go_src/bin/replace_by_go-linux-amd64")
 RULES = PKG / "data" / "rules"
 WORDS = ("萧衍", "萧彦")
 INSERT = "萧衍 起身，众人皆看萧衍，唯萧衍旧部尚在。"
 
-for _p in (PKG, PKG / "fixtext_ui", PKG / "fixtext_import", PKG / "pipeline"):
+for _p in (PKG, PKG / "fixtext_ui", PKG / "fixtext_import", PKG / "pipeline", HERE):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
+from accept_env import env_dir, select_go_engine, tmp_root  # noqa: E402
+
+BASELINE = env_dir("FIXTEXT_T37_BASELINE", tmp_root("m37_baseline")) or tmp_root("m37_baseline")
+_ENGINE = select_go_engine(PKG)
+ENGINE_REL = (
+    _ENGINE.relative_to(PKG) if _ENGINE is not None
+    else Path("pipeline/vendor/fixtext/engine/go_src/bin/__no_platform_engine__")
+)
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 
@@ -334,7 +340,7 @@ def s5_dup_dialog() -> dict:
 # ---------------------------------------------------------------------------
 
 def s6_exec_bit() -> dict:
-    clean = Path("/tmp/t37_clean")
+    clean = tmp_root("t37_clean")
     shutil.rmtree(clean, ignore_errors=True)
     clean.mkdir(parents=True)
     archive = RUNS / "pkg_snapshot.zip"

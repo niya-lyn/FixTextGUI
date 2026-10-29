@@ -67,7 +67,7 @@ def main() -> int:
             return 2
         return fxbundle_smoke.main()
 
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QMessageBox
 
     from main_window import MainWindow, load_qss  # noqa: PLC0415
 
@@ -75,6 +75,16 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("FixText")
     load_qss(app)
+
+    # P2-2：macOS 等无引擎平台启动即明示不支持完整校正（仍可打开界面查看）
+    if sys.platform == "darwin":
+        QMessageBox.warning(
+            None,
+            "当前系统不支持完整校正",
+            "FixText 的一键校正目前只支持 Windows 与 Linux。\n\n"
+            "在 Mac 上可以打开界面、导入与查看，但无法跑完整校正链路。"
+            "请改用 Windows 或 Linux 完成校正与导出。",
+        )
 
     try:
         import fixtext_error_center as error_center

@@ -52,13 +52,12 @@ from fixtext_tokens import (
     c, sp, r, fs, px, FONT_WEIGHT,
 )
 import fixtext_settings as app_settings
-from fixtext_settings import AppSettings as QSettings   # M4-T4.4：设置落用户区
 from fixtext_widgets import Card, Modal, Pill, Switch, cascade_in, hline
 from fixtext_shelf import resolve_current as resolve_current_book
 from fixtext_shelf import list_books as list_shelf_books
 from fixtext_shelf import set_current_book_id
 from fixtext_shelf_ui import BookChip
-from first_run_wizard import FirstRunWizard
+from first_run_wizard import FirstRunWizard, mark_seen, opens_on_first_run
 from check_module import CheckModule
 from export_module import ExportModule
 from history_module import HistoryModule
@@ -265,7 +264,7 @@ class HomeOverview(QWidget):
 
 
 # ---------------------------------------------------------------------------
-# 建设中占位页
+# 建设中占位页（六入口已全部接真模块；仅令牌新增未知入口时回退使用）
 # ---------------------------------------------------------------------------
 
 class BuildingPage(QWidget):
@@ -447,7 +446,8 @@ class MainWindow(QMainWindow):
 
     def _maybe_first_run(self) -> None:
         """首启（设置里没有 wizardSeen）→ 自动弹向导；之后不再自动弹。"""
-        if QSettings("FixText", "V1").value("wizardSeen", "0") == "1":
+        # 与 first_run_wizard.mark_seen / opens_on_first_run 同一写路径（P2-6）
+        if not opens_on_first_run():
             return
         self._open_wizard()
 
@@ -482,7 +482,7 @@ class MainWindow(QMainWindow):
         )
         accepted = w.exec() == QDialog.DialogCode.Accepted
         # 任何关闭方式都算已看过（跳过 / 关闭 / 完成一致），先记再看跳转
-        QSettings("FixText", "V1").setValue("wizardSeen", "1")
+        mark_seen()
         if accepted:
             self.go("history")  # 完成 → 看这次留下的历史记录
 
@@ -625,9 +625,8 @@ class MainWindow(QMainWindow):
         self.pages[HOME_KEY] = self._wrap(HomeOverview(on_enter=self.go))
         self.stack.addWidget(self.pages[HOME_KEY])
 
-        # 六个入口：导入 / 一键校正 / 检查问题为真实模块，其余为建设中占位页。
-        # 导入与一键校正页先放一个空控制器，由 mount_* 填真实模块——
-        # 这样「页面实例只建一次」的约束在挂载前后都成立（不重建 stack 页）。
+        # 六个入口均为真实模块（词库 / 历史 / 导出已非占位页）。
+        # 导入与一键校正页先放宿主，由 mount_* 填入——「页面实例只建一次」。
         for entry in ENTRIES:
             key = entry["key"]
             if key == "check":
@@ -645,6 +644,7 @@ class MainWindow(QMainWindow):
             elif key in ("import", "oneclick"):
                 page = self._module_host()
             else:
+                # 防御性回退：令牌若新增未知入口，仍给建设中页而非崩
                 page = BuildingPage(entry)
                 page.action_requested.connect(self.go)
             if key in ("check", "history", "export"):
@@ -1117,8 +1117,7 @@ class MainWindow(QMainWindow):
     def page(self, key: str) -> QWidget:
         """取页面里承载的业务部件（供自检/外部接线用）。
 
-        真实模块页返回模块本身（导入 / 一键校正 / 检查问题）；
-        占位页返回占位部件。
+        六入口与设置页均返回真实模块；未知键才回落到内容槽宿主。
         """
         if key == "import" and self.import_module is not None:
             return self.import_module

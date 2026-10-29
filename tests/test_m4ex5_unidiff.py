@@ -30,6 +30,11 @@ for _p in (PKG / "pipeline" / "vendor",):
 from fixtext_bookmap.patcher import PatchAnalyzer, PatchError, generate_patch  # noqa: E402
 
 HAS_GNU_DIFF = shutil.which("diff") is not None
+# GNU diff 字节级对照仅在 Linux 上强制跑；Windows 即使装了 diff 也不纳入本对照矩阵
+requires_gnu_linux = pytest.mark.skipif(
+    sys.platform != "linux" or not HAS_GNU_DIFF,
+    reason="GNU diff 对等测试仅 Linux（Windows skip）",
+)
 
 # ---------------------------------------------------------------- #
 # 边界样本（bytes）
@@ -97,11 +102,10 @@ def test_edge_roundtrip(tmp_path, name, a, b):
     assert len(befores) == len(afters) >= 1
 
 
+@requires_gnu_linux
 @pytest.mark.parametrize("name,a,b", EDGE_CASES, ids=[c[0] for c in EDGE_CASES])
 def test_edge_gnu_equivalence(tmp_path, name, a, b):
     """边界样本：与 GNU diff 输出除头 2 行外字节级一致，解析结果一致."""
-    if not HAS_GNU_DIFF:
-        pytest.skip("GNU diff 不可用（Windows 等平台）")
     fa, fb, fp = (tmp_path / "orig.txt", tmp_path / "upd.txt", tmp_path / "p.patch")
     fa.write_bytes(a)
     fb.write_bytes(b)
@@ -134,12 +138,11 @@ def _make_synth(seed: int, n: int, mutate: int) -> tuple:
     return ta, tb
 
 
+@requires_gnu_linux
 @pytest.mark.parametrize("seed,n,mutate", [(1, 300, 20), (2, 800, 60), (3, 1500, 9),
                                            (4, 50, 1), (5, 120, 0), (6, 64, 64)])
 def test_synthetic_gnu_equivalence(tmp_path, seed, n, mutate):
     """确定性合成语料：GNU diff 与新实现解析结果逐项一致."""
-    if not HAS_GNU_DIFF:
-        pytest.skip("GNU diff 不可用")
     a, b = _make_synth(seed, n, mutate)
     fa, fb, fp = (tmp_path / "orig.txt", tmp_path / "upd.txt", tmp_path / "p.patch")
     fa.write_bytes(a)

@@ -35,28 +35,33 @@ HERE = Path(__file__).resolve().parent
 PKG = HERE.parent
 PIPELINE_ROOT = PKG / "pipeline"
 RULES_DIR = PKG / "data" / "rules"
-ENGINE = (PIPELINE_ROOT / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
-          / "replace_by_go-linux-amd64")
 EVID = PKG / "evidence"
 RUNS_ROOT = PKG.parent / "t42_runs"
 
-for p in (PKG, PKG / "fixtext_ui", PIPELINE_ROOT, PIPELINE_ROOT / "vendor"):
+for p in (PKG, PKG / "fixtext_ui", PIPELINE_ROOT, PIPELINE_ROOT / "vendor", HERE):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-# 语料位置：优先环境变量，其次常见落点（验收语料不进交付包）
-_CAND_EPUB = [
-    Path(os.environ.get("FIXTEXT_T42_EPUB", "")) if os.environ.get("FIXTEXT_T42_EPUB") else None,
+from accept_env import (  # noqa: E402
+    env_dir, env_file, select_go_engine, tmp_root,
+)
+
+ENGINE = select_go_engine(PKG) or (
+    PIPELINE_ROOT / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
+    / "__no_platform_engine__"
+)
+
+# 语料位置：优先环境变量，其次常见落点（验收语料不进交付包；勿写死 /tmp）
+EPUB = env_file(
+    "FIXTEXT_T42_EPUB",
     PKG.parent.parent / "media" / "paohuo.epub",
-    Path("/tmp/t42/paohuo.epub"),
-]
-_CAND_BASELINE = [
-    Path(os.environ.get("FIXTEXT_T42_BASELINE", "")) if os.environ.get("FIXTEXT_T42_BASELINE") else None,
+    tmp_root("t42", "paohuo.epub"),
+)
+BASELINE = env_dir(
+    "FIXTEXT_T42_BASELINE",
     PKG.parent.parent / "media" / "baseline",
-    Path("/tmp/t42/t04/FixText_T0.4_回归基线集_v1/baseline"),
-]
-EPUB = next((p for p in _CAND_EPUB if p and p.is_file()), None)
-BASELINE = next((p for p in _CAND_BASELINE if p and p.is_dir()), None)
+    tmp_root("t42", "t04", "FixText_T0.4_回归基线集_v1", "baseline"),
+)
 SMALL_EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
 
 #: 排期 §3.1 的 Go 基准（对照用，不是本卡的实测）
