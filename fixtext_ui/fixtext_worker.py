@@ -191,12 +191,18 @@ class CorrectionJob:
                  custom_vocab_path: Path | None = None,
                  derived_rules_dir: Path | None = None,
                  engine: str | None = None,
+                 auto_fix_quotes: bool = False,
+                 quotation_rules_path: Path | None = None,
                  on_stage_started: Callable[[int], None] | None = None,
                  on_stage_finished: Callable[[int, float], None] | None = None):
         self.epub = Path(epub)
         #: 界面显示的书名 / 作者（历史记录要用；缺省回落到文件名）
         self.title = str(title or "").strip()
         self.author = str(author or "").strip()
+        #: M4-EX.6-R3：词替换后自动修引号（默认关）
+        self.auto_fix_quotes = bool(auto_fix_quotes)
+        self.quotation_rules_path = (
+            Path(quotation_rules_path) if quotation_rules_path else None)
         #: 用户导入的原书（纯文本书包装成电子书时，原书另有其物）
         self.source_epub = Path(source_epub) if source_epub else None
         self.workdir = Path(workdir)
@@ -331,6 +337,9 @@ class CorrectionJob:
             derived_rules_dir=self.derived_rules_dir,
             # 排版章循环协作取消（P1-7）
             cancel_check=lambda: self.cancel_requested,
+            # M4-EX.6-R3：词替换后可选自动修引号（与检查页共用规则文件）
+            auto_fix_quotes=self.auto_fix_quotes,
+            quotation_rules_path=self.quotation_rules_path,
         )
 
         # 准备目录（与编排器 _prepare 相同的布局）
@@ -432,6 +441,10 @@ class CorrectionJob:
             "replace_chars_in": replace.get("chars_in"),
             "replace_chars_out": replace.get("chars_out"),
             "quote_errors": quote.get("error_count"),
+            "quote_errors_before": quote.get(
+                "error_count_before", quote.get("error_count")),
+            "quote_fixed": quote.get("quote_fixed", 0),
+            "auto_fix_quotes": bool(quote.get("auto_fix_quotes", False)),
             "hits": _count_replaced(
                 Path(str(replace.get("before_path") or "")) if replace.get("before_path") else None,
                 Path(str(replace.get("after_path") or "")) if replace.get("after_path") else None,

@@ -112,6 +112,8 @@ class OneClickModule(QWidget):
     correctionDone = Signal(object)
     #: 「去导出」→ 主窗口切到导出页
     gotoExport = Signal()
+    #: 「去检查页」→ 主窗口切到检查问题（M4-EX.6-R3 摘要分支）
+    gotoCheck = Signal()
     #: 本书专有词条就绪（真实词条列表, 书名）→ 交给词库管理页，由用户确认后加入
     bookWordsReady = Signal(object, str)
 
@@ -506,7 +508,28 @@ class OneClickModule(QWidget):
             "Go 缺失 / 异常时自动降级接管并提示，不露命令行。"))
         card.body_l.addWidget(self._basis(
             "与「设置页」共用落点 · Go 异常按降级路径接管 · §2.7.2"))
+
+        card.body_l.addWidget(hline())
+
+        # —— 自动修复引号（M4-EX.6-R3 / 原型 §7）
+        card.body_l.addLayout(self._opt_label("自动修复引号问题", "默认关闭"))
+        import fixtext_settings as _settings
+        self.sw_auto_fix_quote = Switch(_settings.auto_fix_quote())
+        self.sw_auto_fix_quote.toggled.connect(self._on_auto_fix_quote_toggled)
+        card.body_l.addWidget(FieldRow(
+            None,
+            "校正完成后自动修复引号配对",
+            "开启则按检查页同一套规则自动修可确定项，减少待人工确认数",
+            control=self.sw_auto_fix_quote,
+            name_width=190,
+        ))
+        card.body_l.addWidget(self._hint(
+            "默认关闭：校正只做词库替换与校验，引号问题留待「检查问题」逐处处理。"))
         return card
+
+    def _on_auto_fix_quote_toggled(self, on: bool) -> None:
+        import fixtext_settings as _settings
+        _settings.set_auto_fix_quote(bool(on))
 
     def _opt_label(self, text: str, badge: str = "") -> QHBoxLayout:
         hl = QHBoxLayout()
@@ -700,6 +723,10 @@ class OneClickModule(QWidget):
         # 纯文本书没有章节包结构：先原样包成单章电子书，再走同一条链路
         source_epub = self._source_epub(ctx, workdir)
 
+        import fixtext_settings as _settings
+        from fixtext_quotation_rules_path import quotation_rules_path_for
+
+        rules_path = quotation_rules_path_for(ctx)
         job = CorrectionJob(
             epub=source_epub,
             workdir=workdir,
@@ -718,6 +745,9 @@ class OneClickModule(QWidget):
                                if ctx.get("derived_rules_dir") else None),
             # M4-T4.2：本次运行的替换引擎（None = 读配置；降级确认后传 python）
             engine=engine_override,
+            # M4-EX.6-R3：高级选项「自动修复引号问题」
+            auto_fix_quotes=_settings.auto_fix_quote(),
+            quotation_rules_path=rules_path,
         )
         worker = CorrectionWorker(job)
         self._worker = worker
@@ -879,9 +909,36 @@ class OneClickModule(QWidget):
             stats.addWidget(self._stat(num, lab), 1)
         card.body_l.addLayout(stats)
 
+        card.body_l.addWidget(self._quote_status_note(summary))
         card.body_l.addWidget(self._diff(summary))
         card.body_l.addLayout(self._result_actions())
         self.result_slot.addWidget(card)
+
+    def _quote_status_note(self, summary: dict) -> QFrame:
+        """原型 §7 三分支引号摘要（关 / 开且剩余 / 开且清零）。"""
+        from fixtext_quote_status import quote_status_from_summary
+
+        text, _show_go, tip = quote_status_from_summary(summary)
+        box = QFrame()
+        box.setObjectName("QuoteNote")
+        box.setStyleSheet(
+            f"#QuoteNote{{background:{c('warning.bg')};border-radius:10px;"
+            f"border:1px solid {c('warning')}}}")
+        v = QVBoxLayout(box)
+        v.setContentsMargins(14, 12, 14, 12)
+        v.setSpacing(4)
+        main = QLabel(text)
+        main.setWordWrap(True)
+        main.setStyleSheet(
+            f"color:{c('neutral.800')};font-weight:700;font-size:{fs('sm')};"
+            f"background:transparent")
+        sub = QLabel(tip)
+        sub.setWordWrap(True)
+        sub.setStyleSheet(
+            f"color:{c('neutral.600')};font-size:{fs('xs')};background:transparent")
+        v.addWidget(main)
+        v.addWidget(sub)
+        return box
 
     def _diff(self, summary: dict | None) -> QFrame:
         """本次处理摘要（数字全部来自真实运行报告）。"""
@@ -948,6 +1005,8 @@ class OneClickModule(QWidget):
         return box
 
     def _result_actions(self) -> QHBoxLayout:
+        from fixtext_quote_status import quote_status_from_summary
+
         acts = QHBoxLayout()
         acts.setContentsMargins(0, 14, 0, 0)
         acts.setSpacing(10)
@@ -963,6 +1022,14 @@ class OneClickModule(QWidget):
         undo.setCursor(Qt.CursorShape.PointingHandCursor)
         undo.clicked.connect(self._restore_before)
         acts.addWidget(undo)
+
+        _text, show_go_check, _tip = quote_status_from_summary(self._summary)
+        if show_go_check:
+            check_btn = QPushButton("🔍 去检查页")
+            check_btn.setObjectName("BtnPrimary")
+            check_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            check_btn.clicked.connect(self.gotoCheck.emit)
+            acts.addWidget(check_btn)
 
         go = QPushButton("📤 去导出")
         go.setObjectName("BtnOutline")

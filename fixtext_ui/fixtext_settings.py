@@ -61,6 +61,7 @@ KEY_VOCAB_DIR = "vocabDir"       # 自定义词库存储位置（空串 = 包内
 KEY_LOG_DIR = "logDir"           # 诊断日志目录（空串 = 包内默认目录）
 KEY_DIAG_ENABLED = "diagEnabled" # 出错时自动保留现场（默认开）
 KEY_SHOW_BASIS = "showBasis"     # 显示设计依据（默认关）
+KEY_AUTO_FIX_QUOTE = "autoFixQuote"  # M4-EX.6-R3 一键校正自动修引号（默认关）
 
 #: 与 M4-T4.2（引擎双轨）的对接契约：取值只有这两个，默认 go。
 ENGINE_CHOICES = ("go", "python")
@@ -134,3 +135,12 @@ def show_basis() -> bool:
 
 def set_show_basis(on: bool) -> None:
     _set(KEY_SHOW_BASIS, "1" if on else "0")
+
+
+def auto_fix_quote() -> bool:
+    """一键校正高级选项「自动修复引号问题」；默认关。"""
+    return _get(KEY_AUTO_FIX_QUOTE, "0") == "1"
+
+
+def set_auto_fix_quote(on: bool) -> None:
+    _set(KEY_AUTO_FIX_QUOTE, "1" if on else "0")
