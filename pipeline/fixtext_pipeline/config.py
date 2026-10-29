@@ -137,6 +137,10 @@ class PipelineConfig:
     #: 协作式取消（界面注入）：返回 True 表示用户已点取消。
     #: 排版等长循环在章节边界调用；默认 None = 命令行编排器不检查。
     cancel_check: Callable[[], bool] | None = None
+    #: M4-EX.6-R3：词替换后是否自动跑引号修复（默认关；与检查页共用规则文件）
+    auto_fix_quotes: bool = False
+    #: 引号修复规则 JSON（R2 用户区）；None = 全开默认，不强制读盘
+    quotation_rules_path: Path | None = None
 
     def __post_init__(self) -> None:
         self.epub = Path(self.epub).expanduser().resolve()
@@ -150,6 +154,8 @@ class PipelineConfig:
                                   if self.custom_vocab_path else _vb.default_custom_path())
         self.derived_rules_dir = (Path(self.derived_rules_dir).expanduser().resolve()
                                   if self.derived_rules_dir else _vb.default_derived_dir())
+        if self.quotation_rules_path is not None:
+            self.quotation_rules_path = Path(self.quotation_rules_path).expanduser().resolve()
         if self.layout_profile not in LAYOUT_PROFILES:
             raise ValueError(
                 f"未知排版档案 {self.layout_profile!r}，可选：{sorted(LAYOUT_PROFILES)}"
@@ -230,6 +236,10 @@ class PipelineConfig:
             "stages": list(self.stages),
             "resume": self.resume,
             "force": self.force,
+            "auto_fix_quotes": bool(self.auto_fix_quotes),
+            "quotation_rules_path": (
+                str(self.quotation_rules_path) if self.quotation_rules_path else None
+            ),
         }
 
     @staticmethod
