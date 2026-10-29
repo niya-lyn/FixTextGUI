@@ -1,11 +1,11 @@
 """设置页（M4-EX.2a 结构层）：从顶栏弹窗升为平级路由页。
 
-对齐合并版原型 v3 的「设置视图」：页头（标题 + 副标题 + 显示设计依据开关）
+对齐合并版原型 v3 的「设置视图」：页头（标题 + 副标题）
 + 四张卡片——
 
 1. 词库与数据      自定义词库存储位置（选择目录 / 恢复默认位置）
 2. 诊断与日志      日志目录（选择目录 / 打开日志目录）+ 出错时自动保留现场
-3. 通用            安全保护（只读原文件，始终开启）+ 显示设计依据
+3. 通用            安全保护（只读原文件，始终开启）
 4. 替换引擎        Go（默认）/ Python 二选一，读写配置键 ``engine``
                    （与 M4-T4.2 引擎双轨的对接契约：go | python，默认 go）
 
@@ -76,8 +76,6 @@ def _btn(text: str, obj: str, slot) -> QPushButton:
 class SettingsModule(QWidget):
     """设置路由页（key = "settings"，由顶栏 ⚙ 进入）。"""
 
-    #: 显示设计依据开关变了（主窗口联动各模块页）
-    basis_changed = Signal(bool)
     #: 自定义词库存储位置变了（主窗口重载词库数据入口）
     vocab_dir_changed = Signal()
     #: 替换引擎选择变了（执行逻辑在 M4-T4.2，此处只负责选择与保存）
@@ -100,7 +98,6 @@ class SettingsModule(QWidget):
         root.addWidget(self._card_engine())
 
         self.legend = _label(
-            "勾选「显示设计依据」可看到每个界面元素对应的文档条款。"
             "这里的每一项改动都会立即保存，重启后仍然生效。",
             size="xs", color="neutral.500", wrap=True)
         root.addWidget(self.legend)
@@ -111,7 +108,7 @@ class SettingsModule(QWidget):
     # ------------------------------------------------------------------ 页头
 
     def _header(self) -> QWidget:
-        """页头：标题 + 副标题 + 右上「显示设计依据」开关（原型 page-head）。"""
+        """页头：标题 + 副标题。"""
         w = QWidget()
         hl = QHBoxLayout(w)
         hl.setContentsMargins(0, 0, 0, 0)
@@ -124,20 +121,6 @@ class SettingsModule(QWidget):
             "词库存放位置、诊断日志、安全保护与替换引擎，都集中在这里。",
             size="md", color="neutral.600", wrap=True))
         hl.addLayout(col, 1)
-
-        right = QHBoxLayout()
-        right.setSpacing(8)
-        right.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.head_basis = Switch(checked=settings.show_basis())
-        self.head_basis.toggled.connect(self._on_basis)
-        pair = QWidget()
-        pl = QHBoxLayout(pair)
-        pl.setContentsMargins(0, 0, 0, 0)
-        pl.setSpacing(8)
-        pl.addWidget(_label("显示设计依据", size="sm", color="neutral.700"))
-        pl.addWidget(self.head_basis)
-        right.addWidget(pair)
-        hl.addLayout(right)
 
         # 质感层：页头底部分隔线（原型 page-head 的 border-bottom）
         wrap = QWidget()
@@ -223,7 +206,7 @@ class SettingsModule(QWidget):
     # ------------------------------------------------------------------ 卡片三
 
     def _card_general(self) -> Card:
-        card = Card("通用", "安全保护与界面标注")
+        card = Card("通用", "安全保护")
         self.cards.append(card)
 
         safe = Switch(checked=True)
@@ -233,12 +216,6 @@ class SettingsModule(QWidget):
             "始终开启：任何导入都先复制一份副本，你的原文件从头到尾只读。",
             control=safe)
         card.body_l.addWidget(row1)
-
-        row2 = FieldRow(
-            None, "显示设计依据",
-            "在界面元素旁标注对应的设计条款，随时可开关。",
-            control=self._switch_slot("basis"))
-        card.body_l.addWidget(row2)
         return card
 
     # ------------------------------------------------------------------ 卡片四
@@ -275,15 +252,11 @@ class SettingsModule(QWidget):
     # ------------------------------------------------------------------ 开关槽
 
     def _switch_slot(self, which: str) -> QWidget:
-        """开关 + 保存引用（diag / basis 两处）。"""
+        """开关 + 保存引用。"""
         if which == "diag":
             self.diag_sw = Switch(checked=settings.diag_enabled())
             self.diag_sw.toggled.connect(self._on_diag)
             return self.diag_sw
-        if which == "basis":
-            self.card_basis = Switch(checked=settings.show_basis())
-            self.card_basis.toggled.connect(self._on_basis)
-            return self.card_basis
         raise ValueError(which)
 
     # ------------------------------------------------------------------ 状态
@@ -379,13 +352,6 @@ class SettingsModule(QWidget):
         self._say("出错时自动保留现场：已开启。" if on else "出错时自动保留现场：已关闭。",
                   "ok" if on else "warn")
 
-    def _on_basis(self, on: bool) -> None:
-        if self._syncing:
-            return
-        settings.set_show_basis(on)
-        self._sync_basis_widgets(on)
-        self.basis_changed.emit(on)
-
     def _on_engine(self, value: str) -> None:
         settings.set_engine(value)
         self._sync_engine()
@@ -398,7 +364,6 @@ class SettingsModule(QWidget):
     def _sync_from_settings(self) -> None:
         self._sync_vocab()
         self._sync_log()
-        self._sync_basis_widgets(settings.show_basis())
         if self.diag_sw.isChecked() != settings.diag_enabled():
             self.diag_sw.setChecked(settings.diag_enabled())
         self._sync_engine()
@@ -421,16 +386,6 @@ class SettingsModule(QWidget):
         else:
             self.log_path[1].setText("第一次出错时会自动建好")
         self.log_reset_btn.setVisible(d is not None)
-
-    def _sync_basis_widgets(self, on: bool) -> None:
-        self._syncing = True
-        try:
-            if self.head_basis.isChecked() != on:
-                self.head_basis.setChecked(on)
-            if self.card_basis.isChecked() != on:
-                self.card_basis.setChecked(on)
-        finally:
-            self._syncing = False
 
     def _sync_engine(self) -> None:
         cur = settings.engine()

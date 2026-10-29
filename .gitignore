@@ -5,6 +5,7 @@ __pycache__/
 runs/
 logs/
 workspace/
+导出/
 build/
 dist/
 release/

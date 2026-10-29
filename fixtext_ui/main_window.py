@@ -439,9 +439,6 @@ class MainWindow(QMainWindow):
         self._bind_shortcuts()
         self.go(HOME_KEY)
 
-        # M4-EX.2a：上次会话留下的「显示设计依据」状态，启动即恢复
-        if app_settings.show_basis():
-            self.apply_basis(True)
 
         # 首次使用向导（T2.8 并入）：首启自动弹出一次，之后不再自动弹
         QTimer.singleShot(0, self._maybe_first_run)
@@ -657,7 +654,6 @@ class MainWindow(QMainWindow):
             self.stack.addWidget(wrapped)
         # 设置页（M4-EX.2a）：不在左轨六入口里，由顶栏 ⚙ 进入的平级路由页
         self.settings_module = SettingsModule()
-        self.settings_module.basis_changed.connect(self.apply_basis)
         self.settings_module.vocab_dir_changed.connect(self.reload_vocab_store)
         self.settings_module.engine_changed.connect(self._on_engine_changed)
         self.pages[SETTINGS_KEY] = self._wrap(self.settings_module)
@@ -1146,14 +1142,6 @@ class MainWindow(QMainWindow):
         """设置：跳到设置路由页（M4-EX.2a 起不再弹对话框）。"""
         self.go(SETTINGS_KEY)
 
-    def apply_basis(self, on: bool):
-        """全局「显示设计依据」：联动所有已挂载模块页右上角的同款开关。"""
-        for mod in (self.import_module, self.oneclick_module, self.check_module,
-                    self.vocab_module, self.history_module, self.export_module):
-            cb = getattr(mod, "basis_cb", None)
-            if cb is not None and cb.isChecked() != on:
-                cb.setChecked(on)
-
     def _act_help(self):
         """帮助：六个入口各自负责什么（等权，没有先后）。"""
         m = Modal(icon="?", title="帮助")
@@ -1172,21 +1160,17 @@ class MainWindow(QMainWindow):
             desc.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('sm')}")
             rl.addWidget(desc, 2)
             m.add_widget(row)
-        m.add_note("每个模块页右上角的「显示设计依据」开关，会在相关元素旁标注对应的设计条款；"
-                   "也可以在「设置」里一次全部打开。", "info")
         m.add_foot("关闭", kind="ghost")
         self._show_modal_under(m, "帮助")
 
     def _act_more(self):
-        """菜单：新手向导 / 重新生成样式表 / 打开设计依据目录 / 关于。"""
+        """菜单：新手向导 / 重新生成样式表 / 关于。"""
         menu = QMenu(self)
         a_wizard = menu.addAction("新手向导（重新观看）")
         a_wizard.triggered.connect(self._open_wizard)
         menu.addSeparator()
         a_regen = menu.addAction("重新生成样式表")
         a_regen.triggered.connect(self._regen_qss)
-        a_open = menu.addAction("打开设计依据目录")
-        a_open.triggered.connect(self._open_reference)
         menu.addSeparator()
         a_about = menu.addAction("关于 FixText V1")
         a_about.triggered.connect(self._about)
@@ -1218,19 +1202,6 @@ class MainWindow(QMainWindow):
                         "已按设计令牌重写界面样式，重新打开窗口即可看到。", "info")
         except Exception as e:  # noqa: BLE001
             self._flash("!", "样式表生成失败", f"这次没能生成：{e}", "warn")
-
-    def _open_reference(self):
-        """打开设计依据目录（界面令牌与设计快照所在处）。"""
-        ref = PKG_ROOT / "reference"
-        try:
-            if sys.platform == "win32":
-                os.startfile(str(ref))  # type: ignore[attr-defined]
-                self._flash("✓", "已打开设计依据目录", str(ref), "info")
-            else:
-                self._flash("ℹ", "设计依据目录", str(ref), "info")
-        except Exception as e:  # noqa: BLE001
-            self._flash("!", "没法自动打开目录",
-                        f"你可以照这个位置自己找过去：{ref}（{e}）", "warn")
 
     def _about(self):
         self._flash("ℹ", "关于 FixText V1",

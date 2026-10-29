@@ -171,8 +171,7 @@ class OneClickModule(QWidget):
         root.addLayout(self.result_slot)
 
         self.legend = _label(
-            "勾选「显示设计依据」可看到每个 UI 元素对应的文档条款，"
-            "证明不是把命令面板直接包装成产品。",
+            "高级选项里可以开关预处理、严格模式、注音，以及勾选词库组合。",
             size="xs", color="neutral.500", wrap=True)
         root.addWidget(self.legend)
 
@@ -217,11 +216,6 @@ class OneClickModule(QWidget):
         col.addWidget(title)
         col.addWidget(sub)
         hl.addLayout(col, 1)
-
-        self.basis_cb = QCheckBox("显示设计依据")
-        self.basis_cb.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.basis_cb.toggled.connect(self._toggle_basis)
-        hl.addWidget(self.basis_cb, 0, Qt.AlignmentFlag.AlignTop)
         return w
 
     # -------------------------------------------------------------- 书源状态条
@@ -1026,7 +1020,8 @@ class OneClickModule(QWidget):
         card = Card(basis="§2.2 入口⑤ · 替换统计 + 2.4.2 反馈回路")
         self.basis_labels.append(card.basis)
         self._result_basis = card.basis
-        card.basis.setVisible(self.basis_cb.isChecked())
+        if card.basis is not None:
+            card.basis.setVisible(False)
         return card
 
     def _stat(self, num: str, lab: str) -> QFrame:
@@ -1136,25 +1131,14 @@ class OneClickModule(QWidget):
         return _label(text, size="xs", color="neutral.500", wrap=True)
 
     def _basis(self, text: str) -> QLabel:
-        """设计依据（条款号 / 内部组件名）：默认隐藏，随开关出现。"""
+        """设计依据标签：保留结构但始终隐藏（M5-EX.2 / BUG-2）。"""
         b = _label(f"设计依据 · {text}", size="xs", color="neutral.500", wrap=True)
-        b.setVisible(self.basis_cb.isChecked())
+        b.setVisible(False)
         self.basis_labels.append(b)
         return b
 
     def _persist(self):
         self._toast("排版配置已保存，下次沿用")
-
-    def _toggle_basis(self, on: bool):
-        alive = []
-        for b in self.basis_labels:
-            try:
-                b.setVisible(bool(on))
-                alive.append(b)
-            except RuntimeError:
-                # 底层 C++ 对象已随结果卡销毁，丢弃这个悬空引用
-                pass
-        self.basis_labels = alive
 
     def _toast(self, msg: str):
         self.status.setText(msg)

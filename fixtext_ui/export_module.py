@@ -24,7 +24,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QCheckBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
+    QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QWidget,
 )
 
@@ -158,11 +158,6 @@ class ExportModule(QWidget):
             "把校对好的书导出成可以直接用的文件：正文 + 两份替换统计（文本 / 表格）。",
             size="md", color="neutral.600", wrap=True))
         hl.addLayout(col, 1)
-
-        self.basis_cb = QCheckBox("显示设计依据")
-        self.basis_cb.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.basis_cb.toggled.connect(self._toggle_basis)
-        hl.addWidget(self.basis_cb, 0, Qt.AlignmentFlag.AlignTop)
         return w
 
     # -------------------------------------------------------------- 书源状态条
@@ -632,11 +627,6 @@ class ExportModule(QWidget):
 
     def _sync_meta(self) -> None:
         self.refresh()
-
-    def _toggle_basis(self, on: bool) -> None:
-        for card in self.findChildren(Card):
-            if card.basis is not None:
-                card.basis.setVisible(on)
 
     def _toast(self, msg: str) -> None:
         self.toast_label.setText(msg)

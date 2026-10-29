@@ -5,7 +5,7 @@ FixText V1 · 词库管理模块（Qt 移植 · M3-T3.1 接真实词库）
 对照 `FixText_V1_词库管理_原型.html` **1:1 移植**，控件语义与文案逐条对齐。
 
 结构（页头 → 本书专有词库横幅 → 左侧词库分级 + 右侧工作区）：
-- 页头：标题 / 副标题 / 「显示设计依据」开关 / 分级切换（全部·自定义·内置）
+- 页头：标题 / 副标题 / 分级切换（全部·自定义·内置）
 - 本书专有词库横幅（2.4.2）：有真实专有词时才出现，否则整条隐藏
 - 左侧词库分级（底线③ 文件不暴露 · 友好名）：我的词库（可编辑）+ 3 内置（只读）
 - 右侧工作区：
@@ -180,8 +180,7 @@ class VocabModule(QWidget):
         root.addWidget(self._layout_grid())
 
         self.legend = _label(
-            "勾选「显示设计依据」可看到每个界面元素对应的文档条款。新增 / 查重 / 删除 / 合并"
-            "与本书专有词均受五条安全底线约束。",
+            "新增 / 查重 / 删除 / 合并与本书专有词均受五条安全底线约束。",
             size="xs", color="neutral.500", wrap=True)
         root.addWidget(self.legend)
 
@@ -228,11 +227,6 @@ class VocabModule(QWidget):
         right.addWidget(self.hist_btn)
         self.undo_btn = self._head_icon_btn("↩", "撤销上一步（Ctrl+Z）", self._undo)
         right.addWidget(self.undo_btn)
-
-        self.basis_cb = QCheckBox("显示设计依据")
-        self.basis_cb.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.basis_cb.toggled.connect(self._toggle_basis)
-        right.addWidget(self.basis_cb)
 
         self._tier_btns = {}
         seg = QWidget()
@@ -1550,16 +1544,6 @@ class VocabModule(QWidget):
         v.addWidget(lab)
         v.addWidget(control)
         return w
-
-    def _toggle_basis(self, on: bool):
-        alive = []
-        for b in self.basis_labels:
-            try:
-                b.setVisible(bool(on))
-                alive.append(b)
-            except RuntimeError:
-                pass
-        self.basis_labels = alive
 
     def _build_status(self, root: QVBoxLayout):
         self.status_box = QWidget()

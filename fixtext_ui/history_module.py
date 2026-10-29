@@ -192,8 +192,7 @@ class HistoryModule(QWidget):
         root.addWidget(self._snap_w)
 
         self.legend = _label(
-            "勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。清理历史是破坏性操作，"
-            "必须显式触发 + 二次确认。",
+            "清理历史是破坏性操作，必须显式触发 + 二次确认。",
             size="xs", color="neutral.500", wrap=True)
         root.addWidget(self.legend)
 
@@ -256,11 +255,6 @@ class HistoryModule(QWidget):
             "每次校正的任务列表：书名、时间、替换数；可从任一快照完整恢复现场并重新导出。",
             size="md", color="neutral.600", wrap=True))
         hl.addLayout(col, 1)
-
-        self.basis_cb = QCheckBox("显示设计依据")
-        self.basis_cb.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.basis_cb.toggled.connect(self._toggle_basis)
-        hl.addWidget(self.basis_cb, 0, Qt.AlignmentFlag.AlignTop)
         return w
 
     # ------------------------------------------------------------ 任务列表
@@ -859,17 +853,6 @@ class HistoryModule(QWidget):
             self._toast("已清理全部历史")
 
     # ------------------------------------------------------------------ 公共
-
-    def _toggle_basis(self, on: bool):
-        alive = []
-        for b in self.basis_labels:
-            try:
-                b.setVisible(bool(on))
-                alive.append(b)
-            except RuntimeError:
-                # 底层 C++ 对象已随结果卡销毁，丢弃这个悬空引用
-                pass
-        self.basis_labels = alive
 
     # ------------------------------------------------------------------ 撤销
 

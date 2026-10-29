@@ -8,8 +8,8 @@
      新增词条落在新目录，工作副本 / 还原点同棵子树；等价重启再建仍在。
   3. 日志目录变更真实生效：SettingsModule._apply_log_backend 后
      write_record 落新目录；留痕开关关闭后不再落记录。
-  4. 设置页 UI 冒烟：四卡构建、engine 切换保存并同步选中态、
-     设计依据开关双向同步并发信号。
+  4. 设置页 UI 冒烟：四卡构建、engine 切换保存并同步选中态；
+     「显示设计依据」入口已移除（M5-EX.2 / BUG-2）。
 
 设置文件隔离：conftest 的会话级 _isolated_settings 已把
 FIXTEXT_SETTINGS_FILE 指到临时目录，测试不污染真实用户区。
@@ -160,16 +160,12 @@ def test_engine_switch_persists_and_syncs(smod):
     assert settings.engine() == "go"
 
 
-def test_basis_switch_persists_and_signals(smod):
-    seen = []
-    smod.basis_changed.connect(seen.append)
-    smod._on_basis(True)
-    assert settings.show_basis() is True
-    assert smod.head_basis.isChecked() and smod.card_basis.isChecked()
-    assert seen == [True]
-    smod._on_basis(False)
-    assert settings.show_basis() is False
-    assert seen == [True, False]
+def test_basis_ui_removed(smod):
+    """M5-EX.2 / BUG-2：设置页不再暴露「显示设计依据」入口。"""
+    assert not hasattr(smod, "basis_changed")
+    assert not hasattr(smod, "head_basis")
+    assert not hasattr(smod, "card_basis")
+    assert not hasattr(smod, "_on_basis")
 
 
 def test_log_dir_applies_to_error_center(smod, tmp_path):

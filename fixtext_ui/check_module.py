@@ -285,10 +285,6 @@ class CheckModule(QWidget):
         col.addWidget(title)
         col.addWidget(sub)
         hl.addLayout(col, 1)
-        self.basis_cb = QCheckBox("显示设计依据")
-        self.basis_cb.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.basis_cb.toggled.connect(self._toggle_basis)
-        hl.addWidget(self.basis_cb, 0, Qt.AlignmentFlag.AlignTop)
         return w
 
     def _card(self, *args, **kwargs) -> Card:
@@ -534,7 +530,6 @@ class CheckModule(QWidget):
 
     def _legend(self) -> QLabel:
         lab = QLabel(
-            "勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。"
             "「逐处人工确认」是这个模块的核心价值，不能只做「一键修复全部」。")
         lab.setWordWrap(True)
         lab.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
@@ -885,10 +880,6 @@ class CheckModule(QWidget):
             sc = QShortcut(QKeySequence(f"F{i}"), self)
             sc.setContext(ctx)
             sc.activated.connect(lambda ch=ch: self.ins(ch))
-
-    def _toggle_basis(self, on: bool):
-        for b in self.basis_labels:
-            b.setVisible(bool(on))
 
     def toast(self, msg: str):
         self.status.setText(msg)
