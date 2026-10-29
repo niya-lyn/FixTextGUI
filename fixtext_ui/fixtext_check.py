@@ -153,6 +153,66 @@ def _read_lines(path: Path, wanted: set[int]) -> dict[int, str]:
     return out
 
 
+def _neighbor_wanted(line_nos: set[int]) -> set[int]:
+    """报错行及其前后各一行（供三段上下文）。"""
+    out: set[int] = set()
+    for n in line_nos:
+        if n <= 0:
+            continue
+        out.add(n)
+        if n > 1:
+            out.add(n - 1)
+        out.add(n + 1)
+    return out
+
+
+def segments_from_lines(
+    lines: dict[int, str] | list[str],
+    line_no: int,
+) -> tuple[str, str, str, bool, bool]:
+    """取前段 / 问题段 / 后段，以及是否存在前后行。
+
+    ``lines`` 可为 1-based dict，或 0-based list（``split("\\n")`` 结果）。
+    """
+    def _get(n: int) -> str | None:
+        if n <= 0:
+            return None
+        if isinstance(lines, dict):
+            if n not in lines:
+                return None
+            return str(lines[n])
+        idx = n - 1
+        if idx < 0 or idx >= len(lines):
+            return None
+        return str(lines[idx]).replace("\r", "")
+
+    before = _get(line_no - 1)
+    problem = _get(line_no)
+    after = _get(line_no + 1)
+    return (
+        before if before is not None else "",
+        problem if problem is not None else "",
+        after if after is not None else "",
+        before is not None,
+        after is not None,
+    )
+
+
+def attach_segments(
+    item: dict[str, Any],
+    lines: dict[int, str] | list[str],
+) -> dict[str, Any]:
+    """给条目挂上三段正文与前后行标志。"""
+    line_no = int(item.get("line") or 0)
+    before, problem, after, has_b, has_a = segments_from_lines(lines, line_no)
+    item["seg_before"] = before
+    item["seg_problem"] = problem
+    item["seg_after"] = after
+    item["has_before"] = has_b
+    item["has_after"] = has_a
+    return item
+
+
 def _slice_context(line_text: str, char: int) -> tuple[str, str, str]:
     """在报错位置附近切出「前文 / 问题片段 / 后文」。
 
@@ -231,7 +291,7 @@ def load_report(run_dir: str | Path) -> dict[str, Any]:
         if sibling.exists():
             checked_file = str(sibling)
     if checked_file and Path(checked_file).exists():
-        text_lines = _read_lines(Path(checked_file), wanted)
+        text_lines = _read_lines(Path(checked_file), _neighbor_wanted(wanted))
 
     for e in events:
         line_no = int(e.get("line") or 0)
@@ -239,11 +299,13 @@ def load_report(run_dir: str | Path) -> dict[str, Any]:
         msg = str(e.get("msg") or "")
         kind, advice, action = classify(msg)
         pre, hl, post = _slice_context(text_lines.get(line_no, ""), char)
-        items.append(dict(
+        item = dict(
             line=line_no, char=char, msg=msg,
             type=kind, advice=advice, action=action,
             pre=pre, hl=hl, post=post, state=None,
-        ))
+        )
+        attach_segments(item, text_lines)
+        items.append(item)
 
     items.sort(key=lambda it: (_ORDER.get(it["type"], 99), it["line"]))
     found = len(items)
@@ -403,6 +465,7 @@ def scan_text(
             pre=pre, hl=hl, post=post, state=None,
             rule_id=rid,
         )
+        attach_segments(item, lines)
         if action:
             item["fix"] = apply_action(item)
         items.append(item)

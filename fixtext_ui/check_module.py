@@ -852,20 +852,19 @@ class CheckModule(QWidget):
 
     def _replace_line_in_book(self, line_no: int, new_line_body: str) -> str | None:
         """替换 1-based 行内容（保留原行尾换行形态），返回新全文。"""
+        return self._replace_lines_in_book({line_no: new_line_body})
+
+    def _replace_lines_in_book(self, updates: dict[int, str]) -> str | None:
+        """按 1-based 行号批量替换（保留原行尾 \\r 形态），返回新全文。"""
         raw = self._book_text
-        # 与 checker 一致按 \\n 切
         parts = raw.split("\n")
-        # 若原文以 \\n 结尾，split 末尾多一个空串
-        ends_nl = raw.endswith("\n")
-        idx = line_no - 1
-        if idx < 0 or idx >= len(parts) - (1 if ends_nl and parts[-1] == "" else 0):
-            # 宽松：允许最后一行
+        for line_no, new_line_body in updates.items():
+            idx = int(line_no) - 1
             if idx < 0 or idx >= len(parts):
                 return None
-        # 去掉该行残留 \\r
-        body = new_line_body.replace("\r", "").replace("\n", "")
-        had_cr = "\r" in (parts[idx] if idx < len(parts) else "")
-        parts[idx] = body + ("\r" if had_cr else "")
+            body = str(new_line_body).replace("\r", "").replace("\n", "")
+            had_cr = "\r" in (parts[idx] if idx < len(parts) else "")
+            parts[idx] = body + ("\r" if had_cr else "")
         return "\n".join(parts)
 
     # ------------------------------------------------------------------ 渲染
@@ -976,14 +975,20 @@ class CheckModule(QWidget):
         self.editor.setReadOnly(False)
         p = self.probs[self.cur]
         prefix = f"L{p['line']}   "
-        self.editor.setPlainText(prefix + p["pre"] + p["hl"] + p["post"] + self.ins_buf)
+        # M5-EX.2 / BUG-5：前段 / 问题段 / 后段，空行分隔
+        before = str(p.get("seg_before") or "")
+        problem = str(p.get("seg_problem") or (p.get("pre", "") + p.get("hl", "") + p.get("post", "")))
+        after = str(p.get("seg_after") or "")
+        body = f"{before}\n\n{problem}\n\n{after}"
+        self.editor.setPlainText(prefix + body + self.ins_buf)
         advice = p.get("advice") or ""
         if p.get("_advice_blocked"):
             advice = "对应自动修复规则已关闭，可手动改文或开启规则后再修。"
         self.advice.setText(advice)
-        length = len(p["hl"])
+        length = len(p.get("hl") or "")
         if length:
-            start = len(prefix) + len(p["pre"])
+            # 高亮落在问题段内的 hl；问题段起点 = 前缀 + 前段 + 空行
+            start = len(prefix) + len(before) + 2 + len(str(p.get("pre") or ""))
             sel = QTextEdit.ExtraSelection()
             fmt = QTextCharFormat()
             bg = c("success.bg") if p.get("state") == "fixed" else c("warning.bg")
@@ -1199,24 +1204,39 @@ class CheckModule(QWidget):
         self.toast("已跳过，记入跳过清单")
 
     def save_and_next(self):
-        """把编辑器正文写回当前行，再跳下一处。"""
+        """把编辑器三段正文写回前/问题/后行，再跳下一处。"""
         if not self._guard():
             return
         p = self.probs[self.cur]
         raw = self.editor.toPlainText()
-        # 去掉 Lxxx 前缀
         body = raw
         if body.startswith(f"L{p['line']}"):
             body = body.split("   ", 1)[-1] if "   " in body else body
+        # 去掉插入缓冲残留（界面追加的临时内容）
+        if self.ins_buf and body.endswith(self.ins_buf):
+            body = body[: -len(self.ins_buf)]
+        parts = body.split("\n\n", 2)
+        while len(parts) < 3:
+            parts.append("")
+        seg_before, seg_problem, seg_after = parts[0], parts[1], parts[2]
+        line_no = int(p["line"])
+        updates: dict[int, str] = {line_no: seg_problem}
+        if p.get("has_before"):
+            updates[line_no - 1] = seg_before
+        if p.get("has_after"):
+            updates[line_no + 1] = seg_after
         self._push_undo()
         self.undo[-1]["wrote"] = True
         self._push_text_undo()
-        new_text = self._replace_line_in_book(int(p["line"]), body)
+        new_text = self._replace_lines_in_book(updates)
         if new_text is None or not self._write_book_text(new_text):
             self.undo.pop()
             if self._text_undo_stack:
                 self._text_undo_stack.pop()
             return
+        p["seg_before"] = seg_before
+        p["seg_problem"] = seg_problem
+        p["seg_after"] = seg_after
         self._set_state("fixed")
         self.render()
         self.next_issue()
