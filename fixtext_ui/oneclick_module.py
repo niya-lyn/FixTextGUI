@@ -372,10 +372,12 @@ class OneClickModule(QWidget):
 
         if kind == "dropdown":
             box = QComboBox()
+            box.setObjectName("FmtCombo")
             box.addItems(it["opts"])
             box.setCurrentText(it["val"])
             box.setMinimumWidth(132)
             box.setCursor(Qt.CursorShape.PointingHandCursor)
+            # 观感走全局 QSS（M5-EX.4.2）；不改接线
             self._combos[it["n"]] = box
             box.currentTextChanged.connect(
                 lambda v, n=it["n"]: self._on_choice(n, v))

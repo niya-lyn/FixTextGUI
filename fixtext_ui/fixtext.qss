@@ -49,27 +49,46 @@ QLabel { background-color: transparent; }
 #TopAct:hover { background: rgba(255,255,255,.22); color: #FFFFFF; }
 #TopAct:pressed { background: #333B48; }
 
+/* M5-EX.4.2 / BUG-1a：玻璃胶囊 + hover 高对比 */
 #BookChip {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
         stop:0 #FFFFFF,
         stop:1 #F1F3F8);
-    border: 1px solid rgba(255,255,255,.20);
+    border: 1px solid rgba(255,255,255,.28);
     border-radius: 999px;
     min-height: 34px; max-height: 34px;
     max-width: 320px;
 }
 #BookChip:hover {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-        stop:0 #FFFFFF,
-        stop:1 #F1F3F8);
+    background: #FFFFFF;
     border: 1px solid #9AA3E2;
 }
-#BookChip:focus { border: 1px solid #4F59C0; }
+#BookChip:focus {
+    border: 1px solid #4F59C0;
+}
+#BookChip:pressed {
+    background: #F1F3F8;
+}
 #BookChip[empty="true"] {
-    border: 1px solid rgba(255,255,255,.22);
-    background: transparent;
+    border: 1px solid rgba(255,255,255,.32);
+    background: rgba(255,255,255,.08);
+}
+#BookChip[empty="true"]:hover {
+    background: rgba(255,255,255,.16);
+    border: 1px solid rgba(255,255,255,.45);
 }
 #BookChip QLabel { background: transparent; }
+#BcGo {
+    color: #6B7280;
+    font-size: 11px;
+    font-weight: 600;
+    padding-left: 9px;
+    margin-left: 2px;
+    border-left: 1px solid #DDE2EA;
+}
+#BookChip:hover #BcGo {
+    color: #4F59C0;
+}
 
 #ShelfRow {
     background-color: #FFFFFF;
@@ -95,6 +114,7 @@ QLabel { background-color: transparent; }
     font-size: 12px;
     font-weight: 600;
 }
+/* M5-EX.4.2 / BUG-1b：设为当前 hover 主色实底 */
 #BtnSetCurrent {
     color: #333B83;
     background-color: #EEF0FB;
@@ -108,6 +128,11 @@ QLabel { background-color: transparent; }
     background-color: #4F59C0;
     color: #FFFFFF;
     border: 1px solid #4F59C0;
+}
+#BtnSetCurrent:pressed {
+    background-color: #3D4599;
+    color: #FFFFFF;
+    border: 1px solid #3D4599;
 }
 #BtnSetCurrent:focus {
     border: 1px solid #4F59C0;
@@ -265,14 +290,61 @@ QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox {
     border-radius: 8px;
     padding: 8px 12px;
     font-size: 14px;
+    color: #1F2937;
 }
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus {
-    border: 1px solid #4F59C0;
+    border: 2px solid #4F59C0;
     background-color: #FFFFFF;
+    padding: 7px 11px;
 }
 QLineEdit:disabled, QTextEdit:disabled {
     background-color: #EEF1F5;
     color: #9AA4B4;
+}
+/* M5-EX.4.2 / BUG-1c：下拉选中态与弹出列表 */
+QComboBox:hover {
+    border: 1px solid #9AA3E2;
+}
+QComboBox::drop-down {
+    border: none;
+    width: 28px;
+}
+QComboBox QAbstractItemView {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    selection-background-color: #EEF0FB;
+    selection-color: #333B83;
+    outline: 0;
+    padding: 4px;
+}
+/* M5-EX.4.2 / BUG-1e：词库页头浅色图标按钮 */
+QPushButton#HeadIconBtn {
+    background-color: #F7F8FA;
+    color: #4A5363;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    min-width: 34px; max-width: 34px;
+    min-height: 34px; max-height: 34px;
+    padding: 0;
+}
+QPushButton#HeadIconBtn:hover {
+    background-color: #EEF0FB;
+    color: #333B83;
+    border: 1px solid #C0C6EE;
+}
+QPushButton#HeadIconBtn:pressed {
+    background-color: #DDE0F7;
+    color: #333B83;
+}
+QLabel#SafeBadge {
+    color: #15803D;
+    background-color: #ECFDF3;
+    border: 1px solid #A7F3D0;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
 }
 
 QCheckBox {

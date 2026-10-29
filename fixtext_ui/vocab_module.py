@@ -214,11 +214,7 @@ class VocabModule(QWidget):
         safe.setObjectName("SafeBadge")
         safe.setCursor(Qt.CursorShape.PointingHandCursor)
         safe.setToolTip("词库的每一步改动都先留还原点，删错了、合并错了都能退回去")
-        safe.setStyleSheet(
-            f"color:{c('success')};background:{c('success.bg')};"
-            f"border:1px solid {c('success.border')};"
-            f"border-radius:{r('full')};padding:6px 12px;"
-            f"font-size:{fs('xs')};font-weight:700")
+        # 观感走 fixtext.qss #SafeBadge（M5-EX.4.2）
         right.addWidget(safe)
 
         self.hist_btn = self._head_icon_btn("🕑", "历史与快照",
@@ -250,20 +246,14 @@ class VocabModule(QWidget):
         return w
 
     def _head_icon_btn(self, glyph: str, tip: str, slot) -> QPushButton:
-        """页头浅色图标按钮（v3 词库页头控件变体：neutral 底、hover 转 primary）。"""
+        """页头浅色图标按钮（样式走 fixtext.qss #HeadIconBtn，M5-EX.4.2）。"""
         b = QPushButton(glyph)
         b.setObjectName("HeadIconBtn")
         b.setFixedSize(34, 34)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setToolTip(tip)
         b.setAccessibleName(tip)
-        b.setStyleSheet(
-            f"QPushButton#HeadIconBtn{{background:{c('neutral.100')};"
-            f"color:{c('neutral.700')};border:1px solid {c('neutral.200')};"
-            f"border-radius:{r('md')};font-size:{ICON_GLYPH_SIZE}}}"
-            f"QPushButton#HeadIconBtn:hover{{background:{c('primary.50')};"
-            f"color:{c('primary.700')};border-color:{c('primary.200')}}}"
-            f"QPushButton#HeadIconBtn:pressed{{background:{c('primary.100')}}}")
+        b.setStyleSheet(f"font-size:{ICON_GLYPH_SIZE}")
         b.clicked.connect(slot)
         return b
 
@@ -414,10 +404,10 @@ class VocabModule(QWidget):
         col = QVBoxLayout()
         col.setContentsMargins(0, 0, 0, 0)
         col.setSpacing(16)
-        col.addWidget(self._toolbar())
-        col.addWidget(self._table_card())
+        col.addWidget(self._toolbar(), 0)       # 不拉伸
+        col.addWidget(self._table_card(), 1)    # 吃剩余高度
         self._snap_card = self._snap_card()
-        col.addWidget(self._snap_card)
+        col.addWidget(self._snap_card, 0)
         w = QWidget()
         w.setLayout(col)
         return w
@@ -428,8 +418,11 @@ class VocabModule(QWidget):
         card = Card(basis="§2.4.1 五操作 · 新增为 V1 补入")
         self.basis_labels.append(card.basis)
         card.body_l.setSpacing(10)
+        # M5-EX.4.2 / BUG-1d：工具条高度不随空列表撑大
+        card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
 
         bar = QWidget()
+        bar.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         bl = QHBoxLayout(bar)
         bl.setContentsMargins(0, 0, 0, 0)
         bl.setSpacing(8)
@@ -489,8 +482,11 @@ class VocabModule(QWidget):
         card = Card(basis="底线③ 结构化表格 · 不露内部文件格式")
         self.basis_labels.append(card.basis)
         card.body_l.setSpacing(0)
+        # 列表区吃竖直剩余空间；空态也不反向撑工具条
+        card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
         self._table = QWidget()
+        self._table.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
         self._table_body = QVBoxLayout(self._table)
         self._table_body.setContentsMargins(0, 0, 0, 0)
         self._table_body.setSpacing(0)
