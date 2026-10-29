@@ -509,12 +509,10 @@ class FirstRunWizard(QDialog):
             return                      # 用户在对话框里取消了：留在第 1 步
         mod = self.import_module
         self._set_busy(True)
-        mod.take_file(path)             # 与拖放同一个入口，不绕过导入流程
-        # 选好文件后按下本页主按钮：TXT 直接开始导入；EPUB 先到「处理方式」，
-        # 后续由 _advance_import 按它自己的步骤机继续推（不另写一套流程）。
-        mod.click_next()
+        # M5-EX.3：take_file 即开跑，无需再代点「下一步 / 处理方式」
+        mod.take_file(path)
         ok = self._pump(lambda: mod.has_finished() or mod.error_text(),
-                        timeout_s=600, on_tick=self._advance_import)
+                        timeout_s=600)
         self._set_busy(False)
         if not ok or mod.error_text() or mod.result() is None:
             self._error = mod.error_text() or "这本书没能导入，换一个文件再试。"
@@ -523,18 +521,6 @@ class FirstRunWizard(QDialog):
         self._import_result = mod.result()
         self.step = 1
         self._render()
-
-    def _advance_import(self) -> None:
-        """按导入模块自己的步骤机往前推（选处理方式 → 看章节 → 开始导入）。
-
-        只在该页主按钮可用、且后台没在跑的时候代点一下：步骤机仍然是导入模块
-        自己那一台，向导不重复实现任何导入逻辑。
-        """
-        mod = self.import_module
-        if mod is None or mod.is_busy():
-            return
-        if mod.step() in (1, 2) and mod.next_enabled():
-            mod.click_next()
 
     def _do_correct(self) -> None:
         if self.oneclick_module is None:

@@ -33,27 +33,28 @@ def test_txt_import_leaves_source_untouched(sample, workdir, tmp_path):
 
 
 def test_epub_import_leaves_source_untouched(tmp_path, workdir, samples_dir):
-    """验收④：EPUB 导入同样不许改原文件。"""
+    """验收④：EPUB 导入同样不许改原文件；默认即可逆账本。"""
     src = tmp_path / "paohuo.epub"
     src.write_bytes((samples_dir / "book_paohuo.epub").read_bytes())
     before = sha256_file(src)
 
-    result = fi.import_book(src, workdir, fi.ImportOptions(epub_mode="direct"))
+    result = fi.import_book(src, workdir)
 
     assert result.source_sha256_before == result.source_sha256_after == before
     assert sha256_file(src) == before
-    assert result.ledger_path and Path(result.ledger_path).exists(), "直接处理应产出可还原账本"
+    assert result.epub_mode == "direct"
+    assert result.ledger_path and Path(result.ledger_path).exists(), "EPUB 应产出可还原账本"
 
 
-def test_epub_plain_text_mode(sample, tmp_path, workdir, samples_dir):
-    """「先转成 TXT」路径产纯文本，且不带可还原账本。"""
+def test_epub_ignores_text_mode_option(tmp_path, workdir, samples_dir):
+    """M5-EX.3：即使传入 epub_mode=text，仍走可逆并保留账本。"""
     src = tmp_path / "paohuo.epub"
     src.write_bytes((samples_dir / "book_paohuo.epub").read_bytes())
     result = fi.import_book(src, workdir, fi.ImportOptions(epub_mode="text"))
-    assert result.epub_mode == "text"
-    assert result.ledger_path is None
+    assert result.epub_mode == "direct"
+    assert result.ledger_path and Path(result.ledger_path).exists()
     text = Path(result.text_path).read_text(encoding="utf-8")
-    assert "第 1 章" in text
+    assert len(text) > 0
 
 
 @pytest.mark.parametrize("name,expect_newline_changed", [

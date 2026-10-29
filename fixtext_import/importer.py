@@ -1,4 +1,4 @@
-"""FixText V1 · 导入服务（T2.2）
+"""FixText V1 · 导入服务（T2.2 · M5-EX.3 统一可逆）
 
 一条导入链路的完整实现，界面层只负责收集用户意图和展示结果。
 
@@ -8,10 +8,10 @@
 2. **记录原文件 sha256**（导入前）。
 3. 把原文件**逐字节复制**进内部工作区 `<工作区>/<书 id>/original/`。
 4. TXT：识别字符集 → 读成文本 → 统一换行 → 以通用格式写入 `book.txt`。
-   EPUB：按用户选择走「可还原合并」（M1 `merge_epub`，产出 book.txt + 账本）
-   或「先转 TXT」（剥标签的纯文本）。
+   EPUB：**一律可逆合并**（产出 ``book.txt`` + 章节映射账本；导出页再选
+   TXT / 还原 EPUB）。不再提供「先转 TXT」产品路径。
 5. **再次计算原文件 sha256**，与第 2 步比对；再校验工作区副本与原文件一致。
-6. 写导入记录 `import.json`（含两份哈希、识别结果、用户选择的导入方式）。
+6. 写导入记录 `import.json`（含两份哈希、识别结果、导入方式）。
 
 原文件在整条链路里只被**只读打开**（`rb`），没有任何写入路径指向它。
 """
@@ -41,9 +41,13 @@ class ImportError_(Exception):
 
 @dataclass
 class ImportOptions:
-    """导入选项（对应 §2.7.3 的选项空间）。"""
+    """导入选项。
 
-    #: EPUB 导入方式：direct=直接处理（可还原） / text=先转成 TXT
+    ``epub_mode`` 保留字段以兼容旧调用 / 旧 ``import.json``；M5-EX.3 起
+    EPUB **始终**按可逆（``direct``）处理，传入其它值也会被忽略。
+    """
+
+    #: 历史字段；产品路径固定为可逆（direct）
     epub_mode: str = "direct"
     #: 同一本书重复导入时是否复用已有副本
     reuse_existing: bool = True
@@ -168,7 +172,8 @@ def import_book(
 
     notes: list[str] = [messages.copied_note()]
 
-    epub_mode = options.epub_mode if kind == "epub" else "text"
+    # M5-EX.3：EPUB 统一可逆；TXT 记为 text（无账本）。忽略 options.epub_mode。
+    epub_mode = "direct" if kind == "epub" else "text"
     ledger_path: str | None = None
     chapters = 0
     encoding = ProbeResult(codec="utf-8", label="UTF-8", confidence="strict", has_bom=False)
@@ -202,13 +207,9 @@ def import_book(
         author = preview.author or ""
         notes.append(messages.epub_merged_note(chapters))
 
-        if epub_mode == "direct":
-            tick("正在按书的顺序合并章节", 70)
-            merged = epub_import.merge_reversible(original_copy, text_path)
-            ledger_path = str(merged.ledger_path)
-        else:
-            tick("正在把章节拼成一份纯文本", 70)
-            epub_import.merge_to_plain_text(original_copy, text_path)
+        tick("正在按书的顺序合并章节（可还原）", 70)
+        merged = epub_import.merge_reversible(original_copy, text_path)
+        ledger_path = str(merged.ledger_path)
         encoding = ProbeResult(codec="utf-8", label="UTF-8", confidence="strict")
         newline_kind, newline_changed = "lf", False
 

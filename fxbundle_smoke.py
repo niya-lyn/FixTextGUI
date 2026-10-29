@@ -141,17 +141,12 @@ def main() -> int:
 
     imp = win.import_module
     t0 = time.time()
+    # M5-EX.3：选文件即开跑，无向导 / 章节预览步骤
     imp._take_file(str(epub))
     app.processEvents()
-    # EPUB 走三步：选文件(step1) -> 读章节预览(step3) -> 预览就绪(step2) -> 真正导入
-    # 必须等预览**真到位**（step==2 且线程回收）才点第二次「下一步」，
-    # 否则第二次点击落在 step==3，_next() 无对应分支，导入永远不会开始。
-    QTimer.singleShot(0, imp._next)
-    previewed = _wait_until(lambda: imp._preview is not None and imp._thread is None, 240)
-    if not previewed:
-        _log(f"[smoke] 预览未就绪（step={imp._step} · 失败提示={imp._fail_text!r}）")
-    QTimer.singleShot(0, imp._next)
     imported = _wait_until(lambda: imp._thread is None and imp._result is not None, 300)
+    if not imported:
+        _log(f"[smoke] 导入未完成（step={imp._step} · 失败提示={imp._fail_text!r}）")
     app.processEvents()
     res = imp._result
     n_chars = 0

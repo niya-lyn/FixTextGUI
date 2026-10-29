@@ -195,40 +195,27 @@ def main() -> int:
     imp = win.import_module
     oc = win.oneclick_module
 
-    # ---- 1. 真实导入（选择文件通道 → 三步向导全自动走完）----
+    # ---- 1. 真实导入（M5-EX.3：选文件即开跑，无向导）----
     t0 = time.monotonic()
     imp._take_file(str(EPUB))
     assert imp._kind == "epub", "应为 EPUB"
-    # 第 2 步：直接处理（默认单选），点下一步 → 章节预览
-    imp._next()
-    if not wait_until(lambda: imp._step == 2, 120):
-        report["import"] = {"error": "预览超时", "step": imp._step}
-        print(json.dumps(report, ensure_ascii=False)); return 1
-    lst = imp.chapter_pane.list
-    first_row = lst.item(0).text()
-    rows = [lst.item(i).text() for i in range(min(3, lst.count()))]
-    cover_ok = first_row == "封面"
-    print(f"[1] 预览完成：共 {lst.count()} 行，首行 = {first_row!r}，"
-          f"封面标注正确 = {cover_ok}，前3行 = {rows}")
-    report["preview"] = dict(rows_total=lst.count(), first_row=first_row,
-                             cover_labeled=cover_ok, first_rows=rows)
-    ok = ok and cover_ok
-
-    # 第 3 步：开始导入
-    imp._next()
-    if not wait_until(lambda: imp._step == 4, 300):
+    if not wait_until(lambda: imp.has_finished() or bool(imp.error_text()), 300):
         report["import"] = {"error": "导入超时", "step": imp._step}
+        print(json.dumps(report, ensure_ascii=False)); return 1
+    if imp.error_text() or imp._result is None:
+        report["import"] = {"error": imp.error_text() or "无结果"}
         print(json.dumps(report, ensure_ascii=False)); return 1
     import_s = round(time.monotonic() - t0, 2)
     result = imp._result
     ctx_ready = bool(oc.run_context)
+    ledger_ok = bool(result.ledger_path)
     print(f"[1] 导入完成 {import_s}s：{result.chapters} 章 / 约 {result.text_chars:,} 字"
-          f" → 一键校正上下文已就绪 = {ctx_ready}")
+          f" → 一键校正上下文已就绪 = {ctx_ready} · 可逆账本 = {ledger_ok}")
     report["import"] = dict(seconds=import_s, chapters=result.chapters,
                             text_chars=result.text_chars,
                             title=result.title, context_ready=ctx_ready,
-                            epub_mode=result.epub_mode)
-    ok = ok and ctx_ready and result.epub_mode == "direct"
+                            epub_mode=result.epub_mode, ledger=ledger_ok)
+    ok = ok and ctx_ready and result.epub_mode == "direct" and ledger_ok
 
     # ---- 2. 一键校正：排版阶段取消 → 脏状态检查 ----
     # M4-EX.3b 起 runs 根下是按书分的目录（runs/<书id>/run-*），书目录容器

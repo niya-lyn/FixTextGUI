@@ -110,27 +110,19 @@ def test_ui_widget_texts_have_no_tech_terms(qt_app, tmp_path):
 
     module = ImportModule(tmp_path / "ws")
 
-    # 走到每个界面状态：选择方式页 / 章节预览页 / 完成页，都要干净
-    states: list[tuple[str, QWidget]] = [("选择文件", module.panes)]
-    module._kind = "epub"
-    module._step = 1
-    module._render_step()
-    states.append(("处理方式", module.panes))
-
+    # M5-EX.3：无导入向导；扫拖放区 + 进度/结果卡 + 安全说明即可
     texts: list[str] = []
-    for _state, widget in states:
-        for w in widget.findChildren(QWidget):
-            for attr in ("text", "placeholderText", "toolTip"):
-                if hasattr(w, attr):
-                    value = getattr(w, attr)
-                    if isinstance(value, str) and value:
-                        texts.append(value)
-            if isinstance(w, (QLabel, QPushButton, QRadioButton)) and w.windowTitle():
-                texts.append(w.windowTitle())
+    for w in module.findChildren(QWidget):
+        for attr in ("text", "placeholderText", "toolTip"):
+            if hasattr(w, attr):
+                value = getattr(w, attr)
+                if isinstance(value, str) and value:
+                    texts.append(value)
+        if isinstance(w, (QLabel, QPushButton, QRadioButton)) and w.windowTitle():
+            texts.append(w.windowTitle())
 
-    joined = texts
     bad: list[tuple[str, list[str]]] = []
-    for t in joined:
+    for t in texts:
         low = t.lower()
         hits = [w for w in FORBIDDEN if w in low and w not in ALLOWED_WORDS]
         if hits:

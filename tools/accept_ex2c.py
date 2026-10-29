@@ -516,13 +516,10 @@ def s5(app) -> dict:
     mod = win.import_module
     win.go("import")
     app.processEvents()
-    mod.take_file(str(EPUB))
+    mod.take_file(str(EPUB))  # M5-EX.3：选完即开跑，无需代点下一步
     t0 = time.monotonic()
-    mod.click_next()
     while time.monotonic() - t0 < 180:
         app.processEvents()
-        if mod.step() in (1, 2) and not mod.is_busy() and mod.next_enabled():
-            mod.click_next()
         if mod.has_finished() or mod.error_text():
             break
         time.sleep(0.03)

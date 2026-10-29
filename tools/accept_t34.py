@@ -152,14 +152,12 @@ def main() -> int:
     win = open_window(ws)
     imp = win.import_module
     t0 = time.monotonic()
-    imp._take_file(str(EPUB))
-    imp._next()
-    if not wait_until(lambda: imp._step == 2, 120):
-        print(json.dumps(dict(error="预览超时"), ensure_ascii=False))
-        return 1
-    imp._next()
-    if not wait_until(lambda: imp._step == 4, 300):
+    imp._take_file(str(EPUB))  # M5-EX.3：选完即开跑
+    if not wait_until(lambda: imp.has_finished() or bool(imp.error_text()), 300):
         print(json.dumps(dict(error="导入超时"), ensure_ascii=False))
+        return 1
+    if imp.error_text() or imp._result is None:
+        print(json.dumps(dict(error=imp.error_text() or "无结果"), ensure_ascii=False))
         return 1
     import_s = round(time.monotonic() - t0, 2)
 
