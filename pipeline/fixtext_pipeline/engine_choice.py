@@ -139,11 +139,13 @@ def go_engine_status(engine_path: Path | str) -> tuple[bool, str]:
         if not os.access(path, os.X_OK):
             return False, f"引擎文件没有执行权限：{path.name}"
     try:
+        from fixtext_pipeline.winproc import hidden_kwargs
         subprocess.run(
             [str(path)],
             capture_output=True,
             timeout=15,
             check=False,
+            **hidden_kwargs(),
         )
     except subprocess.TimeoutExpired:
         return False, "引擎启动后长时间无响应（可能是杀毒软件拦截）"

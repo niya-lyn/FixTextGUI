@@ -17,8 +17,10 @@ sys.path.insert(0, str(PKG / "fixtext_import"))
 sys.path.insert(0, str(PKG / "fixtext_error_center"))
 
 EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
-ENGINE = (PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src"
-          / "bin" / "replace_by_go-linux-amd64")
+sys.path.insert(0, str(PKG / "pipeline"))
+from fixtext_pipeline.engine_selector import select_engine  # noqa: E402
+_BIN = PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
+ENGINE = select_engine(_BIN) or (_BIN / "__no_platform_engine__")
 RULES = PKG / "data" / "rules"
 
 

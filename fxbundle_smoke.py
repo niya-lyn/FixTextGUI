@@ -9,9 +9,12 @@
 
 1. `opens_on_first_run()` 必须为 True（**打包正确性的关键断言**：包内若夹带
    `workspace/settings.ini` 且带 `wizardSeen=1`，新用户永远看不到向导）；
-2. 导入示例书：章数与正文字数都是真数；
+2. 导入一本 EPUB（优先环境变量 FIXTEXT_SMOKE_EPUB；否则源码树
+   tests/samples/book_paohuo.epub）：章数与正文字数都是真数；
 3. 一键校正：六阶段真跑，得到「已还原」的电子书；
 4. 导出：EPUB 落盘、命中数 > 0、字节数 > 0。
+
+产品包不附带「示例书」目录；冻结包冒烟请自行设置 FIXTEXT_SMOKE_EPUB。
 
 为避免把运行时状态写进包（那会让下一份包带着残留），本模块把用户区设置文件
 指向临时目录；包目录本身只被读。
@@ -114,13 +117,24 @@ def main() -> int:
     win.show()
     app.processEvents()
 
-    # ---- 2. 导入示例书 ----
-    epub = root / "示例书" / "book_paohuo.epub"
-    if not epub.is_file():
-        candidates = sorted((root / "示例书").glob("*.epub"))
-        epub = candidates[0] if candidates else epub
-    if not epub.is_file():
-        result["steps"]["import"] = {"ok": False, "error": "示例书缺失"}
+    # ---- 2. 导入一本 EPUB（产品不附带示例书）----
+    env_epub = os.environ.get("FIXTEXT_SMOKE_EPUB", "").strip()
+    candidates = []
+    if env_epub:
+        candidates.append(Path(env_epub))
+    # 源码 / 未冻结：用测试样本；冻结绿包需靠环境变量
+    candidates.append(root / "tests" / "samples" / "book_paohuo.epub")
+    # 兼容旧布局（若有人仍自备 示例书/）
+    candidates.append(root / "示例书" / "book_paohuo.epub")
+    candidates.extend(sorted((root / "示例书").glob("*.epub"))
+                      if (root / "示例书").is_dir() else [])
+    epub = next((p for p in candidates if p.is_file()), None)
+    if epub is None:
+        result["steps"]["import"] = {
+            "ok": False,
+            "error": "缺少冒烟用 EPUB：请设置 FIXTEXT_SMOKE_EPUB=路径，"
+                     "或在源码树保留 tests/samples/book_paohuo.epub",
+        }
         result["passed"] = False
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 1

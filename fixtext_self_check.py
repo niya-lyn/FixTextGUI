@@ -82,10 +82,16 @@ def _check_engine(root: Path) -> dict:
         b.write_text('["甲"]', encoding="utf-8")
         a.write_text('["乙"]', encoding="utf-8")
         try:
+            try:
+                from fixtext_pipeline.winproc import hidden_kwargs as _hidden
+                _win = _hidden()
+            except Exception:  # noqa: BLE001
+                _win = {}
             proc = subprocess.run(
                 [str(exe), str(t), str(b), str(a), "1"],
                 capture_output=True, text=True, timeout=60,
                 stdin=subprocess.DEVNULL,
+                **_win,
             )
             info["probe_rc"] = proc.returncode
             info["probe_msg"] = ((proc.stdout or "") + (proc.stderr or "")).strip()[:200]

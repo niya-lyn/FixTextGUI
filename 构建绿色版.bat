@@ -193,7 +193,7 @@ echo.
 rem ---------------------------------------------------------------------
 rem 第 5 步：拷贝用户可见目录与目标平台引擎
 rem ---------------------------------------------------------------------
-echo [5/7] 拷贝词库、设计依据、示例书与替换引擎...
+echo [5/7] 拷贝词库、设计依据与替换引擎...
 if not exist "%ROOT%data\rules" (
     echo.
     echo   [需要你操作] 找不到词库目录 data\rules。
@@ -208,10 +208,7 @@ if exist "%ROOT%reference" (
     xcopy /e /i /y /q "%ROOT%reference" "%DISTDIR%\reference" >nul
     if errorlevel 1 goto :copyfail
 )
-if exist "%ROOT%示例书" (
-    xcopy /e /i /y /q "%ROOT%示例书" "%DISTDIR%\示例书" >nul
-    if errorlevel 1 goto :copyfail
-)
+rem 产品不附带「示例书」目录（用户导入自己的书；冒烟用 FIXTEXT_SMOKE_EPUB 或源码 tests\samples）
 
 rem Windows 包**只带 Windows 引擎**，Linux 版一个字节都不带
 set "ENGDIR=%DISTDIR%\pipeline\vendor\fixtext\engine\go_src\bin"
@@ -307,7 +304,7 @@ echo   构建完成
 echo   产物：%ZIPPATH%
 echo.
 echo   下一步：
-echo     1. 自己先解压试跑一遍，确认能打开、能导入示例书；
+echo     1. 自己先解压试跑一遍，确认能打开、能导入自己的书；
 echo     2. 再发给用户 / 上传到发布渠道。
 echo ==========================================================
 echo.

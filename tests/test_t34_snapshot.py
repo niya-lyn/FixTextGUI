@@ -25,8 +25,12 @@ import _fixture_run as fxr  # noqa: E402
 import fixtext_run_snapshot as snap  # noqa: E402
 
 EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
-ENGINE = (PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src"
-          / "bin" / "replace_by_go-linux-amd64")
+sys.path.insert(0, str(PKG / "pipeline"))
+from fixtext_pipeline.engine_selector import select_engine  # noqa: E402
+_BIN = PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
+# 按平台取引擎；取不到时落到不存在的路径，让 skipif 正常跳过（避免 Win 上
+# 因 Linux 二进制 exists() 为真却 subprocess 炸 WinError 193）
+ENGINE = select_engine(_BIN) or (_BIN / "__no_platform_engine__")
 RULES = PKG / "data" / "rules"
 BASE_SHA = fxr.BASE_SHA
 

@@ -280,10 +280,12 @@ class TestEngineChoice:
 
     def test_go_engine_status_real_binary(self):
         from fixtext_pipeline import engine_choice as ec
-        binpath = (ROOT / "pipeline" / "vendor" / "fixtext" / "engine"
-                   / "go_src" / "bin" / "replace_by_go-linux-amd64")
-        if not binpath.exists():
-            pytest.skip("Go 引擎二进制不在包内（Windows 环境另测）")
+        from fixtext_pipeline.engine_selector import select_engine
+        bin_dir = (ROOT / "pipeline" / "vendor" / "fixtext" / "engine"
+                   / "go_src" / "bin")
+        binpath = select_engine(bin_dir)
+        if binpath is None:
+            pytest.skip("本平台没有可用的 Go 引擎二进制")
         ok, reason = ec.go_engine_status(binpath)
         assert ok is True, reason
 

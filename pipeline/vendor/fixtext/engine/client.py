@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -117,11 +118,19 @@ class GoEngineClient:
             cmd = [str(engine), str(target_path), str(before_path), str(after_path), str(request.count)]
             started = time.time()
             try:
+                # Windows：隐藏 CUI 引擎黑窗（与 fixtext_pipeline.winproc 同值；
+                # 此处不依赖 pipeline 包，避免 vendor 反向依赖产品层）
+                _kw = {}
+                if sys.platform == "win32":
+                    _kw["creationflags"] = getattr(
+                        subprocess, "CREATE_NO_WINDOW", 0x08000000
+                    )
                 proc = subprocess.run(
                     cmd,
                     capture_output=True,
                     timeout=timeout_s,
                     cwd=str(workdir),
+                    **_kw,
                 )
             except subprocess.TimeoutExpired as exc:
                 raise EngineError(

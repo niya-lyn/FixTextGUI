@@ -131,11 +131,18 @@ class _SubprocessProxy:
         return getattr(_subprocess_mod, name)
 
     def run(self, cmd, capture_output: bool = False, timeout=None, cwd=None, **_kw):
+        # Windows：隐藏 Go 引擎 CUI 黑窗（见 fixtext_pipeline.winproc）
+        try:
+            from fixtext_pipeline.winproc import hidden_kwargs as _hidden
+            _win = _hidden()
+        except Exception:  # noqa: BLE001 — 缺模块时仍能跑，只是可能闪窗
+            _win = {}
         proc = _subprocess_mod.Popen(
             cmd,
             stdout=_subprocess_mod.PIPE,
             stderr=_subprocess_mod.PIPE,
             cwd=cwd,
+            **_win,
         )
         self._job._active_proc = proc
         deadline = None if timeout is None else time.monotonic() + timeout

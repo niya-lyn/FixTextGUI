@@ -27,8 +27,9 @@ PKG = HERE.parent
 for _p in (PKG, PKG / "fixtext_ui", PKG / "pipeline"):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
-ENGINE = (PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src"
-          / "bin" / "replace_by_go-linux-amd64")
+from fixtext_pipeline.engine_selector import select_engine  # noqa: E402
+_BIN = PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
+ENGINE = select_engine(_BIN) or (_BIN / "__no_platform_engine__")
 RULES = PKG / "data" / "rules"
 
 
