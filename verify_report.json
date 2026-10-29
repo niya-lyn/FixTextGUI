@@ -1,0 +1,237 @@
+{
+  "1_entries_reachable": {
+    "passed": true,
+    "count": 6,
+    "entries": [
+      {
+        "key": "import",
+        "label": "导入书籍",
+        "status": "ready",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "📥  导入书籍",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "ImportModule",
+        "page_visible": true,
+        "page_size": [
+          1018,
+          937
+        ],
+        "passed": true
+      },
+      {
+        "key": "oneclick",
+        "label": "一键校正",
+        "status": "ready",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "⚡  一键校正",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "OneClickModule",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          336
+        ],
+        "passed": true
+      },
+      {
+        "key": "check",
+        "label": "检查问题",
+        "status": "ready",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "🔍  检查问题",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "CheckModule",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          370
+        ],
+        "passed": true
+      },
+      {
+        "key": "vocab",
+        "label": "词库管理",
+        "status": "ready",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "📚  词库管理",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "VocabModule",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          486
+        ],
+        "passed": true
+      },
+      {
+        "key": "export",
+        "label": "导出结果",
+        "status": "ready",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "📤  导出结果",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "ExportModule",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          336
+        ],
+        "passed": true
+      },
+      {
+        "key": "history",
+        "label": "历史记录",
+        "status": "ready",
+        "clicked_by_mouse": true,
+        "stack_current_is_page": true,
+        "active_count": 1,
+        "active_only_self": true,
+        "topbar_where": "🕓  历史记录",
+        "topbar_follows": true,
+        "rail_tag_matches_status": true,
+        "page_class": "HistoryModule",
+        "page_visible": true,
+        "page_size": [
+          1028,
+          370
+        ],
+        "passed": true
+      }
+    ],
+    "home": {
+      "stack_current_is_home": true,
+      "active_count": 0,
+      "topbar_where": "首页概览",
+      "passed": true
+    }
+  },
+  "1c_shortcuts": {
+    "passed": true,
+    "ctrl3_to_check": true,
+    "ctrl_h_to_home": true
+  },
+  "1d_placeholder_cta": {
+    "passed": true,
+    "export_page_class": "ExportModule",
+    "guide_shown": true
+  },
+  "1e_modules_mounted": {
+    "passed": true,
+    "page_classes": {
+      "import": "ImportModule",
+      "oneclick": "OneClickModule",
+      "check": "CheckModule"
+    }
+  },
+  "1e_topbar_actions": {
+    "passed": true,
+    "button_count": 3,
+    "each_opened_dialog": [
+      true,
+      true,
+      true
+    ]
+  },
+  "1b_route_keeps_state": {
+    "passed": true,
+    "state_after_fix": "fixed",
+    "state_after_roundtrip": "fixed",
+    "same_widget_instance": true,
+    "window_count": 1
+  },
+  "2_zero_internal_leak": {
+    "passed": true,
+    "scanned": 3043,
+    "forbidden_patterns": 25,
+    "hits": []
+  },
+  "3_tokens_aligned": {
+    "passed": true,
+    "py_token_count": 73,
+    "css_token_count": 73,
+    "per_group": {
+      "COLORS": 34,
+      "FONT_SIZE": 9,
+      "SPACE": 10,
+      "RADIUS": 5,
+      "LINE_HEIGHT": 3,
+      "FONT_WEIGHT": 4,
+      "SHADOW": 6
+    },
+    "diffs": [],
+    "missing_in_css": [],
+    "extra_in_css": [],
+    "source": "design_root_snapshot.css"
+  },
+  "4_construct_and_screenshots": {
+    "passed": true,
+    "window_title": "FixText V1",
+    "stack_pages": 8,
+    "screenshots": [
+      {
+        "key": "home",
+        "file": "screenshots/01_home_overview.png",
+        "bytes": 116219
+      },
+      {
+        "key": "import",
+        "file": "screenshots/02_entry1_import.png",
+        "bytes": 52148
+      },
+      {
+        "key": "oneclick",
+        "file": "screenshots/03_entry2_oneclick.png",
+        "bytes": 73174
+      },
+      {
+        "key": "check",
+        "file": "screenshots/04_entry3_check.png",
+        "bytes": 119062
+      },
+      {
+        "key": "vocab",
+        "file": "screenshots/05_entry4_vocab.png",
+        "bytes": 69474
+      },
+      {
+        "key": "export",
+        "file": "screenshots/06_entry5_export.png",
+        "bytes": 72408
+      },
+      {
+        "key": "history",
+        "file": "screenshots/07_entry6_history.png",
+        "bytes": 91656
+      }
+    ]
+  },
+  "summary": {
+    "passed": true,
+    "checks": {
+      "1 六入口可达且状态清晰": true,
+      "2 内部目录概念零露出": true,
+      "3 令牌值与设计地基一致": true,
+      "4 主窗口可构造 + 六页截图": true
+    }
+  }
+}
