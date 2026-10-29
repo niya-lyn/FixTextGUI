@@ -27,7 +27,10 @@ QLabel { background-color: transparent; }
     min-height: 53px;
     max-height: 53px;
 }
-#TopBar QWidget { background-color: transparent; color: #FFFFFF; }
+#TopBar QLabel {
+    background-color: transparent;
+    color: #FFFFFF;
+}
 #Brand {
     color: #FFFFFF;
     background: transparent;
@@ -49,45 +52,42 @@ QLabel { background-color: transparent; }
 #TopAct:hover { background: rgba(255,255,255,.22); color: #FFFFFF; }
 #TopAct:pressed { background: #333B48; }
 
-/* M5-EX.4.2 / BUG-1a：玻璃胶囊 + hover 高对比 */
 #BookChip {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
         stop:0 #FFFFFF,
-        stop:1 #F1F3F8);
-    border: 1px solid rgba(255,255,255,.28);
-    border-radius: 999px;
+        stop:1 #F1F3F8) !important;
+    border: 1px solid rgba(255,255,255,.20);
+    border-radius: 17px;
     min-height: 34px; max-height: 34px;
     max-width: 320px;
 }
 #BookChip:hover {
-    background: #FFFFFF;
+    background: #FFFFFF !important;
     border: 1px solid #9AA3E2;
 }
-#BookChip:focus {
-    border: 1px solid #4F59C0;
-}
-#BookChip:pressed {
-    background: #F1F3F8;
-}
+#BookChip:focus { border: 1px solid #4F59C0; }
+#BookChip:pressed { background: #F1F3F8 !important; }
 #BookChip[empty="true"] {
     border: 1px solid rgba(255,255,255,.32);
-    background: rgba(255,255,255,.08);
+    background: rgba(255,255,255,.10) !important;
 }
 #BookChip[empty="true"]:hover {
-    background: rgba(255,255,255,.16);
+    background: rgba(255,255,255,.18) !important;
     border: 1px solid rgba(255,255,255,.45);
 }
 #BookChip QLabel { background: transparent; }
 #BcGo {
-    color: #6B7280;
+    color: #6B7585;
     font-size: 11px;
     font-weight: 600;
     padding-left: 9px;
     margin-left: 2px;
     border-left: 1px solid #DDE2EA;
 }
-#BookChip:hover #BcGo {
-    color: #4F59C0;
+#BookChip:hover #BcGo { color: #3F48A2; }
+#BcDot {
+    border-radius: 999px;
+    background-color: #4F59C0;
 }
 
 #ShelfRow {
@@ -114,7 +114,6 @@ QLabel { background-color: transparent; }
     font-size: 12px;
     font-weight: 600;
 }
-/* M5-EX.4.2 / BUG-1b：设为当前 hover 主色实底 */
 #BtnSetCurrent {
     color: #333B83;
     background-color: #EEF0FB;
@@ -130,9 +129,9 @@ QLabel { background-color: transparent; }
     border: 1px solid #4F59C0;
 }
 #BtnSetCurrent:pressed {
-    background-color: #3D4599;
+    background-color: #3F48A2;
     color: #FFFFFF;
-    border: 1px solid #3D4599;
+    border: 1px solid #3F48A2;
 }
 #BtnSetCurrent:focus {
     border: 1px solid #4F59C0;
@@ -290,25 +289,18 @@ QLineEdit, QTextEdit, QPlainTextEdit, QComboBox, QSpinBox {
     border-radius: 8px;
     padding: 8px 12px;
     font-size: 14px;
-    color: #1F2937;
+    color: #222831;
 }
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QComboBox:focus, QSpinBox:focus {
-    border: 2px solid #4F59C0;
+    border: 1px solid #4F59C0;
     background-color: #FFFFFF;
-    padding: 7px 11px;
 }
 QLineEdit:disabled, QTextEdit:disabled {
     background-color: #EEF1F5;
     color: #9AA4B4;
 }
-/* M5-EX.4.2 / BUG-1c：下拉选中态与弹出列表 */
-QComboBox:hover {
-    border: 1px solid #9AA3E2;
-}
-QComboBox::drop-down {
-    border: none;
-    width: 28px;
-}
+QComboBox:hover { border: 1px solid #9AA3E2; }
+QComboBox::drop-down { border: none; width: 28px; }
 QComboBox QAbstractItemView {
     background-color: #FFFFFF;
     border: 1px solid #DDE2EA;
@@ -318,12 +310,12 @@ QComboBox QAbstractItemView {
     outline: 0;
     padding: 4px;
 }
-/* M5-EX.4.2 / BUG-1e：词库页头浅色图标按钮 */
 QPushButton#HeadIconBtn {
-    background-color: #F7F8FA;
-    color: #4A5363;
+    background-color: #EEF1F5;
+    color: #333B48;
     border: 1px solid #DDE2EA;
     border-radius: 8px;
+    font-size: 15px;
     min-width: 34px; max-width: 34px;
     min-height: 34px; max-height: 34px;
     padding: 0;
@@ -334,13 +326,13 @@ QPushButton#HeadIconBtn:hover {
     border: 1px solid #C0C6EE;
 }
 QPushButton#HeadIconBtn:pressed {
-    background-color: #DDE0F7;
+    background-color: #DDE1F6;
     color: #333B83;
 }
 QLabel#SafeBadge {
     color: #15803D;
-    background-color: #ECFDF3;
-    border: 1px solid #A7F3D0;
+    background-color: #E7F4EC;
+    border: 1px solid #B6E0C5;
     border-radius: 999px;
     padding: 6px 12px;
     font-size: 12px;

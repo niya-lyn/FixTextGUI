@@ -24,6 +24,11 @@
 | BUG-7（全域） | 「整体对齐设计系统」面过大；本轮仅通过 1a～1e 局部贴原型，**不全量**铺卡片阴影/顶栏渐变/级联动画，余量下期 |
 | P2-8 | `resume=False` 属**功能/产品确认**，非样式；维持待产品确认 |
 
-## 自测
+## 自测 / 补丁说明
 
-本机无 PySide6 → **跳过 GUI 目视**，仅提交样式 / SizePolicy diff。
+有 `.venv`（PySide6）可 `python main_app.py` 目视。
+
+**样式不对的根因（已修）：** `#TopBar QWidget { background: transparent }` 的 specificity
+高于 `#BookChip`，把玻璃胶囊底色冲成透明；且手改 `fixtext.qss` 会被
+`build_qss.py` / 菜单「重新生成样式表」覆盖。本轮把抛光写进 `build_qss.py`，
+并去掉顶栏万能透明规则；`BookChip` 圆角用半高像素（Qt 对 999px 不稳）。

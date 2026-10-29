@@ -377,7 +377,18 @@ class OneClickModule(QWidget):
             box.setCurrentText(it["val"])
             box.setMinimumWidth(132)
             box.setCursor(Qt.CursorShape.PointingHandCursor)
-            # 观感走全局 QSS（M5-EX.4.2）；不改接线
+            # 控件级完整态：避免全局 QSS 被其它内联表打断后下拉「无反馈」
+            box.setStyleSheet(
+                f"QComboBox#FmtCombo{{background:{c('neutral.0')};"
+                f"border:1px solid {c('neutral.200')};border-radius:{r('md')};"
+                f"padding:7px 10px;font-size:{fs('sm')};color:{c('neutral.800')}}}"
+                f"QComboBox#FmtCombo:hover{{border:1px solid {c('primary.300')}}}"
+                f"QComboBox#FmtCombo:focus{{border:1px solid {c('primary.500')}}}"
+                f"QComboBox#FmtCombo::drop-down{{border:none;width:28px}}"
+                f"QComboBox#FmtCombo QAbstractItemView{{background:{c('neutral.0')};"
+                f"border:1px solid {c('neutral.200')};border-radius:{r('md')};"
+                f"selection-background-color:{c('primary.50')};"
+                f"selection-color:{c('primary.700')};outline:0;padding:4px}}")
             self._combos[it["n"]] = box
             box.currentTextChanged.connect(
                 lambda v, n=it["n"]: self._on_choice(n, v))

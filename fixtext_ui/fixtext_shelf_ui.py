@@ -270,12 +270,24 @@ class BookChip(QFrame):
         self.setObjectName("BookChip")
         self.setProperty("empty", "true")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setAutoFillBackground(False)
         self.setFixedHeight(CHIP_H)
         self.setMaximumWidth(CHIP_MAX_W)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setAccessibleName("当前要校对的书，点击前往导入书籍切换")
         self._title = ""
+        # 控件级再钉一次圆角：应用 QSS 里 999px 在部分平台不生效
+        from fixtext_tokens import BOOKCHIP_EDGE, BOOKCHIP_GRADIENT_BOTTOM, c
+        rr = max(1, CHIP_H // 2)
+        self.setStyleSheet(
+            f"#BookChip{{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            f"stop:0 {c('neutral.0')},stop:1 {BOOKCHIP_GRADIENT_BOTTOM});"
+            f"border:1px solid {BOOKCHIP_EDGE};border-radius:{rr}px;}}"
+            f"#BookChip:hover{{background:{c('neutral.0')};"
+            f"border:1px solid {c('primary.300')};}}"
+            f"#BookChip[empty=\"true\"]{{background:rgba(255,255,255,.10);"
+            f"border:1px solid rgba(255,255,255,.32);}}")
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(px(sp("3")), 0, px(sp("3")), 0)
@@ -283,6 +295,7 @@ class BookChip(QFrame):
 
         self.dot = QFrame()
         self.dot.setObjectName("BcDot")
+        self.dot.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.dot.setFixedSize(DOT_SIZE, DOT_SIZE)
         lay.addWidget(self.dot, 0, Qt.AlignmentFlag.AlignVCenter)
 
@@ -312,13 +325,20 @@ class BookChip(QFrame):
         has_book = bool(self._title)
         self.setProperty("empty", "false" if has_book else "true")
         self.name.set_full_text(self._title or "未选择书")
+        # 文字色走内联（QLabel 易被全局底色干扰）；圆点补光晕贴原型 .bc-dot
         self.name.setStyleSheet(
             f"color:{c('neutral.800') if has_book else c('neutral.400')};"
             f"font-size:{fs('sm')};font-weight:{FONT_WEIGHT['semibold']};"
-            f"letter-spacing:0.2px")
+            f"letter-spacing:0.2px;background:transparent")
         self.dot.setStyleSheet(
-            f"background:{c('primary.500') if has_book else c('neutral.500')};"
+            f"background:{c('primary.500') if has_book else c('neutral.400')};"
             f"border-radius:{r('full')}")
+        self.go_label.setStyleSheet(
+            f"color:{c('neutral.500')};font-size:11px;"
+            f"font-weight:{FONT_WEIGHT['semibold']};"
+            f"padding-left:9px;margin-left:2px;"
+            f"border-left:1px solid {c('neutral.200')};"
+            f"background:transparent")
         if has_book:
             tip = f"{self._title}\n点击前往「导入书籍」切换当前书"
         else:
@@ -328,6 +348,27 @@ class BookChip(QFrame):
         # 样式表里的属性选择器要重新抛光才生效（empty 态换高光配色）
         self.style().unpolish(self)
         self.style().polish(self)
+
+    def enterEvent(self, event):                     # noqa: N802 - Qt 覆写
+        from fixtext_tokens import FONT_WEIGHT, c
+        # Qt 对「父 :hover 改子」支持不稳，悬停时直接刷「切换」主色
+        self.go_label.setStyleSheet(
+            f"color:{c('primary.600')};font-size:11px;"
+            f"font-weight:{FONT_WEIGHT['semibold']};"
+            f"padding-left:9px;margin-left:2px;"
+            f"border-left:1px solid {c('neutral.200')};"
+            f"background:transparent")
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):                     # noqa: N802 - Qt 覆写
+        from fixtext_tokens import FONT_WEIGHT, c
+        self.go_label.setStyleSheet(
+            f"color:{c('neutral.500')};font-size:11px;"
+            f"font-weight:{FONT_WEIGHT['semibold']};"
+            f"padding-left:9px;margin-left:2px;"
+            f"border-left:1px solid {c('neutral.200')};"
+            f"background:transparent")
+        super().leaveEvent(event)
 
     # ---- 交互 ---------------------------------------------------------
     def mousePressEvent(self, event):                # noqa: N802 - Qt 覆写

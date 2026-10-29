@@ -212,9 +212,14 @@ class VocabModule(QWidget):
         # v3 布局对齐：浅色安全徽标 + 浅色图标按钮（页头控件变体）
         safe = QLabel("  安全保护已开启")
         safe.setObjectName("SafeBadge")
+        safe.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         safe.setCursor(Qt.CursorShape.PointingHandCursor)
         safe.setToolTip("词库的每一步改动都先留还原点，删错了、合并错了都能退回去")
-        # 观感走 fixtext.qss #SafeBadge（M5-EX.4.2）
+        # QLabel 背景必须 WA_StyledBackground；内联与 QSS 双保险（防「重新生成」漏项）
+        safe.setStyleSheet(
+            f"QLabel#SafeBadge{{color:{c('success')};background:{c('success.bg')};"
+            f"border:1px solid {c('success.border')};border-radius:{r('full')};"
+            f"padding:6px 12px;font-size:{fs('xs')};font-weight:700}}")
         right.addWidget(safe)
 
         self.hist_btn = self._head_icon_btn("🕑", "历史与快照",
@@ -246,14 +251,22 @@ class VocabModule(QWidget):
         return w
 
     def _head_icon_btn(self, glyph: str, tip: str, slot) -> QPushButton:
-        """页头浅色图标按钮（样式走 fixtext.qss #HeadIconBtn，M5-EX.4.2）。"""
+        """页头浅色图标按钮（原型 .page-head .icon-btn；内联完整态，勿只留 font-size）。"""
         b = QPushButton(glyph)
         b.setObjectName("HeadIconBtn")
         b.setFixedSize(34, 34)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setToolTip(tip)
         b.setAccessibleName(tip)
-        b.setStyleSheet(f"font-size:{ICON_GLYPH_SIZE}")
+        # 控件级 setStyleSheet 会压掉应用级残缺规则：必须写全 hover/pressed
+        b.setStyleSheet(
+            f"QPushButton#HeadIconBtn{{background:{c('neutral.100')};"
+            f"color:{c('neutral.700')};border:1px solid {c('neutral.200')};"
+            f"border-radius:{r('md')};font-size:{ICON_GLYPH_SIZE};padding:0}}"
+            f"QPushButton#HeadIconBtn:hover{{background:{c('primary.50')};"
+            f"color:{c('primary.700')};border:1px solid {c('primary.200')}}}"
+            f"QPushButton#HeadIconBtn:pressed{{background:{c('primary.100')};"
+            f"color:{c('primary.700')}}}")
         b.clicked.connect(slot)
         return b
 
