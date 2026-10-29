@@ -962,6 +962,7 @@ class MainWindow(QMainWindow):
 
         pipeline = PKG_ROOT / "pipeline"
         engine = self._pick_engine()
+        rules = PKG_ROOT / "data" / "rules"
         # M4-T4.2：不再要求 Go 引擎存在才建运行上下文——引擎被删 / 被杀软
         # 隔离时，一键校正会走降级确认（Python 引擎不需要 Go 二进制）；
         # 这里只挡词库缺失（两个引擎都绕不开词库）。

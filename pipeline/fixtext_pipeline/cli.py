@@ -35,9 +35,19 @@ EXIT_OK = 0
 EXIT_STAGE_FAILED = 1
 EXIT_USAGE = 2
 
-#: 引擎二进制在 vendor 下的相对位置
-_ENGINE_REL = Path("fixtext/engine/go_src/bin/replace_by_go-linux-amd64")
-_ENGINE_REL_WIN = Path("fixtext/engine/go_src/bin/replace_by_go-windows-amd64.exe")
+#: 引擎二进制在 vendor 下的相对目录
+_ENGINE_BIN_REL = Path("fixtext/engine/go_src/bin")
+
+
+def _engine_rel() -> Path:
+    """本平台引擎在 vendor 下的相对位置。
+
+    平台判断只在 ``engine_selector`` 一处，这里按它给的常量拼文件名——
+    绝不再写死 Linux 文件名（Windows 上会拿到 ELF，执行时才炸 WinError 193）。
+    """
+    name = (engine_selector.WINDOWS_NAME if sys.platform == "win32"
+            else engine_selector.LINUX_NAME)
+    return _ENGINE_BIN_REL / name
 
 
 # --------------------------------------------------------------------------- #
@@ -135,7 +145,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     engine = Path(args.engine) if args.engine else discover_engine()
     if engine is None:
         # Python 引擎模式不要求 Go 二进制存在；Go 模式在下面按缺失报错
-        engine = _product_root() / "vendor" / _ENGINE_REL
+        engine = _product_root() / "vendor" / _engine_rel()
     if replace_engine == "go":
         if not Path(args.engine or "").is_file() and args.engine:
             print(f"错误：Go 引擎不存在：{engine}", file=sys.stderr)
@@ -143,7 +153,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         if not args.engine and not engine.is_file():
             print(
                 "错误：找不到 Go 引擎二进制。请用 --engine 指定，或把引擎放到 "
-                f"{_product_root() / 'vendor' / _ENGINE_REL}；"
+                f"{_product_root() / 'vendor' / _engine_rel()}；"
                 "也可用 --replace-engine python 改走 Python 替换引擎（较慢）。",
                 file=sys.stderr,
             )
