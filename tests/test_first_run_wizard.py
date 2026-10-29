@@ -384,6 +384,16 @@ def test_more_menu_has_wizard_entry(main_win, monkeypatch):
             self.separators: list[int] = []
             _FakeMenu.instances.append(self)
 
+        def sizeHint(self):
+            """M4-EX.4d：真实 QMenu 一直有 sizeHint，替身补齐即可。
+
+            产品侧按它算弹层落点（越界时才向内收）；替身给 0 尺寸，
+            `_popup_target` 就不做边界收敛，等价于"直接贴锚点"。
+            """
+            from PySide6.QtCore import QSize
+
+            return QSize(0, 0)
+
         def addAction(self, text=""):
             self.actions.append(text)
             return type("_A", (), {"triggered": type(

@@ -519,6 +519,12 @@ class MainWindow(QMainWindow):
         tl.addWidget(self.book_chip, 0, Qt.AlignmentFlag.AlignVCenter)
 
         tl.addStretch(1)
+        # M4-EX.4d：三颗顶栏按钮**必须直连槽函数**。
+        # 之前用 `lambda _=False, s=slot: s()` 中转，Qt 的 clicked 在
+        # 中转 lambda 里就把发送者丢了，槽里 `self.sender()` 恒为 None，
+        # 菜单锚点只能回退主窗口 → 弹在窗口左下角。直连之后
+        # sender() 才是那颗按钮，弹层才能贴着按钮展开。
+        self._top_acts: dict[str, QPushButton] = {}
         for glyph, title, slot in (
             ("☰", "更多", self._act_more),
             ("?", "帮助", self._act_help),
@@ -530,9 +536,60 @@ class MainWindow(QMainWindow):
             act.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
             act.setToolTip(title)
             act.setAccessibleName(title)
-            act.clicked.connect(lambda _=False, s=slot: s())
+            self._top_acts[title] = act
+            act.clicked.connect(slot)
             tl.addWidget(act)
         return top
+
+    # ------------------------------------------------------------- 弹层定位
+
+    def _popup_anchor(self, title: str) -> QWidget:
+        """顶栏弹层的锚点控件：优先 sender（真实点击），回退同名按钮。
+
+        两个来源都要有：真实点击走 sender()；测试 / 脚本直接调
+        `_act_more()` 时 sender() 是 None，回退到那颗按钮，
+        这样两种入口都不会再退化成"锚到主窗口"。
+        """
+        btn = self.sender()
+        if isinstance(btn, QWidget):
+            return btn
+        return self._top_acts.get(title) or self
+
+    def _global_of(self, point: QPoint) -> QPoint:
+        return self.mapToGlobal(point)
+
+    def _popup_target(self, anchor: QWidget, popup_w: int, popup_h: int) -> QPoint:
+        """弹层该出现在哪：默认贴锚点左下角生长，只在越界时向内收。
+
+        收也要收得有章法——横向越出窗口右边缘时，改成"弹层右边缘对齐
+        按钮右边缘"，弹层始终挨着那颗按钮，不会被推成离按钮很远的样子；
+        纵向放不下时才整体上提。两者都再兜一次窗口边界。
+        """
+        a_left = anchor.mapToGlobal(QPoint(0, anchor.height())).x()
+        a_right = anchor.mapToGlobal(QPoint(anchor.width(), anchor.height())).x()
+        gy = anchor.mapToGlobal(QPoint(0, anchor.height())).y()
+
+        left = self._global_of(QPoint(0, 0)).x()
+        right = self._global_of(QPoint(self.width(), 0)).x()
+        top = self._global_of(QPoint(0, 0)).y()
+        bottom = self._global_of(QPoint(0, self.height())).y()
+
+        gx = a_left
+        if popup_w > 0 and gx + popup_w > right:
+            # 横向放不下：右边缘对齐按钮右边缘（比推回窗口左边更贴按钮）
+            gx = a_right - popup_w
+        if popup_w > 0:
+            gx = max(min(gx, right - popup_w), left)
+        if popup_h > 0:
+            gy = min(gy, bottom - popup_h)
+        return QPoint(gx, max(gy, top))
+
+    def _show_modal_under(self, m: Modal, title: str) -> int:
+        """模态框贴着顶栏按钮展开（不再是屏幕左上角 / 窗口左下角）。"""
+        anchor = self._popup_anchor(title)
+        m.adjustSize()          # 先定尺寸，否则 width()/height() 还是 0
+        m.move(self._popup_target(anchor, m.width(), m.height()))
+        return m.exec()
 
     # ------------------------------------------------------------------ 左轨
 
@@ -1092,7 +1149,7 @@ class MainWindow(QMainWindow):
         m.add_note("每个模块页右上角的「显示设计依据」开关，会在相关元素旁标注对应的设计条款；"
                    "也可以在「设置」里一次全部打开。", "info")
         m.add_foot("关闭", kind="ghost")
-        m.exec()
+        self._show_modal_under(m, "帮助")
 
     def _act_more(self):
         """菜单：新手向导 / 重新生成样式表 / 打开设计依据目录 / 关于。"""
@@ -1107,9 +1164,12 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         a_about = menu.addAction("关于 FixText V1")
         a_about.triggered.connect(self._about)
-        btn = self.sender()
-        anchor = btn if isinstance(btn, QPushButton) else self
-        menu.exec(anchor.mapToGlobal(QPoint(0, anchor.height())))
+        # M4-EX.4d：锚点必须是触发那颗按钮本身。这里不再依赖 sender() 是否
+        # 有效，锚点解析统一收在 _popup_anchor（真实点击取 sender，脚本直调
+        # 回退到同名按钮）；尺寸用 sizeHint，菜单此刻还没 show 起来。
+        anchor = self._popup_anchor("更多")
+        menu.exec(self._popup_target(anchor, menu.sizeHint().width(),
+                                     menu.sizeHint().height()))
 
     def _regen_qss(self):
         """按设计令牌重新生成界面样式表。
@@ -1153,11 +1213,15 @@ class MainWindow(QMainWindow):
                     "软件只读取你交给它的书，不会改动你的原文件。", "info")
 
     def _flash(self, icon: str, title: str, msg: str, kind: str = "info"):
-        """轻量结果提示（重新生成 / 打开目录 / 关于 的反馈）。"""
+        """轻量结果提示（重新生成 / 打开目录 / 关于 的反馈）。
+
+        M4-EX.4d：这些提示都由 ☰ 菜单项触发，sender() 是 QAction 不是按钮，
+        所以锚点回退到「更多」按钮，弹层贴在 ☰ 下方而不是屏幕左上角。
+        """
         m = Modal(icon=icon, title=title, min_width=460)
         m.add_note(msg, kind)
         m.add_foot("知道了", kind="ghost")
-        m.exec()
+        self._show_modal_under(m, "更多")
 
     # ------------------------------------------------------------------ 快捷键
 
