@@ -49,7 +49,7 @@ def test_empty_state_has_no_fake_data(qapp):
     assert data["found"] == 0
     assert data["items"] == []
     # 空状态文案是给用户看的，必须是完整人话句子
-    assert "校正" in mod._empty_text()
+    assert "导入" in mod._empty_text() or "书" in mod._empty_text()
 
 
 def test_injected_report_matches_error_count(run_env, qapp):

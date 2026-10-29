@@ -1,46 +1,43 @@
 """
-FixText V1 · 检查问题模块（Qt 移植）
+FixText V1 · 检查问题模块（M4-EX.6-R2）
 =====================================
 
-对照 `FixText_V1_检查问题_原型.html` **1:1 移植**，保持核心价值：
-**逐处人工确认**（不是「一键修复全部」）。
+对照合并版原型 §8 四态状态机重建：
+空态（无书）→ 待检查 → 检查中（可取消）→ 结果态（含 0 检出「检查通过」）。
 
-结构：书源条 → 统计条（只统计 / 结束检查）→ 两栏（检查项 + 问题清单 | 编辑器）
-      → 操作条（下一处 / 修复 / 跳过 / 保存并下一处 / 撤销）
-      → 7 条规则开关 → 批量操作（二次确认）→ 设计依据开关。
-
-数据来源（T2.10 接线）：问题清单一律来自**真实运行的引号检查报告**，
-经 ``fixtext_check.load_report`` 读入后由 ``set_report`` 注入；
-本模块不含任何演示数据。没有真实报告时只显示空状态引导。
-
-大报告分页：一页 ``PAGE_SIZE`` 条，翻页可达全部条目，不静默截断。
-
-用到的复用部件见 `fixtext_widgets.py`（Card / Switch / Pill / FieldRow）。
+一态一键：开始检查 / 取消 / 重新检查（已删「只统计不修复」「结束检查」）。
+自扫当前书正文（不读校正报告）；7 条规则接 R1 引擎配置接口并持久化。
+逐处修复写回书的当前文本；「按已启用规则修复全部」预览→确认→可撤销。
 """
 
 from __future__ import annotations
 
 import math
+import sys
+from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtCore import Qt, Signal, QTimer, QThread
 from PySide6.QtGui import (
     QFont, QColor, QBrush, QTextCursor, QTextCharFormat, QShortcut, QKeySequence,
 )
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
-    QScrollArea, QFrame, QMessageBox, QCheckBox, QSizePolicy,
+    QScrollArea, QFrame, QMessageBox, QCheckBox, QSizePolicy, QProgressBar,
 )
 
 import fixtext_check as checkdata
 from fixtext_tokens import c, sp, r, fs, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import Card, Switch, Pill, FieldRow, EmptyState, hline, px
 
-
 # ---------------------------------------------------------------------------
-# 检查项（自动执行的检查与规则，条数由真实报告算）
+# 状态机 / 规则 UI
 # ---------------------------------------------------------------------------
 
-#: (名称, 说明, 计入的分类)
+PHASE_EMPTY = "empty"
+PHASE_READY = "ready"
+PHASE_RUNNING = "running"
+PHASE_RESULT = "result"
+
 CHECKS = [
     ("缺左引号 / 缺右引号", "配对栈中发现未闭合或多余", ("缺左引号", "缺右引号")),
     ("引号交叉错乱",       "双套内又出现独立双引号",    ("引号交叉错乱",)),
@@ -49,18 +46,37 @@ CHECKS = [
     ("英文撇号误报过滤",   "前后为字母的撇号不计错",    ("其他引号问题",)),
 ]
 
-RULES = [
-    (1, "双套双引号改单引号",   "外层双引号内再出现双引号时，把内层改为单引号", True),
-    (2, "写反引号反转",         "左右引号写反时调换",                         True),
-    (3, "连续同向引号归一",     "连续两个左 / 右引号收回一个",                 True),
-    (4, "句尾孤立右引号移除",   "句末无配对的右引号删除",                     True),
-    (5, "补左引号",             "缺左引号处补入",                             True),
-    (6, "按文件类型补右引号",   "依文件类型（TXT / EPUB 合并）规则补右引号",   True),
-    (7, "最外层单引号批量改双引号", "批量把最外层单引号统一改双引号",           True),
-]
+#: 与 R1 RULE_IDS / 原型面板对齐（#6 名「补右引号」）
+RULE_UI: tuple[tuple[str, str, str], ...] = (
+    ("nested_doubles", "双套双引号改单引号", "外层双引号内再出现双引号时，把内层改为单引号"),
+    ("reverted_quotations", "写反引号反转", "左右引号写反时调换"),
+    ("repeated_quotations", "连续同向引号归一", "连续两个左 / 右引号收回一个"),
+    ("sole_right_double", "句尾孤立右双引号移除", "句末无配对的右双引号删除"),
+    ("sole_right_single", "句尾孤立右单引号移除", "句末无配对的右单引号删除"),
+    ("missing_left_double", "补左引号", "缺左引号处补入"),
+    ("missing_right_double", "补右引号", "在段落末尾补上缺失的右引号"),
+)
 
-#: 问题清单每页条数（真实报告动辄上百条，翻页而不是截断）
 PAGE_SIZE = 40
+
+
+def _vendor_path() -> Path:
+    try:
+        from fixtext_paths import pkg_root
+        return pkg_root() / "pipeline" / "vendor"
+    except Exception:  # pragma: no cover
+        return Path(__file__).resolve().parent.parent / "pipeline" / "vendor"
+
+
+def _load_engine():
+    v = _vendor_path()
+    if str(v) not in sys.path:
+        sys.path.insert(0, str(v))
+    from fixtext_quotation.fixer import QuotationFixer, fix_text
+    from fixtext_quotation.rules import (
+        QuotationFixRules, load_fix_rules, save_fix_rules, default_rules_path,
+    )
+    return QuotationFixer, fix_text, QuotationFixRules, load_fix_rules, save_fix_rules, default_rules_path
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +85,6 @@ PAGE_SIZE = 40
 
 class ProblemRow(QFrame):
     clicked = Signal(int)
-    #: 「加入词库」按钮被点（§2.4.2 第 4 条：检查页问题行 → 预览 → 确认加入）
     addRequested = Signal(int)
 
     def __init__(self, idx: int, p: dict, selected: bool, parent=None):
@@ -78,7 +93,6 @@ class ProblemRow(QFrame):
         state = p.get("state")
         border = c("primary.500") if selected else c("neutral.100")
         bg = c("primary.50") if selected else c("neutral.0")
-        # 精确选择器：# 内联 QSS 的类型选择器会连带命中 QLabel（QLabel 是 QFrame 子类）
         self.setObjectName("ProblemRow")
         self.setStyleSheet(
             f"QFrame#ProblemRow{{background:{bg};border:1px solid {border};"
@@ -117,7 +131,6 @@ class ProblemRow(QFrame):
             badge = Pill("待确认", "warn")
         hl.addWidget(badge)
 
-        # 加入词库：把这一处的可疑写法收进「我的词库」，下次同类直接纠正
         self.add_btn = QPushButton("＋词库")
         self.add_btn.setObjectName("LinkBtn")
         self.add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -137,6 +150,34 @@ class ProblemRow(QFrame):
         super().mousePressEvent(event)
 
 
+class _ScanWorker(QThread):
+    """后台扫描当前书文本。"""
+
+    finished_ok = Signal(object)
+    finished_err = Signal(str)
+
+    def __init__(self, text: str, book: str, path: str, parent=None):
+        super().__init__(parent)
+        self._text = text
+        self._book = book
+        self._path = path
+        self._cancel = False
+
+    def cancel(self) -> None:
+        self._cancel = True
+
+    def run(self) -> None:
+        try:
+            report = checkdata.scan_text(
+                self._text, book=self._book, source_path=self._path)
+            if self._cancel:
+                return
+            self.finished_ok.emit(report)
+        except Exception as exc:  # noqa: BLE001
+            if not self._cancel:
+                self.finished_err.emit(str(exc))
+
+
 # ---------------------------------------------------------------------------
 # 模块
 # ---------------------------------------------------------------------------
@@ -145,27 +186,34 @@ class CheckModule(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        #: 真实报告（``fixtext_check.load_report`` 的返回；None = 还没校正过）
+        self.phase = PHASE_EMPTY
         self.report: dict | None = None
         self.probs: list[dict] = []
         self.cur = 0
         self._page = 0
         self.ins_buf = ""
-        self.undo = []
-        self.basis_labels = []
+        self.undo: list = []
+        self.basis_labels: list = []
         self._marks: dict[str, str] = {}
         self._run_dir: str = ""
-        #: 词库写入口（由主窗口注入；None 时「＋词库」只给引导，不静默失败）
         self.vocab_store = None
-        #: 最近一次加入结果的还原点（供界面提示「可撤销」）
         self.last_add_point: int = 0
+
+        self._text_path: str = ""
+        self._book_name: str = ""
+        self._book_ext: str = "txt"
+        self._book_text: str = ""
+        self._rules_path: Path | None = None
+        self._worker: _ScanWorker | None = None
+        self._text_undo_stack: list[str] = []  # 整书正文撤销（写回用）
 
         self._toast_timer = QTimer(self)
         self._toast_timer.setSingleShot(True)
         self._toast_timer.timeout.connect(self._hide_status)
 
         self._build()
-        self.set_empty()
+        self._load_rules_into_ui()
+        self.set_book("", "")
         self._bind_shortcuts()
 
     # ------------------------------------------------------------------ 构建
@@ -185,58 +233,58 @@ class CheckModule(QWidget):
 
         root.addWidget(self._head())
 
-        # 无数据空状态（原型 v3 §4）：还没有可检查的书（未跑过校正）时
-        # 整页内容区换成这条引导；由真实状态触发（report 是否注入）。
         self.empty_state = EmptyState(
             "🔍", "还没有可检查的书",
-            "请先导入一本书并完成校正，之后才能逐处检查标点与引号问题。"
+            "请先导入一本书，之后才能逐处检查标点与引号问题。"
             "当前页面在有书状态下展示；无书时仅显示此引导。")
         root.addWidget(self.empty_state)
 
-        # 常规内容区：有报告才显示
         self._content_w = QWidget()
         cl = QVBoxLayout(self._content_w)
         cl.setContentsMargins(0, 0, 0, 0)
         cl.setSpacing(px(sp("4")))
         cl.addWidget(self._bookbar())
-        cl.addWidget(self._stats_bar())
-        cl.addLayout(self._columns())
-        cl.addWidget(self._action_bar())
-        cl.addWidget(self._rules_card())
-        cl.addWidget(self._batch_card())
+        cl.addWidget(self._top_bar())
+        self.pass_banner = QLabel("✓ 检查通过，未发现引号问题")
+        self.pass_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.pass_banner.setStyleSheet(
+            f"color:{c('success')};font-weight:700;font-size:{fs('md')};"
+            f"background:{c('success.bg')};border-radius:{r('md')};padding:14px")
+        self.pass_banner.setVisible(False)
+        cl.addWidget(self.pass_banner)
+        self._result_w = QWidget()
+        rl = QVBoxLayout(self._result_w)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.setSpacing(px(sp("4")))
+        rl.addLayout(self._columns())
+        rl.addWidget(self._action_bar())
+        rl.addWidget(self._rules_card())
+        rl.addWidget(self._batch_card())
+        rl.addWidget(self._checks_card())
+        cl.addWidget(self._result_w)
         root.addWidget(self._content_w)
 
         root.addWidget(self._legend())
         root.addWidget(self._status_label())
-        self._apply_data_presence()
-
-    def _apply_data_presence(self) -> None:
-        """按「有没有一次真实检查结果」切换布局（真实状态触发，无假数据）。"""
-        has = self.has_data
-        self._content_w.setVisible(has)
-        self.empty_state.setVisible(not has)
+        self._apply_phase()
 
     def _head(self) -> QWidget:
         w = QWidget()
         hl = QHBoxLayout(w)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
-
         col = QVBoxLayout()
         col.setSpacing(2)
         title = QLabel("检查问题")
         title.setStyleSheet(
             f"color:{c('neutral.900')};font-size:{fs('2xl')};"
-            f"font-weight:{FONT_WEIGHT['bold']}"
-        )
+            f"font-weight:{FONT_WEIGHT['bold']}")
         sub = QLabel(
-            "引号配对检查 + 逐处交互修复。检查结果可定位、可单独处理、可撤销。"
-        )
+            "引号配对检查 + 逐处交互修复。检查结果可定位、可单独处理、可撤销。")
         sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('md')}")
         col.addWidget(title)
         col.addWidget(sub)
         hl.addLayout(col, 1)
-
         self.basis_cb = QCheckBox("显示设计依据")
         self.basis_cb.setCursor(Qt.CursorShape.PointingHandCursor)
         self.basis_cb.toggled.connect(self._toggle_basis)
@@ -253,44 +301,70 @@ class CheckModule(QWidget):
         card = self._card(basis="§2.2 入口③ · 逐处人工确认")
         hl = QHBoxLayout()
         hl.setSpacing(14)
-
         ico = QLabel("📖")
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setFixedSize(40, 40)
         ico.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:10px;font-size:19px"
-        )
+            f"border-radius:10px;font-size:19px")
         hl.addWidget(ico)
-
         col = QVBoxLayout()
         col.setSpacing(2)
-        self.book_name = QLabel("尚未校正")
+        self.book_name = QLabel("")
         self.book_name.setStyleSheet(
-            f"color:{c('neutral.900')};font-weight:700;font-size:{fs('md')}"
-        )
+            f"color:{c('neutral.900')};font-weight:700;font-size:{fs('md')}")
         self.book_meta = QLabel("")
         self.book_meta.setStyleSheet(
             f"color:{c('neutral.500')};font-size:{fs('xs')}")
         col.addWidget(self.book_name)
         col.addWidget(self.book_meta)
         hl.addLayout(col)
-
         hl.addStretch(1)
         hl.addWidget(Pill("编辑器可改文并保存回写", "info"))
         card.body_l.addLayout(hl)
         return card
 
-    def _stats_bar(self) -> Card:
-        card = Card()
+    def _top_bar(self) -> Card:
+        """待检查 / 运行 / 结果：一态一键主按钮。"""
+        card = self._card(basis="§2.7.4 · 检查 / 处理")
         hl = QHBoxLayout()
-        hl.setSpacing(10)
+        hl.setSpacing(12)
+
+        self._ready_text = QWidget()
+        rt = QVBoxLayout(self._ready_text)
+        rt.setContentsMargins(0, 0, 0, 0)
+        rt.setSpacing(2)
+        t1 = QLabel("检查引号问题")
+        t1.setStyleSheet(
+            f"color:{c('neutral.900')};font-weight:700;font-size:{fs('md')}")
+        t2 = QLabel("扫描当前书的引号配对，逐处确认修复；可定位、可单独处理、可撤销。")
+        t2.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        t2.setWordWrap(True)
+        rt.addWidget(t1)
+        rt.addWidget(t2)
+        hl.addWidget(self._ready_text, 1)
+
         self.stats = QLabel("")
         self.stats.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
-        hl.addWidget(self.stats)
-        hl.addStretch(1)
-        hl.addWidget(self._btn("只统计不修复", "BtnOutline", self.only_count))
-        hl.addWidget(self._btn("结束检查", "BtnDanger", self.end_check))
+        hl.addWidget(self.stats, 1)
+
+        self._run_box = QWidget()
+        rb = QVBoxLayout(self._run_box)
+        rb.setContentsMargins(0, 0, 0, 0)
+        rb.setSpacing(4)
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 0)  # busy
+        self.progress.setTextVisible(False)
+        self.progress.setFixedHeight(8)
+        self.run_tip = QLabel("正在扫描引号配对…")
+        self.run_tip.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        rb.addWidget(self.progress)
+        rb.addWidget(self.run_tip)
+        hl.addWidget(self._run_box, 1)
+
+        self.main_btn = self._btn("🔍 开始检查", "BtnPrimary", self.on_main)
+        self.main_btn.setMinimumWidth(140)
+        hl.addWidget(self.main_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         card.body_l.addLayout(hl)
         return card
 
@@ -298,28 +372,11 @@ class CheckModule(QWidget):
         row = QHBoxLayout()
         row.setSpacing(px(sp("4")))
 
-        # ---- 左列 ----
         left = QVBoxLayout()
         left.setSpacing(px(sp("4")))
-
-        checks = self._card(
-            "检查项（自动执行）", collapsible=True, open_=True,
-            basis="§2.7.4 · 检查项自动执行无开关",
-        )
-        self._check_rows: list[FieldRow] = []
-        self._check_chips: list[tuple[int, FieldRow]] = []
-        for i, (name, desc, _kinds) in enumerate(CHECKS):
-            if i:
-                checks.body_l.addWidget(hline())
-            fr = FieldRow(i + 1, name, desc, chip="—")
-            checks.body_l.addWidget(fr)
-            self._check_rows.append(fr)
-        left.addWidget(checks)
-
         probs_card = self._card(
             "问题清单", "点击任一问题，右侧定位", collapsible=True, open_=True,
-            basis="§2.7.4 · 问题清单 · 点击定位",
-        )
+            basis="§2.7.4 · 问题清单 · 点击定位")
         self.probs_title = probs_card
         sc = QScrollArea()
         sc.setWidgetResizable(True)
@@ -337,33 +394,26 @@ class CheckModule(QWidget):
         left.addWidget(probs_card)
         left.addStretch(1)
 
-        # ---- 右列 ----
         right = QVBoxLayout()
         right.setSpacing(px(sp("4")))
-
         ed = self._card(
             "正文（当前问题上下文）", "可直接改文，保存后自动跳下一处",
             collapsible=True, open_=True,
-            basis="§2.7.4 · 右栏编辑器 · 保存并下一处",
-        )
+            basis="§2.7.4 · 右栏编辑器 · 保存并下一处")
         ed.body_l.setSpacing(10)
-
         self.editor = QTextEdit()
         self.editor.setMinimumHeight(150)
         self.editor.setStyleSheet(
             f"QTextEdit{{background:{c('neutral.50')};"
             f"border:1px solid {c('neutral.200')};border-radius:{r('md')};"
             f"padding:12px;font-family:{FONT_MONO};font-size:{fs('sm')};"
-            f"color:{c('neutral.800')}}}"
-        )
+            f"color:{c('neutral.800')}}}")
         ed.body_l.addWidget(self.editor)
-
         self.advice = QLabel("")
         self.advice.setWordWrap(True)
         self.advice.setStyleSheet(
             f"color:{c('neutral.600')};font-size:{fs('sm')};background:transparent")
         ed.body_l.addWidget(self.advice)
-
         ed.body_l.addLayout(self._label_row("四类引号快捷变换", "Alt+1~4"))
         ed.body_l.addLayout(self._quote_buttons([
             ("前后引号互换", 1), ("单双引号互转", 2),
@@ -399,8 +449,7 @@ class CheckModule(QWidget):
         hl.setSpacing(8)
         lab = QLabel(text)
         lab.setStyleSheet(
-            f"color:{c('neutral.800')};font-weight:700;font-size:{fs('sm')}"
-        )
+            f"color:{c('neutral.800')};font-weight:700;font-size:{fs('sm')}")
         hl.addWidget(lab)
         hl.addWidget(Pill(shortcut, "warn"))
         hl.addStretch(1)
@@ -434,44 +483,59 @@ class CheckModule(QWidget):
     def _rules_card(self) -> Card:
         card = self._card(
             "自动修复规则", "7 条，逐条可开关", collapsible=True, open_=False,
-            basis="§2.7.4 · 7 条规则逐条可开关",
-        )
-        self.rule_switches = {}
-        for i, (n, name, desc, on) in enumerate(RULES):
+            basis="§2.7.4 · 7 条规则逐条可开关")
+        self.rule_switches: dict[str, Switch] = {}
+        for i, (rid, name, desc) in enumerate(RULE_UI):
             if i:
                 card.body_l.addWidget(hline())
-            sw = Switch(on)
-            self.rule_switches[n] = sw
-            card.body_l.addWidget(FieldRow(n, name, desc, control=sw))
-
+            sw = Switch(True)
+            sw.toggled.connect(lambda _on, r=rid: self._on_rule_toggled(r))
+            self.rule_switches[rid] = sw
+            card.body_l.addWidget(FieldRow(i + 1, name, desc, control=sw))
         card.body_l.addWidget(hline())
         foot = QHBoxLayout()
         tip = QLabel("7 条规则逐条可开关，配置按用户持久化。")
         tip.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
         foot.addWidget(tip)
         foot.addStretch(1)
-        foot.addWidget(self._btn("保存配置", "BtnGhost",
-                                 lambda: self.toast("规则配置已保存")))
+        foot.addWidget(self._btn("保存配置", "BtnGhost", self.save_rules_config))
         card.body_l.addLayout(foot)
         return card
 
     def _batch_card(self) -> Card:
         card = self._card(
             "批量操作", "执行前预览影响条数", collapsible=True, open_=True,
-            basis="§2.7.4 · 批量操作二次确认 + 预览",
-        )
+            basis="§2.7.4 · 批量操作二次确认 + 预览")
         card.body_l.addWidget(FieldRow(
             None, "最外层单引号批量改双引号", "把最外层的 ‘…’ 统一改为 “…”",
             control=self._btn("执行", "BtnOutline", self.batch_op),
-            name_width=190,
-        ))
+            name_width=190))
+        card.body_l.addWidget(hline())
+        card.body_l.addWidget(FieldRow(
+            None, "按已启用规则修复全部",
+            "用当前已开启的规则批量修复全部问题（可撤销）",
+            control=self._btn("执行", "BtnOutline", self.batch_fix_all),
+            name_width=190))
         return card
+
+    def _checks_card(self) -> Card:
+        """检查项说明卡置底（原型参考区）。"""
+        checks = self._card(
+            "检查项（自动执行）", collapsible=True, open_=True,
+            basis="§2.7.4 · 检查项自动执行无开关")
+        self._check_rows: list[FieldRow] = []
+        for i, (name, desc, _kinds) in enumerate(CHECKS):
+            if i:
+                checks.body_l.addWidget(hline())
+            fr = FieldRow(i + 1, name, desc, chip="—")
+            checks.body_l.addWidget(fr)
+            self._check_rows.append(fr)
+        return checks
 
     def _legend(self) -> QLabel:
         lab = QLabel(
             "勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。"
-            "「逐处人工确认」是这个模块的核心价值，不能只做「一键修复全部」。"
-        )
+            "「逐处人工确认」是这个模块的核心价值，不能只做「一键修复全部」。")
         lab.setWordWrap(True)
         lab.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
         return lab
@@ -482,70 +546,334 @@ class CheckModule(QWidget):
         self.status.setWordWrap(True)
         self.status.setStyleSheet(
             f"background:{c('neutral.800')};color:#FFFFFF;"
-            f"border-radius:{r('md')};padding:10px 16px;font-size:{fs('sm')}"
-        )
+            f"border-radius:{r('md')};padding:10px 16px;font-size:{fs('sm')}")
         self.status.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         return self.status
 
-    # ------------------------------------------------------------------ 数据注入
+    # ------------------------------------------------------------------ 书 / 相位
+
+    @property
+    def has_book(self) -> bool:
+        return bool(self._text_path)
 
     @property
     def has_data(self) -> bool:
-        """是否已注入真实报告且报告里有条目。"""
-        return bool(self.report and self.report.get("ok") and self.probs)
+        """有可逐处处理的条目（结果态或兼容 set_report 注入）。"""
+        if not self.probs:
+            return False
+        if self.phase == PHASE_RESULT:
+            return True
+        return bool(self.report and self.report.get("ok"))
+
+    @property
+    def is_pass(self) -> bool:
+        return (
+            self.phase == PHASE_RESULT
+            and bool(self.report and self.report.get("ok"))
+            and not self.probs
+        )
+
+    def set_rules_path(self, path: str | Path | None) -> None:
+        """用户区规则文件；``None`` 时用 workspace 默认。"""
+        self._rules_path = Path(path) if path else None
+        self._load_rules_into_ui()
+
+    def set_book(
+        self,
+        text_path: str,
+        book_name: str = "",
+        *,
+        book_ext: str = "txt",
+        rules_dir: str | Path | None = None,
+    ) -> None:
+        """挂当前书。无路径 → 空态；有路径 → 待检查（清掉上一轮结果）。"""
+        self._cancel_worker()
+        self._text_path = str(text_path or "")
+        self._book_name = book_name or (
+            Path(self._text_path).parent.name if self._text_path else "")
+        self._book_ext = (book_ext or "txt").lstrip(".")
+        if rules_dir is not None:
+            _, _, _, _, _, default_rules_path = _load_engine()
+            self._rules_path = default_rules_path(rules_dir)
+        self.report = None
+        self.probs = []
+        self.cur = 0
+        self._page = 0
+        self.undo = []
+        self._text_undo_stack = []
+        self.ins_buf = ""
+        self._book_text = ""
+        if self._text_path:
+            try:
+                self._book_text = Path(self._text_path).read_text(encoding="utf-8")
+            except Exception:
+                self._book_text = ""
+            self.phase = PHASE_READY
+        else:
+            self.phase = PHASE_EMPTY
+        self._load_rules_into_ui()
+        self._apply_phase()
+        self.render()
 
     def set_report(self, report: dict | None) -> None:
-        """注入一次真实运行的引号检查结果（``fixtext_check.load_report`` 的返回）。
-
-        报告为空 / 读失败 → 自动落到空状态引导，不显示任何假条目。
-        """
+        """兼容旧注入：直接进入结果态（测试 / 过渡）。"""
+        self._cancel_worker()
         if not report or not report.get("ok"):
-            self.set_empty(reason=(report or {}).get("reason", ""))
+            if self.has_book:
+                self.phase = PHASE_READY
+                self.report = None
+                self.probs = []
+            else:
+                self.phase = PHASE_EMPTY
+                self.report = None
+                self.probs = []
+            self._apply_phase()
+            self.render()
             return
         self.report = report
         self._run_dir = str(report.get("run_dir") or "")
+        cf = str(report.get("checked_file") or "")
+        if cf and not self._text_path:
+            self._text_path = cf
+            try:
+                self._book_text = Path(cf).read_text(encoding="utf-8")
+            except Exception:
+                pass
+        if report.get("book"):
+            self._book_name = str(report["book"])
         self.probs = [dict(it) for it in report.get("items") or []]
         self._page = 0
         self.cur = 0
         self.undo = []
         self.ins_buf = ""
         self.set_marks(self._marks)
-        self._render_bookbar()
+        self.phase = PHASE_RESULT
+        self._apply_phase()
         self.render()
 
     def set_marks(self, marks: dict[str, str] | None = None) -> None:
-        """贴上/更新复核标记（已修复、已跳过）。"""
         self._marks = dict(marks or {})
         for it in self.probs:
             state = self._marks.get(checkdata.mark_key(it))
             it["state"] = state if state in ("fixed", "skip") else None
 
     def set_empty(self, reason: str = "") -> None:
-        """空状态：还没校正过（或报告读不到）时的人话引导。"""
+        self.set_book("", "")
+        self._empty_reason = reason
+
+    def _apply_phase(self) -> None:
+        is_empty = self.phase == PHASE_EMPTY or not self.has_book
+        self.empty_state.setVisible(is_empty)
+        self._content_w.setVisible(not is_empty)
+        if is_empty:
+            return
+
+        running = self.phase == PHASE_RUNNING
+        ready = self.phase == PHASE_READY
+        result = self.phase == PHASE_RESULT
+
+        self._ready_text.setVisible(ready)
+        self._run_box.setVisible(running)
+        self.stats.setVisible(result)
+        self.pass_banner.setVisible(self.is_pass)
+        # 有问题时才显示清单/编辑器等；通过态只留横幅 + 顶栏
+        show_work = result and not self.is_pass
+        self._result_w.setVisible(show_work)
+
+        if ready:
+            self.main_btn.setText("🔍 开始检查")
+            self.main_btn.setObjectName("BtnPrimary")
+        elif running:
+            self.main_btn.setText("✕ 取消")
+            self.main_btn.setObjectName("BtnOutline")
+        else:
+            self.main_btn.setText("↻ 重新检查")
+            self.main_btn.setObjectName("BtnPrimary")
+        # 刷新 QSS 对象名
+        self.main_btn.style().unpolish(self.main_btn)
+        self.main_btn.style().polish(self.main_btn)
+
+        name = self._book_name or "当前书"
+        self.book_name.setText(f"《{name}》.{self._book_ext}")
+        if ready:
+            self.book_meta.setText("待检查")
+        elif running:
+            self.book_meta.setText("检查中…")
+        elif self.is_pass:
+            self.book_meta.setText("检查通过")
+        else:
+            self.book_meta.setText(f"共 {len(self.probs)} 处待确认")
+
+    # ------------------------------------------------------------------ 规则
+
+    def _rules_file(self) -> Path:
+        _, _, _, _, _, default_rules_path = _load_engine()
+        if self._rules_path is not None:
+            return self._rules_path
+        try:
+            from fixtext_paths import pkg_root
+            return default_rules_path(pkg_root() / "workspace")
+        except Exception:
+            return default_rules_path(Path("workspace"))
+
+    def _load_rules_into_ui(self) -> None:
+        _, _, _, load_fix_rules, _, _ = _load_engine()
+        rules = load_fix_rules(self._rules_file())
+        for rid, sw in self.rule_switches.items():
+            sw.blockSignals(True)
+            sw.setChecked(bool(getattr(rules, rid, True)))
+            sw.blockSignals(False)
+
+    def current_rules(self):
+        _, _, QuotationFixRules, _, _, _ = _load_engine()
+        d = {rid: sw.isChecked() for rid, sw in self.rule_switches.items()}
+        return QuotationFixRules.from_mapping(d)
+
+    def _on_rule_toggled(self, _rid: str) -> None:
+        # 即时持久化，避免只点开关却忘了「保存配置」
+        self.save_rules_config(silent=True)
+        self._refresh_advice_for_rules()
+
+    def save_rules_config(self, silent: bool = False) -> None:
+        _, _, _, _, save_fix_rules, _ = _load_engine()
+        save_fix_rules(self.current_rules(), self._rules_file())
+        if not silent:
+            self.toast("规则配置已保存")
+
+    def _refresh_advice_for_rules(self) -> None:
+        """关闭的规则：对应条目去掉自动改法建议（不参与修复建议）。"""
+        enabled = set(self.current_rules().enabled_ids())
+        for p in self.probs:
+            rid = p.get("rule_id")
+            if rid and rid not in enabled:
+                p["_advice_blocked"] = True
+            else:
+                p.pop("_advice_blocked", None)
+        if self.phase == PHASE_RESULT and self.probs:
+            self._render_editor()
+
+    def rule_allows_item(self, p: dict) -> bool:
+        rid = p.get("rule_id")
+        if not rid:
+            return True  # 无映射规则的人工项仍可手动处理
+        return bool(getattr(self.current_rules(), rid, False))
+
+    # ------------------------------------------------------------------ 扫描
+
+    def on_main(self) -> None:
+        if self.phase == PHASE_RUNNING:
+            self.cancel_check()
+        else:
+            self.start_check()
+
+    def start_check(self, *, sync: bool = False) -> None:
+        """开始 / 重新检查。``sync=True`` 供单测同步跑完。"""
+        if not self.has_book:
+            self.toast("请先导入一本书")
+            return
+        if self.phase == PHASE_RUNNING and not sync:
+            return
+        try:
+            self._book_text = Path(self._text_path).read_text(encoding="utf-8")
+        except Exception as exc:
+            self.toast(f"读不到当前书正文：{exc}")
+            return
+
+        self.phase = PHASE_RUNNING
+        self._apply_phase()
+        self.run_tip.setText("正在扫描引号配对…")
+
+        if sync:
+            report = checkdata.scan_text(
+                self._book_text, book=self._book_name,
+                source_path=self._text_path)
+            self._on_scan_ok(report)
+            return
+
+        self._cancel_worker()
+        self._worker = _ScanWorker(
+            self._book_text, self._book_name, self._text_path, self)
+        self._worker.finished_ok.connect(self._on_scan_ok)
+        self._worker.finished_err.connect(self._on_scan_err)
+        self._worker.start()
+
+    def cancel_check(self) -> None:
+        self._cancel_worker()
+        self.phase = PHASE_READY
         self.report = None
         self.probs = []
+        self._apply_phase()
+        self.render()
+        self.toast("已取消检查")
+
+    def _cancel_worker(self) -> None:
+        if self._worker is not None:
+            self._worker.cancel()
+            self._worker.wait(800)
+            self._worker = None
+
+    def _on_scan_ok(self, report: object) -> None:
+        self._worker = None
+        if not isinstance(report, dict):
+            self._on_scan_err("扫描结果异常")
+            return
+        self.report = report
+        self.probs = [dict(it) for it in report.get("items") or []]
         self.cur = 0
         self._page = 0
-        self._empty_reason = reason or (
-            "这里显示每次校正后真实检出的引号问题。先去「一键校正」跑一次，"
-            "回来就能逐处检查。")
-        self._render_bookbar()
+        self.undo = []
+        self.ins_buf = ""
+        self._refresh_advice_for_rules()
+        self.phase = PHASE_RESULT
+        self._apply_phase()
         self.render()
-
-    def _render_bookbar(self):
-        if self.has_data:
-            book = self.report.get("book") or ""
-            self.book_name.setText(f"《{book}》" if book else "本次校正的书")
-            counts = (f"共 <b>{self.report.get('found', 0)}</b> 处待确认")
-            if not self.report.get("consistent", True):
-                counts += (f"（报告声明 {self.report.get('declared')} 处，"
-                           f"读取到 {self.report.get('found')} 处，已如实并列）")
-            self.book_meta.setText(f"已校正 · {counts}")
+        n = len(self.probs)
+        if n == 0:
+            self.toast("检查通过，未发现引号问题")
         else:
-            self.book_name.setText("尚未校正")
-            self.book_meta.setText(str(getattr(self, "_empty_reason", ""))[:120])
+            self.toast(f"检查完成，共 {n} 处待确认")
 
-    # ------------------------------------------------------------------ 行为
+    def _on_scan_err(self, msg: str) -> None:
+        self._worker = None
+        self.phase = PHASE_READY
+        self._apply_phase()
+        self.toast(f"检查失败：{msg}")
+
+    # ------------------------------------------------------------------ 写回
+
+    def _write_book_text(self, text: str) -> bool:
+        if not self._text_path:
+            return False
+        try:
+            Path(self._text_path).write_text(text, encoding="utf-8", newline="\n")
+            self._book_text = text
+            return True
+        except Exception as exc:
+            self.toast(f"写回失败：{exc}")
+            return False
+
+    def _push_text_undo(self) -> None:
+        self._text_undo_stack.append(self._book_text)
+
+    def _replace_line_in_book(self, line_no: int, new_line_body: str) -> str | None:
+        """替换 1-based 行内容（保留原行尾换行形态），返回新全文。"""
+        raw = self._book_text
+        # 与 checker 一致按 \\n 切
+        parts = raw.split("\n")
+        # 若原文以 \\n 结尾，split 末尾多一个空串
+        ends_nl = raw.endswith("\n")
+        idx = line_no - 1
+        if idx < 0 or idx >= len(parts) - (1 if ends_nl and parts[-1] == "" else 0):
+            # 宽松：允许最后一行
+            if idx < 0 or idx >= len(parts):
+                return None
+        # 去掉该行残留 \\r
+        body = new_line_body.replace("\r", "").replace("\n", "")
+        had_cr = "\r" in (parts[idx] if idx < len(parts) else "")
+        parts[idx] = body + ("\r" if had_cr else "")
+        return "\n".join(parts)
+
+    # ------------------------------------------------------------------ 渲染
 
     def _bind_shortcuts(self):
         ctx = Qt.ShortcutContext.WidgetWithChildrenShortcut
@@ -570,41 +898,35 @@ class CheckModule(QWidget):
     def _hide_status(self):
         self.status.setVisible(False)
 
-    # ------------------------------------------------------------------ 渲染
-
-    def _follow_cursor(self):
-        """当前处不在本页时把页码跟过去（「下一处」跨页跳转时）。"""
-        if not self.has_data:
-            return
-        page = self.cur // PAGE_SIZE
-        if page != self._page:
-            self._page = page
-
     def render(self):
-        self._apply_data_presence()
+        self._apply_phase()
+        if self.phase != PHASE_RESULT or self.is_pass:
+            return
         self._follow_cursor()
         self._render_checks()
         self._render_probs()
         self._render_editor()
         self._render_stats()
-        self._render_bookbar()
+
+    def _follow_cursor(self):
+        if not self.probs:
+            return
+        page = self.cur // PAGE_SIZE
+        if page != self._page:
+            self._page = page
 
     @property
     def pages(self) -> int:
-        return max(1, math.ceil(len(self.probs) / PAGE_SIZE))
+        return max(1, math.ceil(len(self.probs) / PAGE_SIZE)) if self.probs else 1
 
     def _render_checks(self):
-        """检查项的实际条数来自真实报告。"""
         for i, (_name, _desc, kinds) in enumerate(CHECKS):
             n = sum(1 for p in self.probs if p.get("type") in kinds)
-            chip = f"{n} 处" if self.has_data else "—"
+            chip = f"{n} 处" if self.probs else "—"
             if i < len(self._check_rows):
                 self._check_rows[i].set_chip(chip)
 
     def _render_stats(self):
-        if not self.has_data:
-            self.stats.setText("尚未校正 · 还没有可检查的结果")
-            return
         done = sum(1 for p in self.probs if p.get("state"))
         self.stats.setText(
             f"共 <b>{len(self.probs)}</b> 处 · 已处理 <b>{done}</b> · "
@@ -617,18 +939,9 @@ class CheckModule(QWidget):
             w = item.widget()
             if w is not None:
                 w.deleteLater()
-        if not self.has_data:
-            empty = QLabel(self._empty_text())
-            empty.setWordWrap(True)
-            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            empty.setStyleSheet(
-                f"color:{c('neutral.500')};font-size:{fs('sm')};"
-                f"border:1px dashed {c('neutral.300')};border-radius:10px;"
-                f"padding:22px 16px;background:{c('neutral.50')}")
-            self.prob_box.addWidget(empty)
+        if not self.probs:
             self._update_pager()
             return
-
         start = self._page * PAGE_SIZE
         chunk = self.probs[start:start + PAGE_SIZE]
         for off, p in enumerate(chunk):
@@ -640,138 +953,9 @@ class CheckModule(QWidget):
         self.prob_box.addStretch(1)
         self._update_pager()
 
-    # -------------------------------------------------- 问题行 → 加入词库（§2.4.2 第 4 条）
-
-    def set_vocab_store(self, store) -> None:
-        """注入词库写入口（T3.1 的五操作同一入口，加入也走它 → 天然可撤销）。"""
-        self.vocab_store = store
-
-    def problem_candidate(self, i: int) -> dict:
-        """把第 i 处问题整理成一条待加入词库的词条。
-
-        词库规则是**全书生效**的：一条 ``”`` → ``“”`` 的规则会让全书每一个右引号
-        都被改写。检查页这一版的问题全是引号配对（一处一个标点），所以这里
-        不拿单个字符当词条，而是把**这一句的写法**整段作为词条——规则只在同样
-        写法出现时才生效，既保住了「加入词库」这条快路，又不会波及全书。
-
-        连上下文都没有、只剩一个标点时：返回 ``blocked`` 原因，界面拦截不写。
-        """
-        p = self.probs[i]
-        hl = str(p.get("hl") or "").strip()
-        fixed = checkdata.apply_action(p).strip()
-        pre = str(p.get("pre") or "").rstrip()
-        post = str(p.get("post") or "").lstrip()
-
-        word, value, scope = hl, fixed, "单处"
-        if self.vocab_word_blocker(hl):
-            # 单个标点做词条会改坏全书 → 用整句上下文收窄生效范围
-            if pre:
-                word, value = pre + hl, pre + fixed
-                scope = "整句"
-            elif post:
-                word, value = hl + post, fixed + post
-                scope = "整句"
-            else:
-                word, value = hl, fixed
-        return dict(
-            word=word,
-            value=(value or word),
-            type=("缺字漏字" if (p.get("action") or {}).get("mode") in
-                  ("prepend", "append") else "错词校正"),
-            count=1,
-            scope=scope,
-            blocked=self.vocab_word_blocker(word),
-            note=f"检查页第 {p.get('line')} 行 · {p.get('type') or ''}".strip(" ·"),
-        )
-
-    @staticmethod
-    def vocab_word_blocker(word: str) -> str:
-        """判断这个词能不能进词库；能进返回空串，不能进返回人话原因。
-
-        词库规则是**全书生效**的：一条 `”` → `“”` 的规则会让全书每一个右引号
-        都被改写。所以标点/单字符这类「一处问题」不能直接当作词条写进词库——
-        这是防止用户点一下按钮就把整本书改坏的最后一道门。
-        """
-        w = str(word or "").strip()
-        if not w:
-            return "这一处没有可加入词库的写法"
-        if len(w) < 2:
-            return ("这一处只有一个标点、前后也没有上下文，收进词库会让全书同类"
-                    "标点一起变；请用行内修复逐处处理，或到「词库管理」手动新增")
-        if not any(ch.isalnum() for ch in w):
-            return ("这一处全是标点，收进词库会让全书同类标点一起变；"
-                    "请用行内修复逐处处理，或到「词库管理」手动新增")
-        return ""
-
-    def add_problem_to_vocab(self, i: int) -> dict | None:
-        """问题行「＋词库」：预览 → 确认加入（可撤销、必须查重）。"""
-        if not self._guard() or not (0 <= i < len(self.probs)):
-            return None
-        if self.vocab_store is None:
-            self.toast("词库暂不可用，请到「词库管理」页手动新增这一条")
-            return None
-        cand = self.problem_candidate(i)
-        if cand.get("blocked"):
-            self.toast(cand["blocked"])
-            return None
-        if cand["word"] == cand["value"]:
-            self.toast("这一处还没有可靠的自动改法，暂不建议加入词库")
-            return None
-
-        box = QMessageBox(self)
-        box.setWindowTitle("加入词库预览")
-        box.setIcon(QMessageBox.Icon.Question)
-        box.setText("把这一处写法加入「我的词库」？")
-        box.setInformativeText(
-            f"词条：{cand['word']}\n"
-            f"替换值：{cand['value']}\n"
-            f"类型：{cand['type']}\n"
-            f"生效范围：{cand.get('scope') or '单处'}\n\n"
-            "加入后下次校正同类写法自动生效，加入动作可以撤销。"
-        )
-        box.setStandardButtons(
-            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
-        box.button(QMessageBox.StandardButton.Cancel).setText("取消")
-        box.button(QMessageBox.StandardButton.Ok).setText("确认加入")
-        box.setDefaultButton(QMessageBox.StandardButton.Ok)
-        if box.exec() != QMessageBox.StandardButton.Ok:
-            return None
-
-        try:
-            res = self.vocab_store.add_book_words([cand], str(
-                (self.report or {}).get("book") or ""))
-        except Exception as exc:                       # 词库写失败要说清原因
-            self.toast(f"没有加入：{exc}")
-            return None
-
-        added = int(res.get("added") or 0)
-        skipped = list(res.get("skipped_exists") or [])
-        conflicts = list(res.get("conflicts") or [])
-        self.last_add_point = int(res.get("point_id") or 0)
-        if added:
-            self.toast(f"已加入「{cand['word']}」到「我的词库」，可撤销")
-        elif conflicts:
-            kinds = "、".join(sorted({str(h.get("kind") or "") for c0 in conflicts
-                                      for h in (c0.get("hits") or []) if h.get("kind")}))
-            self.toast(
-                f"没有加入：「{cand['word']}」与词库里已有词条冲突（{kinds}），"
-                "未覆盖已有写法")
-        elif skipped:
-            self.toast(f"没有重复加入：「{cand['word']}」已在词库中")
-        else:
-            self.toast("没有加入：这一条被词库规则跳过")
-        return dict(res, added=added, skipped=len(skipped),
-                    conflicts=len(conflicts), candidate=cand)
-
-    def _empty_text(self) -> str:
-        return (
-            "还没有可检查的结果。先去「一键校正」完成一次校正，"
-            "这次检出的引号问题就会出现在这里，可以逐处确认。"
-        )
-
     def _update_pager(self):
         total = self.pages
-        if not self.has_data:
+        if not self.probs:
             self.page_label.setText("")
             self.prev_btn.setEnabled(False)
             self.next_btn.setEnabled(False)
@@ -785,8 +969,7 @@ class CheckModule(QWidget):
         self.next_btn.setEnabled(self._page + 1 < total)
 
     def turn_page(self, delta: int):
-        if not self.has_data:
-            self.toast(self._empty_text())
+        if not self.probs:
             return
         target = self._page + delta
         if target < 0 or target >= self.pages:
@@ -795,18 +978,18 @@ class CheckModule(QWidget):
         self._render_probs()
 
     def _render_editor(self):
-        if not self.has_data:
+        if not self.probs:
             self.editor.setPlainText("")
-            self.editor.setReadOnly(True)
-            self.advice.setText("校正完成后，这里会显示选中那一处的正文上下文。")
-            self.editor.setExtraSelections([])
+            self.advice.setText("")
             return
         self.editor.setReadOnly(False)
         p = self.probs[self.cur]
         prefix = f"L{p['line']}   "
         self.editor.setPlainText(prefix + p["pre"] + p["hl"] + p["post"] + self.ins_buf)
-        self.advice.setText(p.get("advice") or "")
-
+        advice = p.get("advice") or ""
+        if p.get("_advice_blocked"):
+            advice = "对应自动修复规则已关闭，可手动改文或开启规则后再修。"
+        self.advice.setText(advice)
         length = len(p["hl"])
         if length:
             start = len(prefix) + len(p["pre"])
@@ -815,11 +998,9 @@ class CheckModule(QWidget):
             bg = c("success.bg") if p.get("state") == "fixed" else c("warning.bg")
             fmt.setBackground(QBrush(QColor(bg)))
             fmt.setFontWeight(QFont.Weight.Bold)
-            # 下划线对应原型的 2px 底边，弥补 cream 底在小尺寸下不够醒目
             fmt.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SingleUnderline)
             fmt.setUnderlineColor(
-                QColor(c("success") if p.get("state") == "fixed" else c("warning"))
-            )
+                QColor(c("success") if p.get("state") == "fixed" else c("warning")))
             sel.format = fmt
             cur = self.editor.textCursor()
             cur.setPosition(start)
@@ -829,12 +1010,93 @@ class CheckModule(QWidget):
         else:
             self.editor.setExtraSelections([])
 
+    # ------------------------------------------------------------------ 词库（保留）
+
+    def set_vocab_store(self, store) -> None:
+        self.vocab_store = store
+
+    def problem_candidate(self, i: int) -> dict:
+        p = self.probs[i]
+        hl = str(p.get("hl") or "").strip()
+        fixed = checkdata.apply_action(p).strip()
+        pre = str(p.get("pre") or "").rstrip()
+        post = str(p.get("post") or "").lstrip()
+        word, value, scope = hl, fixed, "单处"
+        if self.vocab_word_blocker(hl):
+            if pre:
+                word, value = pre + hl, pre + fixed
+                scope = "整句"
+            elif post:
+                word, value = hl + post, fixed + post
+                scope = "整句"
+        return dict(
+            word=word, value=(value or word),
+            type=("缺字漏字" if (p.get("action") or {}).get("mode") in
+                  ("prepend", "append") else "错词校正"),
+            count=1, scope=scope,
+            blocked=self.vocab_word_blocker(word),
+            note=f"检查页第 {p.get('line')} 行 · {p.get('type') or ''}".strip(" ·"),
+        )
+
+    @staticmethod
+    def vocab_word_blocker(word: str) -> str:
+        w = str(word or "").strip()
+        if not w:
+            return "这一处没有可加入词库的写法"
+        if len(w) < 2:
+            return ("这一处只有一个标点、前后也没有上下文，收进词库会让全书同类"
+                    "标点一起变；请用行内修复逐处处理，或到「词库管理」手动新增")
+        if not any(ch.isalnum() for ch in w):
+            return ("这一处全是标点，收进词库会让全书同类标点一起变；"
+                    "请用行内修复逐处处理，或到「词库管理」手动新增")
+        return ""
+
+    def add_problem_to_vocab(self, i: int) -> dict | None:
+        if not self._guard() or not (0 <= i < len(self.probs)):
+            return None
+        if self.vocab_store is None:
+            self.toast("词库暂不可用，请到「词库管理」页手动新增这一条")
+            return None
+        cand = self.problem_candidate(i)
+        if cand.get("blocked"):
+            self.toast(cand["blocked"])
+            return None
+        if cand["word"] == cand["value"]:
+            self.toast("这一处还没有可靠的自动改法，暂不建议加入词库")
+            return None
+        box = QMessageBox(self)
+        box.setWindowTitle("加入词库预览")
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setText("把这一处写法加入「我的词库」？")
+        box.setInformativeText(
+            f"词条：{cand['word']}\n替换值：{cand['value']}\n"
+            f"类型：{cand['type']}\n生效范围：{cand.get('scope') or '单处'}\n\n"
+            "加入后下次校正同类写法自动生效，加入动作可以撤销。")
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
+        box.button(QMessageBox.StandardButton.Cancel).setText("取消")
+        box.button(QMessageBox.StandardButton.Ok).setText("确认加入")
+        if box.exec() != QMessageBox.StandardButton.Ok:
+            return None
+        try:
+            res = self.vocab_store.add_book_words(
+                [cand], self._book_name or "")
+        except Exception as exc:
+            self.toast(f"没有加入：{exc}")
+            return None
+        added = int(res.get("added") or 0)
+        self.last_add_point = int(res.get("point_id") or 0)
+        if added:
+            self.toast(f"已加入「{cand['word']}」到「我的词库」，可撤销")
+        else:
+            self.toast("没有加入：词库规则跳过或已存在")
+        return res
+
     # ------------------------------------------------------------------ 交互
 
     def _guard(self) -> bool:
-        """无数据时所有逐处操作只给引导，不动界面状态。"""
-        if not self.has_data:
-            self.toast(self._empty_text())
+        if not self.probs:
+            self.toast("请先完成一次检查" if self.has_book else self._empty_text())
             return False
         return True
 
@@ -858,7 +1120,6 @@ class CheckModule(QWidget):
         self.render()
 
     def _push_undo(self):
-        # pre / post 一起存：批量操作会同时改一段话的上下文，只存 hl 撤不完整
         p = self.probs[self.cur]
         self.undo.append({
             "i": self.cur, "pre": p["pre"], "hl": p["hl"],
@@ -866,7 +1127,6 @@ class CheckModule(QWidget):
         })
 
     def _set_state(self, state: str | None):
-        """写状态并同步落盘（重启后还能看到上次的复核进度）。"""
         self.probs[self.cur]["state"] = state
         if self._run_dir:
             key = checkdata.mark_key(self.probs[self.cur])
@@ -877,20 +1137,66 @@ class CheckModule(QWidget):
             checkdata.save_marks(self._run_dir, self._marks)
 
     def fix_here(self):
+        """逐处修复：按已启用规则改行并写回当前书文本。"""
         if not self._guard():
             return
         p = self.probs[self.cur]
-        action = p.get("action")
-        if not action:
-            self.toast("这处没有可靠的自动改法，需要人工判断后再改")
+        if p.get("rule_id") and not self.rule_allows_item(p):
+            self.toast("对应自动修复规则已关闭，请开启后再修或手动改文")
             return
+
+        line_no = int(p["line"])
+        # 取原行
+        parts = self._book_text.split("\n")
+        if line_no < 1 or line_no > len(parts):
+            self.toast("定位不到这一行")
+            return
+        old_line = parts[line_no - 1]
+        # 优先用 R1 引擎对该行跑启用规则；否则用条目 action
+        _, _, _, _, _, _ = _load_engine()
+        from fixtext_quotation.fixer import apply_rules_to_error_lines
+
+        line_text = old_line if old_line.endswith("\n") else old_line + "\n"
+        # 构造仅含该行的迷你文本以触发规则（报错行集合）
+        mini = line_text
+        fixed_mini, actions = apply_rules_to_error_lines(
+            mini, self.current_rules(), {1}, round_index=1)
+        new_body = fixed_mini.rstrip("\n").replace("\r", "")
+        used_engine = bool(actions) and fixed_mini != mini
+
+        if not used_engine:
+            action = p.get("action")
+            if not action:
+                self.toast("这处没有可靠的自动改法，需要人工判断后再改")
+                return
+            # 在 hl 位置套用 action（基于上下文片段）
+            fixed_hl = checkdata.apply_action(p)
+            # 尝试在整行中替换 hl 一次
+            if p["hl"] and p["hl"] in old_line.replace("\r", ""):
+                new_body = old_line.replace("\r", "").replace(p["hl"], fixed_hl, 1)
+            else:
+                new_body = p["pre"] + fixed_hl + p["post"]
+
         self._push_undo()
-        p["hl"] = checkdata.apply_action(p)
+        self.undo[-1]["wrote"] = True
+        self._push_text_undo()
+        new_text = self._replace_line_in_book(line_no, new_body)
+        if new_text is None or not self._write_book_text(new_text):
+            self.undo.pop()
+            if self._text_undo_stack:
+                self._text_undo_stack.pop()
+            return
+
+        p["hl"] = checkdata.apply_action(p) if p.get("action") else p["hl"]
+        if used_engine:
+            p["hl"] = new_body[:40]
+            p["pre"] = ""
+            p["post"] = ""
         self._set_state("fixed")
         line = p["line"]
         self.render()
         self.next_issue()
-        self.toast(f"已按自动修复规则修复 L{line}")
+        self.toast(f"已修复并写回 L{line}")
 
     def skip_here(self):
         if not self._guard():
@@ -902,30 +1208,80 @@ class CheckModule(QWidget):
         self.toast("已跳过，记入跳过清单")
 
     def save_and_next(self):
+        """把编辑器正文写回当前行，再跳下一处。"""
         if not self._guard():
             return
+        p = self.probs[self.cur]
+        raw = self.editor.toPlainText()
+        # 去掉 Lxxx 前缀
+        body = raw
+        if body.startswith(f"L{p['line']}"):
+            body = body.split("   ", 1)[-1] if "   " in body else body
         self._push_undo()
+        self.undo[-1]["wrote"] = True
+        self._push_text_undo()
+        new_text = self._replace_line_in_book(int(p["line"]), body)
+        if new_text is None or not self._write_book_text(new_text):
+            self.undo.pop()
+            if self._text_undo_stack:
+                self._text_undo_stack.pop()
+            return
         self._set_state("fixed")
         self.render()
         self.next_issue()
         self.toast("已保存回写，自动跳到下一处")
 
     def undo_last(self):
-        if not self._guard():
-            return
-        if not self.undo:
+        if self.phase != PHASE_RESULT:
             self.toast("没有可撤销的操作")
             return
+        # 优先整书正文撤销（写回类操作）
+        if self._text_undo_stack and (not self.undo or self.undo[-1].get("text_batch")
+                                      or self.undo[-1].get("wrote")):
+            pass
+        if not self.undo and not self._text_undo_stack:
+            self.toast("没有可撤销的操作")
+            return
+
+        if self.undo and self.undo[-1].get("text_batch"):
+            a = self.undo.pop()
+            prev = a.get("prev_text", "")
+            if prev and self._write_book_text(prev):
+                self.toast("已撤销批量修复，正在重新检查…")
+                self.start_check(sync=True)
+            return
+
+        if self._text_undo_stack and self.undo and self.undo[-1].get("wrote", True):
+            # 逐处写回：恢复正文 + 条目状态
+            a = self.undo.pop()
+            prev = self._text_undo_stack.pop()
+            self._write_book_text(prev)
+            if 0 <= a["i"] < len(self.probs):
+                p = self.probs[a["i"]]
+                p["pre"] = a["pre"]
+                p["hl"] = a["hl"]
+                p["post"] = a["post"]
+                p["state"] = a["state"]
+                self.cur = a["i"]
+            self.render()
+            self.toast("已撤销上一步（正文已恢复）")
+            return
+
+        if not self.undo:
+            if self._text_undo_stack:
+                prev = self._text_undo_stack.pop()
+                self._write_book_text(prev)
+                self.toast("已撤销正文修改")
+            return
+
         a = self.undo.pop()
         if a.get("batch"):
-            # 批量操作是一条撤销记录：整组一起回退，光标回到第一处
             for it in a["items"]:
                 p = self.probs[it["i"]]
                 p["pre"] = it["pre"]
                 p["hl"] = it["hl"]
                 p["post"] = it["post"]
             self.cur = a["items"][0]["i"]
-            self._set_state(a.get("prev_state"))
             self.ins_buf = ""
             self.render()
             self.toast("已撤销批量操作")
@@ -936,22 +1292,9 @@ class CheckModule(QWidget):
         p["post"] = a["post"]
         p["state"] = a["state"]
         self.cur = a["i"]
-        self._sync_mark(p)
         self.ins_buf = ""
         self.render()
         self.toast("已撤销上一步")
-
-    def _sync_mark(self, p: dict):
-        """撤销后把落盘标记同步成条目当前状态。"""
-        if not self._run_dir:
-            return
-        key = checkdata.mark_key(p)
-        state = p.get("state")
-        if state in ("fixed", "skip"):
-            self._marks[key] = state
-        else:
-            self._marks.pop(key, None)
-        checkdata.save_marks(self._run_dir, self._marks)
 
     def qx(self, n: int):
         if not self._guard():
@@ -979,34 +1322,9 @@ class CheckModule(QWidget):
         self._render_editor()
         self.toast(f"已插入 {ch}")
 
-    def only_count(self):
-        if not self.has_data:
-            self.toast(self._empty_text())
-            return
-        self.toast(f"共检出 {len(self.probs)} 处问题，未做任何修改（仅统计）")
-
-    def end_check(self):
-        if not self.has_data:
-            self.toast(self._empty_text())
-            return
-        total = len(self.probs)
-        done = sum(1 for p in self.probs if p.get("state"))
-        box = QMessageBox(self)
-        box.setWindowTitle("结束检查？")
-        box.setIcon(QMessageBox.Icon.Question)
-        box.setText(f"已处理 {done} / {total} 处；未处理的 {total - done} 处将保持原样。")
-        box.setInformativeText("结束检查后仍可从左侧入口重新进入。")
-        box.setStandardButtons(
-            QMessageBox.StandardButton.No | QMessageBox.StandardButton.Yes
-        )
-        box.button(QMessageBox.StandardButton.No).setText("继续检查")
-        box.button(QMessageBox.StandardButton.Yes).setText("结束检查")
-        box.setDefaultButton(QMessageBox.StandardButton.No)
-        if box.exec() == QMessageBox.StandardButton.Yes:
-            self.toast("已结束本轮检查")
+    # ------------------------------------------------------------------ 批量
 
     def _affected_single(self):
-        """会被「最外层单引号改双引号」影响的处（上下文任一段含单引号）。"""
         out = []
         for i, p in enumerate(self.probs):
             txt = p["pre"] + p["hl"] + p["post"]
@@ -1031,25 +1349,69 @@ class CheckModule(QWidget):
         box.setText(f"最外层单引号改双引号 · 影响 {len(affected)} 处。")
         box.setInformativeText(
             "执行前预览影响条数，执行后可撤销。\n"
-            "原：‘这里的引号是外层的’\n改：“这里的引号是外层的”"
-        )
+            "原：‘这里的引号是外层的’\n改：“这里的引号是外层的”")
         box.setStandardButtons(
-            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok
-        )
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
         box.button(QMessageBox.StandardButton.Cancel).setText("取消")
         box.button(QMessageBox.StandardButton.Ok).setText("确认执行")
-        box.setDefaultButton(QMessageBox.StandardButton.Cancel)
-        if box.exec() == QMessageBox.StandardButton.Ok:
-            items = [{
-                "i": i, "pre": p["pre"], "hl": p["hl"],
-                "post": p["post"], "state": p.get("state"),
-            } for i, p in affected]
-            prev_state = self.probs[self.cur].get("state")
-            for _i, p in affected:
-                p["pre"] = self._apply_outer_single(p["pre"])
-                p["hl"] = self._apply_outer_single(p["hl"])
-                p["post"] = self._apply_outer_single(p["post"])
-            self.undo.append({"batch": True, "items": items,
-                              "prev_state": prev_state})
-            self.render()
-            self.toast(f"已批量修改 {len(affected)} 处（可撤销）")
+        if box.exec() != QMessageBox.StandardButton.Ok:
+            return
+        items = [{
+            "i": i, "pre": p["pre"], "hl": p["hl"],
+            "post": p["post"], "state": p.get("state"),
+        } for i, p in affected]
+        for _i, p in affected:
+            p["pre"] = self._apply_outer_single(p["pre"])
+            p["hl"] = self._apply_outer_single(p["hl"])
+            p["post"] = self._apply_outer_single(p["post"])
+        self.undo.append({"batch": True, "items": items})
+        self.render()
+        self.toast(f"已批量修改 {len(affected)} 处（可撤销）")
+
+    def batch_fix_all(self):
+        """按已启用规则修复全部（预览条数 → 二次确认 → 写回 → 可撤销）。"""
+        if self.phase != PHASE_RESULT:
+            self.toast("请先完成一次检查")
+            return
+        rules = self.current_rules()
+        on_n = len(rules.enabled_ids())
+        if on_n == 0:
+            self.toast("当前没有启用的规则")
+            return
+
+        # 预览：只统计 rule_id 落在启用集内、且尚未处理的条目
+        enabled = set(rules.enabled_ids())
+        candidates = [
+            p for p in self.probs
+            if not p.get("state")
+            and (not p.get("rule_id") or p.get("rule_id") in enabled)
+        ]
+        # 引擎级预览：跑一遍看 actions
+        _, fix_text, *_rest = _load_engine()
+        preview = fix_text(self._book_text, rules, max_rounds=8)
+        n_actions = len(preview.actions)
+        n = max(len(candidates), n_actions)
+
+        box = QMessageBox(self)
+        box.setWindowTitle("按已启用规则修复全部")
+        box.setIcon(QMessageBox.Icon.Warning)
+        box.setText(f"将用当前已启用的 {on_n} 条规则批量修复。")
+        box.setInformativeText(
+            f"预览影响约 <b>{n}</b> 处（引擎动作 {n_actions} 步）。"
+            "执行后写回当前书正文，可撤销。")
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Cancel | QMessageBox.StandardButton.Ok)
+        box.button(QMessageBox.StandardButton.Cancel).setText("取消")
+        box.button(QMessageBox.StandardButton.Ok).setText("确认执行")
+        if box.exec() != QMessageBox.StandardButton.Ok:
+            return
+
+        prev = self._book_text
+        if not self._write_book_text(preview.text):
+            return
+        self.undo.append({"text_batch": True, "prev_text": prev})
+        self.toast(f"已按已启用规则修复（{n_actions} 步），正在重新检查…")
+        self.start_check(sync=True)
+
+    def _empty_text(self) -> str:
+        return "还没有可检查的书。请先到「导入书籍」导入一本，再回来检查。"

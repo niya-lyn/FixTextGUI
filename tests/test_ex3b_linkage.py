@@ -110,20 +110,25 @@ def test_switch_reloads_all_four_pages(qapp, two_books):
     S.set_current_book_id("ex3b_b")          # 启动落在乙书（没有运行记录）
     try:
         win = mw.MainWindow(workspace=ws)
-        # 乙书没有记录：检查页空状态、历史页空、导出页挂的是乙书原文
-        assert not win.check_module.has_data, "乙书没有记录，检查页必须空"
+        # 乙书：有书→检查页待检查（R2 不读报告）；历史空；导出挂乙书原文
+        assert win.check_module.has_book, "乙书在书架上，检查页应挂书"
+        assert win.check_module.phase == "ready"
+        assert not win.check_module.has_data, "未点开始检查前不应有结果"
+        assert win.check_module._book_name == "乙书"
         assert win.history_module.tasks == [], "乙书没有记录，历史页必须空"
         assert win.history_module._runs_root == PKG_ROOT / "runs" / "ex3b_b"
         assert win.export_module.source and \
             win.export_module.source.title == "乙书", \
             "导出页必须挂乙书（没跑过校正就挂原文），不能是甲书"
 
-        # 切到甲书（有运行记录）：四页全部换成甲书的数据
+        # 切到甲书（有运行记录）：校正/历史/导出换甲书；检查页换书名待检查
         win._on_current_book_changed(str(a / "book.txt"))
         assert win.oneclick_module.run_context["runs_root"] \
             == str(PKG_ROOT / "runs" / "ex3b_a"), "下次校正必须作用于甲书"
-        assert win.check_module.has_data, "甲书有检查报告，检查页必须有数据"
-        assert win.check_module.report["book"] == "甲书"
+        assert win.check_module.has_book
+        assert win.check_module.phase == "ready"
+        assert win.check_module._book_name == "甲书"
+        assert not win.check_module.has_data, "R2：换书不自动注入校正报告"
         assert [t["title"] for t in win.history_module.tasks] == ["甲书"]
         assert win.export_module.source and \
             win.export_module.source.text_path, "导出页要挂甲书最近校正产物"
@@ -132,6 +137,8 @@ def test_switch_reloads_all_four_pages(qapp, two_books):
 
         # 切回乙书：甲书的数据一个都不许留在页面上
         win._on_current_book_changed(str(b / "book.txt"))
+        assert win.check_module._book_name == "乙书"
+        assert win.check_module.phase == "ready"
         assert not win.check_module.has_data
         assert win.history_module.tasks == []
         assert win.history_module._runs_root == PKG_ROOT / "runs" / "ex3b_b"
@@ -162,9 +169,11 @@ def test_repeated_switch_keeps_data_correct(qapp, two_books):
                 == str(PKG_ROOT / "runs" / book_id)
             assert win.history_module._runs_root == PKG_ROOT / "runs" / book_id
             if book_id == "ex3b_a":
-                assert win.check_module.report["book"] == "甲书"
+                assert win.check_module._book_name == "甲书"
+                assert win.check_module.phase == "ready"
                 assert [t["title"] for t in win.history_module.tasks] == ["甲书"]
             else:
+                assert win.check_module._book_name == "乙书"
                 assert not win.check_module.has_data
                 assert win.history_module.tasks == []
         win.deleteLater()

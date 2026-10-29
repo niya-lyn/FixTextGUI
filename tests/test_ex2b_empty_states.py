@@ -72,13 +72,14 @@ def test_oneclick_page_empty_state_real_trigger(qapp):
 
 
 def test_check_page_empty_state_real_trigger(qapp):
-    """检查页：没有检查报告 → 空状态；内容区收起。"""
+    """检查页：没有当前书 → 空状态；内容区收起（M4-EX.6-R2：不依附报告）。"""
     import check_module as cm
 
     mod = cm.CheckModule()
-    assert mod.report is None
-    assert mod.empty_state.isVisibleTo(mod), "无报告必须触发空状态"
-    assert not mod._content_w.isVisibleTo(mod), "无报告时内容区应收起"
+    assert not mod.has_book
+    assert mod.phase == cm.PHASE_EMPTY
+    assert mod.empty_state.isVisibleTo(mod), "无书必须触发空状态"
+    assert not mod._content_w.isVisibleTo(mod), "无书时内容区应收起"
     texts = _texts(mod)
     assert any("还没有可检查的书" in t for t in texts)
     for fake in FAKE_NAMES:
