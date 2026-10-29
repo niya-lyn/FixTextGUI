@@ -9,3 +9,6 @@ build/
 dist/
 release/
 *.spec.bak
+
+.build_env/
+
