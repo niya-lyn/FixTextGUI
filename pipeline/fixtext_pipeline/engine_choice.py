@@ -54,7 +54,13 @@ def settings_file(pkg_root: Path | str | None = None) -> Path:
     if override:
         return Path(override)
     if pkg_root is None:
-        pkg_root = Path(__file__).resolve().parents[2]
+        # M4-T4.1b：打包后按 __file__ 反推会算错一层，改走统一解析
+        try:
+            from ._roots import pkg_root as _root_of
+
+            pkg_root = _root_of()
+        except Exception:                              # pragma: no cover
+            pkg_root = Path(__file__).resolve().parents[2]
     return Path(pkg_root) / "workspace" / "settings.ini"
 
 

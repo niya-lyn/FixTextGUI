@@ -41,7 +41,14 @@ from fixtext_snapshot import SnapshotStore
 # ---------------------------------------------------------------------------
 
 HERE = Path(__file__).resolve().parent
-PKG_ROOT = HERE.parent
+# 包根统一由 fixtext_paths 解析（M4-T4.1b）：内置词库 data/rules 在包根，
+# 冻结后按 __file__ 反推会指到程序内部目录，界面会报「词库文件未随程序提供」。
+try:
+    from fixtext_paths import pkg_root as _pkg_root
+
+    PKG_ROOT = _pkg_root()
+except Exception:                     # pragma: no cover
+    PKG_ROOT = HERE.parent
 RULES_DIR = PKG_ROOT / "data" / "rules"
 
 BUILTIN_BEFORE = "before.json"

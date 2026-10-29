@@ -67,7 +67,14 @@ from vocab_module import VocabModule
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 QSS_PATH = os.path.join(HERE, "fixtext.qss")
-PKG_ROOT = Path(HERE).resolve().parent
+# 包根统一由 fixtext_paths 解析（M4-T4.1b）：打包后 fixtext_ui 被平铺进程序
+# 内部目录，靠 __file__ 往上数一层会指错，词库 / 引擎 / 用户区就全找不到。
+try:
+    from fixtext_paths import pkg_root as _pkg_root
+
+    PKG_ROOT = _pkg_root()
+except Exception:                    # pragma: no cover - 包根模块缺失时退化
+    PKG_ROOT = Path(HERE).resolve().parent
 
 #: 人话错误体系（T2.4）。缺包时降级：界面照常可用，只是没有错误卡与诊断日志。
 try:
@@ -1105,12 +1112,22 @@ class MainWindow(QMainWindow):
         menu.exec(anchor.mapToGlobal(QPoint(0, anchor.height())))
 
     def _regen_qss(self):
-        """按设计令牌重新生成界面样式表。"""
-        script = os.path.join(HERE, "build_qss.py")
+        """按设计令牌重新生成界面样式表。
+
+        打包后（M4-T4.1b）不能再起子进程跑 ``build_qss.py``——``sys.executable``
+        是程序本身，会再拉起一个主窗口。冻结态改为进程内调用生成函数，
+        写出的是同一份样式表（两者共用 fixtext_tokens 令牌）。
+        """
         try:
-            subprocess.run([sys.executable, script], check=True, timeout=30,
-                           stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                           stderr=subprocess.DEVNULL)
+            if getattr(sys, "frozen", False):
+                import build_qss as _bq
+
+                Path(QSS_PATH).write_text(_bq.build(), encoding="utf-8")
+            else:
+                script = os.path.join(HERE, "build_qss.py")
+                subprocess.run([sys.executable, script], check=True, timeout=30,
+                               stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
             self._flash("✓", "样式表已重新生成",
                         "已按设计令牌重写界面样式，重新打开窗口即可看到。", "info")
         except Exception as e:  # noqa: BLE001

@@ -26,10 +26,19 @@ import os
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
+# 包根：源码态是本文件所在目录；打包后是可执行文件所在目录（M4-T4.1b）。
+# 先算出来并写进环境变量，后续所有模块（含 pipeline 里的）统一按它定位——
+# 冻结后 __file__ 不再指源码树，各自反推会算错一层，词库 / 引擎 / 用户区全会找不到。
+if getattr(sys, "frozen", False):
+    HERE = Path(sys.executable).resolve().parent
+else:
+    HERE = Path(__file__).resolve().parent
+os.environ.setdefault("FIXTEXT_PKG_ROOT", str(HERE))
+
 UI = HERE / "fixtext_ui"
 for p in (str(UI), str(HERE)):
-    if p not in sys.path:
+    # 打包后 fixtext_ui 不是目录（模块已平铺进程序内部目录），跳过即可
+    if os.path.isdir(p) and p not in sys.path:
         sys.path.insert(0, p)
 
 os.environ.setdefault("QT_QPA_PLATFORM", os.environ.get("QT_QPA_PLATFORM", ""))
@@ -41,6 +50,23 @@ def ensure_dirs() -> None:
 
 
 def main() -> int:
+    # M4-T4.1b：打包自检入口。`FixText.exe --self-check` 不打开界面，
+    # 直接把「包根对不对 / 词库和引擎在不在 / 新用户会不会看到向导」打印出来。
+    if "--self-check" in sys.argv[1:]:
+        import fixtext_self_check   # noqa: PLC0415
+
+        return fixtext_self_check.main()
+
+    # 打包冒烟（仅试打包包内含此模块）：在冻结进程里跑通导入→校正→导出。
+    # 正式绿色包不放这个模块，所以这里用可缺省导入。
+    if "--smoke" in sys.argv[1:]:
+        try:
+            import fxbundle_smoke   # noqa: PLC0415
+        except ImportError:
+            print("本包不含打包冒烟模块（正式版不需要）。")
+            return 2
+        return fxbundle_smoke.main()
+
     from PySide6.QtWidgets import QApplication
 
     from main_window import MainWindow, load_qss  # noqa: PLC0415

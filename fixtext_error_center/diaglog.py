@@ -29,8 +29,13 @@ import threading
 _ROTATE_BYTES = 2 * 1024 * 1024  # 单文件 2MB 滚动
 _keep = 1
 
-#: 包根（本包 ``fixtext_error_center/`` 的上一层）
-PKG_ROOT = Path(__file__).resolve().parent.parent
+#: 包根（M4-T4.1b：统一由 fixtext_paths 解析，冻结后 __file__ 不再指源码树）
+try:
+    from fixtext_paths import pkg_root as _pkg_root
+
+    PKG_ROOT = _pkg_root()
+except Exception:                     # pragma: no cover
+    PKG_ROOT = Path(__file__).resolve().parent.parent
 
 _lock = threading.Lock()
 _log_dir: str | None = None

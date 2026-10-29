@@ -22,7 +22,13 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings
 
-PKG_ROOT = Path(__file__).resolve().parent.parent
+# 包根统一由 fixtext_paths 解析（M4-T4.1b，冻结后 __file__ 不再指源码树）
+try:
+    from fixtext_paths import pkg_root as _pkg_root
+
+    PKG_ROOT = _pkg_root()
+except Exception:                     # pragma: no cover
+    PKG_ROOT = Path(__file__).resolve().parent.parent
 #: 用户区里的设置文件名（不是内置词库那棵 ``data/rules/`` 子树）
 SETTINGS_FILE = "settings.ini"
 

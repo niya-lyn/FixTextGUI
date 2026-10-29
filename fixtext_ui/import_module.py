@@ -1121,10 +1121,20 @@ def install_global_drop(window, module: ImportModule, goto_page=None) -> None:
     window.dropEvent = drop
 
 
+def _pkg_root() -> Path:
+    """包根（M4-T4.1b：统一解析，冻结后 __file__ 不再指源码树）。"""
+    try:
+        from fixtext_paths import pkg_root
+
+        return pkg_root()
+    except Exception:                                   # pragma: no cover
+        return Path(__file__).resolve().parent.parent
+
+
 def default_workspace() -> Path:
     """工作区位置：包根下 `workspace/`（M4-T4.4 统一用户区，绿色分发时可整体搬走）。
 
     原实现返回 fixtext_ui/workspace，会让「书籍导入副本」和「我的词库」
     落在两个不同的用户区目录里；统一到 <包根>/workspace。
     """
-    return Path(__file__).resolve().parent.parent / "workspace"
+    return _pkg_root() / "workspace"

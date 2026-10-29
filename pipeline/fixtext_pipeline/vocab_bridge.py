@@ -335,4 +335,9 @@ def _ui_workspace() -> Path:
     ``main_app.py`` 建在包根的 ``workspace/`` 分裂成两棵；现在统一到包根这一棵，
     代码目录里不再出现用户数据。
     """
-    return Path(__file__).resolve().parents[2] / "workspace"
+    try:
+        from ._roots import pkg_root as _root_of
+
+        return _root_of() / "workspace"
+    except Exception:                                  # pragma: no cover
+        return Path(__file__).resolve().parents[2] / "workspace"

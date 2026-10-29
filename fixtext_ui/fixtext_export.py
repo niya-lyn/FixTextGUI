@@ -121,8 +121,13 @@ def ensure_vendor(pipeline_root: str | Path | None) -> str:
     """把 M1 引擎包（vendor/）挂到 sys.path 上，返回 pipeline 根目录。"""
     root = Path(pipeline_root) if pipeline_root else None
     if root is None:
-        here = Path(__file__).resolve().parent
-        root = here.parent / "pipeline"
+        # M4-T4.1b：默认 pipeline 目录在包根下，冻结后不能靠 __file__ 反推
+        try:
+            from fixtext_paths import pkg_root as _pkg_root
+
+            root = _pkg_root() / "pipeline"
+        except Exception:                              # pragma: no cover
+            root = Path(__file__).resolve().parent.parent / "pipeline"
     root = root.resolve()
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
