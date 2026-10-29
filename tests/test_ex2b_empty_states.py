@@ -42,18 +42,19 @@ def test_empty_state_widget_shape(qapp):
 
 # ------------------------------------------------------------------ 五页触发
 
-def test_import_page_empty_state_real_trigger(qapp, tmp_path):
-    """导入页：工作区真的一本书都没有 → 空状态；工作区卡收起。"""
+def test_import_page_empty_workspace_shelf_hint(qapp, tmp_path):
+    """导入页 M5-EX.4.1：无独立 EmptyState；无书时书架卡弱提示 + 拖放入口。"""
     import import_module as im
 
     mod = im.ImportModule(workspace_root=tmp_path)
-    assert mod.empty_state.isVisibleTo(mod), "空工作区必须触发空状态"
-    assert not mod.workspace_card.isVisibleTo(mod), "无书时工作区卡收起"
+    assert not hasattr(mod, "empty_state"), "SYNC-3：导入页不再有独立空状态"
+    assert mod.workspace_card.isVisibleTo(mod), "无书时书架卡仍显示"
     texts = _texts(mod)
-    assert any("还没有导入的书" in t for t in texts)
-    assert any("拖放区" in t for t in texts), "描述要指明导入入口"
+    assert any("工作区还是空的" in t for t in texts)
+    assert any("选择文件" in t or "拖" in t for t in texts), "描述要指明导入入口"
     for fake in FAKE_NAMES:
         assert not any(fake in t for t in texts)
+    mod.shutdown()
 
 
 def test_oneclick_page_empty_state_real_trigger(qapp):

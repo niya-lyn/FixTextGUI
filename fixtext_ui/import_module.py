@@ -1,11 +1,11 @@
 """FixText V1 · 导入书籍模块（T2.2 · M5-EX.3 去向导）
 
-界面结构（无分步向导）：
+界面结构（无分步向导；M5-EX.4.1 布局）：
 
     拖放区 / 选择文件（全局拖放也落在这里）
-      → 导入中（进度 + 取消）
-      → 完成（人话提示 + 导入记录明细）
-      → 工作区书架
+      → 导入中 / 完成（进度 + 结果）
+      → 工作区书架（无书时弱提示，无独立空状态）
+      → 导入安全说明（参考区置底）
 
 设计约束（逐条对应验收）：
 
@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import FONT_MONO, c, fs, px, r, sp
-from fixtext_widgets import Card, Pill, hline, EmptyState
+from fixtext_widgets import Card, Pill, hline
 
 import fixtext_import as fi
 import fixtext_shelf as shelf_data
@@ -413,20 +413,7 @@ class ImportModule(QWidget):
         self.status_card.setVisible(False)
         root.addWidget(self.status_card)
 
-        safety = Card("导入安全说明", "你原来的文件不会被改动", collapsible=True, open_=False)
-        body = QLabel(
-            "· 书会被复制一份到 FixText 的工作区，所有处理都在这份副本上做，"
-            "你原来的文件始终原样保留。\n"
-            "· 导入前后会各记一次文件指纹，用来确认原文件一个字节都没变。\n"
-            "· 书里的字符格式差异会自动处理，不需要你做任何选择；"
-            "处理完成后会用一句普通话告诉你做了什么。\n"
-            "· 电子书按可还原方式导入，导出页再选择 TXT 或还原为 EPUB。"
-        )
-        body.setWordWrap(True)
-        body.setStyleSheet(f"color:{c('neutral.700')};font-size:{fs('sm')}")
-        safety.body_l.addWidget(body)
-        root.addWidget(safety)
-
+        # M5-EX.4.1 / SYNC-3：无独立 EmptyState；无书时书架卡仍显示弱提示
         self.workspace_card = Card("工作区书架", "")
         self.workspace_label = QLabel("")
         self.workspace_label.setWordWrap(True)
@@ -446,13 +433,22 @@ class ImportModule(QWidget):
         self.workspace_card.body_l.addLayout(wrow)
         root.addWidget(self.workspace_card)
 
-        self.empty_state = EmptyState(
-            "📥", "还没有导入的书",
-            "本页默认即空状态：顶部拖放区 + 选择文件按钮就是导入入口。"
-            "导入完成后，结果卡会替换此引导。",
-            primary="📥 选择文件导入")
-        self.empty_state.primaryClicked.connect(self._choose_file)
-        root.addWidget(self.empty_state)
+        # M5-EX.4.1 / SYNC-2：安全说明置底参考区（书架之后）
+        self.safety_card = Card(
+            "导入安全说明", "你原来的文件不会被改动",
+            collapsible=True, open_=False)
+        body = QLabel(
+            "· 书会被复制一份到 FixText 的工作区，所有处理都在这份副本上做，"
+            "你原来的文件始终原样保留。\n"
+            "· 导入前后会各记一次文件指纹，用来确认原文件一个字节都没变。\n"
+            "· 书里的字符格式差异会自动处理，不需要你做任何选择；"
+            "处理完成后会用一句普通话告诉你做了什么。\n"
+            "· 电子书按可还原方式导入，导出页再选择 TXT 或还原为 EPUB。"
+        )
+        body.setWordWrap(True)
+        body.setStyleSheet(f"color:{c('neutral.700')};font-size:{fs('sm')}")
+        self.safety_card.body_l.addWidget(body)
+        root.addWidget(self.safety_card)
 
         root.addStretch(1)
         self._refresh_workspace()
@@ -597,16 +593,17 @@ class ImportModule(QWidget):
     def _refresh_workspace(self) -> None:
         books = self.shelf.books()
         n_books, size = fi.workspace_usage(self.workspace)
-        self.workspace_card.setVisible(bool(n_books))
-        self.empty_state.setVisible(not n_books)
+        # 书架卡始终可见：无书时弱提示，有书时列清单（不再整页 EmptyState）
+        self.workspace_card.setVisible(True)
+        self.shelf.refresh(books)
         if n_books:
-            self.shelf.refresh(books)
             self.workspace_label.setText(
                 shelf_data.shelf_caption(n_books, size)
                 + " 在列表里点「设为当前」，切换要校对的书。")
         else:
             self.workspace_label.setText(
-                "工作区还是空的，导入第一本书后就会出现在这里。")
+                "工作区还是空的。用上面的拖放区或「选择文件」导入第一本，"
+                "导入完成后会出现在这里。")
 
     def _on_shelf_current_changed(self, book_id: str) -> None:
         book = shelf_data.find_book(self.workspace, book_id)

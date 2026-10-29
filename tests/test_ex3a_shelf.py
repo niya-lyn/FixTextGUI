@@ -284,7 +284,8 @@ def test_window_click_chip_routes_to_import_and_highlights(qapp, ws_two):
         QTest.mouseClick(win.book_chip, Qt.MouseButton.LeftButton)
         assert win.current_key == "import", "点击顶栏必须复用既有 go() 路由到导入页"
         panel = win.import_module.shelf
-        assert not win.import_module.empty_state.isVisibleTo(win.import_module)
+        assert not hasattr(win.import_module, "empty_state")
+        assert win.import_module.workspace_card.isVisibleTo(win.import_module)
         active = [r for r in panel.rows if r.property("current") == "true"]
         assert len(active) == 1 and active[0].book.book_id == "b1", "当前书行要高亮"
     finally:
@@ -330,8 +331,8 @@ def test_new_import_auto_becomes_current(qapp, ws_two):
         S.clear_current_book_id()
 
 
-def test_empty_workspace_keeps_empty_state_and_placeholder(qapp, tmp_path):
-    """无书：导入页空状态照旧（2b 契约）+ 顶栏中性占位。"""
+def test_empty_workspace_shelf_hint_and_chip_placeholder(qapp, tmp_path):
+    """无书：顶栏中性占位 + 导入页书架弱提示（M5-EX.4.1 无独立空状态）。"""
     import main_window as mw
 
     ws = tmp_path / "workspace"
@@ -339,5 +340,6 @@ def test_empty_workspace_keeps_empty_state_and_placeholder(qapp, tmp_path):
     win = mw.MainWindow(workspace=ws)
     assert win.book_chip.property("empty") == "true"
     assert win.book_chip.name.text() == "未选择书"
-    assert win.import_module.empty_state.isVisibleTo(win.import_module)
-    assert not win.import_module.workspace_card.isVisibleTo(win.import_module)
+    assert not hasattr(win.import_module, "empty_state")
+    assert win.import_module.workspace_card.isVisibleTo(win.import_module)
+    assert "空" in win.import_module.workspace_label.text()
