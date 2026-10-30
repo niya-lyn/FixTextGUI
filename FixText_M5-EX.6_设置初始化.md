@@ -18,3 +18,11 @@
 - `fixtext_ui/settings_module.py`
 - `fixtext_ui/main_window.py`
 - `tests/test_settings_module.py`
+
+## 补丁：初始化后向导导出仍用旧书名
+
+根因：导出页 `title_edit` 在无书 / 换书时未重绑，初始化清盘后内存里仍留着
+「我的玩家二周目」，向导导入「炮火弧线」再导出时文件名仍用旧名。
+
+- `fixtext_ui/export_module.py`：按正文路径绑定元信息；无书清空；换书重填
+- `tests/test_export_meta_rebind.py`

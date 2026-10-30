@@ -106,6 +106,8 @@ class ExportModule(QWidget):
         # 书源就绪后据此恢复默认的电子书导出；用户手动选过则不再自动改回。
         self._forced_txt = False
         self._default_out_dir = ""
+        #: 元信息绑定的正文路径；换书 / 无书时重填，避免初始化后残留上一本书名
+        self._meta_bound_path: str = ""
         self._running = False
         self._worker: ExportWorker | None = None
         self._toast_timer = QTimer(self)
@@ -404,12 +406,19 @@ class ExportModule(QWidget):
             self.target_hint.setText(
                 "这本书不是从电子书导入的，导出为纯文本。")
 
-        # 元信息：只在第一次拿到书时填默认值，避免覆盖用户的修改
+        # 元信息：按「当前书」绑定。换书或清空时重填，避免初始化 / 向导换书后
+        # 仍拿着上一本的书名去导出（M5-EX.6）。同一本书上不覆盖用户已改的值。
         if has_book:
-            if not self.title_edit.text():
+            bound = str(Path(src.text_path).resolve()) if src.text_path else ""
+            if bound != self._meta_bound_path:
+                self._meta_bound_path = bound
                 self.title_edit.setText(src.title or "")
-            if not self.author_edit.text() and src.author:
-                self.author_edit.setText(src.author)
+                self.author_edit.setText(src.author or "")
+            else:
+                if not self.title_edit.text():
+                    self.title_edit.setText(src.title or "")
+                if not self.author_edit.text() and src.author:
+                    self.author_edit.setText(src.author)
             if src.author:
                 self.meta_hint.setText(
                     f"导入时从书里读到作者「{src.author}」，改了以后导出用你填的值。")
@@ -417,6 +426,9 @@ class ExportModule(QWidget):
                 self.meta_hint.setText(
                     "这本书的元信息里没有作者，可以自己补一个；导出时会写进文件。")
         else:
+            self._meta_bound_path = ""
+            self.title_edit.clear()
+            self.author_edit.clear()
             self.meta_hint.setText("导入一本书后，这里会自动填上书名与作者。")
 
         # 目录：默认包根下「导出/」（M5-EX.2 / BUG-3）；用户自选仍优先。
