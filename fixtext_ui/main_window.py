@@ -1293,7 +1293,8 @@ class MainWindow(QMainWindow):
         self._apply_current_book(None, "")
         if self.import_module is not None:
             try:
-                self.import_module.refresh_shelf()
+                # 书架 + 「本次导入」结果卡一并清掉（只 refresh_shelf 会留下结果区）
+                self.import_module.reset_session()
             except Exception:  # noqa: BLE001
                 pass
         if self.oneclick_module is not None:

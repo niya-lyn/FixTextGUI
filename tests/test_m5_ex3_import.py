@@ -41,3 +41,21 @@ def test_import_module_no_wizard_attrs(qt_app, tmp_path):
     assert hasattr(mod, "status_card")
     assert hasattr(mod, "result_pane")
     mod.shutdown()
+
+
+def test_import_reset_session_hides_status_card(qt_app, tmp_path):
+    """M5-EX.6：初始化后「本次导入」结果卡必须隐藏。"""
+    pytest.importorskip("PySide6")
+    from import_module import ImportModule
+
+    mod = ImportModule(tmp_path / "ws")
+    mod.status_card.setVisible(True)
+    mod.result_pane.setVisible(True)
+    mod._result = object()
+    mod._step = mod.STATE_DONE
+    mod.reset_session()
+    assert not mod.status_card.isVisible()
+    assert not mod.result_pane.isVisible()
+    assert mod.result() is None
+    assert mod.step() == mod.STATE_IDLE
+    mod.shutdown()

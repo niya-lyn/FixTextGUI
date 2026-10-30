@@ -645,6 +645,33 @@ class ImportModule(QWidget):
     def refresh_shelf(self) -> None:
         self._refresh_workspace()
 
+    def reset_session(self) -> None:
+        """清掉本次导入结果区，回到无书空态（M5-EX.6 初始化用）。
+
+        只动本页内存与可见控件；磁盘清理由 ``fixtext_factory_reset`` 负责。
+        """
+        if self._worker is not None:
+            try:
+                self._worker.cancel()
+            except Exception:  # noqa: BLE001
+                pass
+        self._stop_thread()
+        self._step = self.STATE_IDLE
+        self._path = ""
+        self._kind = ""
+        self._result = None
+        self._fail_text = ""
+        self._clear_notice()
+        self.file_label.setText("")
+        self.step_label.setText("")
+        self.bar.setRange(0, 100)
+        self.bar.setValue(0)
+        self.progress_pane.setVisible(False)
+        self.result_pane.setVisible(False)
+        self.status_card.setVisible(False)
+        self.cancel_btn.setEnabled(True)
+        self._refresh_workspace()
+
     def shutdown(self) -> None:
         if self._worker is not None:
             self._worker.cancel()

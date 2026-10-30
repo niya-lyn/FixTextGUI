@@ -26,3 +26,10 @@
 
 - `fixtext_ui/export_module.py`：按正文路径绑定元信息；无书清空；换书重填
 - `tests/test_export_meta_rebind.py`
+
+## 补丁：初始化后导入区仍显示「本次导入」
+
+根因：初始化只 `refresh_shelf()`，未清导入页内存里的结果卡。
+
+- `import_module.reset_session()`：隐藏 status_card / 清空本次结果
+- 一键校正 `set_run_context(None)` 同步清结果卡

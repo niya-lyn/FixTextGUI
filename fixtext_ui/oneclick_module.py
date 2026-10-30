@@ -261,6 +261,9 @@ class OneClickModule(QWidget):
         """
         self.run_context = dict(ctx) if ctx else None
         if not ctx:
+            self._summary = None
+            self._outcome = None
+            self._clear_result()
             self._apply_book_presence()
             return
         ref = ctx.get("epub") or ctx.get("plain_source") or ""
