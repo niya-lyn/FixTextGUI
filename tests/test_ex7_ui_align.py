@@ -20,8 +20,22 @@ def test_qss_no_bookchip_empty_wash():
     qss = (UI / "fixtext.qss").read_text(encoding="utf-8")
     assert '#BookChip[empty="true"]' not in qss
     assert "opacity: 0.5" in qss
-    assert "#PageHead {" in qss
     assert "#BtnGhost:pressed" in qss
+    # 勿用 #PageHead QLabel / border-bottom（会压标题字号、贴副标题）
+    assert "#PageHead QLabel" not in qss
+    assert "border-bottom" not in qss or "#PageHead {" not in qss
+
+
+def test_import_page_title_uses_page_title(qapp, tmp_path):
+    from PySide6.QtWidgets import QLabel, QWidget
+    import import_module as im
+
+    page = im.ImportModule(workspace_root=tmp_path)
+    titles = [l for l in page.findChildren(QLabel) if l.objectName() == "PageTitle"]
+    assert len(titles) == 1 and titles[0].text() == "导入书籍"
+    heads = [w for w in page.findChildren(QWidget) if w.objectName() == "PageHead"]
+    assert heads, "页头须走 page_head_shell"
+    page.shutdown()
 
 
 def test_book_chip_empty_same_glass(qapp):

@@ -31,7 +31,9 @@ from PySide6.QtWidgets import (
 from fixtext_export import ExportOutcome, ExportSource, export_book, resolve_source
 from fixtext_paths import default_export_dir
 from fixtext_tokens import FONT_WEIGHT, c, fs, r
-from fixtext_widgets import Card, ConfirmDialog, Pill, RadioCard, EmptyState, hline
+from fixtext_widgets import (
+    Card, ConfirmDialog, Pill, RadioCard, EmptyState, hline, page_head_shell,
+)
 
 try:
     import fixtext_error_center as error_center
@@ -156,20 +158,23 @@ class ExportModule(QWidget):
     # ------------------------------------------------------------------ 头部
 
     def _header(self) -> QWidget:
-        w = QWidget()
-        w.setObjectName("PageHead")
-        hl = QHBoxLayout(w)
+        shell, body = page_head_shell()
+        hl = QHBoxLayout(body)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
 
         col = QVBoxLayout()
         col.setSpacing(2)
-        col.addWidget(_label("导出结果", size="2xl", color="neutral.900", weight="bold"))
-        col.addWidget(_label(
+        title = _label("导出结果", size="2xl", color="neutral.900", weight="bold")
+        title.setObjectName("PageTitle")
+        sub = _label(
             "把校对好的书导出成可以直接用的文件：正文 + 两份替换统计（文本 / 表格）。",
-            size="md", color="neutral.600", wrap=True))
+            size="md", color="neutral.600", wrap=True)
+        sub.setObjectName("PageSub")
+        col.addWidget(title)
+        col.addWidget(sub)
         hl.addLayout(col, 1)
-        return w
+        return shell
 
     # -------------------------------------------------------------- 书源状态条
 

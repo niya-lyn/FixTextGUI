@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 from fixtext_tokens import c, r, fs, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline,
-    ConfirmDialog,
+    ConfirmDialog, page_head_shell,
 )
 from fixtext_worker import CorrectionJob, CorrectionWorker
 
@@ -201,23 +201,24 @@ class OneClickModule(QWidget):
     # ------------------------------------------------------------------ 头部
 
     def _header(self) -> QWidget:
-        w = QWidget()
-        w.setObjectName("PageHead")
-        hl = QHBoxLayout(w)
+        shell, body = page_head_shell()
+        hl = QHBoxLayout(body)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
 
         col = QVBoxLayout()
         col.setSpacing(2)
         title = _label("一键校正", size="2xl", color="neutral.900", weight="bold")
+        title.setObjectName("PageTitle")
         sub = _label(
             "默认配置一键完成「排版规范化 + 词库替换 + 标点标准化」。"
             "需要微调时，展开下方可选项。",
             size="md", color="neutral.600", wrap=True)
+        sub.setObjectName("PageSub")
         col.addWidget(title)
         col.addWidget(sub)
         hl.addLayout(col, 1)
-        return w
+        return shell
 
     # -------------------------------------------------------------- 书源状态条
 

@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
 
 import fixtext_settings as settings
 from fixtext_tokens import c, sp, r, fs, FONT_WEIGHT, FONT_MONO
-from fixtext_widgets import Card, FieldRow, Switch, RadioCard, ConfirmDialog
+from fixtext_widgets import Card, FieldRow, Switch, RadioCard, ConfirmDialog, page_head_shell
 
 try:
     import fixtext_error_center as error_center
@@ -115,21 +115,24 @@ class SettingsModule(QWidget):
     # ------------------------------------------------------------------ 页头
 
     def _header(self) -> QWidget:
-        """页头：标题 + 副标题（M5-EX.7：#PageHead 底部分隔走 QSS）。"""
-        w = QWidget()
-        w.setObjectName("PageHead")
-        hl = QHBoxLayout(w)
+        """页头：标题 + 副标题 + 底部分隔（page_head_shell）。"""
+        shell, body = page_head_shell()
+        hl = QHBoxLayout(body)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
 
         col = QVBoxLayout()
         col.setSpacing(2)
-        col.addWidget(_label("设置", size="2xl", color="neutral.900", weight="bold"))
-        col.addWidget(_label(
+        title = _label("设置", size="2xl", color="neutral.900", weight="bold")
+        title.setObjectName("PageTitle")
+        sub = _label(
             "词库存放位置、诊断日志、安全保护、替换引擎与初始化，都集中在这里。",
-            size="md", color="neutral.600", wrap=True))
+            size="md", color="neutral.600", wrap=True)
+        sub.setObjectName("PageSub")
+        col.addWidget(title)
+        col.addWidget(sub)
         hl.addLayout(col, 1)
-        return w
+        return shell
 
     # ------------------------------------------------------------------ 卡片一
 

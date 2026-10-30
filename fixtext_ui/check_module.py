@@ -27,7 +27,9 @@ from PySide6.QtWidgets import (
 
 import fixtext_check as checkdata
 from fixtext_tokens import c, sp, r, fs, FONT_MONO, FONT_WEIGHT
-from fixtext_widgets import Card, Switch, Pill, FieldRow, EmptyState, hline, px
+from fixtext_widgets import (
+    Card, Switch, Pill, FieldRow, EmptyState, hline, px, page_head_shell,
+)
 
 # ---------------------------------------------------------------------------
 # 状态机 / 规则 UI
@@ -269,24 +271,25 @@ class CheckModule(QWidget):
         self._apply_phase()
 
     def _head(self) -> QWidget:
-        w = QWidget()
-        w.setObjectName("PageHead")
-        hl = QHBoxLayout(w)
+        shell, body = page_head_shell()
+        hl = QHBoxLayout(body)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
         col = QVBoxLayout()
         col.setSpacing(2)
         title = QLabel("检查问题")
+        title.setObjectName("PageTitle")
         title.setStyleSheet(
             f"color:{c('neutral.900')};font-size:{fs('2xl')};"
             f"font-weight:{FONT_WEIGHT['bold']}")
         sub = QLabel(
             "引号配对检查 + 逐处交互修复。检查结果可定位、可单独处理、可撤销。")
+        sub.setObjectName("PageSub")
         sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('md')}")
         col.addWidget(title)
         col.addWidget(sub)
         hl.addLayout(col, 1)
-        return w
+        return shell
 
     def _card(self, *args, **kwargs) -> Card:
         card = Card(*args, **kwargs)

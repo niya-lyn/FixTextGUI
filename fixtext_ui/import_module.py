@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import FONT_MONO, c, fs, px, r, sp
-from fixtext_widgets import Card, Pill, hline
+from fixtext_widgets import Card, Pill, hline, page_head_shell
 
 import fixtext_import as fi
 import fixtext_shelf as shelf_data
@@ -337,20 +337,19 @@ class ImportModule(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(int(sp("4").replace("px", "")))
 
-        head = QWidget()
-        head.setObjectName("PageHead")
-        hl = QVBoxLayout(head)
+        head, body = page_head_shell()
+        hl = QVBoxLayout(body)
         hl.setContentsMargins(0, 0, 0, 0)
+        hl.setSpacing(4)
         t = QLabel("导入书籍")
-        t.setFont(QFont("", int(fs("2xl").replace("px", "")), QFont.Weight.Bold))
-        t.setStyleSheet(f"color:{c('neutral.900')}")
+        t.setObjectName("PageTitle")
         hl.addWidget(t)
         sub = QLabel(
             "把 TXT 或 EPUB 拖进窗口即可开始。书会被复制到工作区处理，"
             "你电脑里原来的文件不会被改动。"
         )
+        sub.setObjectName("PageSub")
         sub.setWordWrap(True)
-        sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('md')}")
         hl.addWidget(sub)
         root.addWidget(head)
 

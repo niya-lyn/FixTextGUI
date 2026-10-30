@@ -37,7 +37,9 @@ from PySide6.QtWidgets import (
 import fixtext_history as histdata
 import fixtext_run_snapshot as snapshot
 from fixtext_tokens import c, fs, FONT_WEIGHT
-from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal, EmptyState
+from fixtext_widgets import (
+    Card, Pill, hline, ConfirmDialog, Modal, EmptyState, page_head_shell,
+)
 
 
 # 列表列宽比例（头行与数据行共用，保证对齐）。操作列右对齐。
@@ -242,21 +244,23 @@ class HistoryModule(QWidget):
     # ------------------------------------------------------------------ 头部
 
     def _header(self) -> QWidget:
-        w = QWidget()
-        w.setObjectName("PageHead")
-        hl = QHBoxLayout(w)
+        shell, body = page_head_shell()
+        hl = QHBoxLayout(body)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
 
         col = QVBoxLayout()
         col.setSpacing(2)
-        col.addWidget(_label("历史记录", size="2xl", color="neutral.900",
-                             weight="bold"))
-        col.addWidget(_label(
+        title = _label("历史记录", size="2xl", color="neutral.900", weight="bold")
+        title.setObjectName("PageTitle")
+        sub = _label(
             "每次校正的任务列表：书名、时间、替换数；可从任一快照完整恢复现场并重新导出。",
-            size="md", color="neutral.600", wrap=True))
+            size="md", color="neutral.600", wrap=True)
+        sub.setObjectName("PageSub")
+        col.addWidget(title)
+        col.addWidget(sub)
         hl.addLayout(col, 1)
-        return w
+        return shell
 
     # ------------------------------------------------------------ 任务列表
 

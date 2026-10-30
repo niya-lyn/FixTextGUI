@@ -228,20 +228,12 @@ def build() -> str:
     q.append(f'    color: {c("neutral.600")};')
     q.append(f'    font-size: {FONT_SIZE["md"]};')
     q.append("}")
-    # #PageHead：原型 .page-head —— 底部分隔 + 标题/副标题分级（M5-EX.7 §10 Step4）
-    q.append("#PageHead {")
-    q.append(f'    border-bottom: 1px solid {c("neutral.200")};')
-    q.append(f'    padding-bottom: {sp("3")};')
-    q.append(f'    margin-bottom: {sp("2")};')
-    q.append("}")
+    # #PageHead：底部分隔由 page_head_shell()+hline 承担（勿用 border-bottom，Qt 易贴字）
+    # 标题/副标题只走 #PageTitle / #PageSub，勿写 #PageHead QLabel（会压扁标题字号）
     q.append("#PageHead h1 {")
     q.append(f'    color: {c("neutral.900")};')
     q.append(f'    font-size: {FONT_SIZE["2xl"]};')
     q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
-    q.append("}")
-    q.append("#PageHead QLabel {")
-    q.append(f'    color: {c("neutral.600")};')
-    q.append(f'    font-size: {FONT_SIZE["md"]};')
     q.append("}")
     q.append("#TopWhere {")
     q.append(f'    color: {c("neutral.300")};')

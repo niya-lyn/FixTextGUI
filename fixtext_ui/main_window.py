@@ -52,7 +52,7 @@ from fixtext_tokens import (
     c, sp, r, fs, px, FONT_WEIGHT,
 )
 import fixtext_settings as app_settings
-from fixtext_widgets import Card, Modal, Pill, Switch, cascade_in, hline
+from fixtext_widgets import Card, Modal, Pill, Switch, cascade_in, hline, page_head_shell
 from fixtext_shelf import resolve_current as resolve_current_book
 from fixtext_shelf import list_books as list_shelf_books
 from fixtext_shelf import set_current_book_id
@@ -224,9 +224,8 @@ class HomeOverview(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(px(sp("4")))
 
-        head = QWidget()
-        head.setObjectName("PageHead")
-        hl = QVBoxLayout(head)
+        head, body = page_head_shell()
+        hl = QVBoxLayout(body)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(4)
 
@@ -282,9 +281,8 @@ class BuildingPage(QWidget):
         layout.setSpacing(px(sp("4")))
 
         # 页头
-        head = QWidget()
-        head.setObjectName("PageHead")
-        hl = QVBoxLayout(head)
+        head, body = page_head_shell()
+        hl = QVBoxLayout(body)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(6)
 

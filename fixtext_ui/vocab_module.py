@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 
 import fixtext_settings as app_settings
 from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
-from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal
+from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal, page_head_shell
 
 from fixtext_vocab import (
     ENTRY_TYPES, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
@@ -192,18 +192,21 @@ class VocabModule(QWidget):
     # ------------------------------------------------------------------ 头部
 
     def _header(self) -> QWidget:
-        w = QWidget()
-        w.setObjectName("PageHead")
-        hl = QHBoxLayout(w)
+        shell, body = page_head_shell()
+        hl = QHBoxLayout(body)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
 
         col = QVBoxLayout()
         col.setSpacing(2)
-        col.addWidget(_label("词库管理", size="2xl", color="neutral.900", weight="bold"))
-        col.addWidget(_label(
+        title = _label("词库管理", size="2xl", color="neutral.900", weight="bold")
+        title.setObjectName("PageTitle")
+        sub = _label(
             "新增、检索、查重、合并、删除词条，并安全维护你的校正词库。",
-            size="md", color="neutral.600", wrap=True))
+            size="md", color="neutral.600", wrap=True)
+        sub.setObjectName("PageSub")
+        col.addWidget(title)
+        col.addWidget(sub)
         hl.addLayout(col, 1)
 
         right = QHBoxLayout()
@@ -249,7 +252,7 @@ class VocabModule(QWidget):
 
         hl.addLayout(right)
         self._set_tier_active("all")
-        return w
+        return shell
 
     def _head_icon_btn(self, glyph: str, tip: str, slot) -> QPushButton:
         """页头浅色图标按钮（原型 .page-head .icon-btn；内联完整态，勿只留 font-size）。"""

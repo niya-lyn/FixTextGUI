@@ -48,6 +48,23 @@ def hline(color_key: str = "neutral.100") -> QFrame:
     return f
 
 
+def page_head_shell() -> tuple[QWidget, QWidget]:
+    """页头外壳（原型 .page-head）。
+
+    返回 ``(shell, body)``：标题/副标题/右侧控件建在 ``body`` 上；
+    ``shell`` 底部用独立 1px 线分隔（不用 QSS border-bottom，避免贴字）。
+    """
+    shell = QWidget()
+    shell.setObjectName("PageHead")
+    outer = QVBoxLayout(shell)
+    outer.setContentsMargins(0, 0, 0, 0)
+    outer.setSpacing(px(sp("3")))  # 副标题与分隔线之间留白
+    body = QWidget()
+    outer.addWidget(body)
+    outer.addWidget(hline("neutral.200"))
+    return shell, body
+
+
 def no_badge(n) -> QLabel:
     lab = QLabel(str(n))
     lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
