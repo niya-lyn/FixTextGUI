@@ -179,8 +179,8 @@ BOOKCHIP_MAX_W = 320
 BOOKCHIP_GRADIENT_BOTTOM = "#F1F3F8"
 #: 胶囊描边（原型 1px solid rgba(255,255,255,.20)，深色顶栏上的高光边）
 BOOKCHIP_EDGE = "rgba(255,255,255,.20)"
-#: 书架行高与两处固定槽位宽度（原型 .ws-row / .ws-status / .ws-act）
-SHELF_ROW_H = 58
+#: 书架行高：上下 padding 10 + 胶囊 24，至少 44；略留余量避免底边被裁
+SHELF_ROW_H = 48
 SHELF_STATUS_W = 60
 SHELF_ACTION_W = 96
 #: 「当前」徽标高度（与行内「设为当前」按钮等高，互换不抖）

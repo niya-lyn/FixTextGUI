@@ -128,9 +128,9 @@ def build() -> str:
     q.append("}")
     q.append("")
 
-    # ---- 导入页书架（M4-EX.3a；原型 v3 §6 .ws-row）--------------------
-    # 行：白底，隔行有分隔线；当前行浅主色底 + 左侧主色条（Qt 无 ::border，
-    # 用左边框实现并补偿内边距，保证文字与非当前行左对齐）。
+    # ---- 导入页书架（原型 v3 §6 .ws-row）------------------------------
+    # 当前行仅 primary-50 底（无左边条）。徽标/按钮圆角与样式以内联为准
+    # （Qt 对 999px 不稳）；此处只保底色与分隔，勿写 #ShelfRow QLabel 透明全杀。
     q.append("#ShelfRow {")
     q.append(f'    background-color: {c("neutral.0")};')
     q.append(f'    border: none;')
@@ -143,40 +143,10 @@ def build() -> str:
     q.append("}")
     q.append("#ShelfRow[current=\"true\"] {")
     q.append(f'    background-color: {c("primary.50")};')
-    q.append(f'    border-left: 3px solid {c("primary.500")};')
-    q.append(f"    padding-left: {px(sp('3')) - 3}px;")
     q.append("}")
-    q.append("#ShelfRow QLabel { background: transparent; }")
-    q.append("#ShelfBadge {")
-    q.append(f'    color: {c("neutral.0")};')
-    q.append(f'    background-color: {c("success")};')
-    q.append(f'    border-radius: {RADIUS["full"]};')
-    q.append(f'    padding: 0 {sp("2")};')
-    q.append(f'    font-size: {FONT_SIZE["xs"]};')
-    q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
-    q.append("}")
-    # 行内「设为当前」= 该书架的主操作按钮（描边胶囊，悬停转主色实底）
-    q.append("#BtnSetCurrent {")
-    q.append(f'    color: {c("primary.700")};')
-    q.append(f'    background-color: {c("primary.50")};')
-    q.append(f'    border: 1px solid {c("primary.200")};')
-    q.append(f'    border-radius: {RADIUS["full"]};')
-    q.append(f'    padding: 0 {sp("3")};')
-    q.append(f'    font-size: {FONT_SIZE["xs"]};')
-    q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
-    q.append("}")
-    q.append("#BtnSetCurrent:hover {")
-    q.append(f'    background-color: {c("primary.500")};')
-    q.append(f'    color: {c("neutral.0")};')
-    q.append(f'    border: 1px solid {c("primary.500")};')
-    q.append("}")
-    q.append("#BtnSetCurrent:pressed {")
-    q.append(f'    background-color: {c("primary.600")};')
-    q.append(f'    color: {c("neutral.0")};')
-    q.append(f'    border: 1px solid {c("primary.600")};')
-    q.append("}")
-    q.append("#BtnSetCurrent:focus {")
-    q.append(f'    border: 1px solid {c("primary.500")};')
+    q.append("#ShelfAct, #ShelfStatus, #ShelfName {")
+    q.append("    background: transparent;")
+    q.append("    border: none;")
     q.append("}")
     q.append("")
 

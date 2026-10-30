@@ -143,11 +143,14 @@ def test_shelf_rows_content_and_fixed_slots(qapp, ws_two):
     assert cur_row.action_slot.width() == other_row.action_slot.width() == SU.ACTION_SLOT_W
     assert cur_row.badge.height() == other_row.action_btn.height() == SU.SHELF_BADGE_H
 
-    # 行内容：书名带书名号与后缀；格式·大小·导入时间
+    # 行内容：单行书名；格式·大小·导入时间在 tooltip（对齐原型）
     assert cur_row.name.full_text() == f"《{LONG_TITLE}》txt"
-    assert "TXT ·" in cur_row.meta.text() and "10月27日" in cur_row.meta.text()
+    assert "TXT ·" in cur_row.toolTip() and "10月27日" in cur_row.toolTip()
     assert other_row.name.full_text() == "《第一部书》epub"
-    assert "EPUB ·" in other_row.meta.text() and "10月20日" in other_row.meta.text()
+    assert "EPUB ·" in other_row.toolTip() and "10月20日" in other_row.toolTip()
+    from fixtext_tokens import c
+    assert c("success") in cur_row.badge.styleSheet()
+    assert "border-radius" in other_row.action_btn.styleSheet()
 
     # 只有真实导出记录才显示「已导出」，否则空
     assert cur_row.status.text() == "" and other_row.status.text() == ""

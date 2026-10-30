@@ -20,7 +20,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QRectF, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
     QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget,
 )
@@ -28,7 +29,7 @@ from PySide6.QtWidgets import (
 import fixtext_shelf as shelf_data
 from fixtext_tokens import (
     BOOKCHIP_H, BOOKCHIP_MAX_W, SHELF_ACTION_W, SHELF_BADGE_H, SHELF_ROW_H,
-    SHELF_STATUS_W, px, sp,
+    SHELF_STATUS_W, c, px, sp,
 )
 
 #: 书架状态位固定宽度（够放「已导出」，空着也占位）
@@ -47,6 +48,39 @@ DOT_SIZE = px(sp("2"))
 NAME_MAX_W = 248
 #: 省略标签的最小宽度（再窄也不至于把文字挤没）
 NAME_MIN_W = 36
+
+
+class ShelfDot(QWidget):
+    """原型 .bs-dot：8px 实心圆 + 3px 光晕（自绘，避免 QSS 999px 在 Qt 里变方）。"""
+
+    #: 光晕环宽（原型 box-shadow 0 0 0 3px）
+    HALO = 3
+
+    def __init__(self, exported: bool = False, parent=None):
+        super().__init__(parent)
+        self._exported = bool(exported)
+        side = DOT_SIZE + self.HALO * 2
+        self.setFixedSize(side, side)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+
+    def set_exported(self, exported: bool) -> None:
+        self._exported = bool(exported)
+        self.update()
+
+    def paintEvent(self, _event):  # noqa: N802
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(Qt.PenStyle.NoPen)
+        # 光晕
+        halo = QColor(c("success.bg") if self._exported else c("neutral.100"))
+        p.setBrush(halo)
+        p.drawEllipse(self.rect())
+        # 实心圆（居中 8px）
+        fill = QColor(c("success") if self._exported else c("neutral.300"))
+        p.setBrush(fill)
+        inset = float(self.HALO)
+        p.drawEllipse(QRectF(inset, inset, float(DOT_SIZE), float(DOT_SIZE)))
+        p.end()
 
 
 class ElidedLabel(QLabel):
@@ -86,8 +120,13 @@ class ElidedLabel(QLabel):
                                    max(0, self.width())))
 
 
+def _pill_radius() -> int:
+    """胶囊圆角用半高像素：Qt 对 border-radius:999px 常画成方块。"""
+    return max(1, SHELF_BADGE_H // 2)
+
+
 class ShelfRow(QFrame):
-    """书架里的一行：圆点 · 书名/副信息 · 状态位 · 操作位。"""
+    """书架里的一行：圆点 · 书名 · 状态位 · 操作位（对齐原型 .ws-row）。"""
 
     requestCurrent = Signal(str)      # 行内「设为当前」或整行点击 → 切换当前书
 
@@ -104,62 +143,89 @@ class ShelfRow(QFrame):
         self.setFixedHeight(ROW_H)
 
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(px(sp("3")), px(sp("2")), px(sp("3")), px(sp("2")))
-        lay.setSpacing(px(sp("2")))
+        # 原型 .ws-row：padding 10px 12px；gap 8px
+        lay.setContentsMargins(12, 10, 12, 10)
+        lay.setSpacing(8)
 
-        # 圆点：当前书主色实心、其它中性灰（另加底色与加粗，不只靠颜色区分）
-        self.dot = QFrame()
-        self.dot.setObjectName("ShelfDot")
-        self.dot.setFixedSize(DOT_SIZE, DOT_SIZE)
+        # 圆点：按「已导出」着色（自绘正圆 + 光晕）
+        self.dot = ShelfDot(exported=bool(book.exported_at))
         lay.addWidget(self.dot, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        text_box = QWidget()
-        tl = QVBoxLayout(text_box)
-        tl.setContentsMargins(0, 0, 0, 0)
-        tl.setSpacing(2)
+        # 单行书名；格式/大小/时间进 tooltip
         self.name = ElidedLabel(f"《{book.title}》{book.suffix}")
         self.name.setObjectName("ShelfName")
-        tl.addWidget(self.name)
-        self.meta = QLabel(
-            f"{book.fmt} · {shelf_data.human_size(book.size_bytes)} · "
-            f"{shelf_data.human_imported(book)}"
-        )
-        self.meta.setObjectName("ShelfMeta")
-        tl.addWidget(self.meta)
-        lay.addWidget(text_box, 1)
+        lay.addWidget(self.name, 1)
 
-        # 状态位：固定宽度；本卡只可能出现「已导出」，且由真实记录驱动
+        # 状态位：固定宽占位，透明无边框（空时绝不能露出方框）
         self.status = QLabel("已导出" if book.exported_at else "")
         self.status.setObjectName("ShelfStatus")
         self.status.setFixedWidth(STATUS_SLOT_W)
         self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.status.setStyleSheet(
+            "background:transparent;border:none;outline:none;")
         lay.addWidget(self.status, 0, Qt.AlignmentFlag.AlignVCenter)
 
-        # 操作位：固定宽度；当前行是徽标（不可点），其它行是主操作按钮
+        # 操作位：固定宽、透明无框；内部只放胶囊，勿再套可见容器
         self.action_slot = QWidget()
+        self.action_slot.setObjectName("ShelfAct")
         self.action_slot.setFixedWidth(ACTION_SLOT_W)
+        self.action_slot.setFixedHeight(SHELF_BADGE_H)
+        self.action_slot.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.action_slot.setStyleSheet(
+            "#ShelfAct{background:transparent;border:none;}")
         sl = QHBoxLayout(self.action_slot)
         sl.setContentsMargins(0, 0, 0, 0)
         sl.setSpacing(0)
+        sl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        rr = _pill_radius()
+        from fixtext_tokens import FONT_WEIGHT
+
         if current:
             self.badge = QLabel("当前")
             self.badge.setObjectName("ShelfBadge")
+            self.badge.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
             self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.badge.setFixedHeight(SHELF_BADGE_H)
-            sl.addWidget(self.badge)
+            # padding 只左右：上下由固定高度居中，避免底边被裁
+            self.badge.setStyleSheet(
+                f"QLabel#ShelfBadge{{color:{c('on.fill')};"
+                f"background-color:{c('success')};"
+                f"border:none;border-radius:{rr}px;"
+                f"padding:0 10px;font-size:11px;"
+                f"font-weight:{FONT_WEIGHT['semibold']};}}")
+            sl.addWidget(self.badge, 0, Qt.AlignmentFlag.AlignCenter)
             self.action_btn = None
         else:
             self.badge = None
             self.action_btn = QPushButton("设为当前")
             self.action_btn.setObjectName("BtnSetCurrent")
             self.action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.action_btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            # 去掉系统焦点方框（常被看成按钮后多一块）
+            self.action_btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            self.action_btn.setFlat(True)
+            self.action_btn.setAutoDefault(False)
+            self.action_btn.setDefault(False)
             self.action_btn.setFixedHeight(SHELF_BADGE_H)
             self.action_btn.setAccessibleName(f"把《{book.title}》设为当前书")
             self.action_btn.setToolTip(f"把《{book.title}》设为当前书")
+            # 完整内联三态：盖过全局 QPushButton；左右 padding，高度固定不裁底
+            self.action_btn.setStyleSheet(
+                f"QPushButton#BtnSetCurrent{{"
+                f"color:{c('primary.700')};background:{c('primary.50')};"
+                f"border:1px solid {c('primary.200')};border-radius:{rr}px;"
+                f"padding:0 12px;font-size:12px;"
+                f"font-weight:{FONT_WEIGHT['semibold']};outline:none;}}"
+                f"QPushButton#BtnSetCurrent:hover{{"
+                f"background:{c('primary.500')};color:{c('on.fill')};"
+                f"border:1px solid {c('primary.500')};}}"
+                f"QPushButton#BtnSetCurrent:pressed{{"
+                f"background:{c('primary.600')};color:{c('on.fill')};"
+                f"border:1px solid {c('primary.600')};}}")
             self.action_btn.clicked.connect(
                 lambda _=False, bid=book.book_id: self.requestCurrent.emit(bid))
-            sl.addWidget(self.action_btn)
+            sl.addWidget(self.action_btn, 0, Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(self.action_slot, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self._paint()
@@ -168,25 +234,27 @@ class ShelfRow(QFrame):
         return self._current
 
     def _paint(self) -> None:
-        """按当前态着色（全部取自令牌，颜色只在运行期展开）。"""
-        from fixtext_tokens import FONT_WEIGHT, c, fs, r
+        """按当前态 / 导出态着色（对齐原型 .ws-row / .bs-dot）。"""
+        from fixtext_tokens import FONT_WEIGHT, fs
 
-        self.dot.setStyleSheet(
-            f"background:{c('primary.500') if self._current else c('neutral.300')};"
-            f"border-radius:{r('full')}"
-        )
+        self.dot.set_exported(bool(self.book.exported_at))
         self.name.setStyleSheet(
             f"color:{c('primary.700') if self._current else c('neutral.800')};"
             f"font-size:{fs('sm')};"
             f"font-weight:"
-            f"{FONT_WEIGHT['bold'] if self._current else FONT_WEIGHT['medium']}"
-        )
-        self.meta.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:{fs('xs')}")
+            f"{FONT_WEIGHT['bold'] if self._current else FONT_WEIGHT['medium']};"
+            f"background:transparent;border:none;")
         self.status.setStyleSheet(
-            f"color:{c('success')};font-size:{fs('xs')};"
-            f"font-weight:{FONT_WEIGHT['semibold']}")
-        self.name.setToolTip(f"《{self.book.title}》{self.book.suffix}")
+            f"color:{c('success')};font-size:11px;"
+            f"font-weight:{FONT_WEIGHT['semibold']};"
+            f"background:transparent;border:none;")
+        tip = (
+            f"《{self.book.title}》{self.book.suffix}\n"
+            f"{self.book.fmt} · {shelf_data.human_size(self.book.size_bytes)} · "
+            f"{shelf_data.human_imported(self.book)}"
+        )
+        self.name.setToolTip(tip)
+        self.setToolTip(tip)
 
     def mousePressEvent(self, event):                # noqa: N802 - Qt 覆写
         if event.button() == Qt.MouseButton.LeftButton:

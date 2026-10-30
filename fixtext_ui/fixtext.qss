@@ -94,39 +94,10 @@ QLabel { background-color: transparent; }
 }
 #ShelfRow[current="true"] {
     background-color: #EEF0FB;
-    border-left: 3px solid #4F59C0;
-    padding-left: 9px;
 }
-#ShelfRow QLabel { background: transparent; }
-#ShelfBadge {
-    color: #FFFFFF;
-    background-color: #15803D;
-    border-radius: 999px;
-    padding: 0 8px;
-    font-size: 12px;
-    font-weight: 600;
-}
-#BtnSetCurrent {
-    color: #333B83;
-    background-color: #EEF0FB;
-    border: 1px solid #C0C6EE;
-    border-radius: 999px;
-    padding: 0 12px;
-    font-size: 12px;
-    font-weight: 600;
-}
-#BtnSetCurrent:hover {
-    background-color: #4F59C0;
-    color: #FFFFFF;
-    border: 1px solid #4F59C0;
-}
-#BtnSetCurrent:pressed {
-    background-color: #3F48A2;
-    color: #FFFFFF;
-    border: 1px solid #3F48A2;
-}
-#BtnSetCurrent:focus {
-    border: 1px solid #4F59C0;
+#ShelfAct, #ShelfStatus, #ShelfName {
+    background: transparent;
+    border: none;
 }
 
 #Rail {
