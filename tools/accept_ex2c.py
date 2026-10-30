@@ -1,4 +1,4 @@
-"""M4-EX.2c-R3 验收：只跑三个场景（S4 取消二次确认 / S5 ☰ 重开从第 2 步 / S6 完成页跳历史）。
+"""M4-EX.2c / M5-EX.5 验收：S4 取消二次确认 / S5 ☰ 重开从第 1 步 / S6 完成页跳历史。
 
 用法（离屏）：
     QT_QPA_PLATFORM=offscreen PYTHONPATH=<PySide6 site-packages> \\
@@ -486,14 +486,14 @@ def _run_session(sess: Session, step_fn, wizard_cls) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# S5 · ☰ 菜单重开：有当前书 → 从第 2 步开始
+# S5 · ☰ 菜单重开：一律从第 1 步开始（M5-EX.5；旧「有书跳第 2 步」已撤销）
 # ---------------------------------------------------------------------------
 
 WIZARD_MENU_ITEM = "新手向导（重新观看）"
 
 
 def s5(app) -> dict:
-    """真实导入一本书成为「当前书」→ 真实点顶栏 ☰ → 真实触发菜单项 → 断言起始步。
+    """真实导入一本书后 → 真实点顶栏 ☰ → 真实触发菜单项 → 断言仍从第 1 步起。
 
     ``QMenu.exec`` 是 Qt 静态绑定，猴子补丁拦不住（实测补丁后仍走原生实现）。
     所以这里不拦 exec：点 ☰ 后菜单会真的弹出来（阻塞在信号处理里的嵌套循环，
@@ -590,7 +590,7 @@ def s5(app) -> dict:
     app.processEvents()
 
     return {
-        "scenario": "S5 ☰ 菜单重开（有当前书从第 2 步开始）",
+        "scenario": "S5 ☰ 菜单重开（一律从第 1 步开始）",
         "import_ok": import_ok,
         "current_book": Path(current_book).name if current_book else "",
         "current_book_path_exists": bool(current_book) and Path(current_book).exists(),
@@ -598,18 +598,19 @@ def s5(app) -> dict:
         "menu_item_found": menu_info["found"],
         "reopen_start_step": opened.get("start_step"),
         "has_current_book_flag": opened.get("has_current_book"),
-        "starts_at_step2": opened.get("start_step") == 1,
+        "starts_at_step1": opened.get("start_step") == 0,
         "step_bars": opened.get("bars"),
-        "bars_expected": [100, 50, 0],
-        "step2_primary_text": opened.get("primary_text"),
+        "bars_expected": [50, 0, 0],
+        "step1_primary_text": opened.get("primary_text"),
         "prev_button_visible": opened.get("prev_visible"),
-        "step2_banner": opened.get("banner"),
+        "step1_banner": opened.get("banner"),
         "shot": opened.get("shot"),
         "texts": texts,
         "passed": bool(import_ok and menu_info["found"]
-                       and opened.get("start_step") == 1
-                       and opened.get("has_current_book") is True
-                       and opened.get("bars") == [100, 50, 0]),
+                       and opened.get("start_step") == 0
+                       and opened.get("has_current_book") is False
+                       and opened.get("bars") == [50, 0, 0]
+                       and opened.get("primary_text") == "📥 选择我的书…"),
     }
 
 

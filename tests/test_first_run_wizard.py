@@ -137,11 +137,12 @@ def test_step_bars_track_current(qt_app):
 
 
 def test_actions_split_left_right(qt_app):
-    """第 1 步：左侧「跳过」、右侧主操作；第 2 步起左侧多一个「返回上一步」。"""
+    """第 1 步：左侧「跳过」、右侧主操作；第 2 步起左侧多一个「上一步」。"""
     w = W.FirstRunWizard()
     assert w._primary.text() == "📥 选择我的书…"
     assert not _shown(w._prev)
     assert _shown(w._skip)
+    assert w._prev.text() == "上一步"
     w.go_step(1)
     assert w._primary.text() == "⚡ 开始校正"
     assert _shown(w._prev) and _shown(w._skip)
@@ -161,6 +162,28 @@ def test_back_returns_previous_step(qt_app):
     assert w.step == 1
     QTest.mouseClick(w._prev, Qt.MouseButton.LeftButton)
     assert w.step == 0
+    w.deleteLater()
+
+
+def test_back_then_next_resumes_without_rerun(qt_app):
+    """上一步后主按钮变「下一步」，点一下回到离开前的步（不跑业务）。"""
+    w = W.FirstRunWizard()
+    w.go_step(2)
+    QTest.mouseClick(w._prev, Qt.MouseButton.LeftButton)
+    assert w.step == 1
+    assert w._primary.text() == "下一步"
+    QTest.mouseClick(w._primary, Qt.MouseButton.LeftButton)
+    assert w.step == 2
+    assert w._primary.text() == "📤 导出并生成历史"
+    w.deleteLater()
+
+
+def test_rewatch_always_starts_at_step0(qt_app):
+    """M5-EX.5：即使传 has_current_book=True，也从第 1 步起。"""
+    w = W.FirstRunWizard(has_current_book=True)
+    assert w.step == 0
+    assert w.bars.values() == [50, 0, 0]
+    assert not any(x.objectName() == "OnbCurrentBookHint" for x in w.findChildren(QLabel))
     w.deleteLater()
 
 

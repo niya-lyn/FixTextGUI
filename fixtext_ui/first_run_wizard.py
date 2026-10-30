@@ -11,11 +11,12 @@
 每一步完成后，向导里显示的是**这一步的真实结果**（书名 / 字数 / 编码 /
 命中数 / 成品文件名），不是固定文案——所以「向导走完」等于「书真的处理好了」。
 
-交互（对齐合并版原型 v3）：
+交互（对齐合并版原型 v3 · M5-EX.5）：
 - 首启自动弹出（主窗口触发）、可跳过、可返回上一步；
-- 按钮左右分栏：左侧「返回上一步 / 跳过」，右侧主操作；
-- 校正取消二次确认（原型 `#corrConfirm`，层级高于校正进度弹窗）；
-- ☰ 菜单可随时重新打开（可重看）。
+- 按钮左右分栏：左侧「上一步 / 跳过」，右侧主操作；
+- 点「上一步」后，当前页主按钮变为「下一步」，一键回到刚才离开的那一步（不重跑）；
+- ☰「重新观看」始终从第 1 步开始；
+- 校正取消二次确认（原型 `#corrConfirm`，层级高于校正进度弹窗）。
 
 层级（原型附「层级速查」z-index 表，Qt 侧用窗口栈等效表达）：
   主界面 1–10 → 向导 45/46（模态窗，一定在主界面之上）
@@ -166,21 +167,27 @@ class FirstRunWizard(QDialog):
         self.import_module = import_module
         self.oneclick_module = oneclick_module
         self.export_module = export_module
-        # M4-EX.2c-S5：☰ 重开向导时若已有当前书，直接从第 2 步开始，
-        # 不要求用户再导一次（导入页本身也允许换书）。
+        # M5-EX.5：重看 / 首启一律从第 1 步开始。has_current_book 仅保留兼容形参，
+        # 不再跳过导入（旧 M4-EX.2c-S5 行为已撤销）。
         self.has_current_book = bool(has_current_book)
 
-        self.step = 1 if self.has_current_book else 0
+        self.step = 0
         self._import_result = None
         self._correction = None
         self._export = None
         self._export_path = ""
         self._busy = False
         self._error = ""
+        # 点「上一步」时记下离开的步号；返回页用「下一步」跳回，不重跑业务。
+        self._back_from_step: int | None = None
+        # 忙碌态延迟渲染：短操作不整页重绘，避免进度条/提示块一闪而过。
+        self._busy_ui_timer = QTimer(self)
+        self._busy_ui_timer.setSingleShot(True)
+        self._busy_ui_timer.setInterval(180)
+        self._busy_ui_timer.timeout.connect(self._render_if_still_busy)
 
         self._build()
         self._render()
-
     # ---------------------------------------------------------------- 构建
     def _build(self) -> None:
         root = QVBoxLayout(self)
@@ -279,16 +286,6 @@ class FirstRunWizard(QDialog):
         p.setStyleSheet(
             f"color:{c('neutral.700')};font-size:{fs('sm')};line-height:1.7")
         self.panel_l.addWidget(p)
-        if self.has_current_book and self.step == 1:
-            hint = QLabel(
-                "已检测到当前书：向导直接从第 2 步开始，不必重新导入。"
-                "想换一本书，可点「← 返回上一步」。")
-            hint.setWordWrap(True)
-            hint.setObjectName("OnbCurrentBookHint")
-            hint.setStyleSheet(
-                f"background:{c('primary.100')};color:{c('primary.700')};"
-                f"border-radius:{r('md')};padding:8px 10px;font-size:{fs('xs')}")
-            self.panel_l.addWidget(hint)
         self.panel_l.addWidget(hline())
         self.panel_l.addWidget(self._result_block())
         if self._busy:
@@ -420,7 +417,7 @@ class FirstRunWizard(QDialog):
         ll.setContentsMargins(0, 0, 0, 0)
         ll.setSpacing(10)
 
-        self._prev = QPushButton("← 返回上一步")
+        self._prev = QPushButton("上一步")
         self._prev.setObjectName("BtnGhost")
         self._prev.setCursor(Qt.CursorShape.PointingHandCursor)
         self._prev.clicked.connect(self._go_prev)
@@ -437,6 +434,14 @@ class FirstRunWizard(QDialog):
         self.foot_l.addWidget(left)
         self.foot_l.addStretch(1)
 
+        # 从后面退回来时：保留原主操作作次按钮，主按钮改「下一步」回到离开页
+        if self._can_resume_next() and not self._busy:
+            redo = QPushButton(self._action_text())
+            redo.setObjectName("BtnGhost")
+            redo.setCursor(Qt.CursorShape.PointingHandCursor)
+            redo.clicked.connect(self._run_step_action)
+            self.foot_l.addWidget(redo)
+
         self._primary = QPushButton(self._primary_text())
         self._primary.setObjectName("BtnPrimary")
         self._primary.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -444,10 +449,15 @@ class FirstRunWizard(QDialog):
         self._primary.setEnabled(not self._busy)
         self.foot_l.addWidget(self._primary)
 
-    def _primary_text(self) -> str:
-        if self._busy:
-            return {0: "正在导入…", 1: "正在校正…", 2: "正在导出…"}.get(
-                self.step, "请稍候…")
+    def _can_resume_next(self) -> bool:
+        return (
+            self._back_from_step is not None
+            and self.step < self._back_from_step
+            and self.step < 3
+        )
+
+    def _action_text(self) -> str:
+        """当前步的真实业务按钮文案（与「下一步」恢复导航区分）。"""
         return {
             0: "📥 选择我的书…",
             1: "⚡ 开始校正",
@@ -455,9 +465,18 @@ class FirstRunWizard(QDialog):
             3: "完成",
         }[self.step]
 
+    def _primary_text(self) -> str:
+        if self._busy:
+            return {0: "正在导入…", 1: "正在校正…", 2: "正在导出…"}.get(
+                self.step, "请稍候…")
+        if self._can_resume_next():
+            return "下一步"
+        return self._action_text()
+
     # ---------------------------------------------------------------- 导航
     def _go_prev(self) -> None:
         if self.step > 0 and not self._busy:
+            self._back_from_step = self.step
             self.step -= 1
             self._error = ""
             self._render()
@@ -468,6 +487,20 @@ class FirstRunWizard(QDialog):
         if self.step >= 3:
             self.accept()
             return
+        if self._can_resume_next():
+            target = self._back_from_step
+            self._back_from_step = None
+            self.step = int(target)
+            self._error = ""
+            self._render()
+            return
+        self._run_step_action()
+
+    def _run_step_action(self) -> None:
+        """跑当前步真实业务（导入 / 校正 / 导出）；会清掉「下一步」恢复态。"""
+        if self._busy:
+            return
+        self._back_from_step = None
         self._error = ""
         if self.step == 0:
             self._do_import()
@@ -494,8 +527,28 @@ class FirstRunWizard(QDialog):
 
     # ---------------------------------------------------------------- 业务
     def _set_busy(self, busy: bool) -> None:
+        """忙碌开关。
+
+        短操作若立刻整页 ``_render``，进度条与提示块会一闪而过（观感像弹窗闪一下）。
+        进入忙碌时先只锁主按钮；超过约 180ms 仍在忙才整页画出进度条。
+        结束忙碌时取消延迟并交给调用方做最终 ``_render``（避免连闪两次）。
+        """
         self._busy = busy
-        self._render()
+        if busy:
+            if hasattr(self, "_primary") and self._primary is not None:
+                self._primary.setEnabled(False)
+                self._primary.setText(self._primary_text())
+            if hasattr(self, "_prev") and self._prev is not None:
+                self._prev.setVisible(False)
+            if hasattr(self, "_skip") and self._skip is not None:
+                self._skip.setVisible(False)
+            self._busy_ui_timer.start()
+        else:
+            self._busy_ui_timer.stop()
+
+    def _render_if_still_busy(self) -> None:
+        if self._busy:
+            self._render()
 
     def _do_import(self) -> None:
         """真实导入：文件选择对话框 → 导入模块同一汇合入口 → 等它跑完。"""

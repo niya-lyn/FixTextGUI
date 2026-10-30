@@ -477,8 +477,8 @@ class MainWindow(QMainWindow):
             oneclick_module=self.oneclick_module,
             export_module=self.export_module,
             parent=self,
-            # M4-EX.2c-S5：重看向导时若已有当前书，从「一键校正」开始
-            has_current_book=bool(getattr(self, "_current_text_path", "")),
+            # M5-EX.5：☰ 重新观看 / 空状态入口一律从第 1 步开始
+            has_current_book=False,
         )
         accepted = w.exec() == QDialog.DialogCode.Accepted
         # 任何关闭方式都算已看过（跳过 / 关闭 / 完成一致），先记再看跳转
