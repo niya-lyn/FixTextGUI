@@ -151,8 +151,10 @@ class PipelineConfig:
     enable_strict: bool = False
     #: 注音档：``off`` 或 ``0``/``1``/``2``/``3``（对齐原型）
     zhuyin_mode: str = "off"
-    #: 主替换勾选的 UI 袋码（含 custom / b2 / b3；b1 始终锁定）
-    selected_bags: tuple[str, ...] = ("custom",)
+    #: 主替换勾选的 UI 袋码（与 bags.DEFAULT_SELECTED_BAGS 一致）
+    selected_bags: tuple[str, ...] = (
+        "b1", "custom", "cjk", "b3", "ddd", "old_style",
+    )
     #: 当前替换轮次（由具体 Replace*Stage 类设置，编排器可忽略）
     replace_round: str = "main"
 

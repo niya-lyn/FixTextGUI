@@ -78,17 +78,12 @@ def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
 
 
 def _link_btn(text: str, *, danger: bool = False, enabled: bool = True) -> QPushButton:
-    """行内文字按钮（编辑 / 删除）：透明底、主色或危险色、hover 反白。"""
+    """行内文字按钮（编辑 / 删除）：透明底、主色或危险色、hover 反白。
+    配色统一交给 fixtext.qss 的 #LinkBtn / #LinkBtn[danger="true"]（原内联收归）。"""
     btn = QPushButton(text)
-    kind = "LinkBtnDel" if danger else "LinkBtn"
-    btn.setObjectName(kind)
-    fg = c("error") if danger else c("primary.700")
-    hover_bg = c("error.bg") if danger else c("primary.100")
+    btn.setObjectName("LinkBtn")
+    btn.setProperty("danger", "true" if danger else "false")
     btn.setCursor(Qt.CursorShape.PointingHandCursor)
-    btn.setStyleSheet(
-        f"QPushButton#{kind}{{background:transparent;border:none;color:{fg};"
-        f"font-weight:600;font-size:{fs('xs')};padding:4px 6px;border-radius:6px}}"
-        f"QPushButton#{kind}:hover{{background:{hover_bg}}}")
     if not enabled:
         btn.setEnabled(False)
     return btn
@@ -99,9 +94,7 @@ def _mini_table(headers: list, rows: list, *, mono_cols: set | None = None) -> Q
     mono_cols = mono_cols or set()
     box = QFrame()
     box.setObjectName("MiniTable")
-    box.setStyleSheet(
-        f"QFrame#MiniTable{{border:1px solid {c('neutral.200')};"
-        f"border-radius:10px;background:{c('neutral.0')}}}")
+    # 配色交给 fixtext.qss 的 QFrame#MiniTable（原内联收归）
     vl = QVBoxLayout(box)
     vl.setContentsMargins(12, 10, 12, 10)
     vl.setSpacing(0)
@@ -236,8 +229,7 @@ class VocabModule(QWidget):
         self._tier_btns = {}
         seg = QWidget()
         seg.setObjectName("TierTabs")
-        seg.setStyleSheet(
-            f"QWidget#TierTabs{{background:{c('neutral.100')};border-radius:{r('full')};padding:3px}}")
+        # 配色交给 fixtext.qss 的 #TierTabs（原内联收归）
         sl = QHBoxLayout(seg)
         sl.setContentsMargins(3, 3, 3, 3)
         sl.setSpacing(2)
@@ -255,54 +247,40 @@ class VocabModule(QWidget):
         return shell
 
     def _head_icon_btn(self, glyph: str, tip: str, slot) -> QPushButton:
-        """页头浅色图标按钮（原型 .page-head .icon-btn；内联完整态，勿只留 font-size）。"""
+        """页头浅色图标按钮（原型 .page-head .icon-btn）。
+        配色统一交给 fixtext.qss 的 QPushButton#HeadIconBtn（原内联收归）。"""
         b = QPushButton(glyph)
         b.setObjectName("HeadIconBtn")
         b.setFixedSize(34, 34)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setToolTip(tip)
         b.setAccessibleName(tip)
-        # 控件级 setStyleSheet 会压掉应用级残缺规则：必须写全 hover/pressed
-        b.setStyleSheet(
-            f"QPushButton#HeadIconBtn{{background:{c('neutral.100')};"
-            f"color:{c('neutral.700')};border:1px solid {c('neutral.200')};"
-            f"border-radius:{r('md')};font-size:{ICON_GLYPH_SIZE};padding:0}}"
-            f"QPushButton#HeadIconBtn:hover{{background:{c('primary.50')};"
-            f"color:{c('primary.700')};border:1px solid {c('primary.200')}}}"
-            f"QPushButton#HeadIconBtn:pressed{{background:{c('primary.100')};"
-            f"color:{c('primary.700')}}}")
+        # 完整态（含 hover/pressed）已落在 fixtext.qss，无需控件级内联
         b.clicked.connect(slot)
         return b
 
     def _set_tier_active(self, t: str):
         for key, b in self._tier_btns.items():
             on = (key == t)
-            # Qt 样式表没有 cursor / box-shadow：选中态改用描边表达层级
-            b.setStyleSheet(
-                f"QPushButton#TierTab{{border-radius:{r('full')};padding:6px 15px;"
-                f"font-weight:600;font-size:{fs('sm')};"
-                f"background:{c('neutral.0') if on else 'transparent'};"
-                f"color:{c('primary.700') if on else c('neutral.600')};"
-                + (f"border:1px solid {c('neutral.200')};" if on else "border:none;")
-                + "}"
-                f"QPushButton#TierTab:hover{{background:{c('neutral.0') if on else c('neutral.50')}}}")
+            # 选中态交给 fixtext.qss 的 #TierTab[active="true"]（原内联收归）
+            b.setProperty("active", "true" if on else "false")
+            b.style().unpolish(b)
+            b.style().polish(b)
 
     # -------------------------------------------------- 本书专有词库横幅（2.4.2）
 
     def _banner(self) -> QWidget:
         self._banner_w = QWidget()
         self._banner_w.setObjectName("Banner")
-        self._banner_w.setStyleSheet(
-            f"QWidget#Banner{{background:{c('primary.50')};border:1px solid {c('primary.100')};"
-            f"border-radius:{r('lg')};padding:14px 18px}}")
+        # 配色交给 fixtext.qss 的 #Banner（原内联收归）
         hl = QHBoxLayout(self._banner_w)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(14)
         ico = QLabel("✨")
+        ico.setObjectName("BannerIco")
         ico.setFixedSize(38, 38)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('primary.500')};color:{c('on.fill')};border-radius:10px;font-size:18px")
+        # 图标方块配色交给 fixtext.qss 的 #BannerIco（原内联收归）
         hl.addWidget(ico)
         txt = QVBoxLayout()
         txt.setSpacing(2)
@@ -378,7 +356,9 @@ class VocabModule(QWidget):
         hl.setContentsMargins(10, 10, 10, 10)
         hl.setSpacing(10)
         _ico = {
-            "custom": "✎", "b1": "📕", "b2": "📗", "b3": "📘",
+            "custom": "✎", "b1": "📕", "cjk": "📙", "b3": "📘",
+            "b3r": "📕", "extra": "📔", "ddd": "📖", "dei2de": "📑",
+            "old_style": "📜", "txt_format": "📰",
             "preprocess": "📙", "strict": "📓", "zhuyin": "📒",
         }.get(d, "📘")
         ico = QLabel(_ico)
@@ -409,9 +389,10 @@ class VocabModule(QWidget):
         counts = self.counts()
         for key, item in self._dict_items.items():
             on = (key == d)
-            item.setStyleSheet(
-                f"QWidget#DictItem{{border:1px solid {c('primary.500') if on else c('neutral.200')};"
-                f"border-radius:{r('md')};background:{c('primary.50') if on else c('neutral.0')}}}")
+            # 选中态交给 fixtext.qss 的 #DictItem[active="true"]（原内联收归）
+            item.setProperty("active", "true" if on else "false")
+            item.style().unpolish(item)
+            item.style().polish(item)
             item._meta.setText(
                 f"{_fmt_num(counts.get(key, 0))} 条 · {'可编辑' if key=='custom' else '只读'}")
 
@@ -451,12 +432,10 @@ class VocabModule(QWidget):
         bl.addWidget(add)
 
         self._search = QLineEdit()
+        self._search.setObjectName("Search")
         self._search.setPlaceholderText("检索词或替换值…（双向）")
         self._search.setMinimumWidth(200)
-        self._search.setStyleSheet(
-            f"QLineEdit{{background:{c('neutral.50')};border:1px solid {c('neutral.200')};"
-            f"border-radius:{r('md')};padding:8px 12px;font-size:{fs('base')};color:{c('neutral.800')}}}"
-            f"QLineEdit:focus{{border-color:{c('primary.500')};border-width:2px}}")
+        # 配色交给 fixtext.qss 的 #Search（原内联收归）
         self._search.textChanged.connect(self._on_search)
         bl.addWidget(self._search, 1)
 
@@ -664,7 +643,7 @@ class VocabModule(QWidget):
         """当前选择折算成数据层的检索范围。"""
         if self.dict_ == "custom":
             return "custom"
-        if self.dict_ in ("b1", "b2", "b3", "preprocess", "strict", "zhuyin"):
+        if self.dict_ in TIER_NAMES and self.dict_ != "custom":
             return self.dict_
         if self.tier == "custom":
             return "custom"
@@ -802,8 +781,7 @@ class VocabModule(QWidget):
             cur = bool(rec.get("is_current"))
             item = QWidget()
             item.setObjectName("SnapItem")
-            item.setStyleSheet(
-                f"QWidget#SnapItem{{border-bottom:1px solid {c('neutral.100')};}}")
+            # 分隔线交给 fixtext.qss 的 #SnapItem（原内联收归）
             hl = QHBoxLayout(item)
             hl.setContentsMargins(2, 10, 2, 10)
             hl.setSpacing(10)
@@ -1498,13 +1476,13 @@ class VocabModule(QWidget):
         m = Modal(icon="↺", title="恢复默认词库", parent=self)
         m.add_note("底线⑤：恢复默认词库只重置内置词库，不影响你的自定义词条。", "info")
         m.add_widget(_label(
-            "将把内置词库（常规校正 / 标点规范 / 繁简转换）重置为出厂版本，自定义词条保持不变。可撤销。",
+            "将把内置词库重置为出厂版本，自定义词条保持不变。可撤销。",
             size="sm", color="neutral.700", wrap=True))
         rows = [
             ("内置词条", f"{_fmt_num(pv['total_entries'])} 条（"
-                         f"常规校正 {_fmt_num(pv['tier_counts'].get('b1', 0))} / "
-                         f"标点规范 {_fmt_num(pv['tier_counts'].get('b2', 0))} / "
-                         f"繁简转换 {_fmt_num(pv['tier_counts'].get('b3', 0))}）"),
+                         f"常规 {_fmt_num(pv['tier_counts'].get('b1', 0))} / "
+                         f"CJK {_fmt_num(pv['tier_counts'].get('cjk', 0))} / "
+                         f"繁简 {_fmt_num(pv['tier_counts'].get('b3', 0))}）"),
             ("与出厂版本的差异", "已是出厂状态（无需改动）" if pv["already_default"]
                                  else f"{pv['changed_files']} 份内容与出厂版本不同"),
             ("我的词库", f"{_fmt_num(pv['custom_entries'])} 条，保持不动"),

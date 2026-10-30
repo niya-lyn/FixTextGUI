@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 from fixtext_tokens import c, r, fs, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline,
-    ConfirmDialog, page_head_shell,
+    ConfirmDialog, page_head_shell, enable_chrome,
 )
 from fixtext_worker import CorrectionJob, CorrectionWorker
 
@@ -62,12 +62,20 @@ FMT_ITEMS = [
          kind="switch", on=False),
 ]
 
-#: 一键组合可勾选袋（常规锁定；预处理/严格/注音走独立开关，不在此列）
+#: 一键组合可勾选袋（常规锁定；预处理/严格/注音走独立开关与独立轮，不在此列）
+#: 与 data/rules/bags 中主轮可达袋对齐；新增袋须同步 UI_BAG_MAP / 词库 TIER_*。
 BAG_CHECKS = [
-    ("b1", "常规校正词库", True, True),       # code, label, default_on, locked
+    ("b1", "常规校正词库", True, True),         # code, label, default_on, locked
+    ("cjk", "CJK 恢复词库", True, True),        # 编码修复，与常规同锁
     ("custom", "我的词库", True, False),
-    ("b2", "标点规范词库", False, False),
-    ("b3", "繁简转换词库", False, False),
+    ("b3", "繁简转换词库", True, False),        # 默开可关
+    ("ddd", "的地得词库", True, False),
+    ("old_style", "旧式通假词库", True, False),
+    ("b3r", "繁简转换激进词库", False, False),  # 和谐字等，默认关
+    ("extra", "的地得/象像加强", False, False),
+    ("dei2de", "「得」转「的」", False, False),
+    ("txt_format", "txtFormat 词库", False, False),
+    # postfix / temp：不可达，分别留待正则误伤修复、批注→临时表功能
 ]
 
 ZHUYIN_OPTS = [
@@ -225,20 +233,18 @@ class OneClickModule(QWidget):
     def _book_bar(self) -> QFrame:
         bar = QFrame()
         bar.setObjectName("BookBar")
-        bar.setStyleSheet(
-            f"#BookBar{{background:{c('neutral.0')};border:1px solid "
-            f"{c('neutral.200')};border-radius:{r('lg')}}}")
+        enable_chrome(bar)
+        # 配色交给 fixtext.qss 的 QFrame#BookBar（原内联收归）
 
         hl = QHBoxLayout(bar)
         hl.setContentsMargins(18, 14, 18, 14)
         hl.setSpacing(14)
 
         ico = QLabel("📖")
+        ico.setObjectName("BookBarIco")
         ico.setFixedSize(40, 40)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:10px;font-size:19px")
+        # 图标方块配色交给 fixtext.qss 的 #BookBarIco（原内联收归）
         hl.addWidget(ico)
 
         col = QVBoxLayout()
@@ -289,11 +295,8 @@ class OneClickModule(QWidget):
         # M5-EX.7 §10 Step4：与 .chk-top / 导出 .hero 同规（padding/gap/大按钮）
         hero = QFrame()
         hero.setObjectName("Hero")
-        hero.setStyleSheet(
-            f"#Hero{{border-radius:{r('lg')};"
-            f"background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-            f"stop:0 {c('primary.700')},stop:1 {c('primary.500')});}}")
-
+        enable_chrome(hero)
+        # 渐变横幅交给 fixtext.qss 的 #Hero（原内联收归）
         hl = QHBoxLayout(hero)
         hl.setContentsMargins(28, 26, 28, 26)
         hl.setSpacing(24)
@@ -319,14 +322,7 @@ class OneClickModule(QWidget):
         self.run_btn.setObjectName("HeroBtn")
         self.run_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.run_btn.setMinimumHeight(50)
-        self.run_btn.setStyleSheet(
-            f"#HeroBtn{{background:{c('neutral.0')};color:{c('primary.700')};"
-            f"border:none;border-radius:{r('lg')};padding:16px 34px;"
-            f"font-size:{fs('md')};font-weight:{FONT_WEIGHT['bold']}}}"
-            f"#HeroBtn:hover:!pressed{{background:{c('primary.50')}}}"
-            f"#HeroBtn:pressed{{background:{c('primary.100')}}}"
-            f"#HeroBtn:disabled{{opacity:0.5;background:{c('neutral.0')};"
-            f"color:{c('primary.500')}}}")
+        # 大按钮配色交给 fixtext.qss 的 #HeroBtn（原内联收归）
         self.run_btn.clicked.connect(lambda: self.do_correction())
         hl.addWidget(self.run_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         return hero
@@ -384,18 +380,7 @@ class OneClickModule(QWidget):
             box.setCurrentText(it["val"])
             box.setMinimumWidth(132)
             box.setCursor(Qt.CursorShape.PointingHandCursor)
-            # 控件级完整态：避免全局 QSS 被其它内联表打断后下拉「无反馈」
-            box.setStyleSheet(
-                f"QComboBox#FmtCombo{{background:{c('neutral.0')};"
-                f"border:1px solid {c('neutral.200')};border-radius:{r('md')};"
-                f"padding:7px 10px;font-size:{fs('sm')};color:{c('neutral.800')}}}"
-                f"QComboBox#FmtCombo:hover{{border:1px solid {c('primary.300')}}}"
-                f"QComboBox#FmtCombo:focus{{border:1px solid {c('primary.500')}}}"
-                f"QComboBox#FmtCombo::drop-down{{border:none;width:28px}}"
-                f"QComboBox#FmtCombo QAbstractItemView{{background:{c('neutral.0')};"
-                f"border:1px solid {c('neutral.200')};border-radius:{r('md')};"
-                f"selection-background-color:{c('primary.50')};"
-                f"selection-color:{c('primary.700')};outline:0;padding:4px}}")
+            # 完整态交给 fixtext.qss 的 QComboBox#FmtCombo（原内联收归）
             self._combos[it["n"]] = box
             box.currentTextChanged.connect(
                 lambda v, n=it["n"]: self._on_choice(n, v))
@@ -551,7 +536,11 @@ class OneClickModule(QWidget):
             bl.addWidget(cb)
         card.body_l.addWidget(bags_wrap)
         card.body_l.addWidget(self._hint(
-            "「常规校正词库」默认启用且锁定不可取消；其余词库可勾选组合使用，默认「我的词库」。"))
+            "「常规校正」「CJK 恢复」锁定（CJK 用于扩展区编码修复，强制跑）。"
+            "「繁简转换」「的地得」「旧式通假」「我的词库」默认开，可关。"
+            "「繁简转换激进」含和谐字等，易误改，默认关。"
+            "预处理 / 严格 / 注音在上方独立开关（另起一轮）。"
+            "txtFormat 较多误改，建议常规校正后再单独勾选比对。"))
         card.body_l.addWidget(self._basis("§2.2 · 主按钮不询问词库组合"))
 
         card.body_l.addWidget(hline())
@@ -637,9 +626,10 @@ class OneClickModule(QWidget):
 
     def _run_options(self) -> dict:
         """从高级选项控件收集 M5-EX.1 运行参数。"""
-        bags = ["b1"]  # 锁定
+        bags: list[str] = []
         for code, _label, _on, locked in BAG_CHECKS:
             if locked:
+                bags.append(code)  # 常规 / CJK 等锁定袋强制计入
                 continue
             cb = self.bag_checks.get(code)
             if cb is not None and cb.isChecked():
@@ -1004,8 +994,7 @@ class OneClickModule(QWidget):
         """本次处理摘要（数字全部来自真实运行报告）。"""
         box = QFrame()
         box.setObjectName("Diff")
-        box.setStyleSheet(
-            f"#Diff{{background:{c('neutral.50')};border-radius:10px}}")
+        # 配色交给 fixtext.qss 的 #Diff（原内联收归）
         v = QVBoxLayout(box)
         v.setContentsMargins(14, 12, 14, 12)
         v.setSpacing(4)
@@ -1047,8 +1036,7 @@ class OneClickModule(QWidget):
     def _stat(self, num: str, lab: str) -> QFrame:
         box = QFrame()
         box.setObjectName("Stat")
-        box.setStyleSheet(
-            f"#Stat{{background:{c('primary.50')};border-radius:10px}}")
+        # 配色交给 fixtext.qss 的 #Stat（原内联收归）
         v = QVBoxLayout(box)
         v.setContentsMargins(14, 12, 14, 12)
         v.setSpacing(2)

@@ -12,16 +12,28 @@ from typing import Any, Iterable, Sequence
 
 from . import vocab_bridge
 
-#: 主替换锁定袋 + 静默并入（UI 不单独露）
+#: 主替换锁定袋（界面勾选但不可取消）
 LOCKED_MAIN_BAG = "normal"
-SILENT_WITH_NORMAL = ("cjk_recover",)
 
-#: 一键组合勾选 ↔ 袋 id
+#: 与常规同锁：扩展区字形恢复（修编码/比对），主轮强制并入
+SILENT_WITH_NORMAL: tuple[str, ...] = ("cjk_recover",)
+
+#: 一键组合勾选 ↔ 袋 id（不含 preprocess/strict/zhuyin：那三袋走独立开关与独立轮）
+#: 故意不映射：postfix/temp（等正则 / 临时表）；punctuation（已迁排版 formatting）
 UI_BAG_MAP = {
     "b1": "normal",
-    "b2": "punctuation",
+    "cjk": "cjk_recover",
     "b3": "t2s",
+    "b3r": "t2s_radical",
+    "extra": "extra",
+    "ddd": "ddd",
+    "dei2de": "dei2de",
+    "old_style": "old_style",
+    "txt_format": "txt_format",
 }
+
+#: 非 UI 调用时的默认勾选（对齐界面：锁定袋 + 默开袋）
+DEFAULT_SELECTED_BAGS = ("b1", "custom", "cjk", "b3", "ddd", "old_style")
 
 SWITCH_BAGS = {
     "preprocess": "preprocess",
@@ -94,13 +106,14 @@ def concat_bags(bag_ids: Sequence[str], root: Path | None = None) -> tuple[list[
 
 
 def main_bag_ids(selected_ui: Iterable[str] | None = None) -> list[str]:
-    """主替换袋列表：常规锁定 + cjk_recover + 勾选的标点/繁简。"""
+    """主替换袋列表：常规+CJK 锁定并入 + 勾选映射袋（不含开关独占的三轮）。"""
     ids = [LOCKED_MAIN_BAG]
     for silent in SILENT_WITH_NORMAL:
         if silent not in ids:
             ids.append(silent)
     for code in selected_ui or ():
-        if code == "custom" or code == "b1":
+        # b1 / cjk 已由锁定路径装入；custom 走 compose，不进袋 id
+        if code in ("custom", "b1", "cjk"):
             continue
         bag = UI_BAG_MAP.get(str(code))
         if bag and bag not in ids:

@@ -74,12 +74,12 @@ BAG_SPECS: list[dict] = [
     },
     {
         "id": "punctuation",
-        "title": "标点规范",
+        "title": "标点规范（遗留）",
         "locked": False,
         "via_switch": False,
-        "default_on": True,
+        "default_on": False,
         "vars": ["1.自定义词库.php__punctuationMap"],
-        "note": "仅 punctuationMap 源变量；旧 tier=2 里靠 mark 判进「标点」的条目仍留在其来源袋",
+        "note": "PHP 已迁 config/formatting.php；GUI 走排版 normalize_punctuations，本袋不进 UI",
     },
     {
         "id": "cjk_recover",
@@ -113,9 +113,19 @@ BAG_SPECS: list[dict] = [
         "default_on": False,
         "vars": [
             "2.繁转简词库.php__t2sMap",
+        ],
+    },
+    {
+        "id": "t2s_radical",
+        "title": "繁简转换激进",
+        "locked": False,
+        "via_switch": False,
+        "default_on": False,
+        "vars": [
             "2.繁转简词库.php__t2sRadicalMap",
             "2.繁转简词库.php__radicalsSupplementMap",
         ],
+        "note": "更激进的繁简转换（和谐字等），有误改概率；默认不勾选",
     },
     {
         "id": "txt_format",

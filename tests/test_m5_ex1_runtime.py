@@ -31,13 +31,23 @@ def test_bags_manifest_and_locked_main():
     from fixtext_pipeline import bags
 
     man = bags.load_manifest(BAGS)
-    assert man.get("bag_count") == 14
+    assert man.get("bag_count") == 15
     assert bags.LOCKED_MAIN_BAG == "normal"
-    ids = bags.main_bag_ids(("custom", "b2"))
-    assert ids[0] == "normal"
-    assert "cjk_recover" in ids
-    assert "punctuation" in ids
+    # CJK 与常规同锁，始终并入；punctuation 已移除
+    ids = bags.main_bag_ids(("custom",))
+    assert ids == ["normal", "cjk_recover"]
     assert "custom" not in ids  # custom 走 compose，不进袋 id
+    assert bags.main_bag_ids(("b3", "b3r")) == [
+        "normal", "cjk_recover", "t2s", "t2s_radical",
+    ]
+    assert bags.SILENT_WITH_NORMAL == ("cjk_recover",)
+    assert "punctuation" not in bags.UI_BAG_MAP.values()
+    assert "postfix" not in bags.UI_BAG_MAP.values()
+    assert "temp" not in bags.UI_BAG_MAP.values()
+    all_main = bags.main_bag_ids(tuple(bags.UI_BAG_MAP.keys()) + ("custom",))
+    assert set(all_main) == set(bags.UI_BAG_MAP.values())
+    for switch_bag in bags.SWITCH_BAGS.values():
+        assert switch_bag not in all_main
 
 
 def test_bags_concat_and_write_round(tmp_path):
@@ -147,7 +157,7 @@ def test_zhuyin_post_modes():
 # ---------------------------------------------------------------------------
 
 def test_vocab_builtin_from_bags():
-    from fixtext_vocab import BuiltinVocab, TIER_ORDER, TIER_NAMES
+    from fixtext_vocab import BAG_TO_TIER, BuiltinVocab, TIER_NAMES, TIER_ORDER
 
     bv = BuiltinVocab(RULES)
     assert bv.available
@@ -157,8 +167,24 @@ def test_vocab_builtin_from_bags():
     assert counts.get("preprocess", 0) > 0
     assert counts.get("strict", 0) > 0
     assert counts.get("zhuyin", 0) > 0
+    assert counts.get("extra", 0) > 0
+    assert counts.get("ddd", 0) > 0
+    assert counts.get("txt_format", 0) > 0
+    assert counts.get("cjk", 0) > 0
+    assert counts.get("b3", 0) == 3141
+    assert counts.get("b3r", 0) == 1107  # radical + supplement
+    assert set(BAG_TO_TIER) == {
+        "normal", "cjk_recover", "t2s", "t2s_radical",
+        "extra", "ddd", "dei2de", "old_style", "txt_format",
+        "preprocess", "strict", "zhuyin",
+    }
+    assert "punctuation" not in BAG_TO_TIER
+    assert "postfix" not in BAG_TO_TIER and "temp" not in BAG_TO_TIER
+    assert set(BAG_TO_TIER.values()).issubset(set(TIER_ORDER))
     assert "preprocess" in TIER_ORDER
     assert "严格校正词库" in TIER_NAMES.values()
+    assert "的地得词库" in TIER_NAMES.values()
+    assert "繁简转换激进词库" in TIER_NAMES.values()
 
 
 # ---------------------------------------------------------------------------
@@ -239,7 +265,7 @@ def _run_pipeline(
     enable_preprocess=False,
     enable_strict=False,
     zhuyin_mode="off",
-    selected_bags=("custom",),
+    selected_bags=("b1", "custom", "cjk", "b3", "ddd", "old_style"),
 ):
     from fixtext_pipeline.config import PipelineConfig, build_stage_keys
     from fixtext_pipeline.logsetup import StageLogger, capture_output

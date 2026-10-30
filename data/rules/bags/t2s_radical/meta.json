@@ -1,0 +1,15 @@
+{
+  "id": "t2s_radical",
+  "title": "繁简转换激进",
+  "locked": false,
+  "via_switch": false,
+  "default_on": false,
+  "rule_count": 1107,
+  "vars": {
+    "2.繁转简词库.php__t2sRadicalMap": 892,
+    "2.繁转简词库.php__radicalsSupplementMap": 215
+  },
+  "before_sha256": "a38c6b77f5013c6485d7420f205bee17b3f10ab7194ba2ac3c36dac6d8ae9532",
+  "after_sha256": "64e34f2c0921de6641c443e8f400d24ed68589235d8fd5880998314f8724a189",
+  "bag_code": 15
+}

@@ -68,43 +68,72 @@ WORK_RULES_DIR = "rules"
 #: 还原点与操作历史
 SNAP_DIR = "snapshots"
 
-#: 分级代号 → 友好名（一键组合可见袋 + 开关独占袋 + 自定义）
+#: 分级代号 → 友好名（全部拆袋 + 自定义；与一键勾选 / 开关袋对齐）
 TIER_NAMES = {
     "custom": "我的词库",
     "b1": "常规校正词库",
-    "b2": "标点规范词库",
+    "cjk": "CJK 恢复词库",
     "b3": "繁简转换词库",
+    "b3r": "繁简转换激进词库",
+    "extra": "的地得/象像加强",
+    "ddd": "的地得词库",
+    "dei2de": "「得」转「的」",
+    "old_style": "旧式通假词库",
+    "txt_format": "txtFormat 词库",
     "preprocess": "预处理词库",
     "strict": "严格校正词库",
     "zhuyin": "生僻字注音词库",
+    # 磁盘有、界面不挂：punctuation（已迁排版）、postfix/temp（等后续功能）
 }
-#: 袋 id → 界面分级码（M5-EX.1 按袋目录展示）
+#: 袋 id → 界面分级码（可达袋）
 BAG_TO_TIER = {
     "normal": "b1",
-    "punctuation": "b2",
+    "cjk_recover": "cjk",
     "t2s": "b3",
+    "t2s_radical": "b3r",
+    "extra": "extra",
+    "ddd": "ddd",
+    "dei2de": "dei2de",
+    "old_style": "old_style",
+    "txt_format": "txt_format",
     "preprocess": "preprocess",
     "strict": "strict",
     "zhuyin": "zhuyin",
 }
-#: 界面分级码 → 合成 tiers 单字节（仅内存索引；与旧 flat 1/2/3 兼容）
+#: 界面分级码 → 合成 tiers 单字节（仅内存索引；1/3–6 兼容旧 flat；2 原标点已弃用）
 TIER_TO_BYTE = {
     "b1": b"1",
-    "b2": b"2",
     "b3": b"3",
     "preprocess": b"4",
     "strict": b"5",
     "zhuyin": b"6",
+    "cjk": b"7",
+    "extra": b"8",
+    "old_style": b"9",
+    "txt_format": b"A",
+    "ddd": b"B",
+    "dei2de": b"C",
+    "b3r": b"F",
 }
 BUILTIN_TIER_CODE = {
     "1": "b1",
-    "2": "b2",
     "3": "b3",
     "4": "preprocess",
     "5": "strict",
     "6": "zhuyin",
+    "7": "cjk",
+    "8": "extra",
+    "9": "old_style",
+    "A": "txt_format",
+    "B": "ddd",
+    "C": "dei2de",
+    "F": "b3r",
 }
-TIER_ORDER = ["custom", "b1", "b2", "b3", "preprocess", "strict", "zhuyin"]
+TIER_ORDER = [
+    "custom", "b1", "cjk", "b3", "b3r",
+    "extra", "ddd", "dei2de", "old_style", "txt_format",
+    "preprocess", "strict", "zhuyin",
+]
 
 #: 词条类型（新增时可选；内置词条的类型取自分级名）
 ENTRY_TYPES = ["错词校正", "角色名", "专有名词", "其他"]

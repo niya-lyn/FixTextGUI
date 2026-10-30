@@ -274,9 +274,14 @@ class CorrectionJob:
         self.enable_preprocess = bool(enable_preprocess)
         self.enable_strict = bool(enable_strict)
         self.zhuyin_mode = str(zhuyin_mode or "off")
-        self.selected_bags: tuple[str, ...] = tuple(
-            selected_bags if selected_bags is not None else ("custom",)
-        )
+        if selected_bags is not None:
+            self.selected_bags = tuple(selected_bags)
+        else:
+            try:
+                from fixtext_pipeline.bags import DEFAULT_SELECTED_BAGS
+                self.selected_bags = tuple(DEFAULT_SELECTED_BAGS)
+            except Exception:  # pragma: no cover
+                self.selected_bags = ("b1", "custom", "cjk")
         #: 实际用上的引擎（run() 里回填，供测试 / 证据核对）
         self.engine_used: str | None = None
         self._on_stage_started = on_stage_started

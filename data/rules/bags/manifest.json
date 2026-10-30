@@ -6,7 +6,7 @@
   "rules_before_sha256": "e961f82e3cbb41499b41301e04e7a7df7b11e189060064b6edd5af8e881e2c26",
   "rules_after_sha256": "7dd53ae6fd7770c2362b0a7d893ecf03bc5bba7062f9a0cd2bb07797a76a6131",
   "rule_count": 304255,
-  "bag_count": 14,
+  "bag_count": 15,
   "bags_sum": 304255,
   "bags_bin": {
     "path": "builtin_bags.bin",
@@ -26,7 +26,8 @@
       "ddd": 11,
       "dei2de": 12,
       "postfix": 13,
-      "temp": 14
+      "temp": 14,
+      "t2s_radical": 15
     }
   },
   "defaults_for_main_replace": [
@@ -163,15 +164,28 @@
       "locked": false,
       "via_switch": false,
       "default_on": false,
-      "rule_count": 4248,
+      "rule_count": 3141,
       "vars": {
-        "2.繁转简词库.php__t2sMap": 3141,
+        "2.繁转简词库.php__t2sMap": 3141
+      },
+      "before_sha256": "ad91ae99ed43006f342c1ef27ae12b2e3e378caa0a7746ad5ba0147ce9523435",
+      "after_sha256": "2f9485d68a2a83ce356183027e3527b7c646cd18b59253b89ba46a9d915bf852",
+      "bag_code": 9
+    },
+    {
+      "id": "t2s_radical",
+      "title": "繁简转换激进",
+      "locked": false,
+      "via_switch": false,
+      "default_on": false,
+      "rule_count": 1107,
+      "vars": {
         "2.繁转简词库.php__t2sRadicalMap": 892,
         "2.繁转简词库.php__radicalsSupplementMap": 215
       },
-      "before_sha256": "a9f7bc4e78378022d7620ed377369d0c848954906f5642d5cfa7cd5c5bf37ac5",
-      "after_sha256": "609e5fbd78cd3e0195d478d428ce3cbf74a1ce2f85830a806e791aaa07fe1301",
-      "bag_code": 9
+      "before_sha256": "a38c6b77f5013c6485d7420f205bee17b3f10ab7194ba2ac3c36dac6d8ae9532",
+      "after_sha256": "64e34f2c0921de6641c443e8f400d24ed68589235d8fd5880998314f8724a189",
+      "bag_code": 15
     },
     {
       "id": "txt_format",

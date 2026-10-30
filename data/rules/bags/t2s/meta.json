@@ -4,13 +4,11 @@
   "locked": false,
   "via_switch": false,
   "default_on": false,
-  "rule_count": 4248,
+  "rule_count": 3141,
   "vars": {
-    "2.繁转简词库.php__t2sMap": 3141,
-    "2.繁转简词库.php__t2sRadicalMap": 892,
-    "2.繁转简词库.php__radicalsSupplementMap": 215
+    "2.繁转简词库.php__t2sMap": 3141
   },
-  "before_sha256": "a9f7bc4e78378022d7620ed377369d0c848954906f5642d5cfa7cd5c5bf37ac5",
-  "after_sha256": "609e5fbd78cd3e0195d478d428ce3cbf74a1ce2f85830a806e791aaa07fe1301",
+  "before_sha256": "ad91ae99ed43006f342c1ef27ae12b2e3e378caa0a7746ad5ba0147ce9523435",
+  "after_sha256": "2f9485d68a2a83ce356183027e3527b7c646cd18b59253b89ba46a9d915bf852",
   "bag_code": 9
 }
