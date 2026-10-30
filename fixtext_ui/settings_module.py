@@ -1,20 +1,23 @@
-"""设置页（M4-EX.2a 结构层）：从顶栏弹窗升为平级路由页。
+"""设置页（M4-EX.2a 结构层 · M5-EX.6 初始化）：从顶栏弹窗升为平级路由页。
 
 对齐合并版原型 v3 的「设置视图」：页头（标题 + 副标题）
-+ 四张卡片——
++ 五张卡片——
 
 1. 词库与数据      自定义词库存储位置（选择目录 / 恢复默认位置）
 2. 诊断与日志      日志目录（选择目录 / 打开日志目录）+ 出错时自动保留现场
 3. 通用            安全保护（只读原文件，始终开启）
 4. 替换引擎        Go（默认）/ Python 二选一，读写配置键 ``engine``
                    （与 M4-T4.2 引擎双轨的对接契约：go | python，默认 go）
+5. 初始化          强制清理全部运行产物，回到刚装好时的空状态（二次确认）
 
 所有设置项真实生效：
 
 * 词库存储位置 —— 写入设置后发 ``vocab_dir_changed``，主窗口重载词库数据入口，
   之后新增的词条就落在新位置（工作副本与还原点随同一棵子树走）；
 * 日志目录 —— 变更后立即对错误中心重新初始化，后续诊断记录落新目录；
-* 开关与引擎选择 —— 落在用户区设置文件里，重启后保留。
+* 开关与引擎选择 —— 落在用户区设置文件里，重启后保留；
+* 初始化 —— 二次确认后发 ``factory_reset_requested``，由主窗口清
+  workspace / runs / logs / 导出 + 设置文件并刷新界面。
 
 页面不在左侧六入口里（左轨保持六项），由顶栏 ⚙ 进入。
 """
@@ -25,13 +28,13 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QFileDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy,
+    QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy,
     QVBoxLayout, QWidget,
 )
 
 import fixtext_settings as settings
 from fixtext_tokens import c, sp, r, fs, FONT_WEIGHT, FONT_MONO
-from fixtext_widgets import Card, FieldRow, Switch, RadioCard, hline
+from fixtext_widgets import Card, FieldRow, Switch, RadioCard, ConfirmDialog, hline
 
 try:
     import fixtext_error_center as error_center
@@ -80,6 +83,8 @@ class SettingsModule(QWidget):
     vocab_dir_changed = Signal()
     #: 替换引擎选择变了（执行逻辑在 M4-T4.2，此处只负责选择与保存）
     engine_changed = Signal(str)
+    #: 用户已确认初始化（主窗口负责清盘 + 刷新各页）
+    factory_reset_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -96,9 +101,11 @@ class SettingsModule(QWidget):
         root.addWidget(self._card_log())
         root.addWidget(self._card_general())
         root.addWidget(self._card_engine())
+        root.addWidget(self._card_reset())
 
         self.legend = _label(
-            "这里的每一项改动都会立即保存，重启后仍然生效。",
+            "这里的每一项改动都会立即保存，重启后仍然生效。"
+            "「初始化」除外：它会清掉运行产物，请先确认。",
             size="xs", color="neutral.500", wrap=True)
         root.addWidget(self.legend)
 
@@ -118,7 +125,7 @@ class SettingsModule(QWidget):
         col.setSpacing(2)
         col.addWidget(_label("设置", size="2xl", color="neutral.900", weight="bold"))
         col.addWidget(_label(
-            "词库存放位置、诊断日志、安全保护与替换引擎，都集中在这里。",
+            "词库存放位置、诊断日志、安全保护、替换引擎与初始化，都集中在这里。",
             size="md", color="neutral.600", wrap=True))
         hl.addLayout(col, 1)
 
@@ -249,6 +256,21 @@ class SettingsModule(QWidget):
         card.body_l.addWidget(grid)
         return card
 
+    # ------------------------------------------------------------------ 卡片五
+
+    def _card_reset(self) -> Card:
+        card = Card("初始化", "清理全部运行产物，回到刚装好时的状态")
+        self.cards.append(card)
+
+        self.reset_btn = _btn("初始化…", "BtnDanger", self._confirm_factory_reset)
+        row = FieldRow(
+            None, "强制初始化",
+            "删除已导入的书、校正与历史记录、导出成品、诊断日志，并把设置"
+            "恢复为默认。软件自带的词库与引擎不会被动；此操作不可撤销。",
+            control=self.reset_btn)
+        card.body_l.addWidget(row)
+        return card
+
     # ------------------------------------------------------------------ 开关槽
 
     def _switch_slot(self, which: str) -> QWidget:
@@ -358,6 +380,30 @@ class SettingsModule(QWidget):
         name = "Go 引擎" if value == "go" else "Python 引擎"
         self._say(f"替换引擎已切换为 {name}，下一次校正开始时使用。", "ok")
         self.engine_changed.emit(value)
+
+    def _confirm_factory_reset(self) -> None:
+        """二次确认后清产物；实际磁盘清理由主窗口注入的回调完成。"""
+        dlg = ConfirmDialog(
+            icon="⚠️",
+            title="确定要初始化吗？",
+            note=(
+                "将删除：\n"
+                "· 已导入的书与书架记录\n"
+                "· 校正过程与历史记录\n"
+                "· 导出成品与诊断日志\n"
+                "· 你改过的设置（含「新手向导已看过」）\n\n"
+                "不会删除软件自带的词库与校正引擎。\n"
+                "此操作不可撤销。"
+            ),
+            note_kind="warn",
+            confirm_text="确认初始化",
+            confirm_kind="danger",
+            parent=self,
+        )
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        # 真正清理交给主窗口（它知道 workspace / 各页刷新路径）
+        self.factory_reset_requested.emit()
 
     # ------------------------------------------------------------------ 同步
 

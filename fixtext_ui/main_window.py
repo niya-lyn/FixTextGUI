@@ -656,6 +656,7 @@ class MainWindow(QMainWindow):
         self.settings_module = SettingsModule()
         self.settings_module.vocab_dir_changed.connect(self.reload_vocab_store)
         self.settings_module.engine_changed.connect(self._on_engine_changed)
+        self.settings_module.factory_reset_requested.connect(self._on_factory_reset)
         self.pages[SETTINGS_KEY] = self._wrap(self.settings_module)
         self.stack.addWidget(self.pages[SETTINGS_KEY])
 
@@ -1274,6 +1275,44 @@ class MainWindow(QMainWindow):
     def _on_engine_changed(self, value: str):
         """替换引擎切换（M4-EX.2a 只保存选择；执行逻辑在 M4-T4.2 接线）。"""
         self._last_engine = value
+
+    def _on_factory_reset(self) -> None:
+        """设置页「初始化」：清全部运行产物并刷新界面（M5-EX.6）。"""
+        from fixtext_factory_reset import reset_all_products
+
+        done = reset_all_products(
+            workspace=self._workspace_root(),
+            pkg_root=PKG_ROOT,
+        )
+        # 内存态回到无书
+        try:
+            from fixtext_shelf import clear_current_book_id
+            clear_current_book_id()
+        except Exception:  # noqa: BLE001
+            pass
+        self._apply_current_book(None, "")
+        if self.import_module is not None:
+            try:
+                self.import_module.refresh_shelf()
+            except Exception:  # noqa: BLE001
+                pass
+        if self.oneclick_module is not None:
+            try:
+                self.oneclick_module.set_run_context(None)
+            except Exception:  # noqa: BLE001
+                pass
+        self._reload_book_pages()
+        self.reload_vocab_store()
+        if self.settings_module is not None:
+            self.settings_module._sync_from_settings()
+            self.settings_module._apply_log_backend()
+            self.settings_module._say(
+                "已初始化为刚装好时的状态。已清理：" + "；".join(done),
+                "ok",
+            )
+        self.go("import")
+        # 设置已清空 → 视为从未看过向导，与首启一致再弹一次
+        QTimer.singleShot(0, self._maybe_first_run)
 
     # ------------------------------------------------------------------ 收尾
 

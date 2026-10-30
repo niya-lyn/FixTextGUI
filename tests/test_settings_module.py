@@ -139,12 +139,46 @@ def smod(qt_app):
     settings.set_show_basis(False)
 
 
-def test_settings_page_builds_four_cards(smod):
-    assert len(smod.cards) == 4
+def test_settings_page_builds_five_cards(smod):
+    """M5-EX.6：原四卡 +「初始化」卡。"""
+    assert len(smod.cards) == 5
     assert set(smod.engine_cards) == {"go", "python"}
+    assert hasattr(smod, "reset_btn")
+    assert smod.reset_btn.objectName() == "BtnDanger"
     # 顶栏入口对应路由键存在（主窗口侧另测）
     from fixtext_tokens import SETTINGS_KEY
     assert SETTINGS_KEY == "settings"
+
+
+def test_factory_reset_wipes_products_and_settings(tmp_path, monkeypatch):
+    """磁盘清理：workspace / runs / logs / 导出 + 设置文件全部清空。"""
+    from fixtext_factory_reset import reset_all_products
+
+    ws = tmp_path / "workspace"
+    pkg = tmp_path / "pkg"
+    (ws / "bookA").mkdir(parents=True)
+    (ws / "bookA" / "import.json").write_text("{}", encoding="utf-8")
+    (pkg / "runs" / "bookA").mkdir(parents=True)
+    (pkg / "runs" / "bookA" / "x").write_text("1", encoding="utf-8")
+    (pkg / "logs").mkdir(parents=True)
+    (pkg / "logs" / "a.log").write_text("L", encoding="utf-8")
+    (pkg / "导出").mkdir(parents=True)
+    (pkg / "导出" / "out.epub").write_bytes(b"EPUB")
+    ini = tmp_path / "settings.ini"
+    ini.write_text("[General]\nengine=python\nwizardSeen=1\n", encoding="utf-8")
+    monkeypatch.setenv("FIXTEXT_SETTINGS_FILE", str(ini))
+
+    settings.set_engine("python")
+    assert settings.engine() == "python"
+
+    done = reset_all_products(workspace=ws, pkg_root=pkg)
+    assert ws.exists() and not any(ws.iterdir())
+    assert (pkg / "runs").exists() and not any((pkg / "runs").iterdir())
+    assert (pkg / "logs").exists() and not any((pkg / "logs").iterdir())
+    assert (pkg / "导出").exists() and not any((pkg / "导出").iterdir())
+    assert not ini.exists()
+    assert settings.engine() == "go"  # 默认
+    assert any("工作区" in x for x in done)
 
 
 def test_engine_switch_persists_and_syncs(smod):
