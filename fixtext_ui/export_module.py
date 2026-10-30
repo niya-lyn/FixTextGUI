@@ -33,6 +33,7 @@ from fixtext_paths import default_export_dir
 from fixtext_tokens import FONT_WEIGHT, c, fs, r
 from fixtext_widgets import (
     Card, ConfirmDialog, Pill, RadioCard, EmptyState, hline, page_head_shell,
+    enable_chrome,
 )
 
 try:
@@ -181,20 +182,18 @@ class ExportModule(QWidget):
     def _book_bar(self) -> QFrame:
         bar = QFrame()
         bar.setObjectName("BookBar")
-        bar.setStyleSheet(
-            f"#BookBar{{background:{c('neutral.0')};border:1px solid "
-            f"{c('neutral.200')};border-radius:{r('lg')}}}")
+        enable_chrome(bar)
+        # 配色交给 fixtext.qss 的 QFrame#BookBar（原内联收归）
 
         hl = QHBoxLayout(bar)
         hl.setContentsMargins(18, 14, 18, 14)
         hl.setSpacing(14)
 
         ico = QLabel("📖")
+        ico.setObjectName("BookBarIco")
         ico.setFixedSize(40, 40)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:10px;font-size:19px")
+        # 图标方块配色交给 fixtext.qss 的 #BookBarIco（原内联收归）
         hl.addWidget(ico)
 
         col = QVBoxLayout()
@@ -302,10 +301,8 @@ class ExportModule(QWidget):
         # M5-EX.7 §10 Step4：导出主操作横幅，与校正 .hero / 检查 .chk-top 同规
         hero = QFrame()
         hero.setObjectName("Hero")
-        hero.setStyleSheet(
-            f"#Hero{{border-radius:{r('lg')};"
-            f"background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-            f"stop:0 {c('primary.700')},stop:1 {c('primary.500')});}}")
+        enable_chrome(hero)
+        # 渐变横幅交给 fixtext.qss 的 #Hero（原内联收归）
         hl = QHBoxLayout(hero)
         hl.setContentsMargins(28, 26, 28, 26)
         hl.setSpacing(24)
@@ -313,19 +310,14 @@ class ExportModule(QWidget):
         col = QVBoxLayout()
         col.setSpacing(6)
         h2 = QLabel("导出干净文件")
-        h2.setStyleSheet(
-            f"color:{c('on.fill')};font-size:{fs('lg')};"
-            f"font-weight:{FONT_WEIGHT['bold']};background:transparent")
+        h2.setProperty("role", "title")
         p = QLabel("导出干净文件 → 自动附替换报告 → 内部同步基准（保证下轮统计不重复）。")
         p.setWordWrap(True)
-        p.setStyleSheet(
-            f"color:rgba(255,255,255,0.9);font-size:{fs('sm')};"
-            f"background:transparent")
         col.addWidget(h2)
         col.addWidget(p)
-        self.toast_label = _label("", size="xs", color="neutral.0", wrap=True)
-        self.toast_label.setStyleSheet(
-            f"color:rgba(255,255,255,0.85);font-size:{fs('xs')};background:transparent")
+        self.toast_label = QLabel("")
+        self.toast_label.setWordWrap(True)
+        self.toast_label.setProperty("role", "hint")
         col.addWidget(self.toast_label)
         hl.addLayout(col, 1)
 
@@ -333,14 +325,7 @@ class ExportModule(QWidget):
         self.export_btn.setObjectName("HeroBtn")
         self.export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.export_btn.setMinimumHeight(50)
-        self.export_btn.setStyleSheet(
-            f"#HeroBtn{{background:{c('neutral.0')};color:{c('primary.700')};"
-            f"border:none;border-radius:{r('lg')};padding:16px 34px;"
-            f"font-size:{fs('md')};font-weight:{FONT_WEIGHT['bold']}}}"
-            f"#HeroBtn:hover:!pressed{{background:{c('primary.50')}}}"
-            f"#HeroBtn:pressed{{background:{c('primary.100')}}}"
-            f"#HeroBtn:disabled{{opacity:0.5;background:{c('neutral.0')};"
-            f"color:{c('primary.500')}}}")
+        # 大按钮配色交给 fixtext.qss 的 #HeroBtn（原内联收归）
         self.export_btn.clicked.connect(self.export_now)
         hl.addWidget(self.export_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         return hero

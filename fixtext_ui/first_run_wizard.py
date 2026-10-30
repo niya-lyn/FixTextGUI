@@ -44,7 +44,7 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import c, sp, r, fs
-from fixtext_widgets import hline
+from fixtext_widgets import enable_chrome, hline
 
 
 # ---------------------------------------------------------------------------
@@ -204,9 +204,8 @@ class FirstRunWizard(QDialog):
         bl.addWidget(self.bars)
         self.panel = QWidget()
         self.panel.setObjectName("WizardPanel")
-        self.panel.setStyleSheet(
-            f"QWidget#WizardPanel{{background:{c('neutral.0')};"
-            f"border:1px solid {c('neutral.200')};border-radius:{r('lg')}}}")
+        enable_chrome(self.panel)
+        # 配色交给 fixtext.qss 的 #WizardPanel（原内联收归）
         self.panel_l = QVBoxLayout(self.panel)
         self.panel_l.setContentsMargins(20, 18, 20, 18)
         self.panel_l.setSpacing(10)
@@ -295,11 +294,7 @@ class FirstRunWizard(QDialog):
             self.progress.setValue(0)
             self.progress.setTextVisible(False)
             self.progress.setFixedHeight(8)
-            self.progress.setStyleSheet(
-                f"QProgressBar#OnbProgress{{background:{c('neutral.200')};"
-                f"border:none;border-radius:{r('full')}}}"
-                f"QProgressBar#OnbProgress::chunk{{background:{c('primary.500')};"
-                f"border-radius:{r('full')}}}")
+            # 配色交给 fixtext.qss 的 #OnbProgress（原内联收归）
             self.panel_l.addWidget(self.progress)
         self.panel_l.addStretch(1)
         self._render_actions()

@@ -188,13 +188,8 @@ class ShelfRow(QFrame):
             self.badge.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
             self.badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.badge.setFixedHeight(SHELF_BADGE_H)
-            # padding 只左右：上下由固定高度居中，避免底边被裁
-            self.badge.setStyleSheet(
-                f"QLabel#ShelfBadge{{color:{c('on.fill')};"
-                f"background-color:{c('success')};"
-                f"border:none;border-radius:{rr}px;"
-                f"padding:0 10px;font-size:11px;"
-                f"font-weight:{FONT_WEIGHT['semibold']};}}")
+            # padding 只左右：上下由固定高度居中，避免底边被裁；
+            # 配色交给 fixtext.qss 的 QLabel#ShelfBadge（原内联收归）
             sl.addWidget(self.badge, 0, Qt.AlignmentFlag.AlignCenter)
             self.action_btn = None
         else:
@@ -210,19 +205,7 @@ class ShelfRow(QFrame):
             self.action_btn.setFixedHeight(SHELF_BADGE_H)
             self.action_btn.setAccessibleName(f"把《{book.title}》设为当前书")
             self.action_btn.setToolTip(f"把《{book.title}》设为当前书")
-            # 完整内联三态：盖过全局 QPushButton；左右 padding，高度固定不裁底
-            self.action_btn.setStyleSheet(
-                f"QPushButton#BtnSetCurrent{{"
-                f"color:{c('primary.700')};background:{c('primary.50')};"
-                f"border:1px solid {c('primary.200')};border-radius:{rr}px;"
-                f"padding:0 12px;font-size:12px;"
-                f"font-weight:{FONT_WEIGHT['semibold']};outline:none;}}"
-                f"QPushButton#BtnSetCurrent:hover{{"
-                f"background:{c('primary.500')};color:{c('on.fill')};"
-                f"border:1px solid {c('primary.500')};}}"
-                f"QPushButton#BtnSetCurrent:pressed{{"
-                f"background:{c('primary.600')};color:{c('on.fill')};"
-                f"border:1px solid {c('primary.600')};}}")
+            # 完整三态已落在 fixtext.qss 的 #BtnSetCurrent（原内联收归）
             self.action_btn.clicked.connect(
                 lambda _=False, bid=book.book_id: self.requestCurrent.emit(bid))
             sl.addWidget(self.action_btn, 0, Qt.AlignmentFlag.AlignCenter)
@@ -345,16 +328,8 @@ class BookChip(QFrame):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setAccessibleName("当前要校对的书，点击前往导入书籍切换")
         self._title = ""
-        # 控件级再钉一次圆角：应用 QSS 里 999px 在部分平台不生效。
         # M5-EX.7：无书/有书同一套玻璃胶囊（对齐原型 .book-chip，无半透明 wash）。
-        from fixtext_tokens import BOOKCHIP_EDGE, BOOKCHIP_GRADIENT_BOTTOM, c
-        rr = max(1, CHIP_H // 2)
-        self.setStyleSheet(
-            f"#BookChip{{background:qlineargradient(x1:0,y1:0,x2:0,y2:1,"
-            f"stop:0 {c('neutral.0')},stop:1 {BOOKCHIP_GRADIENT_BOTTOM});"
-            f"border:1px solid {BOOKCHIP_EDGE};border-radius:{rr}px;}}"
-            f"#BookChip:hover{{background:{c('neutral.0')};"
-            f"border:1px solid {c('primary.300')};}}")
+        # 渐变/圆角/描边统一由 fixtext.qss 的 #BookChip 提供（原内联收归，_chip_r 已按 BOOKCHIP_H 计算）。
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(px(sp("3")), 0, px(sp("3")), 0)

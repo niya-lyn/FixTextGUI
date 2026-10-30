@@ -52,7 +52,9 @@ from fixtext_tokens import (
     c, sp, r, fs, px, FONT_WEIGHT,
 )
 import fixtext_settings as app_settings
-from fixtext_widgets import Card, Modal, Pill, Switch, cascade_in, hline, page_head_shell
+from fixtext_widgets import (
+    Card, Modal, Pill, Switch, cascade_in, enable_chrome, hline, page_head_shell,
+)
 from fixtext_shelf import resolve_current as resolve_current_book
 from fixtext_shelf import list_books as list_shelf_books
 from fixtext_shelf import set_current_book_id
@@ -129,17 +131,10 @@ class RailItem(QPushButton):
         self._apply(False)
 
     def _apply(self, on: bool):
-        """按选中态调整文字与图标配色（不依赖 QSS 祖先伪状态，跨平台稳定）。"""
+        """按选中态切换 active 属性，配色完全交给 fixtext.qss 的
+        #RailItem / #RailItem[active="true"] 及其 #RailLabel/#RailIco 子选择器
+        统一接管（单源、便于排查）。"""
         self.setProperty("active", "true" if on else "false")
-        lab_color = c("primary.700") if on else c("neutral.600")
-        self.text.setStyleSheet(
-            f"color:{lab_color};font-size:{fs('base')};"
-            f"font-weight:{FONT_WEIGHT['semibold'] if on else FONT_WEIGHT['medium']}"
-        )
-        self.ico.setStyleSheet(
-            f"background:{c('neutral.0') if on else c('neutral.100')};"
-            f"border-radius:7px;font-size:13px;color:{lab_color}"
-        )
         self.style().unpolish(self)
         self.style().polish(self)
 
@@ -159,6 +154,7 @@ class OverviewCard(QFrame):
     def __init__(self, entry: dict, parent=None):
         super().__init__(parent)
         self.setObjectName("OverviewCard")
+        enable_chrome(self)  # 外框圆角（对齐原型 .card）
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.key = entry["key"]

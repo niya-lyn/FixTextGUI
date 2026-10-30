@@ -905,17 +905,13 @@ class HistoryModule(QWidget):
         sl.setSpacing(12)
         self.status = QLabel("")
         self.status.setObjectName("Toast")
-        self.status.setStyleSheet(
-            f"#Toast{{background:{c('neutral.800')};color:{c('on.fill')};"
-            f"border-radius:10px;padding:10px 16px;font-size:{fs('sm')}}}")
+        # 配色交给 fixtext.qss 的 #Toast（原内联收归）
         self.status.setSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         self.undo_btn = QPushButton("撤销")
+        self.undo_btn.setObjectName("UndoBtn")
         self.undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.undo_btn.setStyleSheet(
-            f"QPushButton{{background:{c('primary.500')};color:{c('on.fill')};border:none;"
-            f"padding:6px 12px;border-radius:7px;font-weight:700;font-size:{fs('sm')}}}"
-            f"QPushButton:hover{{background:{c('primary.600')}}}")
+        # 配色交给 fixtext.qss 的 #UndoBtn（原内联收归）
         self.undo_btn.clicked.connect(self._undo)
         sl.addWidget(self.status)
         sl.addWidget(self.undo_btn)

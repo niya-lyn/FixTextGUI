@@ -29,6 +29,7 @@ import fixtext_check as checkdata
 from fixtext_tokens import c, sp, r, fs, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, EmptyState, hline, px, page_head_shell,
+    enable_chrome,
 )
 
 # ---------------------------------------------------------------------------
@@ -93,13 +94,9 @@ class ProblemRow(QFrame):
         super().__init__(parent)
         self.idx = idx
         state = p.get("state")
-        border = c("primary.500") if selected else c("neutral.100")
-        bg = c("primary.50") if selected else c("neutral.0")
         self.setObjectName("ProblemRow")
-        self.setStyleSheet(
-            f"QFrame#ProblemRow{{background:{bg};border:1px solid {border};"
-            f"border-radius:10px}}"
-        )
+        # 选中态底色/边框交给 fixtext.qss 的 #ProblemRow[selected="true"]
+        self.setProperty("selected", "true" if selected else "false")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         hl = QHBoxLayout(self)
@@ -138,11 +135,6 @@ class ProblemRow(QFrame):
         self.add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.add_btn.setToolTip("把这一处的写法加入「我的词库」，下次校正自动纠正")
         self.add_btn.setAccessibleName("加入词库")
-        self.add_btn.setStyleSheet(
-            f"QPushButton#LinkBtn{{background:transparent;border:none;"
-            f"color:{c('primary.700')};font-weight:600;font-size:11px;"
-            f"padding:3px 6px;border-radius:6px}}"
-            f"QPushButton#LinkBtn:hover{{background:{c('primary.100')}}}")
         self.add_btn.clicked.connect(
             lambda _=False, i=idx: self.addRequested.emit(i))
         hl.addWidget(self.add_btn)
@@ -329,10 +321,7 @@ class CheckModule(QWidget):
         # M5-EX.7 §10 Step4：与校正/导出 .hero 同规 padding/gap/大按钮
         bar = QFrame()
         bar.setObjectName("ChkTop")
-        bar.setStyleSheet(
-            f"#ChkTop{{border-radius:{r('lg')};"
-            f"background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-            f"stop:0 {c('primary.700')},stop:1 {c('primary.500')});}}")
+        enable_chrome(bar)
         hl = QHBoxLayout(bar)
         hl.setContentsMargins(28, 26, 28, 26)
         hl.setSpacing(24)
@@ -343,22 +332,15 @@ class CheckModule(QWidget):
         rt.setContentsMargins(0, 0, 0, 0)
         rt.setSpacing(6)
         t1 = QLabel("检查引号问题")
-        t1.setStyleSheet(
-            f"color:{c('on.fill')};font-weight:800;font-size:{fs('lg')};"
-            f"background:transparent")
+        t1.setProperty("role", "title")
         t2 = QLabel("扫描当前书的引号配对，逐处确认修复；可定位、可单独处理、可撤销。")
-        t2.setStyleSheet(
-            f"color:rgba(255,255,255,0.9);font-size:{fs('sm')};"
-            f"background:transparent")
         t2.setWordWrap(True)
         rt.addWidget(t1)
         rt.addWidget(t2)
         hl.addWidget(self._ready_text, 1)
 
         self.stats = QLabel("")
-        self.stats.setStyleSheet(
-            f"color:rgba(255,255,255,0.92);font-size:{fs('sm')};"
-            f"background:transparent")
+        self.stats.setProperty("role", "stats")
         hl.addWidget(self.stats, 1)
 
         self._run_box = QWidget()
@@ -370,14 +352,8 @@ class CheckModule(QWidget):
         self.progress.setRange(0, 0)  # busy
         self.progress.setTextVisible(False)
         self.progress.setFixedHeight(8)
-        self.progress.setStyleSheet(
-            f"QProgressBar{{background:rgba(255,255,255,0.25);"
-            f"border:none;border-radius:4px}}"
-            f"QProgressBar::chunk{{background:{c('neutral.0')};border-radius:4px}}")
         self.run_tip = QLabel("正在扫描引号配对…")
-        self.run_tip.setStyleSheet(
-            f"color:rgba(255,255,255,0.85);font-size:{fs('xs')};"
-            f"background:transparent")
+        self.run_tip.setProperty("role", "hint")
         rb.addWidget(self.progress)
         rb.addWidget(self.run_tip)
         hl.addWidget(self._run_box, 1)
@@ -386,14 +362,7 @@ class CheckModule(QWidget):
         self.main_btn.setObjectName("HeroBtn")
         self.main_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.main_btn.setMinimumHeight(50)
-        self.main_btn.setStyleSheet(
-            f"#HeroBtn{{background:{c('neutral.0')};color:{c('primary.700')};"
-            f"border:none;border-radius:{r('lg')};padding:16px 34px;"
-            f"font-size:{fs('md')};font-weight:{FONT_WEIGHT['bold']}}}"
-            f"#HeroBtn:hover:!pressed{{background:{c('primary.50')}}}"
-            f"#HeroBtn:pressed{{background:{c('primary.100')}}}"
-            f"#HeroBtn:disabled{{opacity:0.5;background:{c('neutral.0')};"
-            f"color:{c('primary.500')}}}")
+        # 大按钮配色交给 fixtext.qss 的 #HeroBtn（原内联收归）
         self.main_btn.clicked.connect(self.on_main)
         hl.addWidget(self.main_btn, 0, Qt.AlignmentFlag.AlignVCenter)
         return bar

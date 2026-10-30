@@ -19,9 +19,9 @@ QLabel { background-color: transparent; }
 
 #TopBar {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-        stop:0 #1C2230,
+        stop:0 #15191F,
         stop:0.55 #15191F,
-        stop:1 #10141B);
+        stop:1 #070A0E);
     border: none;
     border-bottom: 1px solid rgba(255,255,255,.07);
     min-height: 53px;
@@ -35,7 +35,7 @@ QLabel { background-color: transparent; }
     color: #FFFFFF;
     background: transparent;
     border: none;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     padding: 0 12px;
 }
@@ -55,7 +55,7 @@ QLabel { background-color: transparent; }
 #BookChip {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
         stop:0 #FFFFFF,
-        stop:1 #F1F3F8) !important;
+        stop:1 #EEF1F5) !important;
     border: 1px solid rgba(255,255,255,.20);
     border-radius: 17px;
     min-height: 34px; max-height: 34px;
@@ -66,7 +66,7 @@ QLabel { background-color: transparent; }
     border: 1px solid #9AA3E2;
 }
 #BookChip:focus { border: 1px solid #4F59C0; }
-#BookChip:pressed { background: #F1F3F8 !important; }
+#BookChip:pressed { background: #EEF1F5 !important; }
 #BookChip QLabel { background: transparent; }
 #BcGo {
     color: #6B7585;
@@ -79,7 +79,7 @@ QLabel { background-color: transparent; }
 #BookChip:hover #BcGo { color: #3F48A2; }
 #BcDot {
     border-radius: 999px;
-    background-color: #4F59C0;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #6F79D1, stop:1 #3F48A2);
 }
 
 #ShelfRow {
@@ -113,21 +113,126 @@ QLabel { background-color: transparent; }
     padding: 6px 12px;
 }
 #RailItem {
-    color: #333B48;
+    color: #4A5363;
     font-size: 13px;
+    font-weight: 500;
     padding: 8px 12px;
-    border-radius: 4px;
-    border: none;
+    border-radius: 8px;
+    border: 1px solid transparent;
     text-align: left;
 }
-#RailItem:hover { background-color: #EEF1F5; color: #15191F; }
+#RailItem #RailLabel {
+    color: #4A5363;
+    font-size: 14px;
+    font-weight: 500;
+}
+#RailItem #RailIco {
+    background: #EEF1F5;
+    border-radius: 7px;
+    font-size: 13px;
+    color: #4A5363;
+}
+#RailItem:hover { background-color: #EEF0FB; }
 #RailItem:pressed { background-color: #DDE2EA; }
 #RailItem[active="true"] {
-    background-color: #EEF0FB;
+    background-color: #DDE1F6;
     color: #333B83;
-    font-weight: 500;
-    border-left: 3px solid #4F59C0;
-    padding-left: 9px;
+    font-weight: 600;
+    border: 1px solid #DDE1F6;
+}
+#RailItem[active="true"] #RailLabel {
+    color: #333B83;
+    font-weight: 600;
+}
+#RailItem[active="true"] #RailIco {
+    background: #FFFFFF;
+    color: #333B83;
+}
+
+#RadioDot {
+    background: transparent;
+    border: 2px solid #C2CAD6;
+    border-radius: 7px;
+}
+#RadioDot[selected="true"] {
+    border: 2px solid #4F59C0;
+}
+#RadioDotInner {
+    background: transparent;
+    border: none;
+    border-radius: 3px;
+}
+#RadioDot[selected="true"] #RadioDotInner {
+    background: #4F59C0;
+}
+
+#ProblemRow {
+    background: #FFFFFF;
+    border: 1px solid #EEF1F5;
+    border-radius: 10px;
+}
+#ProblemRow[selected="true"] {
+    background: #EEF0FB;
+    border: 1px solid #4F59C0;
+}
+
+#ChkTop {
+    border-radius: 12px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #333B83, stop:1 #4F59C0);
+}
+#ChkTop QLabel {
+    color: rgba(255,255,255,0.90);
+    font-size: 13px;
+    background: transparent;
+}
+#ChkTop QLabel[role="title"] {
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 700;
+}
+#ChkTop QLabel[role="hint"] {
+    color: rgba(255,255,255,0.85);
+    font-size: 12px;
+}
+#Hero QLabel {
+    color: rgba(255,255,255,0.90);
+    font-size: 13px;
+    background: transparent;
+}
+#Hero QLabel[role="title"] {
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 700;
+}
+#Hero QLabel[role="hint"] {
+    color: rgba(255,255,255,0.85);
+    font-size: 12px;
+}
+#ChkTop QLabel[role="stats"] {
+    color: rgba(255,255,255,0.92);
+}
+#ChkTop QProgressBar {
+    background: rgba(255,255,255,0.25);
+    border: none;
+    border-radius: 4px;
+}
+#ChkTop QProgressBar::chunk {
+    background: #FFFFFF;
+    border-radius: 4px;
+}
+
+#LinkBtn {
+    background: transparent;
+    border: none;
+    color: #333B83;
+    font-weight: 600;
+    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 6px;
+}
+#LinkBtn:hover {
+    background: #DDE1F6;
 }
 
 #Content {
@@ -182,7 +287,7 @@ QLabel { background-color: transparent; }
     border-radius: 12px;
 }
 #OverviewCard:hover {
-    border-color: #9AA3E2;
+    border-color: #DDE1F6;
     background-color: #EEF0FB;
 }
 #OvfIco {
@@ -375,6 +480,277 @@ QFrame#PathRow {
     font-size: 12px;
 }
 
+#Pill {
+    border-radius: 999px;
+    padding: 2px 9px;
+    font-size: 12px;
+    font-weight: 700;
+}
+#Pill[kind="ok"] {
+    color: #15803D;
+    background: #E7F4EC;
+}
+#Pill[kind="info"] {
+    color: #3F48A2;
+    background: #ECEEF9;
+}
+#Pill[kind="warn"] {
+    color: #B45309;
+    background: #FBF1DF;
+}
+#Pill[kind="err"] {
+    color: #C0392B;
+    background: #FBEAE8;
+}
+#Pill[kind="neutral"] {
+    color: #6B7585;
+    background: #EEF1F5;
+}
+
+#RadioCard {
+    background: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+}
+#RadioCard:hover { border: 1px solid #9AA3E2; }
+#RadioCard[selected="true"] {
+    background: #EEF0FB;
+    border: 1px solid #4F59C0;
+}
+
+QFrame#EmptyState {
+    background: #F7F8FA;
+    border: 1px dashed #DDE2EA;
+    border-radius: 12px;
+}
+#EsIcoRing {
+    background: #EEF0FB;
+    border: none;
+    border-radius: 22px;
+}
+#EsIco {
+    background: #DDE1F6;
+    color: #333B83;
+    border-radius: 16px;
+    font-size: 28px;
+}
+
+#TierTabs {
+    background: #EEF1F5;
+    border-radius: 999px;
+    padding: 3px;
+}
+#TierTab {
+    border-radius: 999px;
+    padding: 6px 15px;
+    font-weight: 600;
+    font-size: 13px;
+    background: transparent;
+    color: #4A5363;
+    border: none;
+}
+#TierTab:hover {
+    background: #F7F8FA;
+}
+#TierTab[active="true"] {
+    background: #FFFFFF;
+    color: #333B83;
+    border: 1px solid #DDE2EA;
+}
+#TierTab[active="true"]:hover {
+    background: #FFFFFF;
+}
+
+#Banner {
+    background: #EEF0FB;
+    border: 1px solid #DDE1F6;
+    border-radius: 12px;
+    padding: 14px 18px;
+}
+#BannerIco {
+    background: #4F59C0;
+    color: #FFFFFF;
+    border-radius: 10px;
+    font-size: 18px;
+}
+
+#Search {
+    background: #F7F8FA;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: #222831;
+}
+#Search:focus {
+    border-color: #4F59C0;
+    border-width: 2px;
+}
+
+#SnapItem {
+    border-bottom: 1px solid #EEF1F5;
+}
+
+#DictItem {
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    background: #FFFFFF;
+}
+#DictItem[active="true"] {
+    border: 1px solid #4F59C0;
+    background: #EEF0FB;
+}
+
+#LinkBtn[danger="true"] {
+    color: #C0392B;
+}
+#LinkBtn[danger="true"]:hover {
+    background: #FBEAE8;
+}
+
+QFrame#MiniTable {
+    border: 1px solid #DDE2EA;
+    border-radius: 10px;
+    background: #FFFFFF;
+}
+
+QFrame#BookBar {
+    background: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 12px;
+}
+#BookBarIco {
+    background: #DDE1F6;
+    color: #333B83;
+    border-radius: 10px;
+    font-size: 19px;
+}
+
+#Hero {
+    border-radius: 12px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+        stop:0 #333B83, stop:1 #4F59C0);
+}
+#HeroBtn {
+    background: #FFFFFF;
+    color: #333B83;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 34px;
+    font-size: 16px;
+    font-weight: 700;
+}
+#HeroBtn:hover:!pressed {
+    background: #EEF0FB;
+}
+#HeroBtn:pressed {
+    background: #DDE1F6;
+}
+#HeroBtn:disabled {
+    opacity: 0.5;
+    background: #FFFFFF;
+    color: #4F59C0;
+}
+
+#Diff {
+    background: #F7F8FA;
+    border-radius: 10px;
+}
+#Stat {
+    background: #EEF0FB;
+    border-radius: 10px;
+}
+
+QComboBox#FmtCombo {
+    background: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 13px;
+    color: #222831;
+}
+QComboBox#FmtCombo:hover {
+    border: 1px solid #9AA3E2;
+}
+QComboBox#FmtCombo:focus {
+    border: 1px solid #4F59C0;
+}
+QComboBox#FmtCombo::drop-down { border: none; width: 28px; }
+QComboBox#FmtCombo QAbstractItemView {
+    background: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    selection-background-color: #EEF0FB;
+    selection-color: #333B83;
+    outline: 0;
+    padding: 4px;
+}
+
+#WizardPanel {
+    background: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 12px;
+}
+#OnbProgress {
+    background: #DDE2EA;
+    border: none;
+    border-radius: 999px;
+}
+#OnbProgress::chunk {
+    background: #4F59C0;
+    border-radius: 999px;
+}
+
+QLabel#ShelfBadge {
+    color: #FFFFFF;
+    background-color: #15803D;
+    border: none;
+    border-radius: 12px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+}
+#BtnSetCurrent {
+    color: #333B83;
+    background: #EEF0FB;
+    border: 1px solid #C0C6EE;
+    border-radius: 12px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    outline: none;
+}
+#BtnSetCurrent:hover {
+    background: #4F59C0;
+    color: #FFFFFF;
+    border: 1px solid #4F59C0;
+}
+#BtnSetCurrent:pressed {
+    background: #3F48A2;
+    color: #FFFFFF;
+    border: 1px solid #3F48A2;
+}
+
+#Toast {
+    background: #222831;
+    color: #FFFFFF;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 13px;
+}
+#UndoBtn {
+    background: #4F59C0;
+    color: #FFFFFF;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-weight: 700;
+    font-size: 13px;
+}
+#UndoBtn:hover {
+    background: #3F48A2;
+}
+
 Line, QFrame[frameShape="4"] {
     background-color: #DDE2EA;
 }
@@ -388,11 +764,11 @@ QScrollBar:vertical {
     margin: 2px;
 }
 QScrollBar::handle:vertical {
-    background: #C2CAD6;
+    background: #DDE2EA;
     border-radius: 999px;
     min-height: 36px;
 }
-QScrollBar::handle:vertical:hover { background: #9AA4B4; }
+QScrollBar::handle:vertical:hover { background: #C2CAD6; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0; width: 0;
 }
@@ -402,11 +778,11 @@ QScrollBar:horizontal {
     margin: 2px;
 }
 QScrollBar::handle:horizontal {
-    background: #C2CAD6;
+    background: #DDE2EA;
     border-radius: 999px;
     min-width: 36px;
 }
-QScrollBar::handle:horizontal:hover { background: #9AA4B4; }
+QScrollBar::handle:horizontal:hover { background: #C2CAD6; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     height: 0; width: 0;
 }

@@ -61,6 +61,11 @@ COLORS = {
     "focus":        "#4F59C0",
     # 实心底上的前景字（原型 --c-on-fill；浅色主题 = 白）
     "on.fill":      "#FFFFFF",
+    # 实心底（渐变横幅）上的半透明白字，原型在渐变底上做的层级不透明度
+    "on.fill.soft":  "rgba(255,255,255,0.90)",   # 横幅正文描述
+    "on.fill.hint":  "rgba(255,255,255,0.85)",   # 横幅提示/状态小字
+    "on.fill.stats": "rgba(255,255,255,0.92)",   # 横幅统计行
+    "on.fill.track": "rgba(255,255,255,0.25)",   # 横幅内进度条轨道
 }
 
 # ---------------------------------------------------------------------------
@@ -156,8 +161,8 @@ SETTINGS_KEY = "settings"
 # ---------------------------------------------------------------------------
 
 #: 顶栏竖直渐变（180deg）：上端 → 主色带 → 下端（原型 #TopBar linear-gradient）
-TOPBAR_GRADIENT_TOP = "#1C2230"
-TOPBAR_GRADIENT_BOTTOM = "#10141B"
+TOPBAR_GRADIENT_TOP = "#15191F"
+TOPBAR_GRADIENT_BOTTOM = "#070A0E"
 #: 顶栏底部高光描边（原型 border-bottom rgba(255,255,255,.07)）
 TOPBAR_EDGE = "rgba(255,255,255,.07)"
 #: 顶栏图标按钮底色 / 悬停底色（原型 .icon-btn，白色半透明）
@@ -176,7 +181,7 @@ BOOKCHIP_H = 34
 #: 胶囊宽度上限（原型 .book-chip max-width:320px）
 BOOKCHIP_MAX_W = 320
 #: 胶囊渐变下端（原型 linear-gradient(180deg,#FFFFFF 0%,#F1F3F8 100%)）
-BOOKCHIP_GRADIENT_BOTTOM = "#F1F3F8"
+BOOKCHIP_GRADIENT_BOTTOM = "#EEF1F5"
 #: 胶囊描边（原型 1px solid rgba(255,255,255,.20)，深色顶栏上的高光边）
 BOOKCHIP_EDGE = "rgba(255,255,255,.20)"
 #: 书架行高：上下 padding 10 + 胶囊 24，至少 44；略留余量避免底边被裁

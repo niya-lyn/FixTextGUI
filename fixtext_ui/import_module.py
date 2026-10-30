@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import FONT_MONO, c, fs, px, r, sp
-from fixtext_widgets import Card, Pill, hline, page_head_shell
+from fixtext_widgets import Card, Pill, enable_chrome, hline, page_head_shell
 
 import fixtext_import as fi
 import fixtext_shelf as shelf_data
@@ -126,6 +126,7 @@ class DropZone(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("DropZone")
+        enable_chrome(self)  # 虚线外框圆角（对齐原型 .drop）
         self.setAcceptDrops(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumHeight(150)

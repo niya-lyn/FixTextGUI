@@ -41,6 +41,16 @@ def px(value: str) -> int:
     return int(str(value).replace("px", ""))
 
 
+def enable_chrome(widget: QWidget) -> None:
+    """启用面板外框绘制（背景 / 边框 / 圆角）。
+
+    Qt 上 ``QFrame``/``QWidget`` 若不设 ``WA_StyledBackground``，样式表里的
+    ``border-radius`` 经常不生效，外部边框会呈直角——「从文件导入」「工作区书架」
+    等卡片外框不对，多半是这个原因。
+    """
+    widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+
 def hline(color_key: str = "neutral.100") -> QFrame:
     f = QFrame()
     f.setFixedHeight(1)
@@ -90,12 +100,9 @@ class Pill(QLabel):
 
     def __init__(self, text: str, kind: str = "info", parent=None):
         super().__init__(text, parent)
-        fg, bg, _bd = _PILL.get(kind, _PILL["neutral"])
-        self.setStyleSheet(
-            f"color:{c(fg)};background:{c(bg)};"
-            f"border-radius:{r('full')};padding:2px 9px;"
-            f"font-size:{fs('xs')};font-weight:700"
-        )
+        self.setObjectName("Pill")
+        # 语义色交给 fixtext.qss 的 #Pill[kind="x"]（闭集 ok/info/warn/err/neutral）
+        self.setProperty("kind", kind)
         self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
 
 
@@ -138,6 +145,7 @@ class Card(QFrame):
                  basis: str = "", parent=None):
         super().__init__(parent)
         self.setObjectName("Card")
+        enable_chrome(self)  # 外部圆角边框（对齐原型 .card）
         self._collapsible = collapsible
         self._open = open_
         self._chev = None
@@ -255,14 +263,29 @@ class FieldRow(QWidget):
 
         self._chip = None
         if chip is not None:
+            # 原型 .auto-chip（校正页「导入时自动」）。仅此芯片用半高像素圆角：
+            # Qt 对 border-radius:999px 常画成方块（书架胶囊同理）；不动全局 Pill。
+            chip_h = 20
+            shell = QFrame()
+            shell.setObjectName("AutoChip")
+            enable_chrome(shell)
+            shell.setFixedHeight(chip_h)
+            shell.setStyleSheet(
+                f"QFrame#AutoChip{{background:{c('neutral.100')};"
+                f"border:none;border-radius:{chip_h // 2}px;}}"
+            )
+            shell.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+            sh_l = QHBoxLayout(shell)
+            sh_l.setContentsMargins(9, 0, 9, 0)
+            sh_l.setSpacing(0)
             cp = QLabel(chip)
+            cp.setAlignment(Qt.AlignmentFlag.AlignVCenter)
             cp.setStyleSheet(
-                f"background:{c('neutral.100')};color:{c('neutral.500')};"
-                f"border-radius:{r('full')};padding:3px 9px;"
+                f"background:transparent;border:none;color:{c('neutral.500')};"
                 f"font-size:11px;font-weight:700"
             )
-            cp.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
-            hl.addWidget(cp)
+            sh_l.addWidget(cp)
+            hl.addWidget(shell)
             self._chip = cp
 
         if control is not None:
@@ -294,15 +317,13 @@ class RadioDot(QFrame):
         self.set_selected(False)
 
     def set_selected(self, on: bool):
-        ring = c("primary.500") if on else c("neutral.300")
-        self.setStyleSheet(
-            f"QFrame#RadioDot{{background:transparent;border:2px solid {ring};"
-            f"border-radius:7px}}")
-        self._inner.setStyleSheet(
-            f"QFrame#RadioDotInner{{background:{c('primary.500')};border:none;"
-            f"border-radius:3px}}" if on
-            else "QFrame#RadioDotInner{background:transparent;border:none}")
+        # 选中态完全交给 fixtext.qss 的 #RadioDot[selected="true"] 及其子选择器
+        self.setProperty("selected", "true" if on else "false")
         self._inner.setVisible(on)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self._inner.style().unpolish(self._inner)
+        self._inner.style().polish(self._inner)
 
 
 class RadioCard(QFrame):
@@ -318,6 +339,7 @@ class RadioCard(QFrame):
         super().__init__(parent)
         self.value = value
         self.setObjectName("RadioCard")
+        enable_chrome(self)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumHeight(58)
 
@@ -342,15 +364,10 @@ class RadioCard(QFrame):
 
     def set_selected(self, on: bool):
         self._dot.set_selected(on)
-        if on:
-            bg, border = c("primary.50"), c("primary.500")
-        else:
-            bg, border = c("neutral.0"), c("neutral.200")
-        hover = border if on else c("primary.300")
-        self.setStyleSheet(
-            f"QFrame#RadioCard{{background:{bg};border:1px solid {border};"
-            f"border-radius:{r('md')}}}"
-            f"QFrame#RadioCard:hover{{border:1px solid {hover}}}")
+        # 选中态底边框交给 fixtext.qss 的 #RadioCard / #RadioCard[selected="true"]
+        self.setProperty("selected", "true" if on else "false")
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     def mousePressEvent(self, event):
         self.chosen.emit(self.value)
@@ -404,11 +421,8 @@ class EmptyState(QFrame):
                  parent=None):
         super().__init__(parent)
         self.setObjectName("EmptyState")
-        # M5-EX.7 §10 Step7：dashed neutral-200、padding 44/28
-        self.setStyleSheet(
-            f"QFrame#EmptyState{{background:{c('neutral.50')};"
-            f"border:1px dashed {c('neutral.200')};"
-            f"border-radius:{r('lg')}}}")
+        enable_chrome(self)
+        # M5-EX.7 §10 Step7：dashed neutral-200、padding 44/28；外框配色交 fixtext.qss 的 QFrame#EmptyState（原内联收归）
 
         root = QVBoxLayout(self)
         root.setContentsMargins(28, 44, 28, 44)
@@ -416,19 +430,17 @@ class EmptyState(QFrame):
 
         # 外环：primary-50 6px 光晕（Qt 无多 box-shadow，用外框模拟）
         ico_ring = QFrame()
+        ico_ring.setObjectName("EsIcoRing")
         ico_ring.setFixedSize(72, 72)  # 60 + 6*2
-        ico_ring.setStyleSheet(
-            f"QFrame{{background:{c('primary.50')};border-radius:22px;"
-            f"border:none}}")
+        # 外环配色交给 fixtext.qss 的 #EsIcoRing（原内联收归）
         ring_l = QVBoxLayout(ico_ring)
         ring_l.setContentsMargins(6, 6, 6, 6)
         ring_l.setSpacing(0)
         ico = QLabel(icon)
+        ico.setObjectName("EsIco")
         ico.setFixedSize(60, 60)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:16px;font-size:28px")
+        # 图标方块配色交给 fixtext.qss 的 #EsIco（原内联收归）
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(3)
         shadow.setOffset(1, 1)

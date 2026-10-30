@@ -304,16 +304,11 @@ class OneClickModule(QWidget):
         col = QVBoxLayout()
         col.setSpacing(6)
         h2 = QLabel("一键校正")
-        h2.setStyleSheet(
-            f"color:{c('on.fill')};font-size:{fs('lg')};"
-            f"font-weight:{FONT_WEIGHT['bold']};background:transparent")
+        h2.setProperty("role", "title")
         p = QLabel(
             "使用常规校正词库 + 默认排版项，"
             "一次跑完备份→排版→替换→校验。")
         p.setWordWrap(True)
-        p.setStyleSheet(
-            f"color:rgba(255,255,255,0.9);font-size:{fs('sm')};"
-            f"background:transparent")
         col.addWidget(h2)
         col.addWidget(p)
         hl.addLayout(col, 1)
