@@ -44,7 +44,7 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import c, sp, r, fs
-from fixtext_widgets import enable_chrome, hline
+from fixtext_widgets import enable_chrome, hline, PrimaryButton
 
 
 # ---------------------------------------------------------------------------
@@ -437,8 +437,7 @@ class FirstRunWizard(QDialog):
             redo.clicked.connect(self._run_step_action)
             self.foot_l.addWidget(redo)
 
-        self._primary = QPushButton(self._primary_text())
-        self._primary.setObjectName("BtnPrimary")
+        self._primary = PrimaryButton(self._primary_text())
         self._primary.setCursor(Qt.CursorShape.PointingHandCursor)
         self._primary.clicked.connect(self._go_next)
         self._primary.setEnabled(not self._busy)

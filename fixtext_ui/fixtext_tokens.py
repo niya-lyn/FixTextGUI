@@ -110,6 +110,12 @@ SHADOW = {
     "lg":     "0 24px 48px rgba(21,25,31,.16), 0 8px 16px rgba(21,25,31,.08)",
     "primary": "0 8px 20px rgba(79,89,192,.34)",
     "focus":  "0 0 0 3px rgba(79,89,192,.24)",
+    # 品牌主按钮投影两档（原型 --sh-primary-sm / --sh-primary-xs）：
+    # 小主按钮「静止」用 primary-sm，「按下」收为 primary-xs（原型按钮三档高度之一）。
+    # 注意：Qt QSS 的 box-shadow 在子控件上会被裁剪、无法外溢渲染，故实际投影由
+    # fixtext_widgets.PrimaryButton 用 QGraphicsDropShadowEffect 实现（参数即下方两档）。
+    "primary-sm": "0 2px 6px rgba(79,89,192,.22)",
+    "primary-xs": "0 1px 3px rgba(79,89,192,.30)",
 }
 
 # ---------------------------------------------------------------------------

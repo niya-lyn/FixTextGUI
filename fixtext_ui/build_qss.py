@@ -612,13 +612,15 @@ def build() -> str:
     q.append("#EsIcoRing {")
     q.append(f'    background: {c("primary.50")};')
     q.append(f'    border: none;')
-    q.append(f'    border-radius: 22px;')
+    # 外环：72×72（原型 60 + 6×2 光晕带宽），全圆 → 视觉为 6px primary-50 柔光环
+    q.append(f'    border-radius: 36px;')
     q.append("}")
     q.append("#EsIco {")
     q.append(f'    background: {c("primary.100")};')
     q.append(f'    color: {c("primary.700")};')
-    q.append(f'    border-radius: 16px;')
-    q.append(f'    font-size: 28px;')
+    # 内图标：60×60，全圆 + 加大字号（原型 Step7 图标居中醒目）
+    q.append(f'    border-radius: 30px;')
+    q.append(f'    font-size: 26px;')
     q.append("}")
     q.append("")
 

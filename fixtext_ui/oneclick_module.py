@@ -27,7 +27,7 @@ from PySide6.QtWidgets import (
 
 from fixtext_tokens import c, r, fs, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
-    Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline,
+    Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline, PrimaryButton,
     ConfirmDialog, page_head_shell, enable_chrome,
 )
 from fixtext_worker import CorrectionJob, CorrectionWorker
@@ -1055,8 +1055,7 @@ class OneClickModule(QWidget):
         acts.setContentsMargins(0, 14, 0, 0)
         acts.setSpacing(10)
 
-        report = QPushButton("📄 查看替换报告")
-        report.setObjectName("BtnPrimary")
+        report = PrimaryButton("📄 查看替换报告")
         report.setCursor(Qt.CursorShape.PointingHandCursor)
         report.clicked.connect(self._goto_export_report)
         acts.addWidget(report)
@@ -1069,8 +1068,7 @@ class OneClickModule(QWidget):
 
         _text, show_go_check, _tip = quote_status_from_summary(self._summary)
         if show_go_check:
-            check_btn = QPushButton("🔍 去检查页")
-            check_btn.setObjectName("BtnPrimary")
+            check_btn = PrimaryButton("🔍 去检查页")
             check_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             check_btn.clicked.connect(self.gotoCheck.emit)
             acts.addWidget(check_btn)

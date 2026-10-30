@@ -38,7 +38,7 @@ import fixtext_history as histdata
 import fixtext_run_snapshot as snapshot
 from fixtext_tokens import c, fs, FONT_WEIGHT
 from fixtext_widgets import (
-    Card, Pill, hline, ConfirmDialog, Modal, EmptyState, page_head_shell,
+    Card, Pill, hline, ConfirmDialog, Modal, EmptyState, page_head_shell, PrimaryButton,
 )
 
 
@@ -485,8 +485,7 @@ class HistoryModule(QWidget):
         self.export_ws_btn.setObjectName("BtnOutline")
         self.export_ws_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.export_ws_btn.clicked.connect(self._confirm_export_workspace)
-        self.continue_btn = QPushButton("从当前工作区继续")
-        self.continue_btn.setObjectName("BtnPrimary")
+        self.continue_btn = PrimaryButton("从当前工作区继续")
         self.continue_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.continue_btn.clicked.connect(self._confirm_continue)
         al.addStretch(1)

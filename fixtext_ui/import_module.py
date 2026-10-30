@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import FONT_MONO, c, fs, px, r, sp
-from fixtext_widgets import Card, Pill, enable_chrome, hline, page_head_shell
+from fixtext_widgets import Card, Pill, enable_chrome, hline, page_head_shell, PrimaryButton
 
 import fixtext_import as fi
 import fixtext_shelf as shelf_data
@@ -368,8 +368,7 @@ class ImportModule(QWidget):
 
         row = QHBoxLayout()
         row.addStretch(1)
-        self.browse_btn = QPushButton("选择文件…")
-        self.browse_btn.setObjectName("BtnPrimary")
+        self.browse_btn = PrimaryButton("选择文件…")
         self.browse_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.browse_btn.clicked.connect(self._choose_file)
         row.addWidget(self.browse_btn)

@@ -41,6 +41,28 @@ def px(value: str) -> int:
     return int(str(value).replace("px", ""))
 
 
+class PrimaryButton(QPushButton):
+    """带品牌投影的主操作按钮（Qt 单源实现）。
+
+    `#BtnPrimary` 的配色（背景 / 悬停 / 按下 / 禁用）仍由 fixtext.qss 提供；
+    品牌投影则用 QGraphicsDropShadowEffect 实现——Qt QSS 的 ``box-shadow``
+    在子控件上会被裁剪、无法外溢渲染，故不能走 qss。阴影参数对应
+    fixtext_tokens.SHADOW["primary-sm"]（0 2px 6px rgba(79,89,192,.22)）。
+    与 EmptyState 图标阴影同机制，在真实窗口下正常合成。
+    """
+
+    def __init__(self, text: str = "", parent=None):
+        super().__init__(text, parent)
+        self.setObjectName("BtnPrimary")
+        # 必须以 self 为父：否则 effect 仅由构造期局部变量持有，__init__ 返回后即被
+        # GC，C++ 端 effect 一并销毁，运行时 graphicsEffect() 返回 None（阴影不渲染）。
+        eff = QGraphicsDropShadowEffect(self)
+        eff.setOffset(0, 2)
+        eff.setBlurRadius(6)
+        eff.setColor(QColor(79, 89, 192, 56))   # primary.500 @ .22，对应 SHADOW["primary-sm"]
+        self.setGraphicsEffect(eff)
+
+
 def enable_chrome(widget: QWidget) -> None:
     """启用面板外框绘制（背景 / 边框 / 圆角）。
 
@@ -467,8 +489,7 @@ class EmptyState(QFrame):
             al.setContentsMargins(0, 6, 0, 0)
             al.setSpacing(10)
             if primary:
-                b1 = QPushButton(primary)
-                b1.setObjectName("BtnPrimary")
+                b1 = PrimaryButton(primary)
                 b1.setCursor(Qt.CursorShape.PointingHandCursor)
                 b1.clicked.connect(lambda _=False: self.primaryClicked.emit())
                 al.addWidget(b1)
@@ -946,9 +967,11 @@ class ConfirmDialog(QDialog):
         cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         cancel.clicked.connect(self.reject)
         fl.addWidget(cancel)
-        confirm = QPushButton(confirm_text)
-        confirm.setObjectName(
-            "BtnPrimary" if confirm_kind == "primary" else "BtnDanger")
+        if confirm_kind == "primary":
+            confirm = PrimaryButton(confirm_text)
+        else:
+            confirm = QPushButton(confirm_text)
+            confirm.setObjectName("BtnDanger")
         confirm.setCursor(Qt.CursorShape.PointingHandCursor)
         confirm.clicked.connect(self.accept)
         fl.addWidget(confirm)
@@ -1037,9 +1060,11 @@ class Modal(QDialog):
         self.body_l.addSpacing(px)
 
     def add_foot(self, text: str, kind: str = "primary", slot=None) -> QPushButton:
-        btn = QPushButton(text)
-        obj = {"primary": "BtnPrimary", "danger": "BtnDanger", "ghost": "BtnGhost"}[kind]
-        btn.setObjectName(obj)
+        if kind == "primary":
+            btn = PrimaryButton(text)
+        else:
+            btn = QPushButton(text)
+            btn.setObjectName({"danger": "BtnDanger", "ghost": "BtnGhost"}[kind])
         btn.setCursor(Qt.CursorShape.PointingHandCursor)
         if slot is not None:
             btn.clicked.connect(slot)

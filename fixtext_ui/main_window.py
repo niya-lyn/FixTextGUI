@@ -53,7 +53,7 @@ from fixtext_tokens import (
 )
 import fixtext_settings as app_settings
 from fixtext_widgets import (
-    Card, Modal, Pill, Switch, cascade_in, enable_chrome, hline, page_head_shell,
+    Card, Modal, Pill, Switch, cascade_in, enable_chrome, hline, page_head_shell, PrimaryButton,
 )
 from fixtext_shelf import resolve_current as resolve_current_book
 from fixtext_shelf import list_books as list_shelf_books
@@ -343,8 +343,7 @@ class BuildingPage(QWidget):
             row = QHBoxLayout()
             row.setSpacing(10)
             for e in ready:
-                btn = QPushButton(f"{e['icon']}  去用「{e['label']}」")
-                btn.setObjectName("BtnPrimary")
+                btn = PrimaryButton(f"{e['icon']}  去用「{e['label']}」")
                 btn.setCursor(Qt.CursorShape.PointingHandCursor)
                 btn.clicked.connect(
                     lambda _=False, k=e["key"]: self.action_requested.emit(k)

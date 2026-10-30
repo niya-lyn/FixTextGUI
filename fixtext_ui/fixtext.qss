@@ -526,13 +526,13 @@ QFrame#EmptyState {
 #EsIcoRing {
     background: #EEF0FB;
     border: none;
-    border-radius: 22px;
+    border-radius: 36px;
 }
 #EsIco {
     background: #DDE1F6;
     color: #333B83;
-    border-radius: 16px;
-    font-size: 28px;
+    border-radius: 30px;
+    font-size: 26px;
 }
 
 #TierTabs {

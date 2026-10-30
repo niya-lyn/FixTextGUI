@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 import fixtext_check as checkdata
 from fixtext_tokens import c, sp, r, fs, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
-    Card, Switch, Pill, FieldRow, EmptyState, hline, px, page_head_shell,
+    Card, Switch, Pill, FieldRow, EmptyState, hline, px, page_head_shell, PrimaryButton,
     enable_chrome,
 )
 

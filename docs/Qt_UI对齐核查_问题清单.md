@@ -5,7 +5,7 @@
 > 被核查对象：`Desktop/cursor_test/test/GUI项目资源/code/FixText_交付全历史/fixtext_ui/`
 > 方法：静态比对——原型 `:root` 令牌 + 组件 CSS  vs  Qt `fixtext_tokens.py` + `fixtext.qss`（及 `build_qss.py`）。
 > **范围：仅 UI（令牌/配色/圆角/间距/字号/阴影/组件状态/图标/主题），不涉及任何功能逻辑。**
-> 状态更新（2026-10-30）：M1–M6 已修复并通过重建校验；H1 暗色模式、H2 SVG 图标按用户要求跳过；L1 空状态式样、L2 小按钮投影未动（L2 依赖 H3 令牌，H3 亦未做）。修复落点：`fixtext_tokens.py` + `build_qss.py` 改源后重建 `fixtext.qss`（未手改 qss）。
+> 状态（2026-10-30）：**已落地** M1–M6、H3、L1、L2；**跳过** H1 暗色、H2 SVG（按产品要求）。落点：`fixtext_tokens.py` / `build_qss.py` → 重建 `fixtext.qss`；H3/L2 投影走 `PrimaryButton` 的 `QGraphicsDropShadowEffect`（QSS `box-shadow` 子控件会裁切）。
 
 ---
 
@@ -23,11 +23,9 @@
 - **偏差**：图标视觉语言完全不同（彩色 emoji vs 线性 SVG），与原型风格不一致。
 - **修复方向（待确认）**：Qt 渲染 SVG 需走 `QSvgRenderer`/字体图标方案或内联 SVG 资源；属较大改动，建议单独评估方案再动手。
 
-### H3 · 令牌缺两档品牌阴影
-- **原型现状**：`--sh-primary-sm:0 2px 6px rgba(79,89,192,.22)`、`--sh-primary-xs:0 1px 3px rgba(79,89,192,.3)`（小按钮静止/按下两档），主按钮带品牌投影。
-- **Qt 现状**：`SHADOW` 仅 `xs/sm/md/lg/primary/focus`，**无 `primary-sm`/`primary-xs`**；`#BtnPrimary` 也无任何 `box-shadow`。
-- **偏差**：小号主按钮在 Qt 上无品牌质感投影，无法对齐原型的"静止/按下"两档高度。
-- **修复方向（待确认）**：在 `SHADOW` 补 `primary-sm`/`primary-xs`，并在 `build_qss` 给 `BtnPrimary` 等接上对应阴影。
+### H3 · 令牌缺两档品牌阴影 · ✅ 已落地
+- **做法**：`SHADOW` 补 `primary-sm` / `primary-xs`；主按钮投影由 `PrimaryButton`（Effect）消费，不走 QSS `box-shadow`。
+- **余量**：按下态未切到 `primary-xs`（仅静止档 `primary-sm`）。
 
 ---
 
@@ -79,14 +77,11 @@
 
 ## 低优先级（细节 / 需评估）
 
-### L1 · 空状态无专用样式
-- **原型 Step 7**：空状态已升级——60px 图标环（`box-shadow:0 0 0 6px primary-50` 柔光）、标题字重 600、描述 `fs-sm`、操作区 `margin-top:6px`。
-- **Qt**：`fixtext.qss` 无任何 `EmptyState` 类样式；各模块空状态应为普通 QLabel/容器，未对齐原型质感。
-- **置信度**：中（需逐页核真实 widget 结构再定方案）。
-- **修复方向**：在 QSS 增加空状态容器/图标环样式，或逐模块补。
+### L1 · 空状态无专用样式 · ✅ 已落地
+- **做法**：`#EmptyState` / `#EsIcoRing` / `#EsIco` + `EmptyState` 控件（图标环、primary-50 光晕、semibold 标题、`fs-sm` 描述、操作区上边距）。
 
-### L2 · 小主按钮缺品牌投影（与 H3 同源）
-- **说明**：H3 的令牌缺失直接导致 `#BtnPrimary` 等无 `box-shadow`；原型主按钮带品牌投影。列为低优先是因为它依赖 H3 的令牌补充，单独列出便于追踪。
+### L2 · 小主按钮缺品牌投影（与 H3 同源） · ✅ 已落地
+- **做法**：同 H3；`PrimaryButton` 挂 `primary-sm` 投影。按下切 `primary-xs` 仍为余量。
 
 ---
 

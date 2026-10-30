@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 
 import fixtext_settings as app_settings
 from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
-from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal, page_head_shell
+from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal, page_head_shell, PrimaryButton
 
 from fixtext_vocab import (
     ENTRY_TYPES, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
@@ -289,8 +289,7 @@ class VocabModule(QWidget):
         txt.addWidget(_label("是否把它们加入你的自定义词库？加入后，下次校正同类错误将自动生效。",
                              size="sm", color="neutral.500"))
         hl.addLayout(txt, 1)
-        add = QPushButton("查看并加入")
-        add.setObjectName("BtnPrimary")
+        add = PrimaryButton("查看并加入")
         add.setCursor(Qt.CursorShape.PointingHandCursor)
         add.clicked.connect(self.open_book_words)
         later = QPushButton("稍后")
@@ -425,8 +424,7 @@ class VocabModule(QWidget):
         bl.setContentsMargins(0, 0, 0, 0)
         bl.setSpacing(8)
 
-        add = QPushButton("＋ 新增词条")
-        add.setObjectName("BtnPrimary")
+        add = PrimaryButton("＋ 新增词条")
         add.setCursor(Qt.CursorShape.PointingHandCursor)
         add.clicked.connect(self.open_add)
         bl.addWidget(add)
