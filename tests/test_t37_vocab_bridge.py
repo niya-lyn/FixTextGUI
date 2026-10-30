@@ -259,6 +259,46 @@ def test_negative_control_without_bridge_keeps_custom_word_inert(corpus, vocab, 
     assert after_text.count("萧彦") == 0
 
 
+def test_fingerprint_tracks_custom_vocab_sha(tmp_path):
+    """主轮指纹必须含自定义词库内容；改词后指纹变，断点才不会复用旧正文。"""
+    from fixtext_pipeline.config import PipelineConfig
+    from fixtext_pipeline.logsetup import StageLogger
+    from fixtext_pipeline.stages.replace import ReplaceStage
+
+    vocab = tmp_path / "custom_vocab.json"
+    vocab.write_text(json.dumps(
+        {"entries": [{"id": 1, "word": "萧衍", "value": "萧彦"}]},
+        ensure_ascii=False), encoding="utf-8")
+    epub = tmp_path / "probe.epub"
+    epub.write_bytes(b"PK\x03\x04empty")
+    work = tmp_path / "run"
+    work.mkdir(parents=True, exist_ok=True)
+    eng = ENGINE if ENGINE.is_file() else (tmp_path / "fake_engine.exe")
+    if not eng.is_file():
+        eng.write_bytes(b"MZ")
+    cfg = PipelineConfig(
+        epub=epub, workdir=work,
+        rules_before=RULES / "before.json",
+        rules_after=RULES / "after.json",
+        engine_path=eng, stages=("replace",),
+        resume=True, force=False,
+        custom_vocab_path=vocab,
+        selected_bags=("b1", "custom", "cjk"),
+        derived_rules_dir=tmp_path / "derived",
+    )
+    cfg.stage_dir("replace").mkdir(parents=True, exist_ok=True)
+    log = StageLogger(cfg.paths.stage_log("replace"), echo=False)
+    try:
+        fp1 = ReplaceStage(cfg, log).fingerprint()
+        vocab.write_text(json.dumps(
+            {"entries": [{"id": 1, "word": "萧衍", "value": "萧彦二"}]},
+            ensure_ascii=False), encoding="utf-8")
+        fp2 = ReplaceStage(cfg, log).fingerprint()
+    finally:
+        log.close()
+    assert fp1 != fp2, "自定义词改了而指纹没变 → 断点恢复会误判缓存命中"
+
+
 @needs_engine
 def test_fingerprint_changes_with_custom_vocab(corpus, vocab, tmp_path):
     """规则变了指纹必须变，否则断点恢复会把旧正文当新结果复用。"""

@@ -162,6 +162,13 @@ def test_vocab_builtin_from_bags():
     bv = BuiltinVocab(RULES)
     assert bv.available
     assert (bv.meta or {}).get("vocab_source") == "bags" or "bags" in str(bv.source)
+    # bags 展示模式下指纹仍应对 flat 五件套非空，且不可对 bags 目录当文件读
+    assert bv.combined_sha()
+    assert bv.combined_sha() != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    assert bv.current_shas(), "bags 模式下 current_shas 不应恒为空"
+    assert bv.source.is_dir()
+    assert bv.source.name != "bags"
+    assert (bv.source / "before.json").is_file()
     counts = bv.tier_counts()
     assert counts.get("b1", 0) > 1000  # normal
     assert counts.get("preprocess", 0) > 0

@@ -215,9 +215,12 @@ def _atomic_write(path: Path, raw: bytes) -> None:
 
 
 def _read_bytes(path: Path) -> bytes | None:
+    """读普通文件字节；缺文件或路径是目录时返回 None（勿把 bags/ 当文件读）。"""
     try:
+        if not path.is_file():
+            return None
         return path.read_bytes()
-    except FileNotFoundError:
+    except (FileNotFoundError, IsADirectoryError, PermissionError, OSError):
         return None
 
 
@@ -302,13 +305,17 @@ class BuiltinVocab:
         self._before = before
         self._after = after
         self._tiers = bytes(tier_bytes)
-        self._source = bags_dir
+        # 展示内容来自 bags，但指纹 / 恢复默认 / 工作副本仍以 flat 五件套为据。
+        # 若把 _source 指到 bags 目录，current_shas 会对目录拼 before.json → 空指纹，
+        # 再对目录本身 read_bytes 会触发 IsADirectoryError / PermissionError。
+        self._source = self._active_dir()
         try:
             self._meta = json.loads((bags_dir / "manifest.json").read_text("utf-8"))
         except (OSError, ValueError):
             self._meta = {"source": "bags"}
         self._meta = dict(self._meta)
         self._meta["vocab_source"] = "bags"
+        self._meta["bags_dir"] = str(bags_dir)
         self._available = True
         return True
 

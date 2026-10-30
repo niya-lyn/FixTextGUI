@@ -65,10 +65,26 @@ class ReplaceStage(Stage):
             inp_sha = sha256_file(inp) if inp.is_file() else "missing"
         except Exception:
             inp_sha = "missing"
+        # 主轮自定义词进 compose；指纹必须跟着 custom_vocab 变，否则 --resume
+        # 会把旧 after 当命中缓存复用。
+        if self.round_id == "main" and "custom" in self.cfg.selected_bags:
+            cp = self.cfg.custom_vocab_path
+            try:
+                custom_sha = (
+                    sha256_file(cp) if cp is not None and Path(cp).is_file() else "missing"
+                )
+            except Exception:
+                custom_sha = "missing"
+            custom_part = f"custom={custom_sha}"
+        elif self.round_id == "main":
+            custom_part = "custom=off"
+        else:
+            custom_part = "custom=n/a"
         return self.fingerprint_of(
             f"round={self.round_id}",
             f"input={inp_sha}",
             f"bags={','.join(self.cfg.selected_bags)}",
+            custom_part,
             f"prep={self.cfg.enable_preprocess}",
             f"strict={self.cfg.enable_strict}",
             f"zhuyin={self.cfg.zhuyin_mode}",
