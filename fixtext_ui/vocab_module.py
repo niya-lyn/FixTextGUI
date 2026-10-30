@@ -193,6 +193,7 @@ class VocabModule(QWidget):
 
     def _header(self) -> QWidget:
         w = QWidget()
+        w.setObjectName("PageHead")
         hl = QHBoxLayout(w)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
@@ -277,11 +278,11 @@ class VocabModule(QWidget):
             b.setStyleSheet(
                 f"QPushButton#TierTab{{border-radius:{r('full')};padding:6px 15px;"
                 f"font-weight:600;font-size:{fs('sm')};"
-                f"background:{'#fff' if on else 'transparent'};"
+                f"background:{c('neutral.0') if on else 'transparent'};"
                 f"color:{c('primary.700') if on else c('neutral.600')};"
                 + (f"border:1px solid {c('neutral.200')};" if on else "border:none;")
                 + "}"
-                f"QPushButton#TierTab:hover{{background:{'#fff' if on else c('neutral.50')}}}")
+                f"QPushButton#TierTab:hover{{background:{c('neutral.0') if on else c('neutral.50')}}}")
 
     # -------------------------------------------------- 本书专有词库横幅（2.4.2）
 
@@ -298,7 +299,7 @@ class VocabModule(QWidget):
         ico.setFixedSize(38, 38)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setStyleSheet(
-            f"background:{c('primary.500')};color:#fff;border-radius:10px;font-size:18px")
+            f"background:{c('primary.500')};color:{c('on.fill')};border-radius:10px;font-size:18px")
         hl.addWidget(ico)
         txt = QVBoxLayout()
         txt.setSpacing(2)
@@ -1562,13 +1563,13 @@ class VocabModule(QWidget):
         self.status = QLabel("")
         self.status.setObjectName("Toast")
         self.status.setStyleSheet(
-            f"#Toast{{background:{c('neutral.800')};color:#fff;"
+            f"#Toast{{background:{c('neutral.800')};color:{c('on.fill')};"
             f"border-radius:10px;padding:10px 16px;font-size:{fs('sm')}}}")
         self.status.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         self.undo_btn = QPushButton("撤销")
         self.undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.undo_btn.setStyleSheet(
-            f"QPushButton{{background:{c('primary.500')};color:#fff;border:none;"
+            f"QPushButton{{background:{c('primary.500')};color:{c('on.fill')};border:none;"
             f"padding:6px 12px;border-radius:7px;font-weight:700;font-size:{fs('sm')}}}"
             f"QPushButton:hover{{background:{c('primary.600')}}}")
         self.undo_btn.clicked.connect(self._undo)

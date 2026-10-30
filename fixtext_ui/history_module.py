@@ -243,6 +243,7 @@ class HistoryModule(QWidget):
 
     def _header(self) -> QWidget:
         w = QWidget()
+        w.setObjectName("PageHead")
         hl = QHBoxLayout(w)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
@@ -901,14 +902,14 @@ class HistoryModule(QWidget):
         self.status = QLabel("")
         self.status.setObjectName("Toast")
         self.status.setStyleSheet(
-            f"#Toast{{background:{c('neutral.800')};color:#fff;"
+            f"#Toast{{background:{c('neutral.800')};color:{c('on.fill')};"
             f"border-radius:10px;padding:10px 16px;font-size:{fs('sm')}}}")
         self.status.setSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         self.undo_btn = QPushButton("撤销")
         self.undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.undo_btn.setStyleSheet(
-            f"QPushButton{{background:{c('primary.500')};color:#fff;border:none;"
+            f"QPushButton{{background:{c('primary.500')};color:{c('on.fill')};border:none;"
             f"padding:6px 12px;border-radius:7px;font-weight:700;font-size:{fs('sm')}}}"
             f"QPushButton:hover{{background:{c('primary.600')}}}")
         self.undo_btn.clicked.connect(self._undo)

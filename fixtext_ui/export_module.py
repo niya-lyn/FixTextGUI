@@ -135,14 +135,14 @@ class ExportModule(QWidget):
         cl.setContentsMargins(0, 0, 0, 0)
         cl.setSpacing(16)
         self._w_book = self._book_bar()
-        self._lay_actions = self._actions()
+        self._w_actions = self._actions()
         self._w_result = self._result_card()
         self._w_target = self._target_card()
         self._w_meta = self._meta_card()
         self._w_dir = self._dir_card()
         self._w_status = self._status_card()
         cl.addWidget(self._w_book)
-        cl.addLayout(self._lay_actions)
+        cl.addWidget(self._w_actions)
         cl.addWidget(self._w_result)
         cl.addWidget(self._w_target)
         cl.addWidget(self._w_meta)
@@ -157,6 +157,7 @@ class ExportModule(QWidget):
 
     def _header(self) -> QWidget:
         w = QWidget()
+        w.setObjectName("PageHead")
         hl = QHBoxLayout(w)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
@@ -292,20 +293,52 @@ class ExportModule(QWidget):
 
     # ------------------------------------------------------------------ 动作
 
-    def _actions(self) -> QHBoxLayout:
-        acts = QHBoxLayout()
-        acts.setContentsMargins(0, 0, 0, 0)
-        acts.setSpacing(10)
+    def _actions(self) -> QFrame:
+        # M5-EX.7 §10 Step4：导出主操作横幅，与校正 .hero / 检查 .chk-top 同规
+        hero = QFrame()
+        hero.setObjectName("Hero")
+        hero.setStyleSheet(
+            f"#Hero{{border-radius:{r('lg')};"
+            f"background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
+            f"stop:0 {c('primary.700')},stop:1 {c('primary.500')});}}")
+        hl = QHBoxLayout(hero)
+        hl.setContentsMargins(28, 26, 28, 26)
+        hl.setSpacing(24)
+
+        col = QVBoxLayout()
+        col.setSpacing(6)
+        h2 = QLabel("导出干净文件")
+        h2.setStyleSheet(
+            f"color:{c('on.fill')};font-size:{fs('lg')};"
+            f"font-weight:{FONT_WEIGHT['bold']};background:transparent")
+        p = QLabel("导出干净文件 → 自动附替换报告 → 内部同步基准（保证下轮统计不重复）。")
+        p.setWordWrap(True)
+        p.setStyleSheet(
+            f"color:rgba(255,255,255,0.9);font-size:{fs('sm')};"
+            f"background:transparent")
+        col.addWidget(h2)
+        col.addWidget(p)
+        self.toast_label = _label("", size="xs", color="neutral.0", wrap=True)
+        self.toast_label.setStyleSheet(
+            f"color:rgba(255,255,255,0.85);font-size:{fs('xs')};background:transparent")
+        col.addWidget(self.toast_label)
+        hl.addLayout(col, 1)
 
         self.export_btn = QPushButton("📤 开始导出")
-        self.export_btn.setObjectName("BtnPrimary")
+        self.export_btn.setObjectName("HeroBtn")
         self.export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.export_btn.setMinimumHeight(50)
+        self.export_btn.setStyleSheet(
+            f"#HeroBtn{{background:{c('neutral.0')};color:{c('primary.700')};"
+            f"border:none;border-radius:{r('lg')};padding:16px 34px;"
+            f"font-size:{fs('md')};font-weight:{FONT_WEIGHT['bold']}}}"
+            f"#HeroBtn:hover:!pressed{{background:{c('primary.50')}}}"
+            f"#HeroBtn:pressed{{background:{c('primary.100')}}}"
+            f"#HeroBtn:disabled{{opacity:0.5;background:{c('neutral.0')};"
+            f"color:{c('primary.500')}}}")
         self.export_btn.clicked.connect(self.export_now)
-        acts.addWidget(self.export_btn)
-
-        self.toast_label = _label("", size="xs", color="neutral.500", wrap=True)
-        acts.addWidget(self.toast_label, 1)
-        return acts
+        hl.addWidget(self.export_btn, 0, Qt.AlignmentFlag.AlignVCenter)
+        return hero
 
     # ---------------------------------------------------------------- 结果卡
 

@@ -179,7 +179,7 @@ class OneClickModule(QWidget):
         self.status.setObjectName("Toast")
         self.status.setVisible(False)
         self.status.setStyleSheet(
-            f"#Toast{{background:{c('neutral.800')};color:#fff;"
+            f"#Toast{{background:{c('neutral.800')};color:{c('on.fill')};"
             f"border-radius:10px;padding:10px 16px;font-size:{fs('sm')}}}")
         self.status.setSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
@@ -202,6 +202,7 @@ class OneClickModule(QWidget):
 
     def _header(self) -> QWidget:
         w = QWidget()
+        w.setObjectName("PageHead")
         hl = QHBoxLayout(w)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
@@ -284,6 +285,7 @@ class OneClickModule(QWidget):
     # ------------------------------------------------------------ 主按钮 hero
 
     def _hero(self) -> QFrame:
+        # M5-EX.7 §10 Step4：与 .chk-top / 导出 .hero 同规（padding/gap/大按钮）
         hero = QFrame()
         hero.setObjectName("Hero")
         hero.setStyleSheet(
@@ -292,21 +294,21 @@ class OneClickModule(QWidget):
             f"stop:0 {c('primary.700')},stop:1 {c('primary.500')});}}")
 
         hl = QHBoxLayout(hero)
-        hl.setContentsMargins(26, 22, 26, 22)
+        hl.setContentsMargins(28, 26, 28, 26)
         hl.setSpacing(24)
 
         col = QVBoxLayout()
         col.setSpacing(6)
         h2 = QLabel("一键校正")
         h2.setStyleSheet(
-            f"color:#fff;font-size:{fs('lg')};"
+            f"color:{c('on.fill')};font-size:{fs('lg')};"
             f"font-weight:{FONT_WEIGHT['bold']};background:transparent")
         p = QLabel(
             "使用常规校正词库 + 默认排版项，"
             "一次跑完备份→排版→替换→校验。")
         p.setWordWrap(True)
         p.setStyleSheet(
-            f"color:rgba(255,255,255,0.88);font-size:{fs('sm')};"
+            f"color:rgba(255,255,255,0.9);font-size:{fs('sm')};"
             f"background:transparent")
         col.addWidget(h2)
         col.addWidget(p)
@@ -317,11 +319,12 @@ class OneClickModule(QWidget):
         self.run_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.run_btn.setMinimumHeight(50)
         self.run_btn.setStyleSheet(
-            f"#HeroBtn{{background:#fff;color:{c('primary.700')};"
-            f"border:none;border-radius:{r('lg')};padding:0 32px;"
+            f"#HeroBtn{{background:{c('neutral.0')};color:{c('primary.700')};"
+            f"border:none;border-radius:{r('lg')};padding:16px 34px;"
             f"font-size:{fs('md')};font-weight:{FONT_WEIGHT['bold']}}}"
-            f"#HeroBtn:hover{{background:{c('primary.50')}}}"
-            f"#HeroBtn:disabled{{background:rgba(255,255,255,0.55);"
+            f"#HeroBtn:hover:!pressed{{background:{c('primary.50')}}}"
+            f"#HeroBtn:pressed{{background:{c('primary.100')}}}"
+            f"#HeroBtn:disabled{{opacity:0.5;background:{c('neutral.0')};"
             f"color:{c('primary.500')}}}")
         self.run_btn.clicked.connect(lambda: self.do_correction())
         hl.addWidget(self.run_btn, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -932,7 +935,7 @@ class OneClickModule(QWidget):
         ok.setFixedSize(34, 34)
         ok.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ok.setStyleSheet(
-            f"background:{c('success')};color:#fff;border-radius:10px;"
+            f"background:{c('success')};color:{c('on.fill')};border-radius:10px;"
             f"font-size:18px")
         col = QVBoxLayout()
         col.setSpacing(2)

@@ -270,6 +270,7 @@ class CheckModule(QWidget):
 
     def _head(self) -> QWidget:
         w = QWidget()
+        w.setObjectName("PageHead")
         hl = QHBoxLayout(w)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(16)
@@ -320,31 +321,45 @@ class CheckModule(QWidget):
         card.body_l.addLayout(hl)
         return card
 
-    def _top_bar(self) -> Card:
-        """待检查 / 运行 / 结果：一态一键主按钮。"""
-        card = self._card(basis="§2.7.4 · 检查 / 处理")
-        hl = QHBoxLayout()
-        hl.setSpacing(12)
+    def _top_bar(self) -> QFrame:
+        """待检查 / 运行 / 结果：一态一键主按钮（原型 .chk-top 渐变横幅）。"""
+        # M5-EX.7 §10 Step4：与校正/导出 .hero 同规 padding/gap/大按钮
+        bar = QFrame()
+        bar.setObjectName("ChkTop")
+        bar.setStyleSheet(
+            f"#ChkTop{{border-radius:{r('lg')};"
+            f"background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
+            f"stop:0 {c('primary.700')},stop:1 {c('primary.500')});}}")
+        hl = QHBoxLayout(bar)
+        hl.setContentsMargins(28, 26, 28, 26)
+        hl.setSpacing(24)
 
         self._ready_text = QWidget()
+        self._ready_text.setStyleSheet("background:transparent")
         rt = QVBoxLayout(self._ready_text)
         rt.setContentsMargins(0, 0, 0, 0)
-        rt.setSpacing(2)
+        rt.setSpacing(6)
         t1 = QLabel("检查引号问题")
         t1.setStyleSheet(
-            f"color:{c('neutral.900')};font-weight:700;font-size:{fs('md')}")
+            f"color:{c('on.fill')};font-weight:800;font-size:{fs('lg')};"
+            f"background:transparent")
         t2 = QLabel("扫描当前书的引号配对，逐处确认修复；可定位、可单独处理、可撤销。")
-        t2.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        t2.setStyleSheet(
+            f"color:rgba(255,255,255,0.9);font-size:{fs('sm')};"
+            f"background:transparent")
         t2.setWordWrap(True)
         rt.addWidget(t1)
         rt.addWidget(t2)
         hl.addWidget(self._ready_text, 1)
 
         self.stats = QLabel("")
-        self.stats.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
+        self.stats.setStyleSheet(
+            f"color:rgba(255,255,255,0.92);font-size:{fs('sm')};"
+            f"background:transparent")
         hl.addWidget(self.stats, 1)
 
         self._run_box = QWidget()
+        self._run_box.setStyleSheet("background:transparent")
         rb = QVBoxLayout(self._run_box)
         rb.setContentsMargins(0, 0, 0, 0)
         rb.setSpacing(4)
@@ -352,17 +367,33 @@ class CheckModule(QWidget):
         self.progress.setRange(0, 0)  # busy
         self.progress.setTextVisible(False)
         self.progress.setFixedHeight(8)
+        self.progress.setStyleSheet(
+            f"QProgressBar{{background:rgba(255,255,255,0.25);"
+            f"border:none;border-radius:4px}}"
+            f"QProgressBar::chunk{{background:{c('neutral.0')};border-radius:4px}}")
         self.run_tip = QLabel("正在扫描引号配对…")
-        self.run_tip.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        self.run_tip.setStyleSheet(
+            f"color:rgba(255,255,255,0.85);font-size:{fs('xs')};"
+            f"background:transparent")
         rb.addWidget(self.progress)
         rb.addWidget(self.run_tip)
         hl.addWidget(self._run_box, 1)
 
-        self.main_btn = self._btn("🔍 开始检查", "BtnPrimary", self.on_main)
-        self.main_btn.setMinimumWidth(140)
+        self.main_btn = QPushButton("🔍 开始检查")
+        self.main_btn.setObjectName("HeroBtn")
+        self.main_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.main_btn.setMinimumHeight(50)
+        self.main_btn.setStyleSheet(
+            f"#HeroBtn{{background:{c('neutral.0')};color:{c('primary.700')};"
+            f"border:none;border-radius:{r('lg')};padding:16px 34px;"
+            f"font-size:{fs('md')};font-weight:{FONT_WEIGHT['bold']}}}"
+            f"#HeroBtn:hover:!pressed{{background:{c('primary.50')}}}"
+            f"#HeroBtn:pressed{{background:{c('primary.100')}}}"
+            f"#HeroBtn:disabled{{opacity:0.5;background:{c('neutral.0')};"
+            f"color:{c('primary.500')}}}")
+        self.main_btn.clicked.connect(self.on_main)
         hl.addWidget(self.main_btn, 0, Qt.AlignmentFlag.AlignVCenter)
-        card.body_l.addLayout(hl)
-        return card
+        return bar
 
     def _columns(self) -> QHBoxLayout:
         row = QHBoxLayout()
@@ -540,7 +571,7 @@ class CheckModule(QWidget):
         self.status.setVisible(False)
         self.status.setWordWrap(True)
         self.status.setStyleSheet(
-            f"background:{c('neutral.800')};color:#FFFFFF;"
+            f"background:{c('neutral.800')};color:{c('on.fill')};"
             f"border-radius:{r('md')};padding:10px 16px;font-size:{fs('sm')}")
         self.status.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         return self.status
@@ -677,14 +708,12 @@ class CheckModule(QWidget):
 
         if ready:
             self.main_btn.setText("🔍 开始检查")
-            self.main_btn.setObjectName("BtnPrimary")
         elif running:
             self.main_btn.setText("✕ 取消")
-            self.main_btn.setObjectName("BtnOutline")
         else:
             self.main_btn.setText("↻ 重新检查")
-            self.main_btn.setObjectName("BtnPrimary")
-        # 刷新 QSS 对象名
+        # 始终 HeroBtn（渐变横幅上的白底大按钮）
+        self.main_btn.setObjectName("HeroBtn")
         self.main_btn.style().unpolish(self.main_btn)
         self.main_btn.style().polish(self.main_btn)
 

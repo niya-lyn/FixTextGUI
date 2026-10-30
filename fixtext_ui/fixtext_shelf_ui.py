@@ -277,7 +277,8 @@ class BookChip(QFrame):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setAccessibleName("当前要校对的书，点击前往导入书籍切换")
         self._title = ""
-        # 控件级再钉一次圆角：应用 QSS 里 999px 在部分平台不生效
+        # 控件级再钉一次圆角：应用 QSS 里 999px 在部分平台不生效。
+        # M5-EX.7：无书/有书同一套玻璃胶囊（对齐原型 .book-chip，无半透明 wash）。
         from fixtext_tokens import BOOKCHIP_EDGE, BOOKCHIP_GRADIENT_BOTTOM, c
         rr = max(1, CHIP_H // 2)
         self.setStyleSheet(
@@ -285,9 +286,7 @@ class BookChip(QFrame):
             f"stop:0 {c('neutral.0')},stop:1 {BOOKCHIP_GRADIENT_BOTTOM});"
             f"border:1px solid {BOOKCHIP_EDGE};border-radius:{rr}px;}}"
             f"#BookChip:hover{{background:{c('neutral.0')};"
-            f"border:1px solid {c('primary.300')};}}"
-            f"#BookChip[empty=\"true\"]{{background:rgba(255,255,255,.10);"
-            f"border:1px solid rgba(255,255,255,.32);}}")
+            f"border:1px solid {c('primary.300')};}}")
 
         lay = QHBoxLayout(self)
         lay.setContentsMargins(px(sp("3")), 0, px(sp("3")), 0)
@@ -325,14 +324,21 @@ class BookChip(QFrame):
         has_book = bool(self._title)
         self.setProperty("empty", "false" if has_book else "true")
         self.name.set_full_text(self._title or "未选择书")
-        # 文字色走内联（QLabel 易被全局底色干扰）；圆点补光晕贴原型 .bc-dot
+        # 无书只弱化文字/圆点；胶囊底仍与有书同色（浅底上用 neutral.500 保证可读）
         self.name.setStyleSheet(
-            f"color:{c('neutral.800') if has_book else c('neutral.400')};"
+            f"color:{c('neutral.800') if has_book else c('neutral.500')};"
             f"font-size:{fs('sm')};font-weight:{FONT_WEIGHT['semibold']};"
             f"letter-spacing:0.2px;background:transparent")
-        self.dot.setStyleSheet(
-            f"background:{c('primary.500') if has_book else c('neutral.400')};"
-            f"border-radius:{r('full')}")
+        if has_book:
+            self.dot.setStyleSheet(
+                f"background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
+                f"stop:0 {c('primary.400')},stop:1 {c('primary.600')});"
+                f"border-radius:{r('full')};"
+                f"border:3px solid {c('primary.100')}")
+        else:
+            self.dot.setStyleSheet(
+                f"background:{c('neutral.300')};border-radius:{r('full')};"
+                f"border:3px solid {c('neutral.100')}")
         self.go_label.setStyleSheet(
             f"color:{c('neutral.500')};font-size:11px;"
             f"font-weight:{FONT_WEIGHT['semibold']};"
@@ -345,7 +351,6 @@ class BookChip(QFrame):
             tip = "还没有导入的书\n点击前往「导入书籍」"
         self.setToolTip(tip)
         self.name.setToolTip(tip)
-        # 样式表里的属性选择器要重新抛光才生效（empty 态换高光配色）
         self.style().unpolish(self)
         self.style().polish(self)
 

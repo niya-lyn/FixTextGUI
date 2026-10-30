@@ -102,7 +102,7 @@ class Switch(QAbstractButton):
         p.setPen(Qt.PenStyle.NoPen)
         p.setBrush(QColor(c("primary.500") if self.isChecked() else c("neutral.200")))
         p.drawRoundedRect(0, 0, 40, 22, 11, 11)
-        p.setBrush(QColor("#FFFFFF"))
+        p.setBrush(QColor(c("neutral.0")))
         p.drawEllipse(20 if self.isChecked() else 2, 2, 18, 18)
         p.end()
 
@@ -368,10 +368,10 @@ class _WrapLabel(QLabel):
 
 
 class EmptyState(QFrame):
-    """统一空状态（原型 v3 更新记录 §4 口径）。
+    """统一空状态（原型 v3 更新记录 §4 + §10 Step7）。
 
-    结构对齐原型 ``.empty-state``：图标（es-ico，54px 圆角底 + sh-sm 阴影）/
-    标题（es-t，fs-md 加粗）/ 描述（es-d，fs-xs 灰字，最宽 440px 自动换行）/
+    结构对齐原型 ``.empty-state``：图标（es-ico，60px + primary-50 6px 光晕）/
+    标题（es-t，fs-md / semibold）/ 描述（es-d，fs-sm，最宽 460px）/
     双按钮居中（es-acts，主按钮 BtnPrimary + 次按钮 BtnGhost）。
     没有收起按钮（§4 明确去掉）。按钮点击经 primaryClicked /
     secondaryClicked 交给外层接线（去导入页 / 打开新手向导），
@@ -387,46 +387,55 @@ class EmptyState(QFrame):
                  parent=None):
         super().__init__(parent)
         self.setObjectName("EmptyState")
-        # 原型：background neutral-50 / 1px dashed neutral-300 / 圆角 r-lg
+        # M5-EX.7 §10 Step7：dashed neutral-200、padding 44/28
         self.setStyleSheet(
             f"QFrame#EmptyState{{background:{c('neutral.50')};"
-            f"border:1px dashed {c('neutral.300')};"
+            f"border:1px dashed {c('neutral.200')};"
             f"border-radius:{r('lg')}}}")
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(24, 36, 24, 36)
-        root.setSpacing(10)
+        root.setContentsMargins(28, 44, 28, 44)
+        root.setSpacing(14)
 
+        # 外环：primary-50 6px 光晕（Qt 无多 box-shadow，用外框模拟）
+        ico_ring = QFrame()
+        ico_ring.setFixedSize(72, 72)  # 60 + 6*2
+        ico_ring.setStyleSheet(
+            f"QFrame{{background:{c('primary.50')};border-radius:22px;"
+            f"border:none}}")
+        ring_l = QVBoxLayout(ico_ring)
+        ring_l.setContentsMargins(6, 6, 6, 6)
+        ring_l.setSpacing(0)
         ico = QLabel(icon)
-        ico.setFixedSize(54, 54)
+        ico.setFixedSize(60, 60)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # 原型 es-ico：primary-100 底 + primary-700 字色 + 14px 圆角
         ico.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:14px;font-size:26px")
+            f"border-radius:16px;font-size:28px")
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(3)
         shadow.setOffset(1, 1)
-        shadow.setColor(QColor(21, 25, 31, 15))  # sh-sm 的 rgba(21,25,31,.06)
+        shadow.setColor(QColor(21, 25, 31, 15))  # sh-sm
         ico.setGraphicsEffect(shadow)
-        root.addWidget(ico, 0, Qt.AlignmentFlag.AlignHCenter)
+        ring_l.addWidget(ico)
+        root.addWidget(ico_ring, 0, Qt.AlignmentFlag.AlignHCenter)
 
         t = QLabel(title)
         t.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         t.setStyleSheet(
             f"color:{c('neutral.800')};font-size:{fs('md')};"
-            f"font-weight:{FONT_WEIGHT['bold']}")
+            f"font-weight:{FONT_WEIGHT['semibold']}")
         root.addWidget(t, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        d = _WrapLabel(desc, 440)
-        d.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        d = _WrapLabel(desc, 460)
+        d.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('sm')}")
         d.fix_height()  # 样式生效后按实际字体度量定高，避免第二句被裁
         root.addWidget(d, 0, Qt.AlignmentFlag.AlignHCenter)
 
         if primary or secondary:
             acts = QWidget()
             al = QHBoxLayout(acts)
-            al.setContentsMargins(0, 4, 0, 0)  # 原型 es-acts 的 margin-top:4px
+            al.setContentsMargins(0, 6, 0, 0)
             al.setSpacing(10)
             if primary:
                 b1 = QPushButton(primary)
@@ -594,15 +603,15 @@ class ProgressDialog(QDialog):
             if idx < self._i:
                 row._dot.setText("✓")
                 row._dot.setStyleSheet(
-                    f"background:{c('success')};color:#fff;border-radius:999px;"
-                    f"font-size:12px;font-weight:700")
+                    f"background:{c('success')};color:{c('on.fill')};"
+                    f"border-radius:999px;font-size:12px;font-weight:700")
                 row._name.setStyleSheet(
                     f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.600')}")
             elif idx == self._i:
                 row._dot.setText(str(idx + 1))
                 row._dot.setStyleSheet(
-                    f"background:{c('primary.500')};color:#fff;border-radius:999px;"
-                    f"font-size:12px;font-weight:700")
+                    f"background:{c('primary.500')};color:{c('on.fill')};"
+                    f"border-radius:999px;font-size:12px;font-weight:700")
                 row._name.setStyleSheet(
                     f"font-weight:700;font-size:{fs('sm')};color:{c('primary.700')}")
             else:

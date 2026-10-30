@@ -67,14 +67,6 @@ QLabel { background-color: transparent; }
 }
 #BookChip:focus { border: 1px solid #4F59C0; }
 #BookChip:pressed { background: #F1F3F8 !important; }
-#BookChip[empty="true"] {
-    border: 1px solid rgba(255,255,255,.32);
-    background: rgba(255,255,255,.10) !important;
-}
-#BookChip[empty="true"]:hover {
-    background: rgba(255,255,255,.18) !important;
-    border: 1px solid rgba(255,255,255,.45);
-}
 #BookChip QLabel { background: transparent; }
 #BcGo {
     color: #6B7585;
@@ -158,6 +150,7 @@ QLabel { background-color: transparent; }
     text-align: left;
 }
 #RailItem:hover { background-color: #EEF1F5; color: #15191F; }
+#RailItem:pressed { background-color: #DDE2EA; }
 #RailItem[active="true"] {
     background-color: #EEF0FB;
     color: #333B83;
@@ -178,6 +171,11 @@ QLabel { background-color: transparent; }
 #PageSub {
     color: #4A5363;
     font-size: 16px;
+}
+#PageHead {
+    border-bottom: 1px solid #DDE2EA;
+    padding-bottom: 12px;
+    margin-bottom: 8px;
 }
 #PageHead h1 {
     color: #15191F;
@@ -246,7 +244,8 @@ QPushButton {
     padding: 8px 16px;
 }
 QPushButton:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 #BtnPrimary {
     background-color: #4F59C0;
@@ -254,29 +253,34 @@ QPushButton:disabled {
 }
 #BtnPrimary:hover:!pressed { background-color: #3F48A2; }
 #BtnPrimary:pressed { background-color: #333B83; }
+#BtnPrimary:disabled { background-color: #9AA3E2; color: #FFFFFF; opacity: 0.5; }
 #BtnSecondary {
     background-color: #EEF1F5;
     color: #222831;
 }
-#BtnSecondary:hover { background-color: #DDE2EA; }
+#BtnSecondary:hover:!pressed { background-color: #DDE2EA; }
+#BtnSecondary:pressed { background-color: #C2CAD6; }
 #BtnGhost {
     background-color: transparent;
     color: #3F48A2;
 }
-#BtnGhost:hover { background-color: #EEF0FB; }
+#BtnGhost:hover:!pressed { background-color: #EEF0FB; }
+#BtnGhost:pressed { background-color: #DDE1F6; }
 
 #BtnOutline {
     background-color: #FFFFFF;
     color: #222831;
     border: 1px solid #DDE2EA;
 }
-#BtnOutline:hover { background-color: #EEF0FB; border-color: #DDE1F6; }
+#BtnOutline:hover:!pressed { background-color: #EEF0FB; border-color: #DDE1F6; }
+#BtnOutline:pressed { background-color: #DDE1F6; }
 #BtnDanger {
     background-color: #FFFFFF;
     color: #C0392B;
     border: 1px solid #F1C4BD;
 }
-#BtnDanger:hover { background-color: #FBEAE8; }
+#BtnDanger:hover:!pressed { background-color: #FBEAE8; }
+#BtnDanger:pressed { background-color: #F1C4BD; }
 #BtnSecondary:focus { border: 1px solid #4F59C0; }
 #BtnOutline:focus { border: 1px solid #4F59C0; }
 #BtnDanger:focus { border: 1px solid #4F59C0; }
