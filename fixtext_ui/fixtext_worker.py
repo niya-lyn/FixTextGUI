@@ -65,15 +65,19 @@ HUMAN_STAGES: list[dict[str, str]] = [
 def build_human_stages(
     *,
     skip_layout: bool = False,
+    skip_merge: bool = False,
     enable_preprocess: bool = False,
     enable_strict: bool = False,
     zhuyin_mode: str = "off",
 ) -> list[dict[str, str]]:
     """按 M5-EX.1 开关拼进度步（与 pipeline ``build_stage_keys`` 顺序一致）。
 
+    ``skip_merge``：EPUB 已有工作区 ``book.txt``+账本时跳过合并，直接从工作副本进排版。
     不在此 import pipeline：``CorrectionJob`` 构造时可能尚未 bootstrap。
     """
-    keys: list[str] = ["merge"]
+    keys: list[str] = []
+    if not skip_merge:
+        keys.append("merge")
     if not skip_layout:
         keys.append("layout")
     if enable_preprocess:
@@ -132,17 +136,28 @@ def _count_replaced(before: Path | None, after: Path | None) -> int | None:
 
 
 def _artifact_paths(layout: dict, replace: dict, quote: dict,
-                    restore: dict, bookmap: dict | None = None) -> dict[str, str]:
+                    restore: dict, bookmap: dict | None = None,
+                    merge: dict | None = None) -> dict[str, str]:
     """汇总本次运行的**权威产物路径**（各阶段报告里自述的绝对路径）。
 
     导出侧拿它定位校正后的正文，不必再按文件名推测——导入侧固定写
     ``book.txt``、管线按书名命名，两套名字天生不同，猜名字必错。
+    账本优先取排版产物（与 after_text 同 nonce）；跳过排版时退回合并账本。
     """
     laid_out = str(layout.get("text_path") or "")
+    merge_text = str((merge or {}).get("text_path") or "")
     ledger = ""
-    if laid_out:
-        cand = Path(laid_out).with_name(Path(laid_out).stem + ".bundle.json")
-        ledger = str(cand) if cand.exists() else ""
+    for base in (laid_out, merge_text):
+        if not base:
+            continue
+        cand = Path(base).with_name(Path(base).stem + ".bundle.json")
+        if cand.is_file():
+            ledger = str(cand)
+            break
+    if not ledger:
+        lp = str((merge or {}).get("ledger_path") or "")
+        if lp and Path(lp).is_file():
+            ledger = lp
     return {
         "laid_out_text": laid_out,
         "before_text": str(replace.get("before_path") or ""),
@@ -245,6 +260,8 @@ class CorrectionJob:
                  enable_strict: bool = False,
                  zhuyin_mode: str = "off",
                  selected_bags: tuple[str, ...] | list[str] | None = None,
+                 working_text: Path | None = None,
+                 working_ledger: Path | None = None,
                  on_stage_started: Callable[[int], None] | None = None,
                  on_stage_finished: Callable[[int, float], None] | None = None):
         self.epub = Path(epub)
@@ -269,6 +286,13 @@ class CorrectionJob:
         #: 本次运行的替换引擎（M4-T4.2）。None = 启动时读配置键 ``engine``；
         #: 界面降级确认后显式传 ``python``（只本次生效，不写回设置）。
         self.engine = engine
+        #: 工作区正文 / 账本（EPUB）：有则跳过 merge，直接从 TXT 工作副本进后续阶段
+        self.working_text = Path(working_text) if working_text else None
+        self.working_ledger = Path(working_ledger) if working_ledger else None
+        self.skip_merge = bool(
+            self.working_text and self.working_text.is_file()
+            and self.working_ledger and self.working_ledger.is_file()
+        )
         #: M5-EX.1 运行模式 / 分袋开关
         self.skip_layout = bool(skip_layout)
         self.enable_preprocess = bool(enable_preprocess)
@@ -300,6 +324,7 @@ class CorrectionJob:
         #: 本次任务的动态进度步（构造时即定，供 ProgressDialog）
         self.human_stages: list[dict[str, str]] = build_human_stages(
             skip_layout=self.skip_layout,
+            skip_merge=self.skip_merge,
             enable_preprocess=self.enable_preprocess,
             enable_strict=self.enable_strict,
             zhuyin_mode=self.zhuyin_mode,
@@ -432,6 +457,10 @@ class CorrectionJob:
         cfg.paths.report.mkdir(parents=True, exist_ok=True)
         for s in stages:
             cfg.stage_dir(s["key"]).mkdir(parents=True, exist_ok=True)
+        # 跳过 merge 时仍要有 01_merge，供排版读入工作区 TXT
+        if self.skip_merge:
+            cfg.stage_dir("merge").mkdir(parents=True, exist_ok=True)
+            self._seed_merge_from_working(cfg)
 
         # 把引擎客户端的 subprocess 换成可取消代理（只影响本进程内的调用）
         import fixtext.engine.client as _engine_client
@@ -487,6 +516,29 @@ class CorrectionJob:
                 py_engine.set_cancel_check(None)
 
         return self._build_summary(cfg)
+
+    def _seed_merge_from_working(self, cfg) -> None:
+        """EPUB：用工作区 ``book.txt`` + 账本填充合并产物，跳过重新 merge 原件。"""
+        import shutil
+
+        assert self.working_text is not None and self.working_ledger is not None
+        dst_txt = cfg.merged_text()
+        dst_led = cfg.merged_ledger()
+        shutil.copy2(self.working_text, dst_txt)
+        shutil.copy2(self.working_ledger, dst_led)
+        chapters = None
+        try:
+            from epubtext.bundle import Ledger
+            chapters = sum(len(b.chapters) for b in Ledger.load(dst_led).books)
+        except Exception:
+            chapters = None
+        self.stage_reports["merge"] = {
+            "text_path": str(dst_txt),
+            "ledger_path": str(dst_led),
+            "chapters": chapters,
+            "seeded_from_working_copy": True,
+        }
+        self.stage_elapsed["merge"] = 0.0
 
     # ---------------- 收尾 ----------------
 
@@ -545,7 +597,8 @@ class CorrectionJob:
             # 本次运行的**权威产物路径**：各阶段自己报告的绝对路径。
             # 导出侧据此定位，不再按文件名猜（导入侧固定写 book.txt，
             # 而管线按书名命名，两套名字天生不同 → 猜必错）。
-            "artifacts": _artifact_paths(layout, replace, quote, restore, bookmap),
+            "artifacts": _artifact_paths(
+                layout, replace, quote, restore, bookmap, merge=merge),
         }
         # 运行摘要落盘（工作目录内，供导出/排查；界面不直接展示路径）
         from fixtext_pipeline.config import dump_json

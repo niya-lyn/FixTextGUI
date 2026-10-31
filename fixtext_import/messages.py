@@ -138,6 +138,13 @@ def duplicate_note() -> str:
     return "这本书之前导入过，这次直接用了工作区里已有的副本，没有产生重复文件。"
 
 
+def keep_working_copy_note() -> str:
+    return (
+        "工作区里已有这本书的正文（可能含校正/检查页修改），"
+        "本次导入未覆盖，校正结果还在。"
+    )
+
+
 def big_file_note(size_mb: float) -> str:
     return f"这本书比较大（约 {size_mb:.0f} MB），导入会多花一点时间，请稍等。"
 

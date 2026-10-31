@@ -258,9 +258,9 @@ class OneClickModule(QWidget):
     def set_run_context(self, ctx: dict | None) -> None:
         """注入一次真实校正所需的全部路径（由导入流程或测试调用）。
 
-        ctx 字段：epub / pipeline_root / rules_before / rules_after /
-        engine_path / runs_root / title（可选，书名显示用）
-        传 None 表示清空（回到无书空状态）。
+        ctx 字段：plain_source（工作区 book.txt）/ template_epub（EPUB 导出模板）/
+        pipeline_root / rules_before / rules_after / engine_path / runs_root /
+        title（可选）。传 None 表示清空（回到无书空状态）。
         """
         self.run_context = dict(ctx) if ctx else None
         if not ctx:
@@ -269,14 +269,16 @@ class OneClickModule(QWidget):
             self._clear_result()
             self._apply_book_presence()
             return
-        ref = ctx.get("epub") or ctx.get("plain_source") or ""
+        # 展示体积：EPUB 用原件副本；校正吃的是 plain_source（工作正文）
+        ref = (ctx.get("template_epub") or ctx.get("epub")
+               or ctx.get("plain_source") or "")
         title = ctx.get("title") or Path(str(ref)).stem
         suffix = (ctx.get("suffix") or Path(str(ref)).suffix or "").lower()
         kind = "电子书" if suffix == ".epub" else "文本"
         size_mb = Path(str(ref)).stat().st_size / (1024 * 1024) if ref else 0
         self.book_name_label.setText(f"《{title}》· {kind}")
         self.book_meta_label.setText(
-            f"{size_mb:.1f} MB · 校正过程只读原文件，可随时恢复到校正前")
+            f"{size_mb:.1f} MB · 基于工作区正文校正，原件只读可随时回退")
         self.book_pill.setText("已就绪")
         self.book_pill.setStyleSheet(
             f"color:{c('success')};background:{c('success.bg')};"
@@ -645,13 +647,18 @@ class OneClickModule(QWidget):
 
     @staticmethod
     def _source_epub(ctx: dict, workdir: Path) -> Path:
-        """校正链路的输入：EPUB 书用原书；纯文本书先包成单章电子书。
+        """管线 ``cfg.epub``：TXT 用包装电子书；EPUB 只用原件模板供导出还原。
 
-        包装只发生在本次运行目录里，用户导入文件夹不被写入。
+        校正正文一律来自工作区 ``book.txt``（EPUB 跳过 merge、直接播种；
+        TXT 经 ``plain_book`` 包装后走 merge）。不再把 EPUB 先还原成工作 EPUB。
         """
         epub = ctx.get("epub")
         if epub:
             return Path(str(epub))
+        # EPUB：原件只作 restore 模板；正文由 working_text 播种
+        template = ctx.get("template_epub")
+        if template and ctx.get("ledger_path"):
+            return Path(str(template))
         from plain_book import plain_source_epub
         return plain_source_epub(
             ctx["plain_source"], workdir,
@@ -757,7 +764,7 @@ class OneClickModule(QWidget):
         workdir = runs_root / f"run-{int(time.time() * 1000)}"
         book = ctx.get("title") or Path(str(ctx.get("epub") or "")).stem
 
-        # 纯文本书没有章节包结构：先原样包成单章电子书，再走同一条链路
+        # TXT：包装成单章 EPUB 进 merge；EPUB：cfg.epub=原件模板，正文用 book.txt 播种
         source_epub = self._source_epub(ctx, workdir)
 
         import fixtext_settings as _settings
@@ -765,6 +772,8 @@ class OneClickModule(QWidget):
 
         rules_path = quotation_rules_path_for(ctx)
         opts = self._run_options()
+        plain = Path(str(ctx["plain_source"])) if ctx.get("plain_source") else None
+        ledger = Path(str(ctx["ledger_path"])) if ctx.get("ledger_path") else None
         job = CorrectionJob(
             epub=source_epub,
             workdir=workdir,
@@ -775,7 +784,8 @@ class OneClickModule(QWidget):
             # 书名 / 作者 / 原书进运行摘要：历史记录靠它显示这条是谁
             title=str(ctx.get("title") or ""),
             author=str(ctx.get("author") or ""),
-            source_epub=Path(str(ctx.get("epub") or source_epub)),
+            source_epub=Path(str(
+                ctx.get("template_epub") or ctx.get("epub") or source_epub)),
             # 用户区里的自定义词库 / 派生规则（显式给，不依赖下游推算）
             custom_vocab_path=(Path(str(ctx["custom_vocab_path"]))
                                if ctx.get("custom_vocab_path") else None),
@@ -792,6 +802,9 @@ class OneClickModule(QWidget):
             enable_strict=bool(opts["enable_strict"]),
             zhuyin_mode=str(opts["zhuyin_mode"]),
             selected_bags=tuple(opts["selected_bags"]),
+            # EPUB：工作区 TXT+账本直接进排版；TXT 书不传（走 merge）
+            working_text=plain if (plain and ledger) else None,
+            working_ledger=ledger if (plain and ledger) else None,
         )
         worker = CorrectionWorker(job)
         self._worker = worker

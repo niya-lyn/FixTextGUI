@@ -98,6 +98,8 @@ def test_build_run_context_injects_platform_engine(fake_platform, tmp_path):
     book_dir.mkdir()
     original = book_dir / "text.epub"
     original.write_bytes(b"PK\x03\x04")          # 内容无所谓，只要存在
+    working = book_dir / "book.txt"
+    working.write_text("工作区正文", encoding="utf-8")
     (book_dir / "import.json").write_text(json.dumps({
         "original_copy_path": str(original),
         "title": "探针书",
@@ -107,13 +109,19 @@ def test_build_run_context_injects_platform_engine(fake_platform, tmp_path):
     win = mw.MainWindow.__new__(mw.MainWindow)   # 不走完整窗口构造（太重）
 
     fake_platform("win32")
-    ctx = mw.MainWindow.build_run_context(win, str(book_dir / "text.txt"))
+    ctx = mw.MainWindow.build_run_context(win, str(working))
     assert ctx is not None, "Windows 下应能构建上下文（包里确有 .exe）"
     assert Path(ctx["engine_path"]).name == engine_selector.WINDOWS_NAME, (
         f"Windows 注入的引擎错了：{ctx['engine_path']}")
+    # EPUB：校正吃 book.txt；原件只作导出模板
+    assert ctx.get("plain_source") == str(working)
+    assert ctx.get("template_epub") == str(original)
+    assert "epub" not in ctx
+    # 无账本时仍可建上下文（TXT 包装兜底）；有账本则注入
+    assert "ledger_path" not in ctx or Path(ctx["ledger_path"]).name.endswith(".json")
 
     fake_platform("linux")
-    ctx = mw.MainWindow.build_run_context(win, str(book_dir / "text.txt"))
+    ctx = mw.MainWindow.build_run_context(win, str(working))
     assert ctx is not None
     assert Path(ctx["engine_path"]).name == engine_selector.LINUX_NAME
 

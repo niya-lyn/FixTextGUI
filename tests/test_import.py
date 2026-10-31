@@ -86,6 +86,28 @@ def test_reimport_is_idempotent(sample, tmp_path, workdir):
     assert len(dirs) == 1, f"应只有一个书目录，实际 {[d.name for d in dirs]}"
 
 
+def test_reimport_keeps_corrected_book_txt(sample, tmp_path, workdir):
+    """校正后的 book.txt 在重复导入（含记录损坏）时不得被覆盖。"""
+    src = tmp_path / "keep.txt"
+    src.write_bytes(sample("a_utf8_lf.txt").read_bytes())
+    first = fi.import_book(src, workdir)
+    book = Path(first.text_path)
+    corrected = "【已校正】" + book.read_text(encoding="utf-8")
+    book.write_text(corrected, encoding="utf-8", newline="\n")
+
+    # 正常复用
+    second = fi.import_book(src, workdir)
+    assert second.reused is True
+    assert book.read_text(encoding="utf-8") == corrected
+
+    # 模拟 import.json 损坏：仍须保留工作正文
+    Path(first.workspace_dir, "import.json").write_text("{坏", encoding="utf-8")
+    third = fi.import_book(src, workdir)
+    assert third.reused is True
+    assert book.read_text(encoding="utf-8") == corrected
+    assert any("未覆盖" in n or "校正" in n for n in third.reminded)
+
+
 def test_chapter_preview_shape(samples_dir):
     """验收③：章节预览给出的字段只有序号/标题/字数，没有内部结构。"""
     preview = fi.chapter_preview(samples_dir / "book_paohuo.epub")

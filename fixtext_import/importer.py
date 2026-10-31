@@ -13,6 +13,9 @@
 5. **再次计算原文件 sha256**，与第 2 步比对；再校验工作区副本与原文件一致。
 6. 写导入记录 `import.json`（含两份哈希、识别结果、导入方式）。
 
+重复导入（同内容 → 同书 id）：优先复用；若记录损坏但 ``book.txt`` 已在，
+**绝不覆盖工作正文**（校正/检查页改动保留），只刷新原件副本与记录。
+
 原文件在整条链路里只被**只读打开**（`rb`），没有任何写入路径指向它。
 """
 
@@ -144,21 +147,14 @@ def import_book(
     book_id = _book_id(source.name, sha_before)
     book_dir = workspace_root / book_id
     record_path = book_dir / "import.json"
+    text_path = book_dir / "book.txt"
 
-    # 幂等：同内容已导入过则复用，不产生重复目录
-    if options.reuse_existing and record_path.exists():
-        try:
-            old = json.loads(record_path.read_text(encoding="utf-8"))
-            if old.get("source_sha256_before") == sha_before and Path(old.get("text_path", "")).exists():
-                tick("这本书之前导入过，直接打开", 100)
-                result = ImportResult(**{k: v for k, v in old.items()
-                                         if k in ImportResult.__dataclass_fields__})
-                result.elapsed_ms = int((time.time() - started) * 1000)
-                result.reused = True
-                result.reminded = list(old.get("reminded", [])) + [messages.duplicate_note()]
-                return result
-        except (json.JSONDecodeError, TypeError):
-            pass  # 记录损坏时按新导入处理
+    # 幂等：同内容已导入过则复用，不覆盖工作正文、不产生重复目录
+    if options.reuse_existing:
+        reused = _try_reuse_existing(
+            record_path, text_path, sha_before, started, tick)
+        if reused is not None:
+            return reused
 
     original_dir = book_dir / "original"
     original_dir.mkdir(parents=True, exist_ok=True)
@@ -170,6 +166,25 @@ def import_book(
         # 复制过程中源文件被外部改动 —— 明确报错而不是继续
         raise ImportError_("导入时这个文件正在被其它程序修改，请关掉它再试一次。")
 
+    # 书目录里已有 book.txt（校正/检查页可能已改过）：绝不覆盖工作正文
+    if text_path.is_file():
+        tick("保留工作区已有正文，不覆盖校正结果", 70)
+        result = _result_keeping_working_copy(
+            source=source,
+            kind=kind,
+            book_id=book_id,
+            book_dir=book_dir,
+            text_path=text_path,
+            original_copy=original_copy,
+            sha_before=sha_before,
+            copied_dst_sha=copied_dst_sha,
+            started=started,
+            old_record=_read_record_loose(record_path),
+        )
+        _write_import_record(record_path, result, copied_dst_sha == sha_before)
+        tick("导入完成", 100)
+        return result
+
     notes: list[str] = [messages.copied_note()]
 
     # M5-EX.3：EPUB 统一可逆；TXT 记为 text（无账本）。忽略 options.epub_mode。
@@ -178,7 +193,6 @@ def import_book(
     chapters = 0
     encoding = ProbeResult(codec="utf-8", label="UTF-8", confidence="strict", has_bom=False)
     newline_kind, newline_changed, replaced = "lf", False, 0
-    text_path = book_dir / "book.txt"
 
     if kind == "txt":
         tick("正在看这本书的字符格式", 45)
@@ -253,15 +267,145 @@ def import_book(
         elapsed_ms=int((time.time() - started) * 1000),
     )
 
+    _write_import_record(record_path, result, copied_dst_sha == sha_before)
+    tick("导入完成", 100)
+    return result
+
+
+def _read_record_loose(record_path: Path) -> dict:
+    if not record_path.is_file():
+        return {}
+    try:
+        data = json.loads(record_path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, OSError, TypeError):
+        return {}
+
+
+def _try_reuse_existing(
+    record_path: Path,
+    text_path: Path,
+    sha_before: str,
+    started: float,
+    tick,
+) -> ImportResult | None:
+    """同内容 + 工作正文仍在 → 直接复用，不改 book.txt。"""
+    if not record_path.is_file() or not text_path.is_file():
+        return None
+    old = _read_record_loose(record_path)
+    if not old or old.get("source_sha256_before") != sha_before:
+        return None
+    recorded = Path(str(old.get("text_path") or ""))
+    if recorded.resolve() != text_path.resolve() and recorded.is_file():
+        # 记录指向别处且文件还在：仍以标准 book.txt 为准
+        pass
+    tick("这本书之前导入过，直接打开", 100)
+    fields = {k: v for k, v in old.items() if k in ImportResult.__dataclass_fields__}
+    fields["text_path"] = str(text_path)
+    # 账本以盘上为准（校正后可能已换成 book.bundle.json）
+    bundle = text_path.with_name("book.bundle.json")
+    if bundle.is_file():
+        fields["ledger_path"] = str(bundle)
+    elif old.get("ledger_path") and Path(str(old["ledger_path"])).is_file():
+        fields["ledger_path"] = str(old["ledger_path"])
+    try:
+        text = text_path.read_text(encoding="utf-8")
+        fields["text_chars"] = _count_chars(text)
+        fields["text_bytes"] = len(text.encode("utf-8"))
+    except OSError:
+        pass
+    result = ImportResult(**fields)
+    result.elapsed_ms = int((time.time() - started) * 1000)
+    result.reused = True
+    result.reminded = list(old.get("reminded") or []) + [messages.duplicate_note()]
+    return result
+
+
+def _result_keeping_working_copy(
+    *,
+    source: Path,
+    kind: str,
+    book_id: str,
+    book_dir: Path,
+    text_path: Path,
+    original_copy: Path,
+    sha_before: str,
+    copied_dst_sha: str,
+    started: float,
+    old_record: dict,
+) -> ImportResult:
+    """书目录已有 book.txt：只刷新原件，保留工作正文与账本。"""
+    sha_after = sha256_file(source)
+    if sha_after != sha_before:
+        raise ImportError_(
+            "导入期间这个文件被其它程序改动了，请你先关掉它再导入一次。"
+        )
+    text = text_path.read_text(encoding="utf-8")
+    bundle = book_dir / "book.bundle.json"
+    ledger_path = None
+    if bundle.is_file():
+        ledger_path = str(bundle)
+    elif old_record.get("ledger_path") and Path(str(old_record["ledger_path"])).is_file():
+        ledger_path = str(old_record["ledger_path"])
+
+    title = str(old_record.get("title") or source.stem)
+    author = str(old_record.get("author") or "")
+    chapters = int(old_record.get("chapters") or (1 if kind == "txt" else 0))
+    if kind == "epub" and chapters <= 0:
+        try:
+            from . import epub_import
+            preview = epub_import.chapter_preview(original_copy)
+            chapters = len(preview.chapters) or 1
+            title = preview.title or title
+            author = preview.author or author
+        except Exception:
+            chapters = max(chapters, 1)
+    notes = [
+        messages.copied_note(),
+        messages.keep_working_copy_note(),
+        messages.unchanged_note(),
+    ]
+    return ImportResult(
+        book_id=book_id,
+        title=title,
+        author=author,
+        source_path=str(source),
+        source_suffix=source.suffix.lower(),
+        workspace_dir=str(book_dir),
+        text_path=str(text_path),
+        original_copy_path=str(original_copy),
+        ledger_path=ledger_path,
+        source_sha256_before=sha_before,
+        source_sha256_after=sha_after,
+        workspace_copy_sha256=copied_dst_sha,
+        source_unchanged=True,
+        encoding_codec=str(old_record.get("encoding_codec") or "utf-8"),
+        encoding_label=str(old_record.get("encoding_label") or "UTF-8"),
+        encoding_confidence=str(old_record.get("encoding_confidence") or "strict"),
+        encoding_certain=bool(old_record.get("encoding_certain", True)),
+        newline_kind=str(old_record.get("newline_kind") or "lf"),
+        newline_changed=bool(old_record.get("newline_changed", False)),
+        text_chars=_count_chars(text),
+        text_bytes=len(text.encode("utf-8")),
+        replaced_chars=int(old_record.get("replaced_chars") or 0),
+        chapters=chapters or 1,
+        epub_mode="direct" if kind == "epub" else "text",
+        reminded=notes,
+        reused=True,
+        elapsed_ms=int((time.time() - started) * 1000),
+    )
+
+
+def _write_import_record(
+    record_path: Path, result: ImportResult, copy_matches: bool,
+) -> None:
     record = asdict(result)
     record.update({
         "workspace_version": WORKSPACE_VERSION,
         "imported_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "workspace_copy_matches_source": copied_dst_sha == sha_before,
+        "workspace_copy_matches_source": copy_matches,
     })
     write_text_atomic(record_path, json.dumps(record, ensure_ascii=False, indent=2))
-    tick("导入完成", 100)
-    return result
 
 
 def load_record(book_dir: str | Path) -> dict | None:

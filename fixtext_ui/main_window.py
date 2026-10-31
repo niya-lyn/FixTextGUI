@@ -843,6 +843,10 @@ class MainWindow(QMainWindow):
         检查页立刻自扫，关=全量 / 开=剩余 M 处，无需再点「开始检查」。
         """
         self._sync_book_text_from_run(summary)
+        # 工作区正文/账本已更新 → 刷新一键校正上下文，下次校正吃新副本
+        if self.oneclick_module is not None and self._current_text_path:
+            ctx = self.build_run_context(self._current_text_path)
+            self.oneclick_module.set_run_context(ctx)
         self._sync_export(summary)
         self._sync_check(summary, auto_scan=True)
         self._sync_history(summary)
@@ -860,10 +864,16 @@ class MainWindow(QMainWindow):
             pass
 
     def _sync_book_text_from_run(self, summary: dict | None) -> None:
-        """用本次 ``replace_after``（quote 阶段可能已写回修复）覆盖当前书正文。"""
+        """把本次校正后正文（及 EPUB 账本）写回工作区副本。
+
+        ``book.txt`` ← replace/quote 后正文；EPUB 还要把与正文同 nonce 的
+        ``*.bundle.json`` 写到书目录并更新 ``import.json``，否则下一轮无法
+        用工作正文还原工作 EPUB，导出也会对不上账本。
+        """
         path = str(getattr(self, "_current_text_path", "") or "")
         if not path:
             return
+        book_path = Path(path)
         arts = (summary or {}).get("artifacts") or {}
         # quote 写回的是 replace_after；checked_file 与之同路径，优先 after_text
         after = str(arts.get("after_text") or arts.get("checked_file") or "")
@@ -871,7 +881,33 @@ class MainWindow(QMainWindow):
             return
         try:
             text = Path(after).read_text(encoding="utf-8")
-            Path(path).write_text(text, encoding="utf-8", newline="\n")
+            book_path.write_text(text, encoding="utf-8", newline="\n")
+        except Exception:
+            return
+
+        ledger_src = str(arts.get("ledger") or "")
+        if not ledger_src or not Path(ledger_src).is_file():
+            return
+        book_dir = book_path.parent
+        ledger_dst = book_dir / "book.bundle.json"
+        try:
+            import shutil
+            shutil.copy2(ledger_src, ledger_dst)
+        except Exception:
+            return
+        # 刷新 import.json 里的账本指针，供导出 / 下一轮校正使用
+        record_path = book_dir / "import.json"
+        if not record_path.is_file():
+            return
+        try:
+            import json
+            meta = json.loads(record_path.read_text(encoding="utf-8"))
+            meta["ledger_path"] = str(ledger_dst)
+            meta["text_path"] = str(book_path)
+            record_path.write_text(
+                json.dumps(meta, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8")
+            self._import_record = meta
         except Exception:
             pass
 
@@ -1039,9 +1075,12 @@ class MainWindow(QMainWindow):
     def build_run_context(self, text_path: str) -> dict | None:
         """由导入结果推导一次校正所需的路径（真实文件，不做假运行）。
 
-        EPUB 书直接用原书当输入；纯文本（TXT）书没有章节包结构，
-        由 ``plain_book`` 把它原样包成单章电子书后走**同一条**六阶段链路——
-        这样纯文本书也真的有校正结果，而不是永远拿「命中数 0」。
+        校正输入**一律**是工作区 ``book.txt``（导入时已从原件合并/转写；
+        一键校正与检查页的修改也写回这里）。原件副本只读保留：EPUB 仅作
+        导出还原模板（``template_epub``），校正过程不再碰 EPUB 格式。
+
+        TXT：``plain_book`` 包成单章电子书后走 merge。
+        EPUB：跳过 merge，用 ``book.txt``+账本直接进排版/替换；导出时再还原 EPUB。
         """
         try:
             book_dir = Path(text_path).resolve().parent
@@ -1052,6 +1091,9 @@ class MainWindow(QMainWindow):
             return None
         original = meta.get("original_copy_path") or ""
         if not original or not Path(original).exists():
+            return None
+        working = Path(text_path)
+        if not working.is_file():
             return None
 
         pipeline = PKG_ROOT / "pipeline"
@@ -1083,14 +1125,17 @@ class MainWindow(QMainWindow):
             suffix=Path(original).suffix.lower(),
             custom_vocab_path=str(vocab_dir / "custom_vocab.json"),
             derived_rules_dir=str(vocab_dir / "derived_rules"),
+            # 工作副本：TXT / EPUB 校正都吃它
+            plain_source=str(working),
         )
         if original.lower().endswith(".epub"):
-            ctx["epub"] = str(Path(original))
-            #: 以原书副本为模板，导出时可逐字节还原成电子书
             ctx["template_epub"] = str(Path(original))
-        else:
-            #: 纯文本：运行时包成单章电子书再进链路（不写进用户文件夹）
-            ctx["plain_source"] = str(Path(text_path))
+            ledger = str(meta.get("ledger_path") or "")
+            if not ledger or not Path(ledger).is_file():
+                cand = book_dir / "book.bundle.json"
+                ledger = str(cand) if cand.is_file() else ""
+            if ledger:
+                ctx["ledger_path"] = ledger
         return ctx
 
     # ------------------------------------------------------------------ 路由
