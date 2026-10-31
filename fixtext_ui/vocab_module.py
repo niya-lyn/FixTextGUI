@@ -479,12 +479,31 @@ class VocabModule(QWidget):
         # 列表区吃竖直剩余空间；空态也不反向撑工具条
         card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
-        self._table = QWidget()
-        self._table.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        self._table_body = QVBoxLayout(self._table)
-        self._table_body.setContentsMargins(0, 0, 0, 0)
-        self._table_body.setSpacing(0)
-        card.body_l.addWidget(self._table)
+        # 固定表头（不随条目滚动，解决「表头没固定」）
+        card.body_l.addWidget(self._entry_header())
+        card.body_l.addWidget(hline())
+
+        # 可滚动的条目区：仅条目在内部滚动，表头 / 分页固定在卡片内
+        self._scroll = QScrollArea()
+        self._scroll.setObjectName("VocabTableScroll")
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll_inner = QWidget()
+        self._scroll_layout = QVBoxLayout(self._scroll_inner)
+        self._scroll_layout.setContentsMargins(0, 0, 0, 0)
+        self._scroll_layout.setSpacing(0)
+        self._scroll.setWidget(self._scroll_inner)
+        card.body_l.addWidget(self._scroll, 1)
+
+        # 滚动条出现会占用视口宽度，需把表头右留白同步，否则列会偏移
+        self._scroll.verticalScrollBar().rangeChanged.connect(
+            lambda *_: self._sync_hdr_margin())
+        QTimer.singleShot(0, self._sync_hdr_margin)
+
+        card.body_l.addWidget(hline())
+        self._pager_widget = self._pager()
+        card.body_l.addWidget(self._pager_widget)
 
         self._render_entries()
         return card
@@ -494,6 +513,7 @@ class VocabModule(QWidget):
         hl = QHBoxLayout(row)
         hl.setContentsMargins(0, 10, 0, 10)
         hl.setSpacing(12)
+        self._hdr_layout = hl   # 供 _sync_hdr_margin 同步右留白（对齐滚动条）
         self._chk_all = QCheckBox()
         self._chk_all.stateChanged.connect(self._toggle_all)
         hl.addWidget(self._chk_all, 0)
@@ -503,8 +523,20 @@ class VocabModule(QWidget):
             hl.addWidget(lab, stretch)
         act = _label("操作", size="xs", color="neutral.600", weight="semibold")
         act.setAlignment(Qt.AlignmentFlag.AlignRight)
+        act.setFixedWidth(COL_ACT_W)   # 与每行的操作列（acts.setFixedWidth）同宽，保证表头与行对齐
         hl.addWidget(act, 0)
         return row
+
+    def _sync_hdr_margin(self):
+        """表头固定在卡片内、条目在滚动区内。
+
+        条目多到出现竖直滚动条时，滚动条会占用视口宽度，使行内容比表头窄一截，
+        列随之错位。这里把表头右侧留白同步成「行右留白(12) + 滚动条宽」，
+        让表头与行在有无滚动条时都精确对齐。
+        """
+        sb = self._scroll.verticalScrollBar()
+        sbw = sb.width() if sb.isVisible() else 0
+        self._hdr_layout.setContentsMargins(0, 10, 12 + sbw, 10)
 
     def _entry_row(self, e: dict) -> QWidget:
         row = QWidget()
@@ -533,8 +565,15 @@ class VocabModule(QWidget):
         hl.addWidget(_label(e["value"], size="sm", color="primary.700", mono=True), 3)
         hl.addWidget(_label(e.get("type") or "—", size="sm", color="neutral.600"), 2)
 
-        hl.addWidget(Pill("自定义" if not is_builtin else "内置",
-                          "ok" if not is_builtin else "info"), 2)
+        # 来源列用容器包住 Pill：容器吃满 stretch 列宽（与表头对齐），
+        # 徽标本身 Maximum/Fixed 不拉伸，保持左对齐紧凑。
+        src_cell = QWidget()
+        sl = QHBoxLayout(src_cell)
+        sl.setContentsMargins(0, 0, 0, 0)
+        sl.setSpacing(0)
+        sl.addWidget(Pill("自定义" if not is_builtin else "内置",
+                          "ok" if not is_builtin else "info"))
+        hl.addWidget(src_cell, 2)
 
         books = ("📖 " + "、".join(e["books"])) if e.get("books") else "—"
         bk = _label(books, size="xs", color="neutral.600")
@@ -673,11 +712,8 @@ class VocabModule(QWidget):
         return max(1, (self._hit_total + PAGE_SIZE - 1) // PAGE_SIZE)
 
     def _render_entries(self):
-        while self._table_body.count():
-            item = self._table_body.takeAt(0)
-            w = item.widget()
-            if w is not None:
-                w.setParent(None)
+        # 表头 / 分页是卡片内固定部件，这里只重建可滚动的条目区
+        self._clear_layout(self._scroll_layout)
 
         total, rows = self.store.query(self.search, scope=self._scope(),
                                        offset=self._page * PAGE_SIZE, limit=PAGE_SIZE)
@@ -691,19 +727,18 @@ class VocabModule(QWidget):
             self._hit_total = total
             self._page_rows = rows
 
-        self._table_body.addWidget(self._entry_header())
-        self._table_body.addWidget(hline())
-
         if not rows:
-            self._table_body.addWidget(self._empty_state())
+            # 空态紧凑贴顶，不把卡片撑大（解决「没数据时变得很大」）
+            self._scroll_layout.addWidget(self._empty_state())
+            self._scroll_layout.addStretch(1)
+            self._pager_widget.setVisible(False)
             return
 
+        self._pager_widget.setVisible(True)
         for i, e in enumerate(rows):
-            self._table_body.addWidget(self._entry_row(e))
+            self._scroll_layout.addWidget(self._entry_row(e))
             if i != len(rows) - 1:
-                self._table_body.addWidget(hline())
-        self._table_body.addWidget(hline())
-        self._table_body.addWidget(self._pager())
+                self._scroll_layout.addWidget(hline())
         self._update_pager()
 
     def _empty_state(self) -> QWidget:

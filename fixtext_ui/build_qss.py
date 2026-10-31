@@ -965,6 +965,16 @@ def build() -> str:
     q.append("}")
     q.append("")
 
+    # 词库页条目滚动区（表头固定、仅条目滚动）：透明背景融入卡片
+    q.append("QScrollArea#VocabTableScroll {")
+    q.append(f'    background: transparent;')
+    q.append(f'    border: none;')
+    q.append("}")
+    q.append("QScrollArea#VocabTableScroll > QWidget {")
+    q.append(f'    background: transparent;')
+    q.append("}")
+    q.append("")
+
     return "\n".join(q) + "\n"
 
 

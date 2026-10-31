@@ -830,3 +830,11 @@ QGroupBox::title {
     left: 12px;
 }
 
+QScrollArea#VocabTableScroll {
+    background: transparent;
+    border: none;
+}
+QScrollArea#VocabTableScroll > QWidget {
+    background: transparent;
+}
+
