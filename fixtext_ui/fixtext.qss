@@ -452,6 +452,26 @@ QCheckBox::indicator {
 QCheckBox::indicator:checked { background-color: #4F59C0; border-color: #4F59C0; }
 QCheckBox::indicator:checked { image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTYgMTEuM2wtMy4zLTMuM2EuOTh4Ljk4IDAgMCAxIDEuNC0xLjRMNiA4LjU5bDUuNi01LjU5YTEuMDEgMS4wMSAwIDEgMSAxLjQxIDEuNDFMNiAxMS4zeiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==); }
 
+QRadioButton {
+    color: #222831;
+    spacing: 8px;
+    font-size: 13px;
+}
+QRadioButton::indicator {
+    width: 16px; height: 16px;
+    border-radius: 8px;
+    border: 1px solid #C2CAD6;
+    background-color: #FFFFFF;
+}
+QRadioButton::indicator:checked { background-color: #4F59C0; border-color: #4F59C0; }
+QToolTip {
+    background-color: #FFFFFF;
+    color: #222831;
+    border: 1px solid #DDE2EA;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
 QTableWidget, QTreeWidget, QListWidget {
     background-color: #FFFFFF;
     alternate-background-color: #F7F8FA;

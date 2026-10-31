@@ -526,6 +526,29 @@ def build() -> str:
     q.append(f"QCheckBox::indicator:checked {{ image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiI+PHBhdGggZD0iTTYgMTEuM2wtMy4zLTMuM2EuOTh4Ljk4IDAgMCAxIDEuNC0xLjRMNiA4LjU5bDUuNi01LjU5YTEuMDEgMS4wMSAwIDEgMSAxLjQxIDEuNDFMNiAxMS4zeiIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==); }}")
     q.append("")
 
+    # ---- 单选（历史/时点恢复页原生 QRadioButton）----------------------
+    q.append("QRadioButton {")
+    q.append(f'    color: {c("neutral.800")};')
+    q.append(f'    spacing: {sp("2")};')
+    q.append(f'    font-size: {FONT_SIZE["sm"]};')
+    q.append("}")
+    q.append("QRadioButton::indicator {")
+    q.append(f'    width: 16px; height: 16px;')
+    q.append(f'    border-radius: 8px;')   # 圆形指示符
+    q.append(f'    border: 1px solid {c("neutral.300")};')
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append("}")
+    q.append(f"QRadioButton::indicator:checked {{ background-color: {c('primary.500')}; border-color: {c('primary.500')}; }}")
+    # ---- 原生提示框（全应用 setToolTip 通用，统一为白卡风格）----------
+    q.append("QToolTip {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    color: {c("neutral.800")};')
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["sm"]};')
+    q.append(f'    padding: {sp("2")} {sp("3")};')
+    q.append(f'    font-size: {FONT_SIZE["sm"]};')
+    q.append("}")
+
     # ---- 表格（v3 质感层：斑马纹 + 行悬停）---------------------------
     q.append("QTableWidget, QTreeWidget, QListWidget {")
     q.append(f'    background-color: {c("neutral.0")};')
