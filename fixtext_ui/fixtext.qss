@@ -384,6 +384,32 @@ QComboBox QAbstractItemView {
     outline: 0;
     padding: 4px;
 }
+QMenu {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    padding: 4px 4px;
+    outline: 0;
+}
+QMenu::item {
+    background: transparent;
+    color: #222831;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+QMenu::item:selected {
+    background-color: #EEF0FB;
+    color: #333B83;
+}
+QMenu::item:disabled {
+    color: #9AA4B4;
+}
+QMenu::separator {
+    height: 1px;
+    background: #DDE2EA;
+    margin: 4px 8px;
+}
 QPushButton#HeadIconBtn {
     background-color: #EEF1F5;
     color: #333B48;
