@@ -852,3 +852,14 @@ QWidget#VocabTableHeader {
     border-bottom: 1px solid #DDE2EA;
 }
 
+QWidget#CellFullText {
+    background-color: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    padding: 4px;
+}
+QWidget#CellFullText QLabel {
+    color: #15191F;
+    background: transparent;
+}
+

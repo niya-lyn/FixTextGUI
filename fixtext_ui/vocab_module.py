@@ -24,11 +24,11 @@ FixText V1 · 词库管理模块（Qt 移植 · M3-T3.1 接真实词库）
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, QRect, QEvent, QObject
 from PySide6.QtGui import QKeySequence, QShortcut, QFontMetrics
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDialog,
-    QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy, QScrollArea,
+    QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy, QScrollArea, QApplication,
 )
 
 import fixtext_settings as app_settings
@@ -93,7 +93,11 @@ class _ElideLabel(QLabel):
 
     - 横向吃满所在列（sizePolicy=Ignored，不被超长文本撑开、不挤压邻列）；
     - 超长时在末尾显示「…」；
-    - 文字居中对齐，与表头保持一致；完整文本留在 tooltip。
+    - 文字居中对齐，与表头保持一致；
+    - **仅当文本确被截断**才启用交互：悬浮临时显示完整文本并自动隐藏（浮层
+      `_FullTextPopover` 承载）。点击复制整条词条的逻辑放在行级（`_EntryCopyFilter`），
+      此处不再处理点击，避免与「悬浮看全文」冲突。
+      完整文本通过浮层（`_FullTextPopover`）展示，不再用原生 tooltip。
     """
 
     def __init__(self, text: str = "", *, size: str = "sm", color: str = "neutral.800",
@@ -101,28 +105,197 @@ class _ElideLabel(QLabel):
                  center: bool = True) -> None:
         super().__init__(text)
         self._full = text
+        self._is_elided = False
         _apply_label_style(self, size=size, color=color, weight=weight, wrap=False, mono=mono)
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.setWordWrap(False)
         if center:
             self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setToolTip(text)
         self._elide()
 
     def setText(self, t: str) -> None:  # type: ignore[override]
         self._full = t
-        self.setToolTip(t)
         self._elide()
 
     def _elide(self) -> None:
         fm = self.fontMetrics()
         elided = fm.elidedText(self._full, Qt.TextElideMode.ElideRight, max(1, self.width()))
+        self._is_elided = (elided != self._full)
         if elided != self.text():
             super().setText(elided)
+        # 仅被截断的格子才给「可点开看全文」的手型光标
+        self.setCursor(Qt.CursorShape.PointingHandCursor if self._is_elided
+                      else Qt.CursorShape.ArrowCursor)
 
     def resizeEvent(self, ev) -> None:  # 控件宽度随列宽变化时重新截断
         super().resizeEvent(ev)
         self._elide()
+
+    # ---- 悬浮 / 点击显示完整文本（行为由 _FullTextPopover 单例承载）----
+    def enterEvent(self, ev) -> None:
+        if self._is_elided and not _cell_popover().is_pinned():
+            _cell_popover().show_for(self, self._full, pinned=False)
+        super().enterEvent(ev)
+
+    def leaveEvent(self, ev) -> None:
+        pop = _cell_popover()
+        if pop.owner_is(self) and not pop.is_pinned():
+            pop.hide_me()
+        super().leaveEvent(ev)
+
+
+class _FullTextPopover(QWidget):
+    """超长字段悬浮时显示的完整文本浮层（全局单例，同一时间只显示一个）。
+
+    - 悬浮：临时显示，鼠标移开自动隐藏；
+    - 仅用于「看全文」，不再响应点击常驻（点击复制整条词条由行级 `_EntryCopyFilter` 处理）；
+    - 鼠标移开后自动隐藏（由 `_ElideLabel` 的 leaveEvent 处理）。
+    """
+
+    def __init__(self) -> None:
+        super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
+                         | Qt.WindowType.WindowStaysOnTopHint)
+        self.setObjectName("CellFullText")
+        self._owner = None          # 当前显示所属 _ElideLabel
+        self._pinned = False
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(8, 6, 8, 6)
+        lay.setSpacing(6)
+        self._text = QLabel()
+        self._text.setWordWrap(True)
+        self._text.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._text.setStyleSheet(
+            f"color:{c('neutral.900')};font-size:{fs('sm')};background:transparent;")
+        lay.addWidget(self._text)
+
+    # ---- 显隐控制（由 _ElideLabel 调用）----
+    def show_for(self, label: "_ElideLabel", text: str, *, pinned: bool) -> None:
+        self._updating = True                    # 防止自身 setText/show 触发过滤器
+        try:
+            self._owner = label
+            self._pinned = pinned
+            self._text.setText(text)
+            self.adjustSize()
+            self._place_above(label)
+            self.show()
+            self.raise_()
+        finally:
+            self._updating = False
+
+    def hide_me(self) -> None:
+        self._updating = True
+        try:
+            self._owner = None
+            self._pinned = False
+            self.hide()
+        finally:
+            self._updating = False
+
+    def is_pinned(self) -> bool:
+        return self._pinned and self.isVisible()
+
+    def owner_is(self, label: "_ElideLabel") -> bool:
+        return self._owner is label and self.isVisible()
+
+    def _place_above(self, label: "_ElideLabel") -> None:
+        # 优先显示在单元格正上方，空间不足则放下方；水平居中并夹在屏幕内
+        screen = self.screen().availableGeometry() if self.screen() else QRect(0, 0, 1280, 800)
+        gp = label.mapToGlobal(label.rect().topLeft())
+        pw = min(self.width(), screen.width() - 16)
+        ph = self.height()
+        x = gp.x() + (label.width() - pw) // 2
+        x = max(8, min(x, screen.right() - pw - 8))
+        if gp.y() - ph - 6 >= screen.top():
+            y = gp.y() - ph - 6
+        else:
+            y = gp.y() + label.height() + 6
+        self.setGeometry(x, y, pw, ph)
+
+    # ---- app 级事件过滤：点击浮层外区域 / 空白关闭 ----
+    def eventFilter(self, obj, event) -> bool:
+        if getattr(self, "_updating", False):
+            return False
+        if event.type() == QEvent.Type.MouseButtonPress and self.isVisible():
+            # obj 可能是 QWindow（点击落到原生窗口）而非 QWidget，先判型再调 isAncestorOf
+            if obj is self or (isinstance(obj, QWidget) and self.isAncestorOf(obj)):
+                return False                      # 点到浮层自身 → 不关
+            if isinstance(obj, _ElideLabel):
+                return False                      # 点到其它超长格 → 交给该格处理器切换
+            self.hide_me()                        # 其余外部点击（含 QWindow）→ 关闭
+        return False
+
+
+_cell_popover_inst: "_FullTextPopover | None" = None
+
+
+def _cell_popover() -> _FullTextPopover:
+    """返回全局唯一浮层实例，并挂一次 app 级事件过滤器（保证同时只一个）。"""
+    global _cell_popover_inst
+    if _cell_popover_inst is None:
+        _cell_popover_inst = _FullTextPopover()
+        app = QApplication.instance()
+        if app is not None:
+            app.installEventFilter(_cell_popover_inst)
+    return _cell_popover_inst
+
+
+class _EntryCopyFilter(QObject):
+    """行级点击复制：点击词条的任意区域（含非超长格）即把「原词 + 替换为」复制到剪贴板。
+
+    - 挂在 app 级，监听 MouseButtonPress；
+    - 仅当点击落在某条 `VocabRow` 内、且不是勾选框 / 编辑 / 删除按钮时才复制；
+    - 复制的同时关掉可能正悬浮的浮层、并弹出「已复制词条」提示。
+    """
+
+    def __init__(self, module: "VocabModule") -> None:
+        super().__init__()
+        self._module = module
+
+    def eventFilter(self, obj, event) -> bool:
+        if event.type() != QEvent.Type.MouseButtonPress:
+            return False
+        if not isinstance(obj, QWidget):          # 跳过 QWindow 等非控件
+            return False
+        # 用全局坐标找回真正被点中的控件。鼠标 press 未被子控件接受时会向上传播到
+        # 父控件（传播时可能新建 event 实例，无法用「同一事件」判断），因此仅当事件
+        # 直接投递到真正被点中的控件（obj is target）时才复制，传播上来的父级调用直接忽略，
+        # 既避免重复复制，也避免点击勾选框 / 编辑 / 删除「穿透」到行级触发复制。
+        target = obj
+        gp = getattr(event, "globalPosition", None)
+        if gp is not None:
+            w = QApplication.widgetAt(gp().toPoint())
+            if w is not None:
+                target = w
+        if obj is not target:
+            return False
+        # 从真正被点中的控件向上找到所在数据行（objectName 为 VocabRow）
+        row = target
+        while row is not None and row.objectName() != "VocabRow":
+            row = row.parent()
+        if row is None:
+            return False
+        # 勾选框 / 编辑 / 删除按钮有各自的行为，不触发复制
+        if isinstance(target, (QCheckBox, QPushButton)):
+            return False
+        entry = getattr(row, "_entry", None)
+        if not entry:
+            return False
+        self._module._copy_entry(entry)
+        return False
+
+
+_entry_copy_filter_inst: "QObject | None" = None
+
+
+def _install_entry_copy_filter(module: "VocabModule") -> None:
+    """安装一次 app 级点击复制过滤器（重复调用只生效一次）。"""
+    global _entry_copy_filter_inst
+    if _entry_copy_filter_inst is not None:
+        return
+    _entry_copy_filter_inst = _EntryCopyFilter(module)
+    app = QApplication.instance()
+    if app is not None:
+        app.installEventFilter(_entry_copy_filter_inst)
 
 
 def _link_btn(text: str, *, danger: bool = False, enabled: bool = True) -> QPushButton:
@@ -207,6 +380,8 @@ class VocabModule(QWidget):
         self._toast_timer = QTimer(self)
         self._toast_timer.setSingleShot(True)
         self._toast_timer.timeout.connect(self._hide_status)
+        # 行级点击复制（点击词条任意区域复制「原词 + 替换为」）
+        _install_entry_copy_filter(self)
         # Ctrl+Z → 撤销（底线①）
         QShortcut(QKeySequence(QKeySequence.StandardKey.Undo), self).activated.connect(self._undo)
 
@@ -593,6 +768,7 @@ class VocabModule(QWidget):
     def _entry_row(self, e: dict) -> QWidget:
         row = QWidget()
         row.setObjectName("VocabRow")   # 数据行白底（与表头灰带区分）
+        row._entry = e                  # 供行级点击复制过滤器读取整条词条
         hl = QHBoxLayout(row)
         hl.setContentsMargins(0, 12, 0, 12)
         hl.setSpacing(12)
@@ -1665,6 +1841,23 @@ class VocabModule(QWidget):
         self.undo_btn.setVisible(with_undo)
         self.status_box.setVisible(True)
         self._toast_timer.start(5000 if with_undo else 2600)
+
+    def _copy_entry(self, e: dict) -> None:
+        """点击词条任意区域时复制整条词条（原词 + 替换为）到剪贴板，并提示已复制。
+
+        不限制超长词条——任意行、任意列（原词 / 替换为 / 类型 / 来源 / 命中书籍）点击都复制。
+        """
+        word = e.get("word", "")
+        value = e.get("value", "")
+        text = f"原词：{word}\n替换为：{value}"
+        try:
+            cb = QApplication.clipboard()
+            if cb is not None:
+                cb.setText(text)
+        except Exception:                            # 无头等环境剪贴板可能不可用，仅提示不崩
+            pass
+        _cell_popover().hide_me()                    # 复制时顺手关掉可能悬浮的浮层
+        self._toast("已复制词条")
 
     def _hide_status(self):
         self.status_box.setVisible(False)

@@ -992,6 +992,19 @@ def build() -> str:
     q.append("}")
     q.append("")
 
+    # 超长字段悬浮/点击后显示的完整文本浮层（全局单例，同时间只一个）
+    q.append("QWidget#CellFullText {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    border-radius: {r("md")};')
+    q.append("    padding: 4px;")
+    q.append("}")
+    q.append("QWidget#CellFullText QLabel {")
+    q.append(f'    color: {c("neutral.900")};')
+    q.append("    background: transparent;")
+    q.append("}")
+    q.append("")
+
     return "\n".join(q) + "\n"
 
 
