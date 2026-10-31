@@ -272,12 +272,12 @@ class CheckModule(QWidget):
         title = QLabel("检查问题")
         title.setObjectName("PageTitle")
         title.setStyleSheet(
-            f"color:{c('neutral.900')};font-size:{fs('2xl')};"
+            f"color:{c('neutral.900')};font-size:{fs('xl')};"
             f"font-weight:{FONT_WEIGHT['bold']}")
         sub = QLabel(
             "引号配对检查 + 逐处交互修复。检查结果可定位、可单独处理、可撤销。")
         sub.setObjectName("PageSub")
-        sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('md')}")
+        sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
         col.addWidget(title)
         col.addWidget(sub)
         hl.addLayout(col, 1)

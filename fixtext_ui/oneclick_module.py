@@ -211,12 +211,12 @@ class OneClickModule(QWidget):
 
         col = QVBoxLayout()
         col.setSpacing(2)
-        title = _label("一键校正", size="2xl", color="neutral.900", weight="bold")
+        title = _label("一键校正", size="xl", color="neutral.900", weight="bold")
         title.setObjectName("PageTitle")
         sub = _label(
             "默认配置一键完成「排版规范化 + 词库替换 + 标点标准化」。"
             "需要微调时，展开下方可选项。",
-            size="md", color="neutral.600", wrap=True)
+            size="sm", color="neutral.600", wrap=True)
         sub.setObjectName("PageSub")
         col.addWidget(title)
         col.addWidget(sub)

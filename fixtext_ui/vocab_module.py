@@ -371,11 +371,11 @@ class VocabModule(QWidget):
 
         col = QVBoxLayout()
         col.setSpacing(2)
-        title = _label("词库管理", size="2xl", color="neutral.900", weight="bold")
+        title = _label("词库管理", size="xl", color="neutral.900", weight="bold")
         title.setObjectName("PageTitle")
         sub = _label(
             "新增、检索、查重、合并、删除词条，并安全维护你的校正词库。",
-            size="md", color="neutral.600", wrap=True)
+            size="sm", color="neutral.600", wrap=True)
         sub.setObjectName("PageSub")
         col.addWidget(title)
         col.addWidget(sub)

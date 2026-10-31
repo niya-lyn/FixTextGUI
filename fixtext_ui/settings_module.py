@@ -123,11 +123,11 @@ class SettingsModule(QWidget):
 
         col = QVBoxLayout()
         col.setSpacing(2)
-        title = _label("设置", size="2xl", color="neutral.900", weight="bold")
+        title = _label("设置", size="xl", color="neutral.900", weight="bold")
         title.setObjectName("PageTitle")
         sub = _label(
             "词库存放位置、诊断日志、安全保护、替换引擎与初始化，都集中在这里。",
-            size="md", color="neutral.600", wrap=True)
+            size="sm", color="neutral.600", wrap=True)
         sub.setObjectName("PageSub")
         col.addWidget(title)
         col.addWidget(sub)

@@ -251,11 +251,11 @@ class HistoryModule(QWidget):
 
         col = QVBoxLayout()
         col.setSpacing(2)
-        title = _label("历史记录", size="2xl", color="neutral.900", weight="bold")
+        title = _label("历史记录", size="xl", color="neutral.900", weight="bold")
         title.setObjectName("PageTitle")
         sub = _label(
             "每次校正的任务列表：书名、时间、替换数；可从任一快照完整恢复现场并重新导出。",
-            size="md", color="neutral.600", wrap=True)
+            size="sm", color="neutral.600", wrap=True)
         sub.setObjectName("PageSub")
         col.addWidget(title)
         col.addWidget(sub)

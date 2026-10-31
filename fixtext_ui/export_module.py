@@ -166,11 +166,11 @@ class ExportModule(QWidget):
 
         col = QVBoxLayout()
         col.setSpacing(2)
-        title = _label("导出结果", size="2xl", color="neutral.900", weight="bold")
+        title = _label("导出结果", size="xl", color="neutral.900", weight="bold")
         title.setObjectName("PageTitle")
         sub = _label(
             "把校对好的书导出成可以直接用的文件：正文 + 两份替换统计（文本 / 表格）。",
-            size="md", color="neutral.600", wrap=True)
+            size="sm", color="neutral.600", wrap=True)
         sub.setObjectName("PageSub")
         col.addWidget(title)
         col.addWidget(sub)
