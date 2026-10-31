@@ -973,6 +973,23 @@ def build() -> str:
     q.append("QScrollArea#VocabTableScroll > QWidget {")
     q.append(f'    background: transparent;')
     q.append("}")
+    # 滚动内容与数据行白底：衬出灰色表头带；行内容器透明，避免盖住白底
+    q.append("QWidget#VocabScrollInner {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append("}")
+    q.append("QWidget#VocabRow {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append("}")
+    q.append("QWidget#VocabRow QWidget {")
+    q.append(f'    background: transparent;')
+    q.append("}")
+    q.append("")
+
+    # 词库页表头色带：与数据行区分（轻灰底 + 底部分隔线）
+    q.append("QWidget#VocabTableHeader {")
+    q.append(f'    background-color: {c("neutral.100")};')
+    q.append(f'    border-bottom: 1px solid {c("neutral.200")};')
+    q.append("}")
     q.append("")
 
     return "\n".join(q) + "\n"

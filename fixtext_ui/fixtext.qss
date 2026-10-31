@@ -837,4 +837,18 @@ QScrollArea#VocabTableScroll {
 QScrollArea#VocabTableScroll > QWidget {
     background: transparent;
 }
+QWidget#VocabScrollInner {
+    background-color: #FFFFFF;
+}
+QWidget#VocabRow {
+    background-color: #FFFFFF;
+}
+QWidget#VocabRow QWidget {
+    background: transparent;
+}
+
+QWidget#VocabTableHeader {
+    background-color: #EEF1F5;
+    border-bottom: 1px solid #DDE2EA;
+}
 

@@ -25,7 +25,7 @@ FixText V1 · 词库管理模块（Qt 移植 · M3-T3.1 接真实词库）
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QKeySequence, QShortcut, QFontMetrics
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDialog,
     QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy, QScrollArea,
@@ -65,8 +65,16 @@ def _fmt_num(n: int) -> str:
 
 def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
            weight: str | None = None, wrap: bool = False,
-           mono: bool = False) -> QLabel:
+           mono: bool = False, align: str | None = None) -> QLabel:
     lab = QLabel(text)
+    _apply_label_style(lab, size=size, color=color, weight=weight, wrap=wrap,
+                      mono=mono, align=align)
+    return lab
+
+
+def _apply_label_style(lab: QLabel, *, size: str = "sm", color: str = "neutral.800",
+                       weight: str | None = None, wrap: bool = False,
+                       mono: bool = False, align: str | None = None) -> None:
     lab.setWordWrap(wrap)
     style = f"color:{c(color)};font-size:{fs(size)};background:transparent;"
     if weight:
@@ -74,7 +82,47 @@ def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
     if mono:
         style += f"font-family:{FONT_MONO};"
     lab.setStyleSheet(style)
-    return lab
+    if align == "center":
+        lab.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
+    elif align == "left":
+        lab.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+
+class _ElideLabel(QLabel):
+    """超长省略号截断的标签（Qt6 的 QLabel 无 setElideMode，自行在 resize 时计算）。
+
+    - 横向吃满所在列（sizePolicy=Ignored，不被超长文本撑开、不挤压邻列）；
+    - 超长时在末尾显示「…」；
+    - 文字居中对齐，与表头保持一致；完整文本留在 tooltip。
+    """
+
+    def __init__(self, text: str = "", *, size: str = "sm", color: str = "neutral.800",
+                 weight: str | None = None, mono: bool = False,
+                 center: bool = True) -> None:
+        super().__init__(text)
+        self._full = text
+        _apply_label_style(self, size=size, color=color, weight=weight, wrap=False, mono=mono)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.setWordWrap(False)
+        if center:
+            self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setToolTip(text)
+        self._elide()
+
+    def setText(self, t: str) -> None:  # type: ignore[override]
+        self._full = t
+        self.setToolTip(t)
+        self._elide()
+
+    def _elide(self) -> None:
+        fm = self.fontMetrics()
+        elided = fm.elidedText(self._full, Qt.TextElideMode.ElideRight, max(1, self.width()))
+        if elided != self.text():
+            super().setText(elided)
+
+    def resizeEvent(self, ev) -> None:  # 控件宽度随列宽变化时重新截断
+        super().resizeEvent(ev)
+        self._elide()
 
 
 def _link_btn(text: str, *, danger: bool = False, enabled: bool = True) -> QPushButton:
@@ -479,9 +527,8 @@ class VocabModule(QWidget):
         # 列表区吃竖直剩余空间；空态也不反向撑工具条
         card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
 
-        # 固定表头（不随条目滚动，解决「表头没固定」）
+        # 固定表头（不随条目滚动，解决「表头没固定」）；表头自带底部分隔线，不再叠 hline
         card.body_l.addWidget(self._entry_header())
-        card.body_l.addWidget(hline())
 
         # 可滚动的条目区：仅条目在内部滚动，表头 / 分页固定在卡片内
         self._scroll = QScrollArea()
@@ -490,6 +537,7 @@ class VocabModule(QWidget):
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll_inner = QWidget()
+        self._scroll_inner.setObjectName("VocabScrollInner")   # 白底（衬出表头灰带）
         self._scroll_layout = QVBoxLayout(self._scroll_inner)
         self._scroll_layout.setContentsMargins(0, 0, 0, 0)
         self._scroll_layout.setSpacing(0)
@@ -509,7 +557,10 @@ class VocabModule(QWidget):
         return card
 
     def _entry_header(self) -> QWidget:
+        # 表头做成独立色带，跟数据行区分（背景 + 底部分隔线，见 build_qss #VocabTableHeader）
         row = QWidget()
+        row.setObjectName("VocabTableHeader")
+        row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         hl = QHBoxLayout(row)
         hl.setContentsMargins(0, 10, 0, 10)
         hl.setSpacing(12)
@@ -520,9 +571,10 @@ class VocabModule(QWidget):
         hl.addSpacing(COL_CHECK_W - 34)
         for text, stretch in (("原词", 3), ("替换为", 3), ("类型", 2), ("来源", 2), ("命中书籍", 3)):
             lab = _label(text, size="xs", color="neutral.600", weight="semibold")
+            lab.setAlignment(Qt.AlignmentFlag.AlignCenter)   # 同列居中对齐
             hl.addWidget(lab, stretch)
         act = _label("操作", size="xs", color="neutral.600", weight="semibold")
-        act.setAlignment(Qt.AlignmentFlag.AlignRight)
+        act.setAlignment(Qt.AlignmentFlag.AlignCenter)      # 与每行操作列同宽且居中，保证表头与行对齐
         act.setFixedWidth(COL_ACT_W)   # 与每行的操作列（acts.setFixedWidth）同宽，保证表头与行对齐
         hl.addWidget(act, 0)
         return row
@@ -540,6 +592,7 @@ class VocabModule(QWidget):
 
     def _entry_row(self, e: dict) -> QWidget:
         row = QWidget()
+        row.setObjectName("VocabRow")   # 数据行白底（与表头灰带区分）
         hl = QHBoxLayout(row)
         hl.setContentsMargins(0, 12, 0, 12)
         hl.setSpacing(12)
@@ -551,40 +604,52 @@ class VocabModule(QWidget):
         chk.stateChanged.connect(lambda s, i=e["id"]: self._toggle_row(i, s))
         hl.addWidget(chk, 0)
 
+        # 原词 + 拼音：竖向堆叠，整块在行内垂直居中，文字居中
         word_col = QVBoxLayout()
         word_col.setSpacing(1)
-        word_col.addWidget(_label(e["word"], size="sm", weight="bold",
-                                   color="neutral.900", mono=True))
+        wlab = _ElideLabel(e["word"], size="sm", weight="bold",
+                           color="neutral.900", mono=True)
+        word_col.addWidget(wlab)
         if e.get("pinyin"):
-            word_col.addWidget(_label(f"/{e['pinyin']}", size="xs",
-                                      color="neutral.500", mono=True))
+            plab = _label(f"/{e['pinyin']}", size="xs",
+                          color="neutral.500", mono=True)
+            plab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            word_col.addWidget(plab)
         wbox = QWidget()
         wbox.setLayout(word_col)
+        wbox.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         hl.addWidget(wbox, 3)
 
-        hl.addWidget(_label(e["value"], size="sm", color="primary.700", mono=True), 3)
-        hl.addWidget(_label(e.get("type") or "—", size="sm", color="neutral.600"), 2)
+        # 替换为 / 类型：超长省略号截断，居中（不被撑开挤压邻列）
+        vlab = _ElideLabel(e["value"], size="sm", color="primary.700", mono=True)
+        hl.addWidget(vlab, 3)
+
+        tlab = _ElideLabel(e.get("type") or "—", size="sm", color="neutral.600")
+        hl.addWidget(tlab, 2)
 
         # 来源列用容器包住 Pill：容器吃满 stretch 列宽（与表头对齐），
-        # 徽标本身 Maximum/Fixed 不拉伸，保持左对齐紧凑。
+        # 徽标本身 Maximum/Fixed 不拉伸，居中显示
         src_cell = QWidget()
         sl = QHBoxLayout(src_cell)
         sl.setContentsMargins(0, 0, 0, 0)
         sl.setSpacing(0)
+        sl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sl.addWidget(Pill("自定义" if not is_builtin else "内置",
                           "ok" if not is_builtin else "info"))
+        src_cell.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         hl.addWidget(src_cell, 2)
 
-        books = ("📖 " + "、".join(e["books"])) if e.get("books") else "—"
-        bk = _label(books, size="xs", color="neutral.600")
-        bk.setWordWrap(True)
+        # 命中书籍：超长省略号截断，居中
+        bk = _ElideLabel(("📖 " + "、".join(e["books"])) if e.get("books") else "—",
+                         size="xs", color="neutral.600")
         hl.addWidget(bk, 3)
 
+        # 操作：按钮居中（与表头操作列同宽、同对齐）
         acts = QWidget()
         al = QHBoxLayout(acts)
         al.setContentsMargins(0, 0, 0, 0)
         al.setSpacing(8)
-        al.addStretch(1)
+        al.setAlignment(Qt.AlignmentFlag.AlignCenter)
         if not is_builtin:
             edit = _link_btn("编辑")
             edit.clicked.connect(lambda _c, i=e["id"]: self.open_edit(i))
@@ -739,6 +804,9 @@ class VocabModule(QWidget):
             self._scroll_layout.addWidget(self._entry_row(e))
             if i != len(rows) - 1:
                 self._scroll_layout.addWidget(hline())
+        # 末尾留弹性空白：行数不满一屏时把多余高度沉到底部，
+        # 否则 QVBoxLayout 会把所有行等分拉伸（数据行被撑成半屏高，视觉上「列表长度不定」）
+        self._scroll_layout.addStretch(1)
         self._update_pager()
 
     def _empty_state(self) -> QWidget:
