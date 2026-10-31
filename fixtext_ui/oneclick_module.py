@@ -509,6 +509,7 @@ class OneClickModule(QWidget):
             self.bag_checks[code] = chip
             fl.addWidget(chip)
         card.body_l.addWidget(bags_wrap)
+        card.body_l.addSpacing(10)
         card.body_l.addWidget(self._hint(
             "「常规校正」「CJK 恢复」锁定（CJK 用于扩展区编码修复，强制跑）。"
             "「繁简转换」「的地得」「旧式通假」「我的词库」默认开，可关。"

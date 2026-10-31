@@ -439,6 +439,7 @@ class ChkMark(QFrame):
         self.setObjectName("ChkMark")
         self.setFixedSize(16, 16)
         self._on = False
+        self._locked = False
         self._enabled = True
 
     def setChecked(self, on: bool) -> None:
@@ -448,6 +449,10 @@ class ChkMark(QFrame):
     def isChecked(self) -> bool:
         return self._on
 
+    def setLocked(self, v: bool) -> None:
+        self._locked = bool(v)
+        self.update()
+
     def setEnabled(self, v: bool) -> None:
         self._enabled = bool(v)
         self.update()
@@ -455,7 +460,21 @@ class ChkMark(QFrame):
     def paintEvent(self, _event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        r = 4
+        r = 5
+        if self._locked:
+            # 锁定态：灰显（原型 .chk.locked input opacity:.5），不随 on/off 变色
+            p.setPen(QPen(QColor(c("neutral.300")), 1.5))
+            p.setBrush(QColor(c("neutral.100")))
+            p.drawRoundedRect(0.75, 0.75, 14.5, 14.5, r, r)
+            if self._on:
+                pen = QPen(QColor(c("neutral.400")), 2, Qt.PenStyle.SolidLine)
+                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+                p.setPen(pen)
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                p.drawLine(4, 8, 7, 11)
+                p.drawLine(7, 11, 12, 5)
+            p.end()
+            return
         if self._on:
             p.setPen(Qt.PenStyle.NoPen)
             p.setBrush(QColor(c("primary.500")))
@@ -492,11 +511,14 @@ class BagChk(QFrame):
         hl.setSpacing(7)
         self.mark = ChkMark()
         self.mark.setChecked(self._on)
+        self.mark.setLocked(self._locked)
         hl.addWidget(self.mark)
         self.txt = QLabel(label)
         self.txt.setObjectName("BagChkText")
         hl.addWidget(self.txt)
         if locked:
+            # 锁定项整项置灰（原型 .chk.locked input opacity:.5）
+            self.txt.setStyleSheet(f"color:{c('neutral.400')}")
             tag = QLabel("锁定")
             tag.setObjectName("BagLockTag")
             hl.addWidget(tag)
