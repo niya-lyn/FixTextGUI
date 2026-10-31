@@ -241,16 +241,16 @@ QLabel { background-color: transparent; }
 }
 #PageTitle {
     color: #15191F;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
 }
 #PageSub {
     color: #4A5363;
-    font-size: 16px;
+    font-size: 13px;
 }
 #PageHead h1 {
     color: #15191F;
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
 }
 #TopWhere {
@@ -585,7 +585,7 @@ QFrame#BagChk[on="true"] QLabel#BagChkText {
 
 QFrame#EmptyState {
     background: #F7F8FA;
-    border: 1px dashed #DDE2EA;
+    border: 1px dashed #C2CAD6;
     border-radius: 12px;
 }
 #EsIcoRing {

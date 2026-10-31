@@ -163,7 +163,7 @@ class FirstRunWizard(QDialog):
         super().__init__(parent)
         self.setWindowTitle("新手向导 · FixText V1")
         self.setModal(True)
-        self.setMinimumWidth(620)
+        self.setMinimumWidth(560)
         self.import_module = import_module
         self.oneclick_module = oneclick_module
         self.export_module = export_module

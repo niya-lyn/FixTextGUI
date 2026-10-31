@@ -94,7 +94,7 @@ def page_head_shell() -> tuple[QWidget, QWidget]:
     outer.setSpacing(px(sp("3")))  # 副标题与分隔线之间留白
     body = QWidget()
     outer.addWidget(body)
-    outer.addWidget(hline("neutral.200"))
+    outer.addWidget(hline("neutral.100"))
     return shell, body
 
 
@@ -743,7 +743,7 @@ class EmptyState(QFrame):
         t = QLabel(title)
         t.setAlignment(Qt.AlignmentFlag.AlignHCenter)
         t.setStyleSheet(
-            f"color:{c('neutral.800')};font-size:{fs('md')};"
+            f"color:{c('neutral.800')};font-size:{fs('sm')};"
             f"font-weight:{FONT_WEIGHT['semibold']}")
         root.addWidget(t, 0, Qt.AlignmentFlag.AlignHCenter)
 
