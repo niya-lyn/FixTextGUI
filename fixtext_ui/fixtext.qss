@@ -521,18 +521,6 @@ QFrame#PathRow {
     border: 1px solid #4F59C0;
 }
 
-QFrame#BagChk {
-    background: #FFFFFF;
-    border: 1px solid #DDE2EA;
-    border-radius: 999px;
-}
-QFrame#BagChk:hover { border-color: #9AA3E2; background: #EEF0FB; }
-QFrame#BagChk[on="true"] {
-    border-color: #4F59C0;
-    background: #EEF0FB;
-    color: #333B83;
-}
-QFrame#BagChk[locked="true"]:hover { border-color: #4F59C0; background: #EEF0FB; }
 QLabel#BagChkText {
     color: #222831;
     font-size: 13px;
@@ -544,8 +532,6 @@ QFrame#BagChk[on="true"] QLabel#BagChkText {
 }
 #BagLockTag {
     color: #FFFFFF;
-    background: #333B83;
-    border-radius: 999px;
     padding: 1px 7px;
     font-size: 10px;
     font-weight: 700;

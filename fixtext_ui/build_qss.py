@@ -610,18 +610,9 @@ def build() -> str:
     q.append("")
 
     # 一键校正 · 词库多选胶囊（原型 .chk / .lock-tag）
-    q.append("QFrame#BagChk {")
-    q.append(f'    background: {c("neutral.0")};')
-    q.append(f'    border: 1px solid {c("neutral.200")};')
-    q.append(f'    border-radius: {RADIUS["full"]};')
-    q.append("}")
-    q.append(f"QFrame#BagChk:hover {{ border-color: {c('primary.300')}; background: {c('primary.50')}; }}")
-    q.append("QFrame#BagChk[on=\"true\"] {")
-    q.append(f'    border-color: {c("primary.500")};')
-    q.append(f'    background: {c("primary.50")};')
-    q.append(f'    color: {c("primary.700")};')
-    q.append("}")
-    q.append(f"QFrame#BagChk[locked=\"true\"]:hover {{ border-color: {c('primary.500')}; background: {c('primary.50')}; }}")
+    # 背景与边框改由 BagChk.paintEvent 用 QPainterPath 自绘圆角，
+    # 规避 QSS border-radius 在 QFrame 上不裁切背景的已知问题；
+    # 故此处只保留文字与锁标规则，不再输出 background/border/border-radius。
     q.append("QLabel#BagChkText {")
     q.append(f'    color: {c("neutral.800")};')
     q.append(f'    font-size: {FONT_SIZE["sm"]};')
@@ -631,10 +622,10 @@ def build() -> str:
     q.append(f'    color: {c("primary.700")};')
     q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
     q.append("}")
+    # 锁标底色/圆角由 LockTag.paintEvent 自绘（同 BagChk，规避 QSS 不裁切背景），
+    # 此处仅保留文字色 / 内边距 / 字号。
     q.append("#BagLockTag {")
     q.append(f'    color: {c("neutral.0")};')
-    q.append(f'    background: {c("primary.700")};')
-    q.append(f'    border-radius: {RADIUS["full"]};')
     q.append(f'    padding: 1px 7px;')
     q.append(f'    font-size: 10px;')
     q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')

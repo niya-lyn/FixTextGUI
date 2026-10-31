@@ -25,7 +25,7 @@ from PySide6.QtCore import (
     QAbstractAnimation, QEasingCurve, QPropertyAnimation, Qt, QSize, QPoint,
     QRect, Signal, QTimer,
 )
-from PySide6.QtGui import QPainter, QColor, QPen
+from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath
 from PySide6.QtWidgets import (
     QFrame, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
     QAbstractButton, QSizePolicy, QDialog, QProgressBar, QPushButton,
@@ -492,6 +492,29 @@ class ChkMark(QFrame):
         p.end()
 
 
+class LockTag(QLabel):
+    """「锁定」小徽标（原型 ``.lock-tag``）：QPainterPath 自绘圆角胶囊底。
+
+    QLabel 的 QSS ``border-radius`` 同样不裁切背景（与 QFrame 同源问题），
+    故此处自绘圆角底，再由 QLabel 叠加文字（文字颜色/内边距仍由 QSS 提供）。
+    """
+
+    def __init__(self, text: str = "锁定", parent=None):
+        super().__init__(text, parent)
+        self.setObjectName("BagLockTag")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
+
+    def paintEvent(self, event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rr = self.height() / 2.0
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, self.width(), self.height(), rr, rr)
+        p.fillPath(path, QColor(c("primary.700")))
+        p.end()
+        super().paintEvent(event)
+
+
 class BagChk(QFrame):
     """词库多选胶囊（对齐原型 ``label.chk`` / ``.lock-tag``）。"""
 
@@ -501,9 +524,14 @@ class BagChk(QFrame):
                  locked: bool = False, parent=None):
         super().__init__(parent)
         self.setObjectName("BagChk")
-        enable_chrome(self)
+        # 背景/边框改由 paintEvent 用 QPainterPath 自绘圆角。
+        # 不设 WA_StyledBackground（enable_chrome）：否则全局 QWidget{background:#F7F8FA}
+        # 会以直角方块方式填进圆角外的四角，出现「方角」；QFrame 的 QSS
+        # border-radius 本就不裁切背景，故完全交给 paintEvent 处理。
+        self.setStyleSheet("QFrame#BagChk { background: transparent; border: none; }")
         self._locked = locked
         self._on = bool(checked)
+        self._hover = False
         self.setCursor(
             Qt.CursorShape.ArrowCursor if locked else Qt.CursorShape.PointingHandCursor)
         hl = QHBoxLayout(self)
@@ -519,8 +547,7 @@ class BagChk(QFrame):
         if locked:
             # 锁定项整项置灰（原型 .chk.locked input opacity:.5）
             self.txt.setStyleSheet(f"color:{c('neutral.400')}")
-            tag = QLabel("锁定")
-            tag.setObjectName("BagLockTag")
+            tag = LockTag("锁定")
             hl.addWidget(tag)
         self._sync_props()
 
@@ -542,6 +569,42 @@ class BagChk(QFrame):
         self.setProperty("locked", "true" if self._locked else "false")
         self.style().unpolish(self)
         self.style().polish(self)
+
+    def enterEvent(self, event):
+        self._hover = True
+        self.update()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._hover = False
+        self.update()
+        super().leaveEvent(event)
+
+    def paintEvent(self, _event):
+        """自绘圆角胶囊背景 + 边框（QFrame 的 QSS border-radius 不裁切背景，故自绘）。
+
+        与 ChkMark / Switch 一致，用 QPainterPath 画圆角矩形，保证四角真正透明
+        （圆角外露出父级背景），而非被全局 QWidget 背景填成方角。
+        """
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        bg = c("neutral.0")          # 白 #FFFFFF（off）
+        bd = c("neutral.200")        # #DDE2EA（off 边框）
+        if self._on:
+            bg = c("primary.50"); bd = c("primary.500")
+        elif self._locked:
+            if self._hover:
+                bg = c("primary.50"); bd = c("primary.500")
+        elif self._hover:
+            bg = c("primary.50"); bd = c("primary.300")
+        r = self.height() / 2.0      # 全胶囊（等价于 border-radius:999px）
+        path = QPainterPath()
+        path.addRoundedRect(0.5, 0.5, self.width() - 1, self.height() - 1, r, r)
+        p.fillPath(path, QColor(bg))
+        pen = QPen(QColor(bd), 1)
+        pen.setCosmetic(True)
+        p.strokePath(path, pen)
+        p.end()
 
     def mousePressEvent(self, event):
         if not self._locked and event.button() == Qt.MouseButton.LeftButton:
