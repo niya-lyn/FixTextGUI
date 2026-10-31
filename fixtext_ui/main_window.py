@@ -731,7 +731,7 @@ class MainWindow(QMainWindow):
         # 校正完成 → 导出页拿到可导出的产物；「去导出」→ 真的跳到导出页
         module.correctionDone.connect(self._on_correction_done)
         module.gotoExport.connect(lambda: self.go("export"))
-        module.gotoCheck.connect(lambda: self.go("check"))
+        module.gotoCheck.connect(self._go_check)
         # 本书专有词条（真实抽出）→ 词库管理页确认后加入
         module.bookWordsReady.connect(self._on_book_words_ready)
         self._wire_empty_state(module)
@@ -837,15 +837,27 @@ class MainWindow(QMainWindow):
             self._import_record, run, str(PKG_ROOT / "pipeline"))
 
     def _on_correction_done(self, summary: dict) -> None:
-        """校正完成 → 导出页拿到产物，检查页挂当前正文，历史页记一条。
+        """校正完成 → 导出页拿到产物，检查页挂当前正文并自扫，历史页记一条。
 
         M4-EX.6-R3：把替换后正文（含可选自动修引号）写回当前书 ``book.txt``，
-        检查页自扫即可看到关=全量 / 开=剩余 M 处。
+        检查页立刻自扫，关=全量 / 开=剩余 M 处，无需再点「开始检查」。
         """
         self._sync_book_text_from_run(summary)
         self._sync_export(summary)
-        self._sync_check(summary)
+        self._sync_check(summary, auto_scan=True)
         self._sync_history(summary)
+
+    def _go_check(self) -> None:
+        """「去检查页」：切页；若尚在待检查态则补扫一次。"""
+        self.go("check")
+        cm = self.check_module
+        if cm is None or not cm.has_book:
+            return
+        from check_module import PHASE_READY, PHASE_RUNNING
+        if cm.phase == PHASE_READY:
+            cm.start_check()
+        elif cm.phase == PHASE_RUNNING:
+            pass
 
     def _sync_book_text_from_run(self, summary: dict | None) -> None:
         """用本次 ``replace_after``（quote 阶段可能已写回修复）覆盖当前书正文。"""
@@ -853,7 +865,8 @@ class MainWindow(QMainWindow):
         if not path:
             return
         arts = (summary or {}).get("artifacts") or {}
-        after = str(arts.get("after_text") or "")
+        # quote 写回的是 replace_after；checked_file 与之同路径，优先 after_text
+        after = str(arts.get("after_text") or arts.get("checked_file") or "")
         if not after or not Path(after).is_file():
             return
         try:
@@ -864,10 +877,10 @@ class MainWindow(QMainWindow):
 
     # --------------------------------------------------- 检查页 / 历史页 接线（T2.10）
 
-    def _sync_check(self, run: dict | None = None) -> None:
+    def _sync_check(self, run: dict | None = None, *, auto_scan: bool = False) -> None:
         """M4-EX.6-R2：检查页挂当前书正文，自扫不读校正报告。
 
-        ``run`` 参数保留以兼容校正完成回调；检查页不再注入报告。
+        ``auto_scan=True``（校正完成）：挂载后立即扫描，结果进检查页。
         """
         if self.check_module is None:
             return
@@ -881,6 +894,8 @@ class MainWindow(QMainWindow):
         self.check_module.set_book(
             path, title, book_ext=ext,
             rules_dir=self._workspace_root())
+        if auto_scan:
+            self.check_module.start_check()
 
     def _load_history(self) -> None:
         """历史页接上**当前书**的运行目录（M4-EX.3b：runs 按书隔离）。"""

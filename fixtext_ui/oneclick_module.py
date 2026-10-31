@@ -454,40 +454,41 @@ class OneClickModule(QWidget):
         )
         self.basis_labels.append(card.basis)
 
-        # —— 运行模式：完整流程（RadioCard 原样式）+ 四个开关
-        card.body_l.addLayout(self._opt_label("运行模式", "主按钮之外才用到"))
+        # —— 运行模式：完整流程（RadioCard）+ 排版/预处理/严格/注音四开关
+        card.body_l.addLayout(self._opt_label("运行模式"))
         self.rd_full = RadioCard(
             "完整流程（默认）",
-            "备份 → 排版 → 词库替换 → 校验，一条龙",
+            "点击恢复默认：排版开、预处理开、严格关、注音关",
             "full",
         )
         self.rd_full.chosen.connect(lambda _=None: self._reset_run_mode_defaults())
         self.rd_full.set_selected(True)
         card.body_l.addWidget(self.rd_full)
 
-        # 排版默认开；关闭 = 跳过排版流程（原「跳过排版」单选项）
+        # 排版默认开；关闭 = 跳过排版流程
         self.sw_layout = Switch(True)
         self.sw_layout.toggled.connect(lambda _=False: self._sync_full_flow_selected())
+        card.body_l.addLayout(self._opt_label("排版"))
         card.body_l.addLayout(self._switch_row(
             "关闭则跳过排版，直接用词库校正", self.sw_layout))
 
         self.sw_preprocess = Switch(True)
         self.sw_preprocess.toggled.connect(lambda _=False: self._sync_full_flow_selected())
-        card.body_l.addLayout(self._opt_label("预处理", "默认关闭"))
+        card.body_l.addLayout(self._opt_label("预处理"))
         card.body_l.addLayout(self._switch_row(
             "主替换前先用预处理词库单独跑一轮（轻量纠错，非排版）",
             self.sw_preprocess))
 
         self.sw_strict = Switch(False)
         self.sw_strict.toggled.connect(lambda _=False: self._sync_full_flow_selected())
-        card.body_l.addLayout(self._opt_label("严格模式", "默认关闭"))
+        card.body_l.addLayout(self._opt_label("严格模式"))
         card.body_l.addLayout(self._switch_row(
             "用严格词库（strictMap）单独跑一轮，规则更紧", self.sw_strict))
 
         self.sw_zhuyin = Switch(False)
         self.sw_zhuyin.toggled.connect(self._on_zhuyin_toggled)
         self.sw_zhuyin.toggled.connect(lambda _=False: self._sync_full_flow_selected())
-        card.body_l.addLayout(self._opt_label("生僻字注音", "默认关闭"))
+        card.body_l.addLayout(self._opt_label("生僻字注音"))
         card.body_l.addLayout(self._switch_row(
             "为生僻字补充拼音注音", self.sw_zhuyin))
         self.zhu_panel = self._zhuyin_opts_panel()
@@ -517,19 +518,18 @@ class OneClickModule(QWidget):
             "排版 / 预处理 / 严格 / 注音见上方「运行模式」。"
             "txtFormat 较多误改，建议常规校正后再单独勾选比对。"))
         card.body_l.addWidget(self._basis("§2.2 · 主按钮不询问词库组合"))
-
+        card.body_l.addSpacing(16)
         card.body_l.addWidget(hline())
+        card.body_l.addSpacing(8)
 
-        # —— 自动修复引号（M4-EX.6-R3 / 原型 §7）；引擎改在设置页
-        card.body_l.addLayout(self._opt_label("自动修复引号问题", "默认关闭"))
+        # —— 自动修复引号（引擎改在设置页）
+        card.body_l.addLayout(self._opt_label("自动修复引号"))
         import fixtext_settings as _settings
         self.sw_auto_fix_quote = Switch(_settings.auto_fix_quote())
         self.sw_auto_fix_quote.toggled.connect(self._on_auto_fix_quote_toggled)
         card.body_l.addLayout(self._switch_row(
-            "开启则按检查页同一套规则自动修可确定项，减少待人工确认数",
+            "按检查页规则自动修可确定项；关则留待检查页处理",
             self.sw_auto_fix_quote))
-        card.body_l.addWidget(self._hint(
-            "关闭时校正只做词库替换与校验，引号问题留待「检查问题」逐处处理。"))
         return card
 
     def _reset_run_mode_defaults(self) -> None:
