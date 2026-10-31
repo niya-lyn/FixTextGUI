@@ -6,8 +6,8 @@ FixText V1 · 一键校正模块（Qt 移植）
 **主按钮 = 默认组合**（备份 → 排版 → 替换 → 校验一次跑完），
 可选项收进折叠面板，不把参数空间摊在首屏。
 
-结构：书源条 → 主按钮 hero → 排版规范化（14 项折叠）→ 高级选项
-      （运行模式 + 子模式 / 词库 / 引擎）→ 校正结果卡 → 设计依据开关。
+结构：书源条 → 主按钮 hero → 校正结果卡 → 排版规范化（14 项折叠）→ 高级选项
+      （运行模式 / 词库 / 引号）。
 
 复用部件见 `fixtext_widgets.py`（Card / Switch / Pill / FieldRow / RadioCard / ProgressDialog）。
 """
@@ -22,13 +22,13 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame,
-    QComboBox, QLineEdit, QCheckBox, QDialog, QSizePolicy,
+    QComboBox, QLineEdit, QDialog, QSizePolicy,
 )
 
 from fixtext_tokens import c, r, fs, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline, PrimaryButton,
-    ConfirmDialog, page_head_shell, enable_chrome,
+    ConfirmDialog, page_head_shell, enable_chrome, BagChk, FlowLayout,
 )
 from fixtext_worker import CorrectionJob, CorrectionWorker
 
@@ -85,12 +85,6 @@ ZHUYIN_OPTS = [
     ("3", "所有位置都注音，且多音字只取第一种读音", ""),
 ]
 
-ENGINES = [
-    ("自动（推荐）", "auto"),
-    ("强制标准模式", "force"),
-    ("稳妥模式", "degrade"),
-]
-
 # 进度步骤不再是演的：来自 M1 编排器六阶段的人话映射
 # （fixtext_worker.HUMAN_STAGES），由真实任务信号驱动，见 do_correction。
 
@@ -131,7 +125,6 @@ class OneClickModule(QWidget):
         super().__init__(parent)
         self.basis_labels = []
         self._result_basis = None
-        self.mode = "full"
         self.fmt_state = {it["n"]: dict(it) for it in FMT_ITEMS}
         self._switches: dict[int, Switch] = {}
         self._combos: dict[int, QComboBox] = {}
@@ -170,16 +163,18 @@ class OneClickModule(QWidget):
         self._adv_w = self._adv_card()
         root.addWidget(self._book_w)
         root.addWidget(self._hero_w)
-        root.addWidget(self._fmt_w)
-        root.addWidget(self._adv_w)
 
+        # 校正结果卡：主按钮下方、排版规范化上方（跑完后插入）
         self.result_slot = QVBoxLayout()
         self.result_slot.setContentsMargins(0, 0, 0, 0)
         self.result_slot.setSpacing(16)
         root.addLayout(self.result_slot)
 
+        root.addWidget(self._fmt_w)
+        root.addWidget(self._adv_w)
+
         self.legend = _label(
-            "高级选项里可以开关预处理、严格模式、注音，以及勾选词库组合。",
+            "高级选项里可调运行模式（排版 / 预处理 / 严格 / 注音）与词库组合。",
             size="xs", color="neutral.500", wrap=True)
         root.addWidget(self.legend)
 
@@ -453,61 +448,48 @@ class OneClickModule(QWidget):
 
     def _adv_card(self) -> Card:
         card = Card(
-            "高级选项", "运行模式 / 预处理 / 严格模式 / 注音 / 词库组合",
+            "高级选项", "运行模式 / 词库组合 / 引号",
             collapsible=True, open_=False,
             basis="§2.7.2 · 高级选项收进面板",
         )
         self.basis_labels.append(card.basis)
 
-        # —— 运行模式（完整 / 跳过排版）
+        # —— 运行模式：完整流程（RadioCard 原样式）+ 四个开关
         card.body_l.addLayout(self._opt_label("运行模式", "主按钮之外才用到"))
-        row = QHBoxLayout()
-        row.setContentsMargins(0, 8, 0, 0)
-        row.setSpacing(10)
         self.rd_full = RadioCard(
-            "完整流程（默认）", "备份 → 排版 → 词库替换 → 校验，一条龙", "full")
-        self.rd_skip = RadioCard(
-            "跳过排版", "不做排版，直接用词库校正", "skip")
-        self.rd_full.chosen.connect(self.set_mode)
-        self.rd_skip.chosen.connect(self.set_mode)
+            "完整流程（默认）",
+            "备份 → 排版 → 词库替换 → 校验，一条龙",
+            "full",
+        )
+        self.rd_full.chosen.connect(lambda _=None: self._reset_run_mode_defaults())
         self.rd_full.set_selected(True)
-        row.addWidget(self.rd_full, 1)
-        row.addWidget(self.rd_skip, 1)
-        card.body_l.addLayout(row)
+        card.body_l.addWidget(self.rd_full)
 
-        card.body_l.addWidget(hline())
+        # 排版默认开；关闭 = 跳过排版流程（原「跳过排版」单选项）
+        self.sw_layout = Switch(True)
+        self.sw_layout.toggled.connect(lambda _=False: self._sync_full_flow_selected())
+        card.body_l.addLayout(self._switch_row(
+            "关闭则跳过排版，直接用词库校正", self.sw_layout))
 
-        # —— 预处理 / 严格 / 注音（默认关；开则各插独占轮）
+        self.sw_preprocess = Switch(True)
+        self.sw_preprocess.toggled.connect(lambda _=False: self._sync_full_flow_selected())
         card.body_l.addLayout(self._opt_label("预处理", "默认关闭"))
-        self.sw_preprocess = Switch(False)
-        card.body_l.addWidget(FieldRow(
-            None,
+        card.body_l.addLayout(self._switch_row(
             "主替换前先用预处理词库单独跑一轮（轻量纠错，非排版）",
-            "",
-            control=self.sw_preprocess,
-            name_width=320,
-        ))
+            self.sw_preprocess))
 
-        card.body_l.addLayout(self._opt_label("严格模式", "默认关闭"))
         self.sw_strict = Switch(False)
-        card.body_l.addWidget(FieldRow(
-            None,
-            "用严格词库（strictMap）单独跑一轮，规则更紧",
-            "",
-            control=self.sw_strict,
-            name_width=320,
-        ))
+        self.sw_strict.toggled.connect(lambda _=False: self._sync_full_flow_selected())
+        card.body_l.addLayout(self._opt_label("严格模式", "默认关闭"))
+        card.body_l.addLayout(self._switch_row(
+            "用严格词库（strictMap）单独跑一轮，规则更紧", self.sw_strict))
 
-        card.body_l.addLayout(self._opt_label("生僻字注音", "默认关闭"))
         self.sw_zhuyin = Switch(False)
         self.sw_zhuyin.toggled.connect(self._on_zhuyin_toggled)
-        card.body_l.addWidget(FieldRow(
-            None,
-            "为生僻字补充拼音注音",
-            "",
-            control=self.sw_zhuyin,
-            name_width=320,
-        ))
+        self.sw_zhuyin.toggled.connect(lambda _=False: self._sync_full_flow_selected())
+        card.body_l.addLayout(self._opt_label("生僻字注音", "默认关闭"))
+        card.body_l.addLayout(self._switch_row(
+            "为生僻字补充拼音注音", self.sw_zhuyin))
         self.zhu_panel = self._zhuyin_opts_panel()
         self.zhu_panel.setVisible(False)
         card.body_l.addWidget(self.zhu_panel)
@@ -515,59 +497,65 @@ class OneClickModule(QWidget):
 
         card.body_l.addWidget(hline())
 
-        # —— 词库多选（常规锁定）
+        # —— 词库多选（原型 .chk-group 胶囊 + 锁定徽标）
         card.body_l.addLayout(self._opt_label("使用哪套词库", "可多选"))
-        self.bag_checks: dict[str, QCheckBox] = {}
+        self.bag_checks: dict[str, BagChk] = {}
         bags_wrap = QFrame()
-        bl = QVBoxLayout(bags_wrap)
-        bl.setContentsMargins(0, 4, 0, 0)
-        bl.setSpacing(6)
+        bags_wrap.setObjectName("BagChkGroup")
+        fl = FlowLayout(bags_wrap, hspacing=8, vspacing=8)
+        fl.setContentsMargins(0, 4, 0, 0)
         for code, label, on, locked in BAG_CHECKS:
-            cb = QCheckBox(label + ("（锁定）" if locked else ""))
-            cb.setChecked(on)
-            cb.setEnabled(not locked)
-            cb.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.bag_checks[code] = cb
-            bl.addWidget(cb)
+            chip = BagChk(label, checked=on, locked=locked)
+            self.bag_checks[code] = chip
+            fl.addWidget(chip)
         card.body_l.addWidget(bags_wrap)
         card.body_l.addWidget(self._hint(
             "「常规校正」「CJK 恢复」锁定（CJK 用于扩展区编码修复，强制跑）。"
             "「繁简转换」「的地得」「旧式通假」「我的词库」默认开，可关。"
             "「繁简转换激进」含和谐字等，易误改，默认关。"
-            "预处理 / 严格 / 注音在上方独立开关（另起一轮）。"
+            "排版 / 预处理 / 严格 / 注音见上方「运行模式」。"
             "txtFormat 较多误改，建议常规校正后再单独勾选比对。"))
         card.body_l.addWidget(self._basis("§2.2 · 主按钮不询问词库组合"))
 
         card.body_l.addWidget(hline())
 
-        # —— 引擎
-        card.body_l.addLayout(self._opt_label("替换引擎"))
-        self.engine_box = QComboBox()
-        self.engine_box.addItems([t for t, _v in ENGINES])
-        self.engine_box.setCursor(Qt.CursorShape.PointingHandCursor)
-        card.body_l.addWidget(self.engine_box)
-        card.body_l.addWidget(self._hint(
-            "Go 缺失 / 异常时自动降级接管并提示，不露命令行。"))
-        card.body_l.addWidget(self._basis(
-            "与「设置页」共用落点 · Go 异常按降级路径接管 · §2.7.2"))
-
-        card.body_l.addWidget(hline())
-
-        # —— 自动修复引号（M4-EX.6-R3 / 原型 §7）
+        # —— 自动修复引号（M4-EX.6-R3 / 原型 §7）；引擎改在设置页
         card.body_l.addLayout(self._opt_label("自动修复引号问题", "默认关闭"))
         import fixtext_settings as _settings
         self.sw_auto_fix_quote = Switch(_settings.auto_fix_quote())
         self.sw_auto_fix_quote.toggled.connect(self._on_auto_fix_quote_toggled)
-        card.body_l.addWidget(FieldRow(
-            None,
-            "校正完成后自动修复引号配对",
+        card.body_l.addLayout(self._switch_row(
             "开启则按检查页同一套规则自动修可确定项，减少待人工确认数",
-            control=self.sw_auto_fix_quote,
-            name_width=190,
-        ))
+            self.sw_auto_fix_quote))
         card.body_l.addWidget(self._hint(
-            "默认关闭：校正只做词库替换与校验，引号问题留待「检查问题」逐处处理。"))
+            "关闭时校正只做词库替换与校验，引号问题留待「检查问题」逐处处理。"))
         return card
+
+    def _reset_run_mode_defaults(self) -> None:
+        """「完整流程（默认）」：四个运行模式开关恢复出厂组合。"""
+        if getattr(self, "sw_layout", None) is not None:
+            self.sw_layout.setChecked(True)
+        if getattr(self, "sw_preprocess", None) is not None:
+            self.sw_preprocess.setChecked(True)
+        if getattr(self, "sw_strict", None) is not None:
+            self.sw_strict.setChecked(False)
+        if getattr(self, "sw_zhuyin", None) is not None:
+            self.sw_zhuyin.setChecked(False)
+        self._set_zhuyin_mode("0")
+        self._sync_full_flow_selected()
+
+    def _sync_full_flow_selected(self) -> None:
+        """四个开关均处默认态时，「完整流程」卡片保持选中样式。"""
+        rd = getattr(self, "rd_full", None)
+        if rd is None:
+            return
+        at_default = (
+            bool(getattr(self, "sw_layout", None) and self.sw_layout.isChecked())
+            and bool(getattr(self, "sw_preprocess", None) and self.sw_preprocess.isChecked())
+            and not bool(getattr(self, "sw_strict", None) and self.sw_strict.isChecked())
+            and not bool(getattr(self, "sw_zhuyin", None) and self.sw_zhuyin.isChecked())
+        )
+        rd.set_selected(at_default)
 
     def _zhuyin_opts_panel(self) -> QFrame:
         panel = QFrame()
@@ -601,7 +589,7 @@ class OneClickModule(QWidget):
 
     def _opt_label(self, text: str, badge: str = "") -> QHBoxLayout:
         hl = QHBoxLayout()
-        hl.setContentsMargins(0, 12, 0, 0)
+        hl.setContentsMargins(0, 8, 0, 8)
         hl.setSpacing(8)
         hl.addWidget(_label(text, size="base", weight="bold"))
         if badge:
@@ -614,10 +602,17 @@ class OneClickModule(QWidget):
         hl.addStretch(1)
         return hl
 
-    def set_mode(self, mode: str):
-        self.mode = mode
-        self.rd_full.set_selected(mode == "full")
-        self.rd_skip.set_selected(mode == "skip")
+    def _switch_row(self, desc: str, control: QWidget) -> QHBoxLayout:
+        """原型 ``.frow``：仅描述 + 控件（无独立加粗标题；标题由上方 ``_opt_label`` 承担）。"""
+        hl = QHBoxLayout()
+        hl.setContentsMargins(0, 8, 0, 8)
+        hl.setSpacing(12)
+        d = QLabel(desc)
+        d.setWordWrap(True)
+        d.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        hl.addWidget(d, 1)
+        hl.addWidget(control)
+        return hl
 
     def _run_options(self) -> dict:
         """从高级选项控件收集 M5-EX.1 运行参数。"""
@@ -632,8 +627,11 @@ class OneClickModule(QWidget):
         zhu = "off"
         if getattr(self, "sw_zhuyin", None) is not None and self.sw_zhuyin.isChecked():
             zhu = str(getattr(self, "zhuyin_mode", "0") or "0")
+        # 排版开关默认开；关闭 → skip_layout
+        layout_on = bool(
+            getattr(self, "sw_layout", None) and self.sw_layout.isChecked())
         return dict(
-            skip_layout=(self.mode == "skip"),
+            skip_layout=(not layout_on),
             enable_preprocess=bool(
                 getattr(self, "sw_preprocess", None) and self.sw_preprocess.isChecked()),
             enable_strict=bool(

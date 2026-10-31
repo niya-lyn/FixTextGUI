@@ -358,6 +358,12 @@ def build() -> str:
     q.append(f'    border: 1px solid {c("neutral.200")};')
     q.append(f'    border-radius: {RADIUS["lg"]};')
     q.append("}")
+    # 结构体容器透明：否则 head/body 继承全局 QWidget{background:#F7F8FA}，
+    # 把 #Card 的白底盖掉，卡片在灰页面上只剩 1px 边框→「四条不相连的线」。
+    # 透明后透出 #Card 的白底（WA_StyledBackground + 圆角），对齐原型 .card（白底+阴影）。
+    q.append("QWidget#CardHead, QWidget#CardBody {")
+    q.append("    background: transparent;")
+    q.append("}")
     q.append("")
 
     # ---- 按钮 --------------------------------------------------------
@@ -600,6 +606,38 @@ def build() -> str:
     q.append("#RadioCard[selected=\"true\"] {")
     q.append(f'    background: {c("primary.50")};')
     q.append(f'    border: 1px solid {c("primary.500")};')
+    q.append("}")
+    q.append("")
+
+    # 一键校正 · 词库多选胶囊（原型 .chk / .lock-tag）
+    q.append("QFrame#BagChk {")
+    q.append(f'    background: {c("neutral.0")};')
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append("}")
+    q.append(f"QFrame#BagChk:hover {{ border-color: {c('primary.300')}; background: {c('primary.50')}; }}")
+    q.append("QFrame#BagChk[on=\"true\"] {")
+    q.append(f'    border-color: {c("primary.500")};')
+    q.append(f'    background: {c("primary.50")};')
+    q.append(f'    color: {c("primary.700")};')
+    q.append("}")
+    q.append(f"QFrame#BagChk[locked=\"true\"]:hover {{ border-color: {c('primary.500')}; background: {c('primary.50')}; }}")
+    q.append("QLabel#BagChkText {")
+    q.append(f'    color: {c("neutral.800")};')
+    q.append(f'    font-size: {FONT_SIZE["sm"]};')
+    q.append(f'    spacing: 7px;')
+    q.append("}")
+    q.append("QFrame#BagChk[on=\"true\"] QLabel#BagChkText {")
+    q.append(f'    color: {c("primary.700")};')
+    q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
+    q.append("}")
+    q.append("#BagLockTag {")
+    q.append(f'    color: {c("neutral.0")};')
+    q.append(f'    background: {c("primary.700")};')
+    q.append(f'    border-radius: {RADIUS["full"]};')
+    q.append(f'    padding: 1px 7px;')
+    q.append(f'    font-size: 10px;')
+    q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
     q.append("}")
     q.append("")
 

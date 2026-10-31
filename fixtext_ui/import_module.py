@@ -157,7 +157,7 @@ class DropZone(QFrame):
 
     def _apply_style(self, state: str) -> None:
         border = c("primary.500") if state == "hot" else c("neutral.300")
-        bg = c("primary.50") if state == "hot" else c("neutral.50")
+        bg = c("primary.50") if state == "hot" else c("neutral.0")
         self.setStyleSheet(
             f"#DropZone{{background:{bg};border:2px dashed {border};"
             f"border-radius:{r('lg')}}}"

@@ -22,13 +22,14 @@ FixText V1 · 复用部件库（Qt）
 from __future__ import annotations
 
 from PySide6.QtCore import (
-    QAbstractAnimation, QEasingCurve, QPropertyAnimation, Qt, QSize, Signal,
-    QTimer,
+    QAbstractAnimation, QEasingCurve, QPropertyAnimation, Qt, QSize, QPoint,
+    QRect, Signal, QTimer,
 )
-from PySide6.QtGui import QPainter, QColor
+from PySide6.QtGui import QPainter, QColor, QPen
 from PySide6.QtWidgets import (
-    QFrame, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QFrame, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
     QAbstractButton, QSizePolicy, QDialog, QProgressBar, QPushButton,
+    QLayout, QLayoutItem,
 )
 from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtWidgets import QGraphicsDropShadowEffect
@@ -168,6 +169,13 @@ class Card(QFrame):
         super().__init__(parent)
         self.setObjectName("Card")
         enable_chrome(self)  # 外部圆角边框（对齐原型 .card）
+        # 原型 .card 有 box-shadow:var(--sh-sm)；Qt QSS 的 box-shadow 在子控件上
+        # 会被裁剪、无法外溢，故用 QGraphicsDropShadowEffect 实现（参数对应 SHADOW["sm"]）。
+        eff = QGraphicsDropShadowEffect(self)
+        eff.setOffset(0, 1)
+        eff.setBlurRadius(3)
+        eff.setColor(QColor(21, 25, 31, 15))   # rgba(21,25,31,.06)
+        self.setGraphicsEffect(eff)
         self._collapsible = collapsible
         self._open = open_
         self._chev = None
@@ -179,6 +187,7 @@ class Card(QFrame):
 
         if title:
             head = QWidget()
+            head.setObjectName("CardHead")
             hl = QHBoxLayout(head)
             hl.setContentsMargins(18, 14, 18, 14)
             hl.setSpacing(10)
@@ -207,6 +216,7 @@ class Card(QFrame):
             root.addWidget(self._sep)
 
         self.body = QWidget()
+        self.body.setObjectName("CardBody")
         self.body_l = QVBoxLayout(self.body)
         self.body_l.setContentsMargins(18, 14, 18, 18)
         self.body_l.setSpacing(0)
@@ -346,6 +356,180 @@ class RadioDot(QFrame):
         self.style().polish(self)
         self._inner.style().unpolish(self._inner)
         self._inner.style().polish(self._inner)
+
+
+class FlowLayout(QLayout):
+    """横向自动换行（对齐原型 ``.chk-group { flex-wrap: wrap }``）。"""
+
+    def __init__(self, parent=None, *, hspacing: int = 8, vspacing: int = 8):
+        super().__init__(parent)
+        self._items: list[QLayoutItem] = []
+        self._hs = hspacing
+        self._vs = vspacing
+
+    def addItem(self, item: QLayoutItem) -> None:
+        self._items.append(item)
+
+    def count(self) -> int:
+        return len(self._items)
+
+    def itemAt(self, index: int) -> QLayoutItem | None:
+        if 0 <= index < len(self._items):
+            return self._items[index]
+        return None
+
+    def takeAt(self, index: int) -> QLayoutItem | None:
+        if 0 <= index < len(self._items):
+            return self._items.pop(index)
+        return None
+
+    def expandingDirections(self) -> Qt.Orientation:
+        return Qt.Orientation(0)
+
+    def hasHeightForWidth(self) -> bool:
+        return True
+
+    def heightForWidth(self, width: int) -> int:
+        return self._do_layout(QRect(0, 0, width, 0), True)
+
+    def setGeometry(self, rect: QRect) -> None:
+        super().setGeometry(rect)
+        self._do_layout(rect, False)
+
+    def sizeHint(self) -> QSize:
+        return self.minimumSize()
+
+    def minimumSize(self) -> QSize:
+        size = QSize()
+        for item in self._items:
+            size = size.expandedTo(item.minimumSize())
+        m = self.contentsMargins()
+        size += QSize(m.left() + m.right(), m.top() + m.bottom())
+        return size
+
+    def _do_layout(self, rect: QRect, test_only: bool) -> int:
+        m = self.contentsMargins()
+        effective = rect.adjusted(m.left(), m.top(), -m.right(), -m.bottom())
+        x, y = effective.x(), effective.y()
+        line_h = 0
+        for item in self._items:
+            wh = item.sizeHint()
+            next_x = x + wh.width() + self._hs
+            if line_h and next_x - self._hs > effective.right():
+                x = effective.x()
+                y = y + line_h + self._vs
+                next_x = x + wh.width() + self._hs
+                line_h = 0
+            if not test_only:
+                item.setGeometry(QRect(QPoint(x, y), wh))
+            x = next_x
+            line_h = max(line_h, wh.height())
+        return y + line_h - rect.y() + m.bottom()
+
+
+class ChkMark(QFrame):
+    """词库勾选指示器（对齐原型 ``.chk`` 内 15px 主色 checkbox）。
+
+    原生 ``QCheckBox`` 的指示器是系统方块勾选，与原型「主色小方块 + 白勾」的
+    胶囊风格不一致；这里用 QPainter 自绘，不依赖原生样式与图片资源。
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setObjectName("ChkMark")
+        self.setFixedSize(16, 16)
+        self._on = False
+        self._enabled = True
+
+    def setChecked(self, on: bool) -> None:
+        self._on = bool(on)
+        self.update()
+
+    def isChecked(self) -> bool:
+        return self._on
+
+    def setEnabled(self, v: bool) -> None:
+        self._enabled = bool(v)
+        self.update()
+
+    def paintEvent(self, _event):
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = 4
+        if self._on:
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(QColor(c("primary.500")))
+            p.drawRoundedRect(0, 0, 16, 16, r, r)
+            pen = QPen(QColor(c("neutral.0")), 2, Qt.PenStyle.SolidLine)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            p.setPen(pen)
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.drawLine(4, 8, 7, 11)
+            p.drawLine(7, 11, 12, 5)
+        else:
+            p.setPen(QPen(QColor(c("neutral.300")), 1.5))
+            p.setBrush(QColor(c("neutral.0")))
+            p.drawRoundedRect(0.75, 0.75, 14.5, 14.5, r, r)
+        p.end()
+
+
+class BagChk(QFrame):
+    """词库多选胶囊（对齐原型 ``label.chk`` / ``.lock-tag``）。"""
+
+    toggled = Signal(bool)
+
+    def __init__(self, label: str, *, checked: bool = False,
+                 locked: bool = False, parent=None):
+        super().__init__(parent)
+        self.setObjectName("BagChk")
+        enable_chrome(self)
+        self._locked = locked
+        self._on = bool(checked)
+        self.setCursor(
+            Qt.CursorShape.ArrowCursor if locked else Qt.CursorShape.PointingHandCursor)
+        hl = QHBoxLayout(self)
+        hl.setContentsMargins(13, 7, 13, 7)
+        hl.setSpacing(7)
+        self.mark = ChkMark()
+        self.mark.setChecked(self._on)
+        hl.addWidget(self.mark)
+        self.txt = QLabel(label)
+        self.txt.setObjectName("BagChkText")
+        hl.addWidget(self.txt)
+        if locked:
+            tag = QLabel("锁定")
+            tag.setObjectName("BagLockTag")
+            hl.addWidget(tag)
+        self._sync_props()
+
+    def isChecked(self) -> bool:
+        return self._on
+
+    def setChecked(self, on: bool) -> None:
+        self._on = bool(on)
+        self.mark.setChecked(self._on)
+        self._sync_props()
+
+    def setEnabled(self, v: bool) -> None:
+        super().setEnabled(v)
+        self.mark.setEnabled(v)
+        self.txt.setEnabled(v)
+
+    def _sync_props(self) -> None:
+        self.setProperty("on", "true" if self._on else "false")
+        self.setProperty("locked", "true" if self._locked else "false")
+        self.style().unpolish(self)
+        self.style().polish(self)
+
+    def mousePressEvent(self, event):
+        if not self._locked and event.button() == Qt.MouseButton.LeftButton:
+            self._on = not self._on
+            self.mark.setChecked(self._on)
+            self._sync_props()
+            self.toggled.emit(self._on)
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
 
 class RadioCard(QFrame):
