@@ -172,8 +172,6 @@ class ShelfRow(QFrame):
         self.action_slot.setFixedWidth(ACTION_SLOT_W)
         self.action_slot.setFixedHeight(SHELF_BADGE_H)
         self.action_slot.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.action_slot.setStyleSheet(
-            "#ShelfAct{background:transparent;border:none;}")
         sl = QHBoxLayout(self.action_slot)
         sl.setContentsMargins(0, 0, 0, 0)
         sl.setSpacing(0)
@@ -228,7 +226,7 @@ class ShelfRow(QFrame):
             f"{FONT_WEIGHT['bold'] if self._current else FONT_WEIGHT['medium']};"
             f"background:transparent;border:none;")
         self.status.setStyleSheet(
-            f"color:{c('success')};font-size:11px;"
+            f"color:{c('success')};font-size:{fs('xs')};"
             f"font-weight:{FONT_WEIGHT['semibold']};"
             f"background:transparent;border:none;")
         tip = (
@@ -383,9 +381,9 @@ class BookChip(QFrame):
                 f"background:{c('neutral.300')};border-radius:{r('full')};"
                 f"border:3px solid {c('neutral.100')}")
         self.go_label.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:11px;"
+            f"color:{c('neutral.500')};font-size:{fs('xs')};"
             f"font-weight:{FONT_WEIGHT['semibold']};"
-            f"padding-left:9px;margin-left:2px;"
+            f"padding-left:{sp('2')};margin-left:{sp('1')};"
             f"border-left:1px solid {c('neutral.200')};"
             f"background:transparent")
         if has_book:
@@ -401,9 +399,9 @@ class BookChip(QFrame):
         from fixtext_tokens import FONT_WEIGHT, c
         # Qt 对「父 :hover 改子」支持不稳，悬停时直接刷「切换」主色
         self.go_label.setStyleSheet(
-            f"color:{c('primary.600')};font-size:11px;"
+            f"color:{c('primary.600')};font-size:{fs('xs')};"
             f"font-weight:{FONT_WEIGHT['semibold']};"
-            f"padding-left:9px;margin-left:2px;"
+            f"padding-left:{sp('2')};margin-left:{sp('1')};"
             f"border-left:1px solid {c('neutral.200')};"
             f"background:transparent")
         super().enterEvent(event)
@@ -411,9 +409,9 @@ class BookChip(QFrame):
     def leaveEvent(self, event):                     # noqa: N802 - Qt 覆写
         from fixtext_tokens import FONT_WEIGHT, c
         self.go_label.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:11px;"
+            f"color:{c('neutral.500')};font-size:{fs('xs')};"
             f"font-weight:{FONT_WEIGHT['semibold']};"
-            f"padding-left:9px;margin-left:2px;"
+            f"padding-left:{sp('2')};margin-left:{sp('1')};"
             f"border-left:1px solid {c('neutral.200')};"
             f"background:transparent")
         super().leaveEvent(event)

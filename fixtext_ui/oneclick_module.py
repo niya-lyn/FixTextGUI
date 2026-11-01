@@ -181,9 +181,6 @@ class OneClickModule(QWidget):
         self.status = QLabel("")
         self.status.setObjectName("Toast")
         self.status.setVisible(False)
-        self.status.setStyleSheet(
-            f"#Toast{{background:{c('neutral.800')};color:{c('on.fill')};"
-            f"border-radius:10px;padding:10px 16px;font-size:{fs('sm')}}}")
         self.status.setSizePolicy(
             QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         root.addWidget(self.status, 0, Qt.AlignmentFlag.AlignLeft)
@@ -282,7 +279,7 @@ class OneClickModule(QWidget):
         self.book_pill.setText("已就绪")
         self.book_pill.setStyleSheet(
             f"color:{c('success')};background:{c('success.bg')};"
-            f"border-radius:{r('full')};padding:2px 9px;"
+            f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
             f"font-size:{fs('xs')};font-weight:700")
         self._apply_book_presence()
 
@@ -563,9 +560,6 @@ class OneClickModule(QWidget):
     def _zhuyin_opts_panel(self) -> QFrame:
         panel = QFrame()
         panel.setObjectName("ZhuPanel")
-        panel.setStyleSheet(
-            f"#ZhuPanel{{background:{c('neutral.50')};border:1px dashed "
-            f"{c('neutral.200')};border-radius:10px}}")
         pl = QVBoxLayout(panel)
         pl.setContentsMargins(14, 12, 14, 12)
         pl.setSpacing(8)
@@ -599,8 +593,8 @@ class OneClickModule(QWidget):
             p = Pill(badge, "warn")
             p.setStyleSheet(
                 f"color:{c('warning')};background:{c('warning.bg')};"
-                f"border-radius:{r('full')};padding:1px 7px;"
-                f"font-size:10px;font-weight:700")
+                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
+                f"font-size:{fs('xs')};font-weight:700")
             hl.addWidget(p)
         hl.addStretch(1)
         return hl
@@ -933,8 +927,8 @@ class OneClickModule(QWidget):
         ok.setFixedSize(34, 34)
         ok.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ok.setStyleSheet(
-            f"background:{c('success')};color:{c('on.fill')};border-radius:10px;"
-            f"font-size:18px")
+            f"background:{c('success')};color:{c('on.fill')};border-radius:{r('lg')};"
+            f"font-size:{fs('lg')}")
         col = QVBoxLayout()
         col.setSpacing(2)
         book = summary.get("book", "书籍")
@@ -978,9 +972,6 @@ class OneClickModule(QWidget):
         text, _show_go, tip = quote_status_from_summary(summary)
         box = QFrame()
         box.setObjectName("QuoteNote")
-        box.setStyleSheet(
-            f"#QuoteNote{{background:{c('warning.bg')};border-radius:10px;"
-            f"border:1px solid {c('warning')}}}")
         v = QVBoxLayout(box)
         v.setContentsMargins(14, 12, 14, 12)
         v.setSpacing(4)

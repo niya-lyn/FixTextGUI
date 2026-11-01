@@ -244,7 +244,7 @@ class ResultPane(QWidget):
         self.detail.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self.detail.setStyleSheet(
             f"color:{c('neutral.600')};background:{c('neutral.50')};"
-            f"border-radius:{r('md')};padding:10px;font-family:{FONT_MONO};"
+            f"border-radius:{r('md')};padding:{sp('3')};font-family:{FONT_MONO};"
             f"font-size:{fs('xs')}"
         )
         lay.addWidget(self.detail)
@@ -463,7 +463,7 @@ class ImportModule(QWidget):
         self.notice.setText(text)
         self.notice.setStyleSheet(
             f"background:{c(bg)};color:{c(fg)};border:1px solid {c(border)};"
-            f"border-radius:{r('md')};padding:10px 12px;font-size:{fs('sm')}"
+            f"border-radius:{r('md')};padding:{sp('3')} {sp('3')};font-size:{fs('sm')}"
         )
         self.notice.setVisible(True)
 

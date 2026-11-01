@@ -295,7 +295,7 @@ class SettingsModule(QWidget):
         self.status.setText(text)
         self.status.setStyleSheet(
             f"background:{c(bg)};color:{c(fg)};border:1px solid {c(border)};"
-            f"border-radius:{r('md')};padding:8px 10px;font-size:{fs('sm')}")
+            f"border-radius:{r('md')};padding:{sp('2')} {sp('3')};font-size:{fs('sm')}")
         self.status.setVisible(True)
 
     # ------------------------------------------------------------------ 动作

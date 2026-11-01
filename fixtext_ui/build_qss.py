@@ -1055,6 +1055,47 @@ def build() -> str:
     q.append("}")
     q.append("")
 
+    # ---- 局部组件（原散落各模块的内联 setStyleSheet，收回为单一样式来源）----
+    # #BagChk：勾选卡片容器（背景/圆角由 paintEvent 自绘，此处仅清空默认边框，避免方角）
+    q.append("#BagChk {")
+    q.append("    background: transparent;")
+    q.append("    border: none;")
+    q.append("}")
+    # #ZhuPanel：注音选项面板（oneclick）
+    q.append("#ZhuPanel {")
+    q.append(f'    background: {c("neutral.50")};')
+    q.append(f'    border: 1px dashed {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["lg"]};')
+    q.append("}")
+    # #QuoteNote：引号状态说明卡片（oneclick）
+    q.append("#QuoteNote {")
+    q.append(f'    background: {c("warning.bg")};')
+    q.append(f'    border: 1px solid {c("warning")};')
+    q.append(f'    border-radius: {RADIUS["lg"]};')
+    q.append("}")
+    # #DupGroup：重复导入分组框（vocab）
+    q.append("#DupGroup {")
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["lg"]};')
+    q.append(f'    background: {c("neutral.50")};')
+    q.append(f'    padding: {sp("3")} {sp("4")};')
+    q.append(f'    margin-top: {sp("2")};')
+    q.append("}")
+    # #ToastUndo：浮层撤销按钮（vocab toast）
+    q.append("#ToastUndo {")
+    q.append(f'    background: {c("primary.500")};')
+    q.append(f'    color: {c("on.fill")};')
+    q.append("    border: none;")
+    q.append(f'    padding: {sp("2")} {sp("3")};')
+    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
+    q.append(f'    font-size: {FONT_SIZE["sm"]};')
+    q.append("}")
+    q.append("#ToastUndo:hover {")
+    q.append(f'    background: {c("primary.600")};')
+    q.append("}")
+    q.append("")
+
     return "\n".join(q) + "\n"
 
 

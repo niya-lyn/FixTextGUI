@@ -391,11 +391,7 @@ class VocabModule(QWidget):
         safe.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         safe.setCursor(Qt.CursorShape.PointingHandCursor)
         safe.setToolTip("词库的每一步改动都先留还原点，删错了、合并错了都能退回去")
-        # QLabel 背景必须 WA_StyledBackground；内联与 QSS 双保险（防「重新生成」漏项）
-        safe.setStyleSheet(
-            f"QLabel#SafeBadge{{color:{c('success')};background:{c('success.bg')};"
-            f"border:1px solid {c('success.border')};border-radius:{r('full')};"
-            f"padding:6px 12px;font-size:{fs('xs')};font-weight:700}}")
+        # QLabel 背景必须 WA_StyledBackground；样式统一由 fixtext.qss 的 #SafeBadge 提供
         right.addWidget(safe)
 
         self.hist_btn = self._head_icon_btn("🕑", "历史与快照",
@@ -544,7 +540,7 @@ class VocabModule(QWidget):
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setStyleSheet(
             f"background:{c('success.bg') if d=='custom' else c('info.bg')};"
-            f"border-radius:6px;font-size:12px")
+            f"border-radius:{r('md')};font-size:{fs('xs')}")
         hl.addWidget(ico)
         col = QVBoxLayout()
         col.setSpacing(1)
@@ -555,7 +551,7 @@ class VocabModule(QWidget):
         hl.addLayout(col, 1)
         lock = QLabel("✎" if d == "custom" else "🔒")
         lock.setStyleSheet(
-            f"color:{'transparent' if d=='custom' else c('neutral.500')};font-size:12px")
+            f"color:{'transparent' if d=='custom' else c('neutral.500')};font-size:{fs('xs')}")
         hl.addWidget(lock)
         item.mousePressEvent = lambda e, d=d: self.select_dict(d)
         return item
@@ -1026,7 +1022,7 @@ class VocabModule(QWidget):
             dot.setStyleSheet(
                 f"background:{c('success') if cur else c('neutral.200')};"
                 + (f"border:3px solid {c('success.bg')};" if cur else "")
-                + "border-radius:999px")
+                + "border-radius:{r('full')}")
             hl.addWidget(dot)
             hl.addWidget(_label(rec["label"], size="sm", weight="semibold",
                                 color="neutral.800"), 0)
@@ -1077,7 +1073,7 @@ class VocabModule(QWidget):
             pill = QLabel(op.get("act_name", "变更"))
             pill.setStyleSheet(
                 f"background:{c('neutral.100')};color:{c('neutral.700')};"
-                f"border-radius:6px;padding:2px 8px;font-size:{fs('xs')}")
+                f"border-radius:{r('md')};padding:{sp('1')} {sp('2')};font-size:{fs('xs')}")
             hl.addWidget(pill)
             hl.addWidget(_label(op.get("summary", ""), size="sm", color="neutral.800"), 0)
             hl.addStretch(1)
@@ -1355,9 +1351,6 @@ class VocabModule(QWidget):
         for gi, g in enumerate(groups, start=1):
             box = QFrame()
             box.setObjectName("DupGroup")
-            box.setStyleSheet(
-                f"QFrame#DupGroup{{border:1px solid {c('neutral.200')};border-radius:10px;"
-                f"background:{c('neutral.50')};padding:12px 14px;margin-top:6px}}")
             bl = QVBoxLayout(box)
             bl.setContentsMargins(0, 0, 0, 0)
             bl.setSpacing(8)
@@ -1594,7 +1587,7 @@ class VocabModule(QWidget):
         area.setWidget(rows_box)
         area.setStyleSheet(
             f"QScrollArea{{border:1px solid {c('neutral.200')};"
-            f"border-radius:10px;background:{c('neutral.0')}}}")
+            f"border-radius:{r('lg')};background:{c('neutral.0')}}}")
         m.add_widget(area)
 
         self._book_checks = checks
@@ -1777,8 +1770,6 @@ class VocabModule(QWidget):
         self.status_box = QWidget(self)
         self.status_box.setObjectName("Toast")
         self.status_box.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.status_box.setStyleSheet(
-            f"#Toast{{background:{c('neutral.800')};border-radius:10px;}}")
         # 原型 --sh-lg；QSS box-shadow 会被裁剪，改用投影效果
         eff = QGraphicsDropShadowEffect(self.status_box)
         eff.setOffset(0, 8)
@@ -1796,11 +1787,6 @@ class VocabModule(QWidget):
         self.undo_btn = QPushButton("撤销")
         self.undo_btn.setObjectName("ToastUndo")
         self.undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.undo_btn.setStyleSheet(
-            f"QPushButton#ToastUndo{{background:{c('primary.500')};color:{c('on.fill')};"
-            f"border:none;padding:6px 12px;border-radius:7px;font-weight:700;"
-            f"font-size:{fs('sm')}}}"
-            f"QPushButton#ToastUndo:hover{{background:{c('primary.600')}}}")
         self.undo_btn.clicked.connect(self._undo)
         sl.addWidget(self.status)
         sl.addWidget(self.undo_btn)

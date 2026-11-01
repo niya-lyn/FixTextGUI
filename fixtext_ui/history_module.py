@@ -474,7 +474,7 @@ class HistoryModule(QWidget):
         self._active_hint.setObjectName("ActiveHint")
         self._active_hint.setStyleSheet(
             f"color:{c('primary.700')};font-size:{fs('sm')};"
-            f"background:transparent;margin-top:4px")
+            f"background:transparent;margin-top:{sp('1')}")
         card.body_l.addWidget(self._active_hint)
 
         acts = QWidget()

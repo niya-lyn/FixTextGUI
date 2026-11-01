@@ -909,3 +909,37 @@ QWidget#CellFullText QLabel {
     background: transparent;
 }
 
+#BagChk {
+    background: transparent;
+    border: none;
+}
+#ZhuPanel {
+    background: #F7F8FA;
+    border: 1px dashed #DDE2EA;
+    border-radius: 12px;
+}
+#QuoteNote {
+    background: #FBF1DF;
+    border: 1px solid #B45309;
+    border-radius: 12px;
+}
+#DupGroup {
+    border: 1px solid #DDE2EA;
+    border-radius: 12px;
+    background: #F7F8FA;
+    padding: 12px 16px;
+    margin-top: 8px;
+}
+#ToastUndo {
+    background: #4F59C0;
+    color: #FFFFFF;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+}
+#ToastUndo:hover {
+    background: #3F48A2;
+}
+

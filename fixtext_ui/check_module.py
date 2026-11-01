@@ -105,7 +105,7 @@ class ProblemRow(QFrame):
 
         no = QLabel(f"L{p['line']}")
         no.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:11px;font-weight:700;"
+            f"color:{c('neutral.500')};font-size:{fs('xs')};font-weight:700;"
             f"font-family:{FONT_MONO}"
         )
         hl.addWidget(no)
@@ -243,7 +243,7 @@ class CheckModule(QWidget):
         self.pass_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.pass_banner.setStyleSheet(
             f"color:{c('success')};font-weight:700;font-size:{fs('md')};"
-            f"background:{c('success.bg')};border-radius:{r('md')};padding:14px")
+            f"background:{c('success.bg')};border-radius:{r('md')};padding:{sp('4')}")
         self.pass_banner.setVisible(False)
         cl.addWidget(self.pass_banner)
         self._result_w = QWidget()
@@ -271,13 +271,9 @@ class CheckModule(QWidget):
         col.setSpacing(2)
         title = QLabel("检查问题")
         title.setObjectName("PageTitle")
-        title.setStyleSheet(
-            f"color:{c('neutral.900')};font-size:{fs('xl')};"
-            f"font-weight:{FONT_WEIGHT['bold']}")
         sub = QLabel(
             "引号配对检查 + 逐处交互修复。检查结果可定位、可单独处理、可撤销。")
         sub.setObjectName("PageSub")
-        sub.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
         col.addWidget(title)
         col.addWidget(sub)
         hl.addLayout(col, 1)
@@ -298,7 +294,7 @@ class CheckModule(QWidget):
         ico.setFixedSize(40, 40)
         ico.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:10px;font-size:19px")
+            f"border-radius:{r('lg')};font-size:{fs('xl')}")
         hl.addWidget(ico)
         col = QVBoxLayout()
         col.setSpacing(2)
@@ -405,7 +401,7 @@ class CheckModule(QWidget):
         self.editor.setStyleSheet(
             f"QTextEdit{{background:{c('neutral.50')};"
             f"border:1px solid {c('neutral.200')};border-radius:{r('md')};"
-            f"padding:12px;font-family:{FONT_MONO};font-size:{fs('sm')};"
+            f"padding:{sp('3')};font-family:{FONT_MONO};font-size:{fs('sm')};"
             f"color:{c('neutral.800')}}}")
         ed.body_l.addWidget(self.editor)
         self.advice = QLabel("")
@@ -544,7 +540,7 @@ class CheckModule(QWidget):
         self.status.setWordWrap(True)
         self.status.setStyleSheet(
             f"background:{c('neutral.800')};color:{c('on.fill')};"
-            f"border-radius:{r('md')};padding:10px 16px;font-size:{fs('sm')}")
+            f"border-radius:{r('md')};padding:{sp('3')} {sp('4')};font-size:{fs('sm')}")
         self.status.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         return self.status
 

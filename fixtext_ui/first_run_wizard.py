@@ -225,7 +225,7 @@ class FirstRunWizard(QDialog):
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:10px;font-size:20px")
+            f"border-radius:{r('lg')};font-size:{fs('xl')}")
         col = QVBoxLayout()
         col.setSpacing(2)
         t = QLabel("新手向导")
@@ -268,7 +268,7 @@ class FirstRunWizard(QDialog):
         ic.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ic.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:12px;font-size:22px")
+            f"border-radius:{r('lg')};font-size:{fs('xl')}")
         col = QVBoxLayout()
         col.setSpacing(2)
         t = QLabel(title)
@@ -370,7 +370,7 @@ class FirstRunWizard(QDialog):
             err.setWordWrap(True)
             err.setStyleSheet(
                 f"background:{c('warning.bg')};border:1px solid {c('warning.border')};"
-                f"color:{c('warning')};border-radius:{r('md')};padding:10px 14px;"
+                f"color:{c('warning')};border-radius:{r('md')};padding:{sp('3')} {sp('4')};"
                 f"font-size:{fs('sm')}")
             bl.addWidget(err)
 
@@ -390,7 +390,7 @@ class FirstRunWizard(QDialog):
             hint.setWordWrap(True)
             hint.setStyleSheet(
                 f"background:{c('info.bg')};border:1px solid {c('info.border')};"
-                f"color:{c('info')};border-radius:{r('md')};padding:10px 14px;"
+                f"color:{c('info')};border-radius:{r('md')};padding:{sp('3')} {sp('4')};"
                 f"font-size:{fs('sm')}")
             bl.addWidget(hint)
         return box

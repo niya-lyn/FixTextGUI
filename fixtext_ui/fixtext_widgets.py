@@ -104,7 +104,7 @@ def no_badge(n) -> QLabel:
     lab.setFixedSize(22, 22)
     lab.setStyleSheet(
         f"background:{c('neutral.100')};color:{c('neutral.500')};"
-        f"border-radius:6px;font-size:11px;font-weight:700"
+        f"border-radius:{r('md')};font-size:{fs('xs')};font-weight:700"
     )
     return lab
 
@@ -234,7 +234,7 @@ class Card(QFrame):
             self.basis_label = QLabel(text)
             self.basis_label.setStyleSheet(
                 f"color:{c('primary.700')};background:{c('primary.50')};"
-                f"border-radius:{r('full')};padding:2px 9px;"
+                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
                 f"font-size:{fs('xs')};font-weight:700"
             )
             self.basis_label.setSizePolicy(
@@ -314,7 +314,7 @@ class FieldRow(QWidget):
             cp.setAlignment(Qt.AlignmentFlag.AlignVCenter)
             cp.setStyleSheet(
                 f"background:transparent;border:none;color:{c('neutral.500')};"
-                f"font-size:11px;font-weight:700"
+                f"font-size:{fs('xs')};font-weight:700"
             )
             sh_l.addWidget(cp)
             hl.addWidget(shell)
@@ -527,8 +527,8 @@ class BagChk(QFrame):
         # 背景/边框改由 paintEvent 用 QPainterPath 自绘圆角。
         # 不设 WA_StyledBackground（enable_chrome）：否则全局 QWidget{background:#F7F8FA}
         # 会以直角方块方式填进圆角外的四角，出现「方角」；QFrame 的 QSS
-        # border-radius 本就不裁切背景，故完全交给 paintEvent 处理。
-        self.setStyleSheet("QFrame#BagChk { background: transparent; border: none; }")
+        # border-radius 本就不裁切背景，故完全交给 paintEvent 处理；
+        # 容器默认边框/背景由 fixtext.qss 的 #BagChk 规则清空。
         self._locked = locked
         self._on = bool(checked)
         self._hover = False
@@ -832,7 +832,7 @@ class ProgressDialog(QDialog):
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:8px;font-size:16px")
+            f"border-radius:{r('md')};font-size:{fs('md')}")
         htitle = QLabel(title)
         htitle.setStyleSheet(
             f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
@@ -850,7 +850,7 @@ class ProgressDialog(QDialog):
             nl.setWordWrap(True)
             nl.setStyleSheet(
                 f"background:{c('info.bg')};border:1px solid {c('info.border')};"
-                f"color:{c('info')};border-radius:10px;padding:10px 14px;"
+                f"color:{c('info')};border-radius:{r('lg')};padding:{sp('3')} {sp('4')};"
                 f"font-size:{fs('sm')}")
             bl.addWidget(nl)
 
@@ -868,10 +868,10 @@ class ProgressDialog(QDialog):
         self.bar.setRange(0, 100)
         self.bar.setValue(0)
         self.bar.setStyleSheet(
-            f"QProgressBar{{background:{c('neutral.100')};border-radius:999px;"
+            f"QProgressBar{{background:{c('neutral.100')};border-radius:{r('full')};"
             f"height:10px;text-align:none}}"
             f"QProgressBar::chunk{{background:{c('primary.500')};"
-            f"border-radius:999px}}")
+            f"border-radius:{r('full')}}}")
         bl.addWidget(self.bar)
 
         meta = QHBoxLayout()
@@ -923,21 +923,21 @@ class ProgressDialog(QDialog):
                 row._dot.setText("✓")
                 row._dot.setStyleSheet(
                     f"background:{c('success')};color:{c('on.fill')};"
-                    f"border-radius:999px;font-size:12px;font-weight:700")
+                    f"border-radius:{r('full')};font-size:{fs('xs')};font-weight:700")
                 row._name.setStyleSheet(
                     f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.600')}")
             elif idx == self._i:
                 row._dot.setText(str(idx + 1))
                 row._dot.setStyleSheet(
                     f"background:{c('primary.500')};color:{c('on.fill')};"
-                    f"border-radius:999px;font-size:12px;font-weight:700")
+                    f"border-radius:{r('full')};font-size:{fs('xs')};font-weight:700")
                 row._name.setStyleSheet(
                     f"font-weight:700;font-size:{fs('sm')};color:{c('primary.700')}")
             else:
                 row._dot.setText(str(idx + 1))
                 row._dot.setStyleSheet(
                     f"background:{c('neutral.100')};color:{c('neutral.500')};"
-                    f"border-radius:999px;font-size:12px;font-weight:700")
+                    f"border-radius:{r('full')};font-size:{fs('xs')};font-weight:700")
                 row._name.setStyleSheet(
                     f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.500')}")
 
@@ -1131,7 +1131,7 @@ class CancelConfirmDialog(QDialog):
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setStyleSheet(
             f"background:{c('warning.bg')};color:{c('warning')};"
-            f"border-radius:8px;font-size:16px")
+            f"border-radius:{r('md')};font-size:{fs('md')}")
         t = QLabel(self.TITLE)
         t.setStyleSheet(
             f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
@@ -1146,7 +1146,7 @@ class CancelConfirmDialog(QDialog):
         note.setWordWrap(True)
         note.setStyleSheet(
             f"background:{c('warning.bg')};border:1px solid {c('warning.border')};"
-            f"color:{c('warning')};border-radius:10px;padding:10px 14px;"
+            f"color:{c('warning')};border-radius:{r('lg')};padding:{sp('3')} {sp('4')};"
             f"font-size:{fs('sm')}")
         bl.addWidget(note)
         root.addWidget(body)
@@ -1199,7 +1199,7 @@ class ConfirmDialog(QDialog):
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:8px;font-size:16px")
+            f"border-radius:{r('md')};font-size:{fs('md')}")
         htitle = QLabel(title)
         htitle.setStyleSheet(
             f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
@@ -1216,12 +1216,12 @@ class ConfirmDialog(QDialog):
         if note_kind == "warn":
             nl.setStyleSheet(
                 f"background:{c('warning.bg')};border:1px solid {c('warning.border')};"
-                f"color:{c('warning')};border-radius:10px;padding:10px 14px;"
+                f"color:{c('warning')};border-radius:{r('lg')};padding:{sp('3')} {sp('4')};"
                 f"font-size:{fs('sm')}")
         else:
             nl.setStyleSheet(
                 f"background:{c('info.bg')};border:1px solid {c('info.border')};"
-                f"color:{c('info')};border-radius:10px;padding:10px 14px;"
+                f"color:{c('info')};border-radius:{r('lg')};padding:{sp('3')} {sp('4')};"
                 f"font-size:{fs('sm')}")
         bl.addWidget(nl)
         root.addWidget(body)
@@ -1278,7 +1278,7 @@ class Modal(QDialog):
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setStyleSheet(
             f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:8px;font-size:16px")
+            f"border-radius:{r('md')};font-size:{fs('md')}")
         htitle = QLabel(title)
         htitle.setStyleSheet(
             f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
@@ -1317,7 +1317,7 @@ class Modal(QDialog):
             bg, bd, fg = c("neutral.100"), c("neutral.200"), c("neutral.600")
         nl.setStyleSheet(
             f"background:{bg};border:1px solid {bd};color:{fg};"
-            f"border-radius:10px;padding:10px 14px;font-size:{fs('sm')}")
+            f"border-radius:{r('lg')};padding:{sp('3')} {sp('4')};font-size:{fs('sm')}")
         self.body_l.addWidget(nl)
         return nl
 

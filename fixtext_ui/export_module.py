@@ -401,7 +401,7 @@ class ExportModule(QWidget):
             self.book_pill.setText("可导出" if has_book else "等待导入")
             self.book_pill.setStyleSheet(
                 f"color:{c('success')};background:{c('success.bg')};"
-                f"border-radius:{r('full')};padding:2px 9px;"
+                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
                 f"font-size:{fs('xs')};font-weight:700")
         else:
             self.book_name_label.setText("尚未导入书籍")
