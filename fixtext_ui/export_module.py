@@ -21,8 +21,8 @@ import os
 import threading
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtCore import QObject, Qt, QTimer, QUrl, Signal, QSize
+from PySide6.QtGui import QDesktopServices, QIcon
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QWidget,
@@ -33,8 +33,10 @@ from fixtext_paths import default_export_dir
 from fixtext_tokens import FONT_WEIGHT, c, fs, r, sp
 from fixtext_widgets import (
     Card, ConfirmDialog, Pill, RadioCard, EmptyState, hline, page_head_shell,
-    enable_chrome,
+    enable_chrome, make_label,
 )
+from fixtext_tokens import c
+from icons import icon, has_icon, pixmap
 
 try:
     import fixtext_error_center as error_center
@@ -44,13 +46,7 @@ except Exception:                                    # pragma: no cover
 
 def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
            weight: str | None = None, wrap: bool = False) -> QLabel:
-    lab = QLabel(text)
-    lab.setWordWrap(wrap)
-    style = f"color:{c(color)};font-size:{fs(size)};background:transparent;"
-    if weight:
-        style += f"font-weight:{FONT_WEIGHT[weight]};"
-    lab.setStyleSheet(style)
-    return lab
+    return make_label(text, size=size, color=color, weight=weight, wrap=wrap)
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +122,7 @@ class ExportModule(QWidget):
         # 无书空状态（原型 v3 §4）：还没有可导出的书时整页内容区换成
         # 这条引导；由真实状态触发（source 是否就绪）。
         self.empty_state = EmptyState(
-            "📤", "还没有可导出的书",
+            "export", "还没有可导出的书",
             "请先导入并完成校正，才能导出干净文件。"
             "当前页面在有书状态下展示；无书时仅显示此引导。")
         root.addWidget(self.empty_state)
@@ -189,10 +185,11 @@ class ExportModule(QWidget):
         hl.setContentsMargins(18, 14, 18, 14)
         hl.setSpacing(14)
 
-        ico = QLabel("📖")
+        ico = QLabel()
         ico.setObjectName("BookBarIco")
         ico.setFixedSize(40, 40)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ico.setPixmap(pixmap("book", 28, c("neutral.600")))
         # 图标方块配色交给 fixtext.qss 的 #BookBarIco（原内联收归）
         hl.addWidget(ico)
 
@@ -321,10 +318,12 @@ class ExportModule(QWidget):
         col.addWidget(self.toast_label)
         hl.addLayout(col, 1)
 
-        self.export_btn = QPushButton("📤 开始导出")
+        self.export_btn = QPushButton("开始导出")
         self.export_btn.setObjectName("HeroBtn")
         self.export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.export_btn.setMinimumHeight(50)
+        self.export_btn.setIcon(icon("export", c("neutral.700"), 18))
+        self.export_btn.setIconSize(QSize(18, 18))
         # 大按钮配色交给 fixtext.qss 的 #HeroBtn（原内联收归）
         self.export_btn.clicked.connect(self.export_now)
         hl.addWidget(self.export_btn, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -398,16 +397,14 @@ class ExportModule(QWidget):
             else:
                 state = "尚未校正"
             self.book_meta_label.setText(f"{kind} · {state}")
-            self.book_pill.setText("可导出" if has_book else "等待导入")
-            self.book_pill.setStyleSheet(
-                f"color:{c('success')};background:{c('success.bg')};"
-                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-                f"font-size:{fs('xs')};font-weight:700")
+            self.book_pill.setText("可导出")
+            self.book_pill.set_kind("ok")
         else:
             self.book_name_label.setText("尚未导入书籍")
             self.book_meta_label.setText(
                 "先在「导入」页选择一本书，再回到这里导出")
             self.book_pill.setText("等待导入")
+            self.book_pill.set_kind("neutral")
 
         # 目标：只有电子书来源才能还原
         can_epub = bool(has_book and src.can_restore_epub)
@@ -517,7 +514,7 @@ class ExportModule(QWidget):
             return True
         names = "；".join(p.name for p in existing)
         dlg = ConfirmDialog(
-            icon="⚠",
+            icon="alert",
             title="导出目录里已有同名文件，要覆盖吗？",
             note=f"下列文件已经存在，继续导出会用新内容覆盖它们：{names}。"
                  f"覆盖后旧内容不可恢复；原书与你导入的文件不受影响。",
@@ -630,9 +627,11 @@ class ExportModule(QWidget):
         add(f"替换命中数：{outcome.hits}", color="neutral.800")
         add(f"涉及词库：{'；'.join(outcome.libs) if outcome.libs else '无'}")
 
-        open_btn = QPushButton("📂 打开所在文件夹")
+        open_btn = QPushButton("打开所在文件夹")
         open_btn.setObjectName("BtnOutline")
         open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        open_btn.setIcon(icon("folder-open", c("neutral.700"), 16))
+        open_btn.setIconSize(QSize(16, 16))
         folder = str(Path(outcome.main_file).resolve().parent)
         open_btn.clicked.connect(lambda _=False, p=folder: self._open_folder(p))
         self.result_box.addWidget(open_btn)

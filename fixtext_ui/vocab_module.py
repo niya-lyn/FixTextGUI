@@ -24,7 +24,7 @@ FixText V1 · 词库管理模块（Qt 移植 · M3-T3.1 接真实词库）
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QTimer, QRect, QEvent, Signal
+from PySide6.QtCore import Qt, QTimer, QRect, QEvent, QSize, Signal
 from PySide6.QtGui import QKeySequence, QShortcut, QFontMetrics, QColor
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDialog,
@@ -34,7 +34,10 @@ from PySide6.QtWidgets import (
 
 import fixtext_settings as app_settings
 from fixtext_tokens import c, fs, r, sp, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
-from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal, page_head_shell, PrimaryButton
+from fixtext_widgets import (
+    Card, Pill, hline, ConfirmDialog, Modal, page_head_shell, PrimaryButton, apply_label,
+)
+from icons import icon, has_icon, pixmap
 
 from fixtext_vocab import (
     ENTRY_TYPES, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
@@ -76,17 +79,8 @@ def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
 def _apply_label_style(lab: QLabel, *, size: str = "sm", color: str = "neutral.800",
                        weight: str | None = None, wrap: bool = False,
                        mono: bool = False, align: str | None = None) -> None:
-    lab.setWordWrap(wrap)
-    style = f"color:{c(color)};font-size:{fs(size)};background:transparent;"
-    if weight:
-        style += f"font-weight:{FONT_WEIGHT[weight]};"
-    if mono:
-        style += f"font-family:{FONT_MONO};"
-    lab.setStyleSheet(style)
-    if align == "center":
-        lab.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
-    elif align == "left":
-        lab.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+    apply_label(lab, size=size, color=color, weight=weight, wrap=wrap,
+                mono=mono, align=align)
 
 
 class _ElideLabel(QLabel):
@@ -179,10 +173,8 @@ class _FullTextPopover(QWidget):
         lay.setContentsMargins(8, 6, 8, 6)
         lay.setSpacing(6)
         self._text = QLabel()
-        self._text.setWordWrap(True)
         self._text.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self._text.setStyleSheet(
-            f"color:{c('neutral.900')};font-size:{fs('sm')};background:transparent;")
+        apply_label(self._text, size="sm", color="neutral.900", wrap=True)
         lay.addWidget(self._text)
 
     # ---- 显隐控制（由 _ElideLabel 调用）----
@@ -394,11 +386,11 @@ class VocabModule(QWidget):
         # QLabel 背景必须 WA_StyledBackground；样式统一由 fixtext.qss 的 #SafeBadge 提供
         right.addWidget(safe)
 
-        self.hist_btn = self._head_icon_btn("🕑", "历史与快照",
+        self.hist_btn = self._head_icon_btn("clock", "历史与快照",
                                             lambda: self._snap_card.setVisible(
                                                 not self._snap_card.isVisible()))
         right.addWidget(self.hist_btn)
-        self.undo_btn = self._head_icon_btn("↩", "撤销上一步（Ctrl+Z）", self._undo)
+        self.undo_btn = self._head_icon_btn("chevron-left", "撤销上一步（Ctrl+Z）", self._undo)
         right.addWidget(self.undo_btn)
 
         self._tier_btns = {}
@@ -423,13 +415,19 @@ class VocabModule(QWidget):
 
     def _head_icon_btn(self, glyph: str, tip: str, slot) -> QPushButton:
         """页头浅色图标按钮（原型 .page-head .icon-btn）。
-        配色统一交给 fixtext.qss 的 QPushButton#HeadIconBtn（原内联收归）。"""
-        b = QPushButton(glyph)
+        配色统一交给 fixtext.qss 的 QPushButton#HeadIconBtn（原内联收归）。
+        glyph 为 SVG 名（如 "clock"）时渲染矢量图标，否则按文本兜底。"""
+        b = QPushButton()
         b.setObjectName("HeadIconBtn")
         b.setFixedSize(34, 34)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setToolTip(tip)
         b.setAccessibleName(tip)
+        if has_icon(glyph):
+            b.setIcon(icon(glyph, c("neutral.700"), 18))
+            b.setIconSize(QSize(18, 18))
+        else:
+            b.setText(glyph)
         # 完整态（含 hover/pressed）已落在 fixtext.qss，无需控件级内联
         b.clicked.connect(slot)
         return b
@@ -451,10 +449,11 @@ class VocabModule(QWidget):
         hl = QHBoxLayout(self._banner_w)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(14)
-        ico = QLabel("✨")
+        ico = QLabel()
         ico.setObjectName("BannerIco")
         ico.setFixedSize(38, 38)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ico.setPixmap(pixmap("sparkle", 24, c("primary.500")))
         # 图标方块配色交给 fixtext.qss 的 #BannerIco（原内联收归）
         hl.addWidget(ico)
         txt = QVBoxLayout()
@@ -530,17 +529,15 @@ class VocabModule(QWidget):
         hl.setContentsMargins(10, 10, 10, 10)
         hl.setSpacing(10)
         _ico = {
-            "custom": "✎", "b1": "📕", "cjk": "📙", "b3": "📘",
-            "b3r": "📕", "extra": "📔", "ddd": "📖", "dei2de": "📑",
-            "old_style": "📜", "txt_format": "📰",
-            "preprocess": "📙", "strict": "📓", "zhuyin": "📒",
-        }.get(d, "📘")
-        ico = QLabel(_ico)
+            "custom": "pencil",
+            "dei2de": "file", "old_style": "file", "txt_format": "file",
+        }.get(d, "book")
+        ico = QLabel()
+        ico.setObjectName("DictIco")
+        ico.setProperty("tone", "custom" if d == "custom" else "info")
         ico.setFixedSize(22, 22)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('success.bg') if d=='custom' else c('info.bg')};"
-            f"border-radius:{r('md')};font-size:{fs('xs')}")
+        ico.setPixmap(pixmap(_ico, 16, c("neutral.600")))
         hl.addWidget(ico)
         col = QVBoxLayout()
         col.setSpacing(1)
@@ -549,9 +546,13 @@ class VocabModule(QWidget):
         col.addWidget(meta)
         item._meta = meta
         hl.addLayout(col, 1)
-        lock = QLabel("✎" if d == "custom" else "🔒")
-        lock.setStyleSheet(
-            f"color:{'transparent' if d=='custom' else c('neutral.500')};font-size:{fs('xs')}")
+        lock = QLabel()
+        lock.setObjectName("DictLock")
+        lock.setProperty("ghost", "true" if d == "custom" else "false")
+        if d == "custom":
+            lock.setPixmap(pixmap("pencil", 14, c("neutral.500")))
+        else:
+            lock.setPixmap(pixmap("lock", 14, c("neutral.400")))
         hl.addWidget(lock)
         item.mousePressEvent = lambda e, d=d: self.select_dict(d)
         return item
@@ -612,7 +613,9 @@ class VocabModule(QWidget):
         self._search.textChanged.connect(self._on_search)
         bl.addWidget(self._search, 1)
 
-        dup = QPushButton("🔁 查重")
+        dup = QPushButton("查重")
+        dup.setIcon(icon("refresh", c("neutral.700"), 16))
+        dup.setIconSize(QSize(16, 16))
         dup.setObjectName("BtnOutline")
         dup.setCursor(Qt.CursorShape.PointingHandCursor)
         dup.clicked.connect(self.open_dup)
@@ -624,13 +627,17 @@ class VocabModule(QWidget):
         self._merge_btn.clicked.connect(self.open_merge)
         bl.addWidget(self._merge_btn)
 
-        self._del_btn = QPushButton("🗑 删除选中")
+        self._del_btn = QPushButton("删除选中")
+        self._del_btn.setIcon(icon("trash", c("neutral.700"), 16))
+        self._del_btn.setIconSize(QSize(16, 16))
         self._del_btn.setObjectName("BtnDanger")
         self._del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._del_btn.clicked.connect(self._on_delete_selected)
         bl.addWidget(self._del_btn)
 
-        expand = QPushButton("📋 展开核对")
+        expand = QPushButton("展开核对")
+        expand.setIcon(icon("clipboard", c("neutral.700"), 16))
+        expand.setIconSize(QSize(16, 16))
         expand.setObjectName("BtnOutline")
         expand.setCursor(Qt.CursorShape.PointingHandCursor)
         expand.clicked.connect(self.open_expand)
@@ -771,7 +778,7 @@ class VocabModule(QWidget):
         hl.addWidget(src_cell, 2)
 
         # 命中书籍：超长省略号截断，居中
-        bk = _ElideLabel(("📖 " + "、".join(e["books"])) if e.get("books") else "—",
+        bk = _ElideLabel(("、".join(e["books"])) if e.get("books") else "—",
                          size="xs", color="neutral.600")
         hl.addWidget(bk, 3)
 
@@ -833,7 +840,9 @@ class VocabModule(QWidget):
         hl.setSpacing(10)
         hl.addWidget(_label("历史与快照", size="base", color="neutral.800", weight="semibold"))
         hl.addStretch(1)
-        self._restore_btn = QPushButton("↺ 恢复默认词库（保留自定义）")
+        self._restore_btn = QPushButton("恢复默认词库（保留自定义）")
+        self._restore_btn.setIcon(icon("refresh", c("neutral.700"), 16))
+        self._restore_btn.setIconSize(QSize(16, 16))
         self._restore_btn.setObjectName("BtnGhost")
         self._restore_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._restore_btn.clicked.connect(self.restore_default)
@@ -1018,11 +1027,9 @@ class VocabModule(QWidget):
             hl.setContentsMargins(2, 10, 2, 10)
             hl.setSpacing(10)
             dot = QLabel()
+            dot.setObjectName("SnapDot")
+            dot.setProperty("current", "true" if cur else "false")
             dot.setFixedSize(9, 9)
-            dot.setStyleSheet(
-                f"background:{c('success') if cur else c('neutral.200')};"
-                + (f"border:3px solid {c('success.bg')};" if cur else "")
-                + "border-radius:{r('full')}")
             hl.addWidget(dot)
             hl.addWidget(_label(rec["label"], size="sm", weight="semibold",
                                 color="neutral.800"), 0)
@@ -1071,9 +1078,7 @@ class VocabModule(QWidget):
             hl.setSpacing(10)
             hl.addWidget(_label(op.get("time", ""), size="xs", color="neutral.500"))
             pill = QLabel(op.get("act_name", "变更"))
-            pill.setStyleSheet(
-                f"background:{c('neutral.100')};color:{c('neutral.700')};"
-                f"border-radius:{r('md')};padding:{sp('1')} {sp('2')};font-size:{fs('xs')}")
+            pill.setObjectName("MetaChip")
             hl.addWidget(pill)
             hl.addWidget(_label(op.get("summary", ""), size="sm", color="neutral.800"), 0)
             hl.addStretch(1)
@@ -1248,7 +1253,7 @@ class VocabModule(QWidget):
         self._pending_add = dict(word=word, value=value, typ=typ, pinyin=pinyin)
         conflicts = self.store.conflicts_for_add(word, value)
 
-        m = Modal(icon="✍", title="写入词库（二次确认）", parent=self)
+        m = Modal(icon="pen", title="写入词库（二次确认）", parent=self)
         m.add_note("底线④：批量 / 写动作先预览再执行；新增可撤销。", "warn")
         rows = [(cf["kind"], cf["word"], cf["value"], cf["where"]) for cf in conflicts]
         m.add_widget(_mini_table(["冲突", "原词", "替换为", "所在"], rows, mono_cols={1, 2}))
@@ -1291,7 +1296,7 @@ class VocabModule(QWidget):
         e = self._by_id(i)
         if not e or not self._is_custom(i):
             return
-        modal = Modal(icon="✎", title="编辑词条", parent=self)
+        modal = Modal(icon="pencil", title="编辑词条", parent=self)
         word = QLineEdit(e["word"])
         val = QLineEdit(e["value"])
         typ = QComboBox()
@@ -1338,7 +1343,7 @@ class VocabModule(QWidget):
             self._toast("未发现重复词条")
             return groups
 
-        m = Modal(icon="🔁", title="查重清单（只读，不会改动词库）", parent=self)
+        m = Modal(icon="refresh", title="查重清单（只读，不会改动词库）", parent=self)
         m.add_note(
             f"一共 {len(groups)} 组重复或冲突，下面**全部列出**。本窗口只看不改："
             "要处理请关掉它，用工具条上的「合并」或「删除选中」——那两处会先给"
@@ -1393,7 +1398,7 @@ class VocabModule(QWidget):
             return
         self._merge_sel = sel
         items = [self._by_id(i) for i in sel]
-        m = Modal(icon="➕", title="合并词条（先预览清单）", parent=self)
+        m = Modal(icon="plus", title="合并词条（先预览清单）", parent=self)
         m.add_note("底线④：合并前给预览清单（改哪些、删哪些、留哪个）；合并可撤销。", "warn")
         target = QComboBox()
         target.addItems([f"{e['word']} → {e['value']}" for e in items])
@@ -1415,7 +1420,7 @@ class VocabModule(QWidget):
         items = [self._by_id(i) for i in sel]
         removed = len([e for e in items if e["word"] != target_word])
         # 先给二次确认清单，确认后才真的写文件（底线④）
-        m = Modal(icon="✍", title="写入词库（二次确认）", parent=self)
+        m = Modal(icon="pen", title="写入词库（二次确认）", parent=self)
         m.add_note(
             f"将把合并结果写入「我的词库」，主词保留「{target_word}」，移除 {removed} 条重复词条。", "info")
         m.add_widget(_label(f"本次将保留 1 条主词、移除 {removed} 条（合并动作可撤销）。",
@@ -1445,7 +1450,7 @@ class VocabModule(QWidget):
 
     def open_expand(self):
         rows = self._page_rows
-        m = Modal(icon="📋", title="展开核对（只读）", parent=self, min_width=620)
+        m = Modal(icon="clipboard", title="展开核对（只读）", parent=self, min_width=620)
         m.add_note("结果以结构化表格呈现，不展示内部文件内容 / 行号（底线③）。", "info")
         m.add_widget(_mini_table(
             ["#", "原词", "替换为", "来源"],
@@ -1477,7 +1482,7 @@ class VocabModule(QWidget):
                 book_map[b] = book_map.get(b, 0) + 1
         book_lines = "；".join(f"{b}：涉及 {n} 条" for b, n in book_map.items()) or \
             "无（这些词条尚未在任何校正中命中）"
-        m = Modal(icon="🗑", title="删除确认（批量先预览）", parent=self)
+        m = Modal(icon="trash", title="删除确认（批量先预览）", parent=self)
         m.add_note("底线④：批量删除必须先给预览清单，确认后执行；底线①：误删可撤销。", "warn")
         m.add_widget(_label(
             f"即将删除 {len(targets)} 条自定义词条，删除后可通过「撤销」恢复。",
@@ -1520,7 +1525,7 @@ class VocabModule(QWidget):
             self._toast("这本书校正后没有提取到可加入的专有词条，无需操作")
             return
         total = len(self._book_words)
-        m = Modal(icon="✨", title="本书专有词条（加入预览）", parent=self,
+        m = Modal(icon="sparkle", title="本书专有词条（加入预览）", parent=self,
                   min_width=780)
         m.add_note(
             f"共 {_fmt_num(total)} 条，全部列在下方，可在下面逐条勾选或整组选择；"
@@ -1584,10 +1589,8 @@ class VocabModule(QWidget):
         area.setFrameShape(QFrame.Shape.NoFrame)
         area.setMinimumHeight(320)
         area.setMaximumHeight(420)
+        area.setObjectName("BookWordScroll")
         area.setWidget(rows_box)
-        area.setStyleSheet(
-            f"QScrollArea{{border:1px solid {c('neutral.200')};"
-            f"border-radius:{r('lg')};background:{c('neutral.0')}}}")
         m.add_widget(area)
 
         self._book_checks = checks
@@ -1702,7 +1705,7 @@ class VocabModule(QWidget):
         """第一步：预览（只读）——把会影响什么先摊开，不写任何东西。"""
         pv = self.store.preview_restore_default()
         self._restore_preview = pv
-        m = Modal(icon="↺", title="恢复默认词库", parent=self)
+        m = Modal(icon="refresh", title="恢复默认词库", parent=self)
         m.add_note("底线⑤：恢复默认词库只重置内置词库，不影响你的自定义词条。", "info")
         m.add_widget(_label(
             "将把内置词库重置为出厂版本，自定义词条保持不变。可撤销。",
@@ -1760,7 +1763,7 @@ class VocabModule(QWidget):
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(6)
         lab = QLabel(label_text)
-        lab.setStyleSheet(f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.800')}")
+        apply_label(lab, size="sm", color="neutral.800", weight="semibold")
         v.addWidget(lab)
         v.addWidget(control)
         return w
@@ -1781,8 +1784,7 @@ class VocabModule(QWidget):
         sl.setContentsMargins(16, 12, 16, 12)
         sl.setSpacing(14)
         self.status = QLabel("")
-        self.status.setStyleSheet(
-            f"color:{c('on.fill')};font-size:{fs('sm')};background:transparent;")
+        apply_label(self.status, size="sm", color="on.fill")
         self.status.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         self.undo_btn = QPushButton("撤销")
         self.undo_btn.setObjectName("ToastUndo")

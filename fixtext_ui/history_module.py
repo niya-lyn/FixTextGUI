@@ -27,7 +27,7 @@ import threading
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QSize, QTimer, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -37,8 +37,10 @@ from PySide6.QtWidgets import (
 import fixtext_history as histdata
 import fixtext_run_snapshot as snapshot
 from fixtext_tokens import c, fs, sp, FONT_WEIGHT
+from icons import icon, has_icon, pixmap
 from fixtext_widgets import (
     Card, Pill, hline, ConfirmDialog, Modal, EmptyState, page_head_shell, PrimaryButton,
+    make_label,
 )
 
 
@@ -48,13 +50,7 @@ COL_W = (3, 2, 1, 2, 5)
 
 def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
            weight: str | None = None, wrap: bool = False) -> QLabel:
-    lab = QLabel(text)
-    lab.setWordWrap(wrap)
-    style = f"color:{c(color)};font-size:{fs(size)};background:transparent;"
-    if weight:
-        style += f"font-weight:{FONT_WEIGHT[weight]};"
-    lab.setStyleSheet(style)
-    return lab
+    return make_label(text, size=size, color=color, weight=weight, wrap=wrap)
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +67,7 @@ class SnapshotDialog(Modal):
     """
 
     def __init__(self, *, book: str, when: str, points: list[dict], parent=None):
-        super().__init__(icon="↺", title="恢复到哪个时点？", parent=parent,
+        super().__init__(icon="refresh", title="恢复到哪个时点？", parent=parent,
                          min_width=640)
         self.chosen = ""
         self._radios: dict[str, QRadioButton] = {}
@@ -107,9 +103,6 @@ class SnapshotDialog(Modal):
         radio.setCursor(Qt.CursorShape.PointingHandCursor)
         available = bool(p.get("available"))
         radio.setEnabled(available)
-        radio.setStyleSheet(
-            f"QRadioButton{{color:{c('neutral.900' if available else 'neutral.400')};"
-            f"font-size:{fs('sm')};font-weight:{FONT_WEIGHT['semibold']}}}")
         if available:
             radio.toggled.connect(self._on_toggle)
             self._radios[str(p.get("key"))] = radio
@@ -183,7 +176,7 @@ class HistoryModule(QWidget):
         # 无任务空状态（原型 v3 §4）：还没有校正历史时整页内容区换成
         # 这条引导；由真实状态触发（磁盘扫描结果为空）。
         self.empty_state = EmptyState(
-            "🕓", "还没有校正历史",
+            "clock", "还没有校正历史",
             "完成一次校正后，任务会自动出现在这里，可随时恢复任意时间点或重新导出。"
             "当前页面在有任务状态下展示；无任务时仅显示此引导。")
         root.addWidget(self.empty_state)
@@ -378,11 +371,7 @@ class HistoryModule(QWidget):
         return row
 
     def _th(self, text: str) -> QLabel:
-        lab = QLabel(text)
-        lab.setStyleSheet(
-            f"color:{c('neutral.600')};font-weight:{FONT_WEIGHT['semibold']};"
-            f"font-size:{fs('xs')};background:transparent")
-        return lab
+        return make_label(text, size="xs", color="neutral.600", weight="semibold")
 
     def _task_row(self, t: dict, idx: int) -> QWidget:
         row = QWidget()
@@ -411,15 +400,19 @@ class HistoryModule(QWidget):
         ahl.addStretch(1)
         if idx == self._active_idx:
             ahl.addWidget(Pill("当前工作区", "ok"))
-        restore = QPushButton("↺ 恢复")
+        restore = QPushButton("恢复")
         restore.setObjectName("BtnOutline")
         restore.setCursor(Qt.CursorShape.PointingHandCursor)
         restore.setToolTip("把这本书切回这次处理留下的某个时点（可撤销）")
+        restore.setIcon(icon("refresh", c("neutral.700"), 16))
+        restore.setIconSize(QSize(16, 16))
         restore.clicked.connect(lambda _c, i=idx: self._open_snapshot_dialog(i))
-        reexp = QPushButton("📤 重新导出")
+        reexp = QPushButton("重新导出")
         reexp.setObjectName("BtnOutline")
         reexp.setCursor(Qt.CursorShape.PointingHandCursor)
         reexp.setToolTip("用这次校正的成品重新导出一份文件")
+        reexp.setIcon(icon("export", c("neutral.700"), 16))
+        reexp.setIconSize(QSize(16, 16))
         reexp.clicked.connect(lambda _c, i=idx: self._confirm_restore(i))
         delete = QPushButton("删除")
         delete.setObjectName("BtnDanger")
@@ -460,21 +453,14 @@ class HistoryModule(QWidget):
             "基准同步失败不阻断主流程，仅在任务列表里留痕。",
         ]
         for b in bullets:
-            lab = QLabel(f"• {b}")
+            lab = make_label(f"• {b}", size="sm", color="neutral.600", wrap=True)
             lab.setTextFormat(Qt.TextFormat.RichText)
-            lab.setWordWrap(True)
-            lab.setStyleSheet(
-                f"color:{c('neutral.600')};font-size:{fs('sm')};"
-                f"background:transparent;line-height:1.7")
             card.body_l.addWidget(lab)
             card.body_l.addSpacing(8)
 
         self._active_hint = QLabel(snapshot.current_summary_text(None))
         self._active_hint.setWordWrap(True)
         self._active_hint.setObjectName("ActiveHint")
-        self._active_hint.setStyleSheet(
-            f"color:{c('primary.700')};font-size:{fs('sm')};"
-            f"background:transparent;margin-top:{sp('1')}")
         card.body_l.addWidget(self._active_hint)
 
         acts = QWidget()
@@ -563,7 +549,7 @@ class HistoryModule(QWidget):
         t = self.tasks[idx]
         hits = "—" if t.get("hits") is None else f"{t['hits']} 处"
         dlg = ConfirmDialog(
-            icon="📤",
+            icon="export",
             title="用这次的结果重新导出一份？",
             note=f"将使用 {t['book']}（{t['time']}，替换 {hits}）那次校正的成品，"
                  f"重新导出一份放到导出目录。原书与本次校正结果都不改动。",
@@ -712,7 +698,7 @@ class HistoryModule(QWidget):
             self._toast("词库或处理组件不在原位，暂时不能继续")
             return
         dlg = ConfirmDialog(
-            icon="⏭",
+            icon="skip",
             title="从当前工作区往下继续？",
             note=f"将从 {cur.get('book') or '这本书'} 的「{cur.get('point_name') or '当前时点'}」"
                  f"接着往后做：这一步之前已经做完的部分会直接沿用（不重跑），"
@@ -811,7 +797,7 @@ class HistoryModule(QWidget):
             return
         t = self.tasks[idx]
         dlg = ConfirmDialog(
-            icon="🗑",
+            icon="trash",
             title="删除这条历史？",
             note=f"删除后可在提示条上撤销。受影响：{t['book']} · {t['time']}。",
             note_kind="warn",
@@ -837,7 +823,7 @@ class HistoryModule(QWidget):
     def _confirm_clear(self):
         n = len(self.tasks)
         dlg = ConfirmDialog(
-            icon="🧹",
+            icon="broom",
             title="清理全部历史？",
             note=f"将删除全部 {n} 条任务及其结果文件，且不可恢复。"
                  f"清理历史为显式操作，需二次确认。",

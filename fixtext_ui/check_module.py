@@ -16,9 +16,10 @@ import math
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal, QTimer, QThread
+from PySide6.QtCore import Qt, Signal, QTimer, QThread, QSize
 from PySide6.QtGui import (
     QFont, QColor, QBrush, QTextCursor, QTextCharFormat, QShortcut, QKeySequence,
+    QIcon,
 )
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
@@ -26,10 +27,11 @@ from PySide6.QtWidgets import (
 )
 
 import fixtext_check as checkdata
-from fixtext_tokens import c, sp, r, fs, FONT_MONO, FONT_WEIGHT
+from fixtext_tokens import c, sp
+from icons import icon, has_icon, pixmap
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, EmptyState, hline, px, page_head_shell, PrimaryButton,
-    enable_chrome,
+    enable_chrome, make_label,
 )
 
 # ---------------------------------------------------------------------------
@@ -103,22 +105,16 @@ class ProblemRow(QFrame):
         hl.setContentsMargins(10, 9, 10, 9)
         hl.setSpacing(10)
 
-        no = QLabel(f"L{p['line']}")
-        no.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:{fs('xs')};font-weight:700;"
-            f"font-family:{FONT_MONO}"
-        )
+        no = make_label(
+            f"L{p['line']}", size="xs", color="neutral.500", weight="bold", mono=True)
         hl.addWidget(no)
 
         tone = "neutral.400" if state else "neutral.800"
-        t = QLabel(p["type"])
-        t.setStyleSheet(f"color:{c(tone)};font-weight:600;font-size:{fs('sm')}")
+        t = make_label(p["type"], size="sm", color=tone, weight="semibold")
         hl.addWidget(t)
 
-        ctx = QLabel(p["pre"] + p["hl"] + p["post"])
-        ctx.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:{fs('xs')};font-family:{FONT_MONO}"
-        )
+        ctx = make_label(
+            p["pre"] + p["hl"] + p["post"], size="xs", color="neutral.500", mono=True)
         ctx.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         hl.addWidget(ctx, 1)
 
@@ -130,8 +126,10 @@ class ProblemRow(QFrame):
             badge = Pill("待确认", "warn")
         hl.addWidget(badge)
 
-        self.add_btn = QPushButton("＋词库")
+        self.add_btn = QPushButton("词库")
         self.add_btn.setObjectName("LinkBtn")
+        self.add_btn.setIcon(icon("plus", c("primary.600"), 14))
+        self.add_btn.setIconSize(QSize(14, 14))
         self.add_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.add_btn.setToolTip("把这一处的写法加入「我的词库」，下次校正自动纠正")
         self.add_btn.setAccessibleName("加入词库")
@@ -228,7 +226,7 @@ class CheckModule(QWidget):
         root.addWidget(self._head())
 
         self.empty_state = EmptyState(
-            "🔍", "还没有可检查的书",
+            "search", "还没有可检查的书",
             "请先导入一本书，之后才能逐处检查标点与引号问题。"
             "当前页面在有书状态下展示；无书时仅显示此引导。")
         root.addWidget(self.empty_state)
@@ -239,11 +237,9 @@ class CheckModule(QWidget):
         cl.setSpacing(px(sp("4")))
         cl.addWidget(self._bookbar())
         cl.addWidget(self._top_bar())
-        self.pass_banner = QLabel("✓ 检查通过，未发现引号问题")
+        self.pass_banner = QLabel("检查通过，未发现引号问题")
+        self.pass_banner.setObjectName("PassBanner")
         self.pass_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.pass_banner.setStyleSheet(
-            f"color:{c('success')};font-weight:700;font-size:{fs('md')};"
-            f"background:{c('success.bg')};border-radius:{r('md')};padding:{sp('4')}")
         self.pass_banner.setVisible(False)
         cl.addWidget(self.pass_banner)
         self._result_w = QWidget()
@@ -289,21 +285,16 @@ class CheckModule(QWidget):
         card = self._card(basis="§2.2 入口③ · 逐处人工确认")
         hl = QHBoxLayout()
         hl.setSpacing(14)
-        ico = QLabel("📖")
+        ico = QLabel()
+        ico.setObjectName("MarkIco")
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setFixedSize(40, 40)
-        ico.setStyleSheet(
-            f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:{r('lg')};font-size:{fs('xl')}")
+        ico.setPixmap(pixmap("book", 28, c("neutral.600")))
         hl.addWidget(ico)
         col = QVBoxLayout()
         col.setSpacing(2)
-        self.book_name = QLabel("")
-        self.book_name.setStyleSheet(
-            f"color:{c('neutral.900')};font-weight:700;font-size:{fs('md')}")
-        self.book_meta = QLabel("")
-        self.book_meta.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        self.book_name = make_label("", size="md", color="neutral.900", weight="bold")
+        self.book_meta = make_label("", size="xs", color="neutral.500")
         col.addWidget(self.book_name)
         col.addWidget(self.book_meta)
         hl.addLayout(col)
@@ -323,7 +314,7 @@ class CheckModule(QWidget):
         hl.setSpacing(24)
 
         self._ready_text = QWidget()
-        self._ready_text.setStyleSheet("background:transparent")
+        self._ready_text.setObjectName("ChkReady")
         rt = QVBoxLayout(self._ready_text)
         rt.setContentsMargins(0, 0, 0, 0)
         rt.setSpacing(6)
@@ -340,7 +331,7 @@ class CheckModule(QWidget):
         hl.addWidget(self.stats, 1)
 
         self._run_box = QWidget()
-        self._run_box.setStyleSheet("background:transparent")
+        self._run_box.setObjectName("ChkRun")
         rb = QVBoxLayout(self._run_box)
         rb.setContentsMargins(0, 0, 0, 0)
         rb.setSpacing(4)
@@ -354,10 +345,12 @@ class CheckModule(QWidget):
         rb.addWidget(self.run_tip)
         hl.addWidget(self._run_box, 1)
 
-        self.main_btn = QPushButton("🔍 开始检查")
+        self.main_btn = QPushButton("开始检查")
         self.main_btn.setObjectName("HeroBtn")
         self.main_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.main_btn.setMinimumHeight(50)
+        self.main_btn.setIcon(icon("search", c("neutral.700"), 18))
+        self.main_btn.setIconSize(QSize(18, 18))
         # 大按钮配色交给 fixtext.qss 的 #HeroBtn（原内联收归）
         self.main_btn.clicked.connect(self.on_main)
         hl.addWidget(self.main_btn, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -377,9 +370,9 @@ class CheckModule(QWidget):
         sc.setWidgetResizable(True)
         sc.setFixedHeight(300)
         sc.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        sc.setStyleSheet("QScrollArea{border:none;background:transparent}")
+        sc.setObjectName("ProbScroll")
         holder = QWidget()
-        holder.setStyleSheet("background:transparent")
+        holder.setObjectName("ProbScrollInner")
         self.prob_box = QVBoxLayout(holder)
         self.prob_box.setContentsMargins(0, 0, 0, 0)
         self.prob_box.setSpacing(6)
@@ -397,17 +390,10 @@ class CheckModule(QWidget):
             basis="§2.7.4 · 右栏编辑器 · 保存并下一处")
         ed.body_l.setSpacing(10)
         self.editor = QTextEdit()
+        self.editor.setObjectName("CheckEditor")
         self.editor.setMinimumHeight(150)
-        self.editor.setStyleSheet(
-            f"QTextEdit{{background:{c('neutral.50')};"
-            f"border:1px solid {c('neutral.200')};border-radius:{r('md')};"
-            f"padding:{sp('3')};font-family:{FONT_MONO};font-size:{fs('sm')};"
-            f"color:{c('neutral.800')}}}")
         ed.body_l.addWidget(self.editor)
-        self.advice = QLabel("")
-        self.advice.setWordWrap(True)
-        self.advice.setStyleSheet(
-            f"color:{c('neutral.600')};font-size:{fs('sm')};background:transparent")
+        self.advice = make_label("", size="sm", color="neutral.600", wrap=True)
         ed.body_l.addWidget(self.advice)
         ed.body_l.addLayout(self._label_row("四类引号快捷变换", "Alt+1~4"))
         ed.body_l.addLayout(self._quote_buttons([
@@ -428,9 +414,7 @@ class CheckModule(QWidget):
     def _pager(self) -> QHBoxLayout:
         hl = QHBoxLayout()
         hl.setSpacing(8)
-        self.page_label = QLabel("")
-        self.page_label.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        self.page_label = make_label("", size="xs", color="neutral.500")
         hl.addWidget(self.page_label)
         hl.addStretch(1)
         self.prev_btn = self._btn("上一页", "BtnOutline", lambda: self.turn_page(-1))
@@ -442,9 +426,7 @@ class CheckModule(QWidget):
     def _label_row(self, text: str, shortcut: str) -> QHBoxLayout:
         hl = QHBoxLayout()
         hl.setSpacing(8)
-        lab = QLabel(text)
-        lab.setStyleSheet(
-            f"color:{c('neutral.800')};font-weight:700;font-size:{fs('sm')}")
+        lab = make_label(text, size="sm", color="neutral.800", weight="bold")
         hl.addWidget(lab)
         hl.addWidget(Pill(shortcut, "warn"))
         hl.addStretch(1)
@@ -471,7 +453,7 @@ class CheckModule(QWidget):
         hl.addWidget(self._btn("跳过此处", "BtnOutline", self.skip_here))
         hl.addWidget(self._btn("保存并下一处", "BtnOutline", self.save_and_next))
         hl.addStretch(1)
-        hl.addWidget(self._btn("↺ 撤销上一步", "BtnOutline", self.undo_last))
+        hl.addWidget(self._btn("撤销上一步", "BtnOutline", self.undo_last))
         card.body_l.addLayout(hl)
         return card
 
@@ -489,8 +471,7 @@ class CheckModule(QWidget):
             card.body_l.addWidget(FieldRow(i + 1, name, desc, control=sw))
         card.body_l.addWidget(hline())
         foot = QHBoxLayout()
-        tip = QLabel("7 条规则逐条可开关，配置按用户持久化。")
-        tip.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        tip = make_label("7 条规则逐条可开关，配置按用户持久化。", size="xs", color="neutral.500")
         foot.addWidget(tip)
         foot.addStretch(1)
         foot.addWidget(self._btn("保存配置", "BtnGhost", self.save_rules_config))
@@ -528,19 +509,15 @@ class CheckModule(QWidget):
         return checks
 
     def _legend(self) -> QLabel:
-        lab = QLabel(
-            "「逐处人工确认」是这个模块的核心价值，不能只做「一键修复全部」。")
-        lab.setWordWrap(True)
-        lab.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
-        return lab
+        return make_label(
+            "「逐处人工确认」是这个模块的核心价值，不能只做「一键修复全部」。",
+            size="xs", color="neutral.500", wrap=True)
 
     def _status_label(self) -> QLabel:
         self.status = QLabel("")
+        self.status.setObjectName("CheckToast")
         self.status.setVisible(False)
         self.status.setWordWrap(True)
-        self.status.setStyleSheet(
-            f"background:{c('neutral.800')};color:{c('on.fill')};"
-            f"border-radius:{r('md')};padding:{sp('3')} {sp('4')};font-size:{fs('sm')}")
         self.status.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         return self.status
 
@@ -675,11 +652,14 @@ class CheckModule(QWidget):
         self._result_w.setVisible(show_work)
 
         if ready:
-            self.main_btn.setText("🔍 开始检查")
+            self.main_btn.setText("开始检查")
+            self.main_btn.setIcon(icon("search", c("neutral.700"), 18))
         elif running:
-            self.main_btn.setText("✕ 取消")
+            self.main_btn.setText("取消")
+            self.main_btn.setIcon(QIcon())
         else:
-            self.main_btn.setText("↻ 重新检查")
+            self.main_btn.setText("重新检查")
+            self.main_btn.setIcon(QIcon())
         # 始终 HeroBtn（渐变横幅上的白底大按钮）
         self.main_btn.setObjectName("HeroBtn")
         self.main_btn.style().unpolish(self.main_btn)

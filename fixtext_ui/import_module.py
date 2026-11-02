@@ -33,8 +33,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QWidget,
 )
 
-from fixtext_tokens import FONT_MONO, c, fs, px, r, sp
-from fixtext_widgets import Card, Pill, enable_chrome, hline, page_head_shell, PrimaryButton
+from fixtext_tokens import px, sp, c
+from icons import has_icon, pixmap
+from fixtext_widgets import (
+    Card, Pill, enable_chrome, hline, page_head_shell, PrimaryButton,
+    apply_label, make_label, repolish,
+)
 
 import fixtext_import as fi
 import fixtext_shelf as shelf_data
@@ -138,31 +142,26 @@ class DropZone(QFrame):
         lay.setSpacing(6)
         lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        icon = QLabel("📥")
-        icon.setFont(QFont("", 30))
-        icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lay.addWidget(icon)
+        ico = QLabel()
+        ico.setObjectName("DropIco")
+        ico.setFixedSize(48, 48)
+        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ico.setPixmap(pixmap("import", 30, c("neutral.500")))
+        lay.addWidget(ico)
 
-        self.title = QLabel("把书拖到这里，或点击选择文件")
-        self.title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.title.setStyleSheet(
-            f"color:{c('neutral.800')};font-size:{fs('md')};font-weight:600"
-        )
+        self.title = make_label(
+            "把书拖到这里，或点击选择文件",
+            size="md", color="neutral.800", weight="semibold", align="center")
         lay.addWidget(self.title)
 
-        self.sub = QLabel("支持 TXT / EPUB · 导入后自动复制到工作区，原文件不会改动")
-        self.sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.sub.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        self.sub = make_label(
+            "支持 TXT / EPUB · 导入后自动复制到工作区，原文件不会改动",
+            size="xs", color="neutral.500", align="center")
         lay.addWidget(self.sub)
 
     def _apply_style(self, state: str) -> None:
-        border = c("primary.500") if state == "hot" else c("neutral.300")
-        bg = c("primary.50") if state == "hot" else c("neutral.0")
-        self.setStyleSheet(
-            f"#DropZone{{background:{bg};border:2px dashed {border};"
-            f"border-radius:{r('lg')}}}"
-            "#DropZone QLabel{border:none;background:transparent}"
-        )
+        self.setProperty("hot", "true" if state == "hot" else "false")
+        repolish(self)
 
     def dragEnterEvent(self, event):
         if self._first_local_file(event.mimeData()):
@@ -212,18 +211,13 @@ class ResultPane(QWidget):
         lay.setSpacing(int(sp("3").replace("px", "")))
 
         head = QHBoxLayout()
-        self.title = QLabel("导入完成")
-        self.title.setWordWrap(True)
-        self.title.setStyleSheet(
-            f"color:{c('neutral.900')};font-size:{fs('lg')};font-weight:700"
-        )
+        self.title = make_label("导入完成", size="lg", color="neutral.900", weight="bold", wrap=True)
         head.addWidget(self.title)
         head.addStretch(1)
         head.addWidget(Pill("已完成", "ok"))
         lay.addLayout(head)
 
-        self.facts = QLabel("")
-        self.facts.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
+        self.facts = make_label("", size="sm", color="neutral.600")
         lay.addWidget(self.facts)
 
         lay.addWidget(hline("neutral.100"))
@@ -239,14 +233,10 @@ class ResultPane(QWidget):
         lay.addWidget(self.detail_toggle)
 
         self.detail = QLabel("")
+        self.detail.setObjectName("ImportDetail")
         self.detail.setVisible(False)
         self.detail.setWordWrap(True)
         self.detail.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self.detail.setStyleSheet(
-            f"color:{c('neutral.600')};background:{c('neutral.50')};"
-            f"border-radius:{r('md')};padding:{sp('3')};font-family:{FONT_MONO};"
-            f"font-size:{fs('xs')}"
-        )
         lay.addWidget(self.detail)
 
         foot = QHBoxLayout()
@@ -275,11 +265,8 @@ class ResultPane(QWidget):
                 w.deleteLater()
         for note in result.human_notes:
             row = QHBoxLayout()
-            dot = QLabel("·")
-            dot.setStyleSheet(f"color:{c('primary.500')};font-weight:700")
-            lab = QLabel(note)
-            lab.setWordWrap(True)
-            lab.setStyleSheet(f"color:{c('neutral.700')};font-size:{fs('sm')}")
+            dot = make_label("·", size="base", color="primary.500", weight="bold")
+            lab = make_label(note, size="sm", color="neutral.700", wrap=True)
             row.addWidget(dot, 0, Qt.AlignmentFlag.AlignTop)
             row.addWidget(lab, 1)
             box = QWidget()
@@ -382,12 +369,9 @@ class ImportModule(QWidget):
         gl = QVBoxLayout(self.progress_pane)
         gl.setContentsMargins(0, 0, 0, 0)
         gl.setSpacing(10)
-        self.file_label = QLabel("")
-        self.file_label.setWordWrap(True)
-        self.file_label.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('xs')}")
+        self.file_label = make_label("", size="xs", color="neutral.600", wrap=True)
         gl.addWidget(self.file_label)
-        self.step_label = QLabel("准备中…")
-        self.step_label.setStyleSheet(f"color:{c('neutral.800')};font-size:{fs('sm')}")
+        self.step_label = make_label("准备中…", size="sm", color="neutral.800")
         gl.addWidget(self.step_label)
         self.bar = QProgressBar()
         self.bar.setRange(0, 100)
@@ -414,9 +398,7 @@ class ImportModule(QWidget):
 
         # M5-EX.4.1 / SYNC-3：无独立 EmptyState；无书时书架卡仍显示弱提示
         self.workspace_card = Card("工作区书架", "")
-        self.workspace_label = QLabel("")
-        self.workspace_label.setWordWrap(True)
-        self.workspace_label.setStyleSheet(f"color:{c('neutral.600')};font-size:{fs('sm')}")
+        self.workspace_label = make_label("", size="sm", color="neutral.600", wrap=True)
         self.workspace_card.body_l.addWidget(self.workspace_label)
         self.workspace_card.body_l.addSpacing(px(sp("3")))
         self.shelf = ShelfPanel(self.workspace)
@@ -444,8 +426,7 @@ class ImportModule(QWidget):
             "处理完成后会用一句普通话告诉你做了什么。\n"
             "· 电子书按可还原方式导入，导出页再选择 TXT 或还原为 EPUB。"
         )
-        body.setWordWrap(True)
-        body.setStyleSheet(f"color:{c('neutral.700')};font-size:{fs('sm')}")
+        apply_label(body, size="sm", color="neutral.700", wrap=True)
         self.safety_card.body_l.addWidget(body)
         root.addWidget(self.safety_card)
 
@@ -454,17 +435,9 @@ class ImportModule(QWidget):
 
     # ---- 选文件 --------------------------------------------------------
     def _show_notice(self, text: str, kind: str = "warn") -> None:
-        palette = {
-            "warn": ("warning.bg", "warning", "neutral.200"),
-            "info": ("primary.50", "primary.700", "primary.200"),
-            "ok": ("success.bg", "success", "success.bg"),
-        }
-        bg, fg, border = palette.get(kind, palette["warn"])
         self.notice.setText(text)
-        self.notice.setStyleSheet(
-            f"background:{c(bg)};color:{c(fg)};border:1px solid {c(border)};"
-            f"border-radius:{r('md')};padding:{sp('3')} {sp('3')};font-size:{fs('sm')}"
-        )
+        self.notice.setProperty("kind", kind if kind in ("warn", "info", "ok") else "warn")
+        repolish(self.notice)
         self.notice.setVisible(True)
 
     def _clear_notice(self) -> None:

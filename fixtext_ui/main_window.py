@@ -37,7 +37,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QPoint, Qt, Signal, QTimer
+from PySide6.QtCore import QPoint, Qt, QSize, Signal, QTimer
 from PySide6.QtGui import QFont, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout,
@@ -49,11 +49,13 @@ from fixtext_tokens import (
     APP_TITLE, APP_NAME, ENTRIES, ENTRY_BY_KEY, HOME_KEY, RAIL_WIDTH,
     READY_KEYS, SETTINGS_KEY, STATUS_TEXT, WINDOW_H, WINDOW_MIN_H,
     WINDOW_MIN_W, WINDOW_W, CONTENT_MAX_W,
-    c, sp, r, fs, px, FONT_WEIGHT,
+    sp, px, c,
 )
+from icons import has_icon, icon, pixmap
 import fixtext_settings as app_settings
 from fixtext_widgets import (
     Card, Modal, Pill, Switch, cascade_in, enable_chrome, hline, page_head_shell, PrimaryButton,
+    apply_label, make_label,
 )
 from fixtext_shelf import resolve_current as resolve_current_book
 from fixtext_shelf import list_books as list_shelf_books
@@ -109,7 +111,8 @@ class RailItem(QPushButton):
         row.setContentsMargins(10, 6, 10, 6)
         row.setSpacing(10)
 
-        self.ico = QLabel(entry["icon"])
+        self._icon_name = entry["icon"]
+        self.ico = QLabel()
         self.ico.setObjectName("RailIco")
         self.ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.ico.setFixedSize(24, 24)
@@ -135,8 +138,13 @@ class RailItem(QPushButton):
         #RailItem / #RailItem[active="true"] 及其 #RailLabel/#RailIco 子选择器
         统一接管（单源、便于排查）。"""
         self.setProperty("active", "true" if on else "false")
+        self._set_rail_icon(on)
         self.style().unpolish(self)
         self.style().polish(self)
+
+    def _set_rail_icon(self, on: bool) -> None:
+        color = c("primary.600") if on else c("neutral.600")
+        self.ico.setPixmap(pixmap(self._icon_name, 20, color))
 
     def set_active(self, on: bool):
         self._apply(bool(on))
@@ -166,17 +174,17 @@ class OverviewCard(QFrame):
 
         top = QHBoxLayout()
         top.setSpacing(10)
-        ico = QLabel(entry["icon"])
+        ico = QLabel()
         ico.setObjectName("OvfIco")
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ico.setFixedSize(30, 30)
+        if has_icon(entry["icon"]):
+            ico.setPixmap(pixmap(entry["icon"], 24, c("primary.500")))
+        else:
+            ico.setText(entry["icon"])
         top.addWidget(ico)
 
-        title = QLabel(entry["label"])
-        title.setStyleSheet(
-            f"color:{c('neutral.900')};font-size:{fs('lg')};"
-            f"font-weight:{FONT_WEIGHT['bold']}"
-        )
+        title = make_label(entry["label"], size="lg", color="neutral.900", weight="bold")
         top.addWidget(title)
         top.addStretch(1)
 
@@ -184,19 +192,11 @@ class OverviewCard(QFrame):
         top.addWidget(Pill(STATUS_TEXT[entry["status"]], kind))
         layout.addLayout(top)
 
-        desc = QLabel(entry["short"])
-        desc.setWordWrap(True)
+        desc = make_label(entry["short"], size="sm", color="neutral.600", wrap=True)
         desc.setMinimumHeight(40)
-        desc.setStyleSheet(
-            f"color:{c('neutral.600')};font-size:{fs('sm')}"
-        )
         layout.addWidget(desc)
 
-        hint = QLabel("点开看看 →")
-        hint.setStyleSheet(
-            f"color:{c('primary.600')};font-size:{fs('xs')};"
-            f"font-weight:{FONT_WEIGHT['semibold']}"
-        )
+        hint = make_label("点开看看 →", size="xs", color="primary.600", weight="semibold")
         layout.addWidget(hint)
 
     def mousePressEvent(self, event):
@@ -252,8 +252,7 @@ class HomeOverview(QWidget):
             "现在能直接用的入口标着「可用」，其余标着「建设中」——"
             "点进去会告诉你它做好之后能做什么，不会点了个寂寞。"
         )
-        foot.setWordWrap(True)
-        foot.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        apply_label(foot, size="xs", color="neutral.500", wrap=True)
         layout.addWidget(foot)
         layout.addStretch(1)
 
@@ -304,25 +303,16 @@ class BuildingPage(QWidget):
             f"「{entry['label']}」的界面还没做完，所以现在点开还看不到可以操作的内容。"
             "它不是坏了，也不是点不动——等它做好，你在这里能做的事是："
         )
-        lead.setWordWrap(True)
-        lead.setStyleSheet(
-            f"color:{c('neutral.700')};font-size:{fs('base')}"
-        )
+        apply_label(lead, size="base", color="neutral.700", wrap=True)
         note.body_l.addWidget(lead)
 
         for line in entry["what"]:
             item = QHBoxLayout()
             item.setSpacing(8)
-            dot = QLabel("·")
-            dot.setStyleSheet(
-                f"color:{c('primary.500')};font-size:{fs('lg')};"
-                f"font-weight:{FONT_WEIGHT['bold']}"
-            )
+            dot = make_label("·", size="lg", color="primary.500", weight="bold")
             dot.setFixedWidth(10)
             item.addWidget(dot, 0, Qt.AlignmentFlag.AlignTop)
-            lab = QLabel(line)
-            lab.setWordWrap(True)
-            lab.setStyleSheet(f"color:{c('neutral.700')};font-size:{fs('base')}")
+            lab = make_label(line, size="base", color="neutral.700", wrap=True)
             item.addWidget(lab, 1)
             note.body_l.addLayout(item)
         layout.addWidget(note)
@@ -337,8 +327,7 @@ class BuildingPage(QWidget):
                 if len(ready) == 1 else
                 "在等这些入口做完的这段时间，下面这些已经能用了："
             )
-            txt.setWordWrap(True)
-            txt.setStyleSheet(f"color:{c('neutral.700')};font-size:{fs('base')}")
+            apply_label(txt, size="base", color="neutral.700", wrap=True)
             go_card.body_l.addWidget(txt)
             row = QHBoxLayout()
             row.setSpacing(10)
@@ -515,17 +504,22 @@ class MainWindow(QMainWindow):
         # 菜单锚点只能回退主窗口 → 弹在窗口左下角。直连之后
         # sender() 才是那颗按钮，弹层才能贴着按钮展开。
         self._top_acts: dict[str, QPushButton] = {}
-        for glyph, title, slot in (
-            ("☰", "更多", self._act_more),
+        for icon_name, title, slot in (
+            ("menu", "更多", self._act_more),
             ("?", "帮助", self._act_help),
-            ("⚙", "设置", self._act_settings),
+            ("gear", "设置", self._act_settings),
         ):
-            act = QPushButton(glyph)
+            act = QPushButton()
             act.setObjectName("TopAct")
             act.setCursor(Qt.CursorShape.PointingHandCursor)
             act.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
             act.setToolTip(title)
             act.setAccessibleName(title)
+            if has_icon(icon_name):
+                act.setIcon(icon(icon_name, c("neutral.700"), 18))
+                act.setIconSize(QSize(18, 18))
+            else:
+                act.setText(icon_name)
             self._top_acts[title] = act
             act.clicked.connect(slot)
             tl.addWidget(act)
@@ -1151,11 +1145,9 @@ class MainWindow(QMainWindow):
         if key == HOME_KEY:
             self.where.setText("首页概览")
         elif key == SETTINGS_KEY:
-            self.where.setText("⚙  设置")
+            self.where.setText("设置")
         else:
-            self.where.setText(
-                f"{ENTRY_BY_KEY[key]['icon']}  {ENTRY_BY_KEY[key]['label']}"
-            )
+            self.where.setText(ENTRY_BY_KEY[key]["label"])
         # v3 质感层：切页时页内卡片级联淡入（等效原型 cardIn）
         if key != getattr(self, "_cascade_last_key", None):
             target = self.page(key)
@@ -1204,13 +1196,10 @@ class MainWindow(QMainWindow):
             row = QWidget()
             rl = QHBoxLayout(row)
             rl.setContentsMargins(0, 0, 0, 0)
-            name = QLabel(f"{entry['icon']}  {entry['label']}")
-            name.setStyleSheet(f"font-size:{fs('md')};color:{c('neutral.800')}")
+            name = make_label(f"{entry['icon']}  {entry['label']}", size="md", color="neutral.800")
             rl.addWidget(name)
             rl.addStretch(1)
-            desc = QLabel(entry["short"])
-            desc.setWordWrap(True)
-            desc.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('sm')}")
+            desc = make_label(entry["short"], size="sm", color="neutral.500", wrap=True)
             rl.addWidget(desc, 2)
             m.add_widget(row)
         m.add_foot("关闭", kind="ghost")
@@ -1251,13 +1240,13 @@ class MainWindow(QMainWindow):
                 subprocess.run([sys.executable, script], check=True, timeout=30,
                                stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                stderr=subprocess.DEVNULL)
-            self._flash("✓", "样式表已重新生成",
+            self._flash("check", "样式表已重新生成",
                         "已按设计令牌重写界面样式，重新打开窗口即可看到。", "info")
         except Exception as e:  # noqa: BLE001
-            self._flash("!", "样式表生成失败", f"这次没能生成：{e}", "warn")
+            self._flash("alert", "样式表生成失败", f"这次没能生成：{e}", "warn")
 
     def _about(self):
-        self._flash("ℹ", "关于 FixTextGUI",
+        self._flash("info", "关于 FixTextGUI",
                     "FixTextGUI · 面向写作者的电子书排版校正工具。\n"
                     "六个入口：导入书籍、一键校正、检查问题、词库管理、导出结果、历史记录。\n"
                     "软件只读取你交给它的书，不会改动你的原文件。", "info")

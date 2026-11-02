@@ -19,7 +19,7 @@ import sys
 import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QSize, QTimer, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame,
     QComboBox, QLineEdit, QDialog, QSizePolicy,
@@ -28,9 +28,11 @@ from PySide6.QtWidgets import (
 from fixtext_tokens import c, r, fs, sp, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline, PrimaryButton,
-    ConfirmDialog, page_head_shell, enable_chrome, BagChk, FlowLayout,
+    ConfirmDialog, page_head_shell, enable_chrome, BagChk, FlowLayout, make_label,
 )
 from fixtext_worker import CorrectionJob, CorrectionWorker
+from fixtext_tokens import c
+from icons import icon, has_icon, pixmap
 
 
 # ---------------------------------------------------------------------------
@@ -90,13 +92,7 @@ ZHUYIN_OPTS = [
 
 def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
            weight: str | None = None, wrap: bool = False) -> QLabel:
-    lab = QLabel(text)
-    lab.setWordWrap(wrap)
-    style = f"color:{c(color)};font-size:{fs(size)};background:transparent;"
-    if weight:
-        style += f"font-weight:{FONT_WEIGHT[weight]};"
-    lab.setStyleSheet(style)
-    return lab
+    return make_label(text, size=size, color=color, weight=weight, wrap=wrap)
 
 
 def _fmt_num(v) -> str:
@@ -152,7 +148,7 @@ class OneClickModule(QWidget):
         # 无书空状态（原型 v3 §4）：无运行上下文时整页只显示这条引导，
         # 有书后恢复常规布局。由真实状态触发（run_context 是否注入）。
         self.empty_state = EmptyState(
-            "⚡", "还没有可校正的书",
+            "flash", "还没有可校正的书",
             "请先导入一本书，才能跑「一键校正」。"
             "当前页面在有书状态下展示；无书时仅显示此引导。")
         root.addWidget(self.empty_state)
@@ -232,10 +228,11 @@ class OneClickModule(QWidget):
         hl.setContentsMargins(18, 14, 18, 14)
         hl.setSpacing(14)
 
-        ico = QLabel("📖")
+        ico = QLabel()
         ico.setObjectName("BookBarIco")
         ico.setFixedSize(40, 40)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ico.setPixmap(pixmap("book", 24, c("neutral.600")))
         # 图标方块配色交给 fixtext.qss 的 #BookBarIco（原内联收归）
         hl.addWidget(ico)
 
@@ -264,6 +261,8 @@ class OneClickModule(QWidget):
             self._summary = None
             self._outcome = None
             self._clear_result()
+            self.book_pill.setText("等待导入")
+            self.book_pill.set_kind("neutral")
             self._apply_book_presence()
             return
         # 展示体积：EPUB 用原件副本；校正吃的是 plain_source（工作正文）
@@ -277,10 +276,7 @@ class OneClickModule(QWidget):
         self.book_meta_label.setText(
             f"{size_mb:.1f} MB · 基于工作区正文校正，原件只读可随时回退")
         self.book_pill.setText("已就绪")
-        self.book_pill.setStyleSheet(
-            f"color:{c('success')};background:{c('success.bg')};"
-            f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-            f"font-size:{fs('xs')};font-weight:700")
+        self.book_pill.set_kind("ok")
         self._apply_book_presence()
 
     # ------------------------------------------------------------ 主按钮 hero
@@ -307,10 +303,12 @@ class OneClickModule(QWidget):
         col.addWidget(p)
         hl.addLayout(col, 1)
 
-        self.run_btn = QPushButton("⚡ 开始校正")
+        self.run_btn = QPushButton("开始校正")
         self.run_btn.setObjectName("HeroBtn")
         self.run_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.run_btn.setMinimumHeight(50)
+        self.run_btn.setIcon(icon("flash", "#FFFFFF", 18))
+        self.run_btn.setIconSize(QSize(18, 18))
         # 大按钮配色交给 fixtext.qss 的 #HeroBtn（原内联收归）
         self.run_btn.clicked.connect(lambda: self.do_correction())
         hl.addWidget(self.run_btn, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -388,7 +386,6 @@ class OneClickModule(QWidget):
         edit = QLineEdit(it["ival"])
         edit.setPlaceholderText(it["ph"])
         edit.setFixedWidth(it["iw"])
-        edit.setStyleSheet(f"background:{c('neutral.0')}")
         self._inputs[it["n"]] = edit
         edit.textChanged.connect(
             lambda v, n=it["n"]: self._on_input(n, v))
@@ -590,12 +587,7 @@ class OneClickModule(QWidget):
         hl.setSpacing(8)
         hl.addWidget(_label(text, size="base", weight="bold"))
         if badge:
-            p = Pill(badge, "warn")
-            p.setStyleSheet(
-                f"color:{c('warning')};background:{c('warning.bg')};"
-                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-                f"font-size:{fs('xs')};font-weight:700")
-            hl.addWidget(p)
+            hl.addWidget(Pill(badge, "warn"))
         hl.addStretch(1)
         return hl
 
@@ -604,9 +596,7 @@ class OneClickModule(QWidget):
         hl = QHBoxLayout()
         hl.setContentsMargins(0, 8, 0, 8)
         hl.setSpacing(12)
-        d = QLabel(desc)
-        d.setWordWrap(True)
-        d.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        d = make_label(desc, size="xs", color="neutral.500", wrap=True)
         hl.addWidget(d, 1)
         hl.addWidget(control)
         return hl
@@ -731,7 +721,7 @@ class OneClickModule(QWidget):
         返回 True = 用户同意本次改走 Python 引擎。
         """
         dlg = ConfirmDialog(
-            icon="⚠️",
+            icon="alert",
             title="校正引擎没有就绪",
             note=(
                 "检测到：" + self._sanitized_reason(reason) + "。\n\n"
@@ -808,7 +798,7 @@ class OneClickModule(QWidget):
         self.run_btn.setEnabled(False)
 
         dlg = ProgressDialog(
-            icon="⚡",
+            icon="flash",
             title=f"正在校正《{book}》",
             note="校正过程中原书保持只读；随时可取消，取消后不留下半成品。",
             steps=[dict(name=s["name"], desc=s["desc"]) for s in job.human_stages],
@@ -923,12 +913,11 @@ class OneClickModule(QWidget):
 
         head = QHBoxLayout()
         head.setSpacing(12)
-        ok = QLabel("✓")
+        ok = QLabel()
+        ok.setObjectName("DoneMark")
         ok.setFixedSize(34, 34)
         ok.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ok.setStyleSheet(
-            f"background:{c('success')};color:{c('on.fill')};border-radius:{r('lg')};"
-            f"font-size:{fs('lg')}")
+        ok.setPixmap(pixmap("check", 22, c("success")))
         col = QVBoxLayout()
         col.setSpacing(2)
         book = summary.get("book", "书籍")
@@ -975,15 +964,8 @@ class OneClickModule(QWidget):
         v = QVBoxLayout(box)
         v.setContentsMargins(14, 12, 14, 12)
         v.setSpacing(4)
-        main = QLabel(text)
-        main.setWordWrap(True)
-        main.setStyleSheet(
-            f"color:{c('neutral.800')};font-weight:700;font-size:{fs('sm')};"
-            f"background:transparent")
-        sub = QLabel(tip)
-        sub.setWordWrap(True)
-        sub.setStyleSheet(
-            f"color:{c('neutral.600')};font-size:{fs('xs')};background:transparent")
+        main = make_label(text, size="sm", color="neutral.800", weight="bold", wrap=True)
+        sub = make_label(tip, size="xs", color="neutral.600", wrap=True)
         v.addWidget(main)
         v.addWidget(sub)
         return box
@@ -1016,10 +998,7 @@ class OneClickModule(QWidget):
         if sha:
             rows.append(f"成品校验指纹 {sha[:16]}…（与重跑结果一致）")
         for text in rows:
-            lab = QLabel(text)
-            lab.setStyleSheet(
-                f"color:{c('neutral.700')};font-family:{FONT_MONO};"
-                f"font-size:{fs('xs')};background:transparent")
+            lab = make_label(text, size="xs", color="neutral.700", mono=True)
             v.addWidget(lab)
         return box
 
@@ -1038,15 +1017,8 @@ class OneClickModule(QWidget):
         v = QVBoxLayout(box)
         v.setContentsMargins(14, 12, 14, 12)
         v.setSpacing(2)
-        n = QLabel(num)
-        n.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        n.setStyleSheet(
-            f"color:{c('primary.700')};font-size:{fs('xl')};"
-            f"font-weight:{FONT_WEIGHT['bold']};background:transparent")
-        l2 = QLabel(lab)
-        l2.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        l2.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:{fs('xs')};background:transparent")
+        n = make_label(num, size="xl", color="primary.700", weight="bold", align="center")
+        l2 = make_label(lab, size="xs", color="neutral.500", align="center")
         v.addWidget(n)
         v.addWidget(l2)
         return box
@@ -1058,12 +1030,16 @@ class OneClickModule(QWidget):
         acts.setContentsMargins(0, 14, 0, 0)
         acts.setSpacing(10)
 
-        report = PrimaryButton("📄 查看替换报告")
+        report = PrimaryButton("查看替换报告")
+        report.setIcon(icon("file", "#FFFFFF", 16))
+        report.setIconSize(QSize(16, 16))
         report.setCursor(Qt.CursorShape.PointingHandCursor)
         report.clicked.connect(self._goto_export_report)
         acts.addWidget(report)
 
-        undo = QPushButton("↺ 恢复到校正前")
+        undo = QPushButton("恢复到校正前")
+        undo.setIcon(icon("refresh", c("neutral.700"), 16))
+        undo.setIconSize(QSize(16, 16))
         undo.setObjectName("BtnOutline")
         undo.setCursor(Qt.CursorShape.PointingHandCursor)
         undo.clicked.connect(self._restore_before)
@@ -1071,12 +1047,16 @@ class OneClickModule(QWidget):
 
         _text, show_go_check, _tip = quote_status_from_summary(self._summary)
         if show_go_check:
-            check_btn = PrimaryButton("🔍 去检查页")
+            check_btn = PrimaryButton("去检查页")
+            check_btn.setIcon(icon("search", "#FFFFFF", 16))
+            check_btn.setIconSize(QSize(16, 16))
             check_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             check_btn.clicked.connect(self.gotoCheck.emit)
             acts.addWidget(check_btn)
 
-        go = QPushButton("📤 去导出")
+        go = QPushButton("去导出")
+        go.setIcon(icon("export", c("neutral.700"), 16))
+        go.setIconSize(QSize(16, 16))
         go.setObjectName("BtnOutline")
         go.setCursor(Qt.CursorShape.PointingHandCursor)
         go.clicked.connect(self.gotoExport.emit)
@@ -1088,7 +1068,9 @@ class OneClickModule(QWidget):
         if book_n is None:
             book_n = len((self._summary or {}).get('book_words') or [])
         words = QPushButton(
-            f"✨ 预览本书专有词条（{_fmt_num(book_n)} 条）并加入词库")
+            f"预览本书专有词条（{_fmt_num(book_n)} 条）并加入词库")
+        words.setIcon(icon("sparkle", c("neutral.700"), 16))
+        words.setIconSize(QSize(16, 16))
         words.setObjectName("BtnOutline")
         words.setCursor(Qt.CursorShape.PointingHandCursor)
         words.setToolTip("先看清单再决定加入哪些，加入后下次校正自动生效")

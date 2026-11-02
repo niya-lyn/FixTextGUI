@@ -37,14 +37,17 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from PySide6.QtCore import QEventLoop, Qt, QTimer, Signal
+from PySide6.QtCore import QEventLoop, Qt, QTimer, Signal, QSize
 from PySide6.QtWidgets import (
     QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QProgressBar, QPushButton,
     QVBoxLayout, QWidget,
 )
 
-from fixtext_tokens import c, sp, r, fs
-from fixtext_widgets import enable_chrome, hline, PrimaryButton
+from fixtext_widgets import (
+    apply_label, enable_chrome, hline, make_label, PrimaryButton, repolish, style_callout,
+)
+from fixtext_tokens import c
+from icons import icon, has_icon, pixmap
 
 
 # ---------------------------------------------------------------------------
@@ -52,9 +55,9 @@ from fixtext_widgets import enable_chrome, hline, PrimaryButton
 # ---------------------------------------------------------------------------
 
 STEPS = [
-    ("📥", "导入书籍"),
-    ("⚡", "一键校正"),
-    ("📤", "导出结果"),
+    ("import", "导入书籍"),
+    ("flash", "一键校正"),
+    ("export", "导出结果"),
 ]
 
 FILE_FILTER = "书籍文件 (*.txt *.epub)"
@@ -105,9 +108,17 @@ class _StepBars(QWidget):
             bar.setTextVisible(False)
             bar.setFixedHeight(6)
             bl.addWidget(bar)
-            lab = QLabel(f"{ico} {name}")
-            lab.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
-            bl.addWidget(lab)
+            row = QHBoxLayout()
+            row.setSpacing(4)
+            if has_icon(ico):
+                iw = QLabel()
+                iw.setPixmap(pixmap(ico, 12, c("neutral.500")))
+                iw.setFixedSize(12, 12)
+                row.addWidget(iw)
+            lab = make_label(name, size="xs", color="neutral.500")
+            row.addWidget(lab)
+            row.addStretch(1)
+            bl.addLayout(row)
             self._bars.append(bar)
             self._labels.append(lab)
             hl.addWidget(box, 1)
@@ -121,24 +132,14 @@ class _StepBars(QWidget):
             else:
                 state, value = "todo", 0
             bar.setValue(value)
-            fill = {
-                "done": c("success"),
-                "active": c("primary.500"),
-                "todo": c("neutral.200"),
-            }[state]
-            bar.setStyleSheet(
-                f"QProgressBar#OnbBar{{background:{c('neutral.200')};"
-                f"border:none;border-radius:{r('full')}}}"
-                f"QProgressBar#OnbBar::chunk{{background:{fill};"
-                f"border-radius:{r('full')}}}"
-            )
+            bar.setProperty("state", state)
+            repolish(bar)
             if state == "done":
-                lab.setStyleSheet(f"font-size:{fs('xs')};color:{c('success')}")
+                apply_label(lab, size="xs", color="success")
             elif state == "active":
-                lab.setStyleSheet(
-                    f"font-size:{fs('xs')};color:{c('primary.700')};font-weight:600")
+                apply_label(lab, size="xs", color="primary.700", weight="semibold")
             else:
-                lab.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+                apply_label(lab, size="xs", color="neutral.500")
 
     #: 测试用：读回每根条的百分比
     def values(self) -> list[int]:
@@ -220,27 +221,25 @@ class FirstRunWizard(QDialog):
         hl = QHBoxLayout(head)
         hl.setContentsMargins(20, 16, 20, 16)
         hl.setSpacing(12)
-        ico = QLabel("🧭")
+        ico = QLabel()
+        ico.setObjectName("MarkIco")
         ico.setFixedSize(40, 40)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:{r('lg')};font-size:{fs('xl')}")
+        ico.setPixmap(pixmap("compass", 28, c("neutral.600")))
         col = QVBoxLayout()
         col.setSpacing(2)
-        t = QLabel("新手向导")
-        t.setStyleSheet(
-            f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
-        s = QLabel("三步走完一本书的校准")
-        s.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+        t = make_label("新手向导", size="lg", color="neutral.900", weight="bold")
+        s = make_label("三步走完一本书的校准", size="xs", color="neutral.500")
         col.addWidget(t)
         col.addWidget(s)
         hl.addWidget(ico)
         hl.addLayout(col, 1)
-        close = QPushButton("×")
+        close = QPushButton()
         close.setObjectName("ModalClose")
         close.setCursor(Qt.CursorShape.PointingHandCursor)
         close.setFixedSize(30, 30)
+        close.setIcon(icon("close", c("neutral.600"), 16))
+        close.setIconSize(QSize(16, 16))
         close.setToolTip("关掉向导（随时可从右上角菜单重新打开）")
         close.clicked.connect(self._skip_wizard)
         hl.addWidget(close)
@@ -263,27 +262,23 @@ class FirstRunWizard(QDialog):
         title, desc, ico = self._copy()
         hl = QHBoxLayout()
         hl.setSpacing(12)
-        ic = QLabel(ico)
+        ic = QLabel()
+        ic.setObjectName("MarkIco")
         ic.setFixedSize(44, 44)
         ic.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ic.setStyleSheet(
-            f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:{r('lg')};font-size:{fs('xl')}")
+        if has_icon(ico):
+            ic.setPixmap(pixmap(ico, 32, c("primary.500")))
+        else:
+            ic.setText(ico)
         col = QVBoxLayout()
         col.setSpacing(2)
-        t = QLabel(title)
-        t.setWordWrap(True)
-        t.setStyleSheet(
-            f"font-weight:700;font-size:{fs('md')};color:{c('neutral.900')}")
+        t = make_label(title, size="md", color="neutral.900", weight="bold", wrap=True)
         col.addWidget(t)
         hl.addWidget(ic)
         hl.addLayout(col, 1)
         self.panel_l.addLayout(hl)
 
-        p = QLabel(desc)
-        p.setWordWrap(True)
-        p.setStyleSheet(
-            f"color:{c('neutral.700')};font-size:{fs('sm')};line-height:1.7")
+        p = make_label(desc, size="sm", color="neutral.700", wrap=True)
         self.panel_l.addWidget(p)
         self.panel_l.addWidget(hline())
         self.panel_l.addWidget(self._result_block())
@@ -304,22 +299,22 @@ class FirstRunWizard(QDialog):
             return ("第 1 步 · 导入一本书",
                     "先把要校正的书导入工作区。原文件只读保护，FixTextGUI 会在"
                     "工作区里留下一份副本和初始快照，随时能回到这一刻。",
-                    "📥")
+                    "import")
         if self.step == 1:
             return ("第 2 步 · 一键校正",
                     "用默认配置跑完「备份 → 排版 → 词库替换 → 校验」，进度条里"
                     "每一步都看得到；中途想停可以取消，取消不会留下半成品。",
-                    "⚡")
+                    "flash")
         if self.step == 2:
             return ("第 3 步 · 导出结果",
                     "导出干净文件，自动附一份替换报告，并在历史记录里留一条任务，"
                     "以后随时能恢复或重新导出。",
-                    "📤")
+                    "export")
         return ("一本书的校准已完成！",
                 "导入、校正、导出三步都真实完成了，结果分别落在「导入书籍 / "
                 "一键校正 / 导出结果」三页，历史记录也多了一条任务。需要细修"
                 "引号时，可随时进入「检查问题」逐处处理。",
-                "🎉")
+                "sparkle")
 
     # ---- 各步的真实结果 ------------------------------------------------
     def _result_block(self) -> QWidget:
@@ -366,32 +361,19 @@ class FirstRunWizard(QDialog):
         bl.setSpacing(6)
 
         if self._error:
-            err = QLabel("⚠️ " + self._error)
-            err.setWordWrap(True)
-            err.setStyleSheet(
-                f"background:{c('warning.bg')};border:1px solid {c('warning.border')};"
-                f"color:{c('warning')};border-radius:{r('md')};padding:{sp('3')} {sp('4')};"
-                f"font-size:{fs('sm')}")
+            err = QLabel(self._error)
+            style_callout(err, "warn", radius="md")
             bl.addWidget(err)
 
         if rows:
-            ttl = QLabel("✓ 这一步已完成")
-            ttl.setStyleSheet(
-                f"color:{c('success')};font-size:{fs('sm')};font-weight:700")
+            ttl = make_label("这一步已完成", size="sm", color="success", weight="bold")
             bl.addWidget(ttl)
             for txt in rows:
-                lab = QLabel(txt)
-                lab.setWordWrap(True)
-                lab.setStyleSheet(
-                    f"color:{c('neutral.700')};font-size:{fs('sm')}")
+                lab = make_label(txt, size="sm", color="neutral.700", wrap=True)
                 bl.addWidget(lab)
         elif not self._error and not self._busy:
             hint = QLabel(self._pending_hint())
-            hint.setWordWrap(True)
-            hint.setStyleSheet(
-                f"background:{c('info.bg')};border:1px solid {c('info.border')};"
-                f"color:{c('info')};border-radius:{r('md')};padding:{sp('3')} {sp('4')};"
-                f"font-size:{fs('sm')}")
+            style_callout(hint, "info", radius="md")
             bl.addWidget(hint)
         return box
 
@@ -453,9 +435,9 @@ class FirstRunWizard(QDialog):
     def _action_text(self) -> str:
         """当前步的真实业务按钮文案（与「下一步」恢复导航区分）。"""
         return {
-            0: "📥 选择我的书…",
-            1: "⚡ 开始校正",
-            2: "📤 导出并生成历史",
+            0: "选择我的书…",
+            1: "开始校正",
+            2: "导出并生成历史",
             3: "完成",
         }[self.step]
 

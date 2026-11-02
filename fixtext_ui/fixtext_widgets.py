@@ -34,12 +34,78 @@ from PySide6.QtWidgets import (
 from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtWidgets import QGraphicsDropShadowEffect
 
-from fixtext_tokens import c, sp, r, fs, FONT_WEIGHT, FONT_MONO
+from fixtext_tokens import c, sp
+from icons import has_icon, pixmap
 
 
 def px(value: str) -> int:
     """'12px' -> 12"""
     return int(str(value).replace("px", ""))
+
+
+_WEIGHT_NAME = {
+    "400": "regular", "regular": "regular",
+    "500": "medium", "medium": "medium",
+    "600": "semibold", "semibold": "semibold",
+    "700": "bold", "bold": "bold",
+}
+
+
+def apply_label(
+    lab: QLabel,
+    *,
+    size: str = "sm",
+    color: str = "neutral.800",
+    weight: str | None = None,
+    mono: bool = False,
+    wrap: bool = False,
+    align: str | None = None,
+) -> None:
+    """用 tone/size/weight/mono 属性描述文字，样式在 fixtext.qss。"""
+    lab.setWordWrap(wrap)
+    lab.setProperty("tone", color)
+    lab.setProperty("size", size)
+    lab.setProperty("weight", _WEIGHT_NAME.get(weight, "") if weight else "")
+    lab.setProperty("mono", "true" if mono else "false")
+    if align == "center":
+        lab.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
+    elif align == "left":
+        lab.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+    repolish(lab)
+
+
+def make_label(text: str, **kwargs) -> QLabel:
+    lab = QLabel(text)
+    apply_label(lab, **kwargs)
+    return lab
+
+
+def style_callout(lab: QLabel, kind: str, *, radius: str = "lg", pad: str = "roomy") -> None:
+    """说明条。kind ∈ info/warn/ok/neutral。"""
+    lab.setObjectName("Callout")
+    lab.setWordWrap(True)
+    lab.setProperty("kind", kind)
+    lab.setProperty("radius", radius)
+    lab.setProperty("pad", pad)
+    repolish(lab)
+
+
+def modal_icon(glyph: str, *, tone: str = "primary") -> QLabel:
+    """弹窗头 30×30 图标。tone ∈ primary/warning。
+
+    glyph 若是 SVG 名（如 "alert"）则渲染矢量图标；否则按原样当作文本（emoji 兜底）。
+    """
+    lab = QLabel()
+    lab.setObjectName("ModalIco")
+    lab.setProperty("tone", tone)
+    lab.setFixedSize(30, 30)
+    lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    if has_icon(glyph):
+        color = c("warning") if glyph in ("alert", "x-circle") else c("primary.500")
+        lab.setPixmap(pixmap(glyph, 22, color))
+    else:
+        lab.setText(glyph)
+    return lab
 
 
 class PrimaryButton(QPushButton):
@@ -76,8 +142,10 @@ def enable_chrome(widget: QWidget) -> None:
 
 def hline(color_key: str = "neutral.100") -> QFrame:
     f = QFrame()
+    f.setObjectName("HLine")
+    f.setProperty("tone", color_key)
     f.setFixedHeight(1)
-    f.setStyleSheet(f"background:{c(color_key)};border:none")
+    f.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
     return f
 
 
@@ -114,12 +182,9 @@ def repolish(widget: QWidget) -> None:
 
 def no_badge(n) -> QLabel:
     lab = QLabel(str(n))
+    lab.setObjectName("NoBadge")
     lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
     lab.setFixedSize(22, 22)
-    lab.setStyleSheet(
-        f"background:{c('neutral.100')};color:{c('neutral.500')};"
-        f"border-radius:{r('md')};font-size:{fs('xs')};font-weight:700"
-    )
     return lab
 
 
@@ -141,6 +206,10 @@ class Pill(QLabel):
         # 语义色交给 fixtext.qss 的 #Pill[kind="x"]（闭集 ok/info/warn/err/neutral）
         self.setProperty("kind", kind)
         self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+
+    def set_kind(self, kind: str) -> None:
+        self.setProperty("kind", kind)
+        repolish(self)
 
 
 class Switch(QAbstractButton):
@@ -205,22 +274,14 @@ class Card(QFrame):
             hl = QHBoxLayout(head)
             hl.setContentsMargins(18, 14, 18, 14)
             hl.setSpacing(10)
-            t = QLabel(title)
-            t.setStyleSheet(
-                f"color:{c('neutral.800')};font-size:{fs('base')};"
-                f"font-weight:{FONT_WEIGHT['semibold']}"
-            )
+            t = make_label(title, size="base", color="neutral.800", weight="semibold")
             hl.addWidget(t)
             if sub:
-                s = QLabel(sub)
-                s.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+                s = make_label(sub, size="xs", color="neutral.500")
                 hl.addWidget(s)
             hl.addStretch(1)
             if collapsible:
-                self._chev = QLabel("▼" if open_ else "▶")
-                self._chev.setStyleSheet(
-                    f"color:{c('neutral.500')};font-size:{fs('sm')}"
-                )
+                self._chev = make_label("▼" if open_ else "▶", size="sm", color="neutral.500")
                 hl.addWidget(self._chev)
                 head.setCursor(Qt.CursorShape.PointingHandCursor)
                 head.mousePressEvent = lambda e: self.toggle()
@@ -246,11 +307,7 @@ class Card(QFrame):
             bl.setContentsMargins(0, 0, 0, 0)
             bl.setSpacing(0)
             self.basis_label = QLabel(text)
-            self.basis_label.setStyleSheet(
-                f"color:{c('primary.700')};background:{c('primary.50')};"
-                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-                f"font-size:{fs('xs')};font-weight:700"
-            )
+            self.basis_label.setObjectName("CardBasis")
             self.basis_label.setSizePolicy(
                 QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed
             )
@@ -292,16 +349,12 @@ class FieldRow(QWidget):
         if idx is not None:
             hl.addWidget(no_badge(idx))
 
-        n = QLabel(name)
-        n.setStyleSheet(
-            f"color:{c('neutral.800')};font-weight:600;font-size:{fs('sm')}"
-        )
+        n = make_label(name, size="sm", color="neutral.800", weight="semibold")
         n.setMinimumWidth(name_width)
         hl.addWidget(n)
 
         if desc:
-            d = QLabel(desc)
-            d.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
+            d = make_label(desc, size="xs", color="neutral.500")
             d.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
             hl.addWidget(d, 1)
         else:
@@ -316,20 +369,12 @@ class FieldRow(QWidget):
             shell.setObjectName("AutoChip")
             enable_chrome(shell)
             shell.setFixedHeight(chip_h)
-            shell.setStyleSheet(
-                f"QFrame#AutoChip{{background:{c('neutral.100')};"
-                f"border:none;border-radius:{chip_h // 2}px;}}"
-            )
             shell.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
             sh_l = QHBoxLayout(shell)
             sh_l.setContentsMargins(9, 0, 9, 0)
             sh_l.setSpacing(0)
             cp = QLabel(chip)
             cp.setAlignment(Qt.AlignmentFlag.AlignVCenter)
-            cp.setStyleSheet(
-                f"background:transparent;border:none;color:{c('neutral.500')};"
-                f"font-size:{fs('xs')};font-weight:700"
-            )
             sh_l.addWidget(cp)
             hl.addWidget(shell)
             self._chip = cp
@@ -559,8 +604,6 @@ class BagChk(QFrame):
         self.txt.setObjectName("BagChkText")
         hl.addWidget(self.txt)
         if locked:
-            # 锁定项整项置灰（原型 .chk.locked input opacity:.5）
-            self.txt.setStyleSheet(f"color:{c('neutral.400')}")
             tag = LockTag("锁定")
             hl.addWidget(tag)
         self._sync_props()
@@ -581,8 +624,8 @@ class BagChk(QFrame):
     def _sync_props(self) -> None:
         self.setProperty("on", "true" if self._on else "false")
         self.setProperty("locked", "true" if self._locked else "false")
-        self.style().unpolish(self)
-        self.style().polish(self)
+        repolish(self)
+        repolish(self.txt)
 
     def enterEvent(self, event):
         self._hover = True
@@ -655,11 +698,8 @@ class RadioCard(QFrame):
         self._dot = RadioDot()
         col = QVBoxLayout()
         col.setSpacing(3)
-        t = QLabel(title)
-        t.setStyleSheet(
-            f"font-weight:700;font-size:{fs('sm')};color:{c('neutral.800')}")
-        d = QLabel(desc)
-        d.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+        t = make_label(title, size="sm", color="neutral.800", weight="bold")
+        d = make_label(desc, size="xs", color="neutral.500")
         col.addWidget(t)
         col.addWidget(d)
         hl.addWidget(self._dot, 0, Qt.AlignmentFlag.AlignVCenter)
@@ -721,8 +761,8 @@ class EmptyState(QFrame):
     secondaryClicked = Signal()
 
     def __init__(self, icon: str, title: str, desc: str, *,
-                 primary: str | None = "📥 去导入第一本书",
-                 secondary: str | None = "🧭 打开新手向导",
+                 primary: str | None = "去导入第一本书",
+                 secondary: str | None = "打开新手向导",
                  parent=None):
         super().__init__(parent)
         self.setObjectName("EmptyState")
@@ -741,10 +781,14 @@ class EmptyState(QFrame):
         ring_l = QVBoxLayout(ico_ring)
         ring_l.setContentsMargins(6, 6, 6, 6)
         ring_l.setSpacing(0)
-        ico = QLabel(icon)
+        ico = QLabel()
         ico.setObjectName("EsIco")
         ico.setFixedSize(60, 60)
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        if has_icon(icon):
+            ico.setPixmap(pixmap(icon, 44, c("primary.500")))
+        else:
+            ico.setText(icon)
         # 图标方块配色交给 fixtext.qss 的 #EsIco（原内联收归）
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(3)
@@ -754,15 +798,12 @@ class EmptyState(QFrame):
         ring_l.addWidget(ico)
         root.addWidget(ico_ring, 0, Qt.AlignmentFlag.AlignHCenter)
 
-        t = QLabel(title)
-        t.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-        t.setStyleSheet(
-            f"color:{c('neutral.800')};font-size:{fs('sm')};"
-            f"font-weight:{FONT_WEIGHT['semibold']}")
+        t = make_label(
+            title, size="sm", color="neutral.800", weight="semibold", align="center")
         root.addWidget(t, 0, Qt.AlignmentFlag.AlignHCenter)
 
         d = _WrapLabel(desc, 460)
-        d.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('sm')}")
+        apply_label(d, size="sm", color="neutral.500")
         d.fix_height()  # 样式生效后按实际字体度量定高，避免第二句被裁
         root.addWidget(d, 0, Qt.AlignmentFlag.AlignHCenter)
 
@@ -841,15 +882,8 @@ class ProgressDialog(QDialog):
         head.setObjectName("ModalHead")
         hl = QHBoxLayout(head)
         hl.setContentsMargins(18, 16, 18, 16)
-        ico = QLabel(icon)
-        ico.setFixedSize(30, 30)
-        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:{r('md')};font-size:{fs('md')}")
-        htitle = QLabel(title)
-        htitle.setStyleSheet(
-            f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
+        ico = modal_icon(icon)
+        htitle = make_label(title, size="lg", color="neutral.900", weight="bold")
         hl.addWidget(ico)
         hl.addWidget(htitle)
         root.addWidget(head)
@@ -861,11 +895,7 @@ class ProgressDialog(QDialog):
 
         if note:
             nl = QLabel(note)
-            nl.setWordWrap(True)
-            nl.setStyleSheet(
-                f"background:{c('info.bg')};border:1px solid {c('info.border')};"
-                f"color:{c('info')};border-radius:{r('lg')};padding:{sp('3')} {sp('4')};"
-                f"font-size:{fs('sm')}")
+            style_callout(nl, "info")
             bl.addWidget(nl)
 
         self.list_w = QWidget()
@@ -879,20 +909,16 @@ class ProgressDialog(QDialog):
         bl.addWidget(self.list_w)
 
         self.bar = QProgressBar()
+        self.bar.setObjectName("TaskBar")
         self.bar.setRange(0, 100)
         self.bar.setValue(0)
-        self.bar.setStyleSheet(
-            f"QProgressBar{{background:{c('neutral.100')};border-radius:{r('full')};"
-            f"height:10px;text-align:none}}"
-            f"QProgressBar::chunk{{background:{c('primary.500')};"
-            f"border-radius:{r('full')}}}")
+        self.bar.setTextVisible(False)
+        self.bar.setFixedHeight(10)
         bl.addWidget(self.bar)
 
         meta = QHBoxLayout()
-        self.step_name = QLabel("准备中…")
-        self.step_name.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.600')}")
-        self.eta = QLabel("—")
-        self.eta.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+        self.step_name = make_label("准备中…", size="xs", color="neutral.600")
+        self.eta = make_label("—", size="xs", color="neutral.500")
         meta.addWidget(self.step_name)
         meta.addStretch(1)
         meta.addWidget(self.eta)
@@ -918,12 +944,12 @@ class ProgressDialog(QDialog):
         hl.setContentsMargins(0, 10, 0, 10)
         hl.setSpacing(12)
         dot = QLabel()
+        dot.setObjectName("StepDot")
+        dot.setProperty("state", "wait")
         dot.setFixedSize(22, 22)
         dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        n = QLabel(name)
-        n.setStyleSheet(f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.600')}")
-        d = QLabel(desc)
-        d.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+        n = make_label(name, size="sm", color="neutral.600", weight="semibold")
+        d = make_label(desc, size="xs", color="neutral.500")
         hl.addWidget(dot)
         hl.addWidget(n, 0)
         hl.addWidget(d, 1)
@@ -934,26 +960,18 @@ class ProgressDialog(QDialog):
     def _paint(self):
         for idx, row in enumerate(self.step_rows):
             if idx < self._i:
-                row._dot.setText("✓")
-                row._dot.setStyleSheet(
-                    f"background:{c('success')};color:{c('on.fill')};"
-                    f"border-radius:{r('full')};font-size:{fs('xs')};font-weight:700")
-                row._name.setStyleSheet(
-                    f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.600')}")
+                row._dot.setPixmap(pixmap("check", 14, c("success")))
+                row._dot.setProperty("state", "done")
+                apply_label(row._name, size="sm", color="neutral.600", weight="semibold")
             elif idx == self._i:
                 row._dot.setText(str(idx + 1))
-                row._dot.setStyleSheet(
-                    f"background:{c('primary.500')};color:{c('on.fill')};"
-                    f"border-radius:{r('full')};font-size:{fs('xs')};font-weight:700")
-                row._name.setStyleSheet(
-                    f"font-weight:700;font-size:{fs('sm')};color:{c('primary.700')}")
+                row._dot.setProperty("state", "current")
+                apply_label(row._name, size="sm", color="primary.700", weight="bold")
             else:
                 row._dot.setText(str(idx + 1))
-                row._dot.setStyleSheet(
-                    f"background:{c('neutral.100')};color:{c('neutral.500')};"
-                    f"border-radius:{r('full')};font-size:{fs('xs')};font-weight:700")
-                row._name.setStyleSheet(
-                    f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.500')}")
+                row._dot.setProperty("state", "wait")
+                apply_label(row._name, size="sm", color="neutral.500", weight="semibold")
+            repolish(row._dot)
 
     # ---------------------------------------------------------------- timer 模式
 
@@ -1140,15 +1158,8 @@ class CancelConfirmDialog(QDialog):
         head.setObjectName("ModalHead")
         hl = QHBoxLayout(head)
         hl.setContentsMargins(18, 16, 18, 16)
-        ico = QLabel("⚠️")
-        ico.setFixedSize(30, 30)
-        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('warning.bg')};color:{c('warning')};"
-            f"border-radius:{r('md')};font-size:{fs('md')}")
-        t = QLabel(self.TITLE)
-        t.setStyleSheet(
-            f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
+        ico = modal_icon("alert", tone="warning")
+        t = make_label(self.TITLE, size="lg", color="neutral.900", weight="bold")
         hl.addWidget(ico)
         hl.addWidget(t)
         root.addWidget(head)
@@ -1157,11 +1168,7 @@ class CancelConfirmDialog(QDialog):
         bl = QVBoxLayout(body)
         bl.setContentsMargins(18, 16, 18, 16)
         note = QLabel(self.NOTE)
-        note.setWordWrap(True)
-        note.setStyleSheet(
-            f"background:{c('warning.bg')};border:1px solid {c('warning.border')};"
-            f"color:{c('warning')};border-radius:{r('lg')};padding:{sp('3')} {sp('4')};"
-            f"font-size:{fs('sm')}")
+        style_callout(note, "warn")
         bl.addWidget(note)
         root.addWidget(body)
 
@@ -1208,15 +1215,8 @@ class ConfirmDialog(QDialog):
         head.setObjectName("ModalHead")
         hl = QHBoxLayout(head)
         hl.setContentsMargins(18, 16, 18, 16)
-        ico = QLabel(icon)
-        ico.setFixedSize(30, 30)
-        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:{r('md')};font-size:{fs('md')}")
-        htitle = QLabel(title)
-        htitle.setStyleSheet(
-            f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
+        ico = modal_icon(icon)
+        htitle = make_label(title, size="lg", color="neutral.900", weight="bold")
         hl.addWidget(ico)
         hl.addWidget(htitle)
         root.addWidget(head)
@@ -1226,17 +1226,7 @@ class ConfirmDialog(QDialog):
         bl.setContentsMargins(18, 16,18, 16)
         bl.setSpacing(12)
         nl = QLabel(note)
-        nl.setWordWrap(True)
-        if note_kind == "warn":
-            nl.setStyleSheet(
-                f"background:{c('warning.bg')};border:1px solid {c('warning.border')};"
-                f"color:{c('warning')};border-radius:{r('lg')};padding:{sp('3')} {sp('4')};"
-                f"font-size:{fs('sm')}")
-        else:
-            nl.setStyleSheet(
-                f"background:{c('info.bg')};border:1px solid {c('info.border')};"
-                f"color:{c('info')};border-radius:{r('lg')};padding:{sp('3')} {sp('4')};"
-                f"font-size:{fs('sm')}")
+        style_callout(nl, "warn" if note_kind == "warn" else "info")
         bl.addWidget(nl)
         root.addWidget(body)
 
@@ -1287,15 +1277,8 @@ class Modal(QDialog):
         head.setObjectName("ModalHead")
         hl = QHBoxLayout(head)
         hl.setContentsMargins(18, 16, 18, 16)
-        ico = QLabel(icon)
-        ico.setFixedSize(30, 30)
-        ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setStyleSheet(
-            f"background:{c('primary.100')};color:{c('primary.700')};"
-            f"border-radius:{r('md')};font-size:{fs('md')}")
-        htitle = QLabel(title)
-        htitle.setStyleSheet(
-            f"font-weight:700;font-size:{fs('lg')};color:{c('neutral.900')}")
+        ico = modal_icon(icon)
+        htitle = make_label(title, size="lg", color="neutral.900", weight="bold")
         hl.addWidget(ico)
         hl.addWidget(htitle)
         hl.addStretch(1)
@@ -1322,16 +1305,9 @@ class Modal(QDialog):
 
     def add_note(self, text: str, kind: str = "info") -> QLabel:
         nl = QLabel(text)
-        nl.setWordWrap(True)
-        if kind == "warn":
-            bg, bd, fg = c("warning.bg"), c("warning.border"), c("warning")
-        elif kind == "info":
-            bg, bd, fg = c("info.bg"), c("info.border"), c("info")
-        else:
-            bg, bd, fg = c("neutral.100"), c("neutral.200"), c("neutral.600")
-        nl.setStyleSheet(
-            f"background:{bg};border:1px solid {bd};color:{fg};"
-            f"border-radius:{r('lg')};padding:{sp('3')} {sp('4')};font-size:{fs('sm')}")
+        if kind not in ("warn", "info"):
+            kind = "neutral"
+        style_callout(nl, kind)
         self.body_l.addWidget(nl)
         return nl
 

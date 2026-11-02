@@ -207,7 +207,7 @@ SHELF_BADGE_H = 24
 
 ENTRIES = [
     dict(
-        key="import", icon="📥", label="导入书籍", status="ready",
+        key="import", icon="import", label="导入书籍", status="ready",
         short="拖放或选择 TXT / EPUB，自动识别编码并转成通用文本",
         what=[
             "把书拖进窗口就能用，不需要事先改格式、改编码。",
@@ -216,7 +216,7 @@ ENTRIES = [
         ],
     ),
     dict(
-        key="oneclick", icon="⚡", label="一键校正", status="ready",
+        key="oneclick", icon="flash", label="一键校正", status="ready",
         short="排版、词库替换、标点统一一次跑完，随时可停",
         what=[
             "点一下就把排版、词库替换、标点统一跑完，不用挑词库组合。",
@@ -225,7 +225,7 @@ ENTRIES = [
         ],
     ),
     dict(
-        key="check", icon="🔍", label="检查问题", status="ready",
+        key="check", icon="search", label="检查问题", status="ready",
         short="引号配对检查，一处一处确认，改错了能撤回",
         what=[
             "检查全文的中文引号配对是否出错，把每一处的位置列出来。",
@@ -234,7 +234,7 @@ ENTRIES = [
         ],
     ),
     dict(
-        key="vocab", icon="📚", label="词库管理", status="ready",
+        key="vocab", icon="books", label="词库管理", status="ready",
         short="查词、查重、删除、合并，改动前先给你看清单",
         what=[
             "在这里查一个词会被换成什么，也可以往词库里加你自己的词。",
@@ -243,7 +243,7 @@ ENTRIES = [
         ],
     ),
     dict(
-        key="export", icon="📤", label="导出结果", status="ready",
+        key="export", icon="export", label="导出结果", status="ready",
         short="导出干净的 TXT，EPUB 进来的还原回 EPUB",
         what=[
             "导出一份干净文本，可以直接丢进常见阅读器。",
@@ -252,7 +252,7 @@ ENTRIES = [
         ],
     ),
     dict(
-        key="history", icon="🕓", label="历史记录", status="ready",
+        key="history", icon="clock", label="历史记录", status="ready",
         short="每次校正都留一条记录，能退回到任一次",
         what=[
             "每校正一本书记一条：书名、时间、改了多少处。",

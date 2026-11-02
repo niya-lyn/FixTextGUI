@@ -139,15 +139,15 @@ def test_step_bars_track_current(qt_app):
 def test_actions_split_left_right(qt_app):
     """第 1 步：左侧「跳过」、右侧主操作；第 2 步起左侧多一个「上一步」。"""
     w = W.FirstRunWizard()
-    assert w._primary.text() == "📥 选择我的书…"
+    assert w._primary.text() == "选择我的书…"
     assert not _shown(w._prev)
     assert _shown(w._skip)
     assert w._prev.text() == "上一步"
     w.go_step(1)
-    assert w._primary.text() == "⚡ 开始校正"
+    assert w._primary.text() == "开始校正"
     assert _shown(w._prev) and _shown(w._skip)
     w.go_step(2)
-    assert w._primary.text() == "📤 导出并生成历史"
+    assert w._primary.text() == "导出并生成历史"
     w.go_step(3)
     assert w._primary.text() == "完成"
     assert not _shown(w._prev) and not _shown(w._skip), \
@@ -174,7 +174,7 @@ def test_back_then_next_resumes_without_rerun(qt_app):
     assert w._primary.text() == "下一步"
     QTest.mouseClick(w._primary, Qt.MouseButton.LeftButton)
     assert w.step == 2
-    assert w._primary.text() == "📤 导出并生成历史"
+    assert w._primary.text() == "导出并生成历史"
     w.deleteLater()
 
 

@@ -33,8 +33,11 @@ from PySide6.QtWidgets import (
 )
 
 import fixtext_settings as settings
-from fixtext_tokens import c, sp, r, fs, FONT_WEIGHT, FONT_MONO
-from fixtext_widgets import Card, FieldRow, Switch, RadioCard, ConfirmDialog, page_head_shell
+from fixtext_tokens import sp
+from fixtext_widgets import (
+    Card, FieldRow, Switch, RadioCard, ConfirmDialog, page_head_shell,
+    apply_label, make_label, style_callout,
+)
 
 try:
     import fixtext_error_center as error_center
@@ -44,11 +47,7 @@ except Exception:                                  # noqa: BLE001 - 可选组件
 
 def _label(text: str, *, size: str = "sm", color: str = "neutral.600",
             weight: str = "regular", wrap: bool = False) -> QLabel:
-    lab = QLabel(text)
-    lab.setWordWrap(wrap)
-    lab.setStyleSheet(
-        f"color:{c(color)};font-size:{fs(size)};font-weight:{FONT_WEIGHT[weight]}")
-    return lab
+    return make_label(text, size=size, color=color, weight=weight, wrap=wrap)
 
 
 def _pathbox() -> tuple[QFrame, QLabel]:
@@ -59,10 +58,7 @@ def _pathbox() -> tuple[QFrame, QLabel]:
     lay.setContentsMargins(12, 9, 12, 9)
     lay.setSpacing(10)
     lab = QLabel("")
-    lab.setWordWrap(True)
-    lab.setStyleSheet(
-        f"color:{c('neutral.600')};font-size:{fs('sm')};"
-        f"font-family:'{FONT_MONO}'")
+    apply_label(lab, size="sm", color="neutral.600", mono=True, wrap=True)
     lab.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
     lay.addWidget(lab, 1)
     return box, lab
@@ -286,16 +282,13 @@ class SettingsModule(QWidget):
         root.addWidget(self.status)
 
     def _say(self, text: str, kind: str = "ok") -> None:
-        palette = {
-            "ok":   ("success.bg", "success", "success.border"),
-            "warn": ("warning.bg", "warning", "warning.border"),
-            "info": ("info.bg", "info", "info.border"),
-        }
-        bg, fg, border = palette.get(kind, palette["info"])
         self.status.setText(text)
-        self.status.setStyleSheet(
-            f"background:{c(bg)};color:{c(fg)};border:1px solid {c(border)};"
-            f"border-radius:{r('md')};padding:{sp('2')} {sp('3')};font-size:{fs('sm')}")
+        style_callout(
+            self.status,
+            kind if kind in ("ok", "warn", "info") else "info",
+            radius="md",
+            pad="tight",
+        )
         self.status.setVisible(True)
 
     # ------------------------------------------------------------------ 动作
@@ -380,7 +373,7 @@ class SettingsModule(QWidget):
     def _confirm_factory_reset(self) -> None:
         """二次确认后清产物；实际磁盘清理由主窗口注入的回调完成。"""
         dlg = ConfirmDialog(
-            icon="⚠️",
+            icon="alert",
             title="确定要初始化吗？",
             note=(
                 "将删除：\n"

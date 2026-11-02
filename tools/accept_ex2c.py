@@ -610,7 +610,7 @@ def s5(app) -> dict:
                        and opened.get("start_step") == 0
                        and opened.get("has_current_book") is False
                        and opened.get("bars") == [50, 0, 0]
-                       and opened.get("primary_text") == "📥 选择我的书…"),
+                       and opened.get("primary_text") == "选择我的书…"),
     }
 
 
