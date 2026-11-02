@@ -211,7 +211,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     from .vendor_bootstrap import REQUIRED_MODULES, bootstrap
 
     problems: list[str] = []
-    print("FixText 一键校正编排器 · 环境体检")
+    print("FixTextGUI 一键校正编排器 · 环境体检")
     print("-" * 60)
 
     print(f"Python            : {sys.version.split()[0]}")
@@ -326,7 +326,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="fixtext-pipeline",
-        description="FixText 一键校正编排器：合并 → 排版 → 替换 → 引号检查 → 专有词库 → 还原",
+        description="FixTextGUI 一键校正编排器：合并 → 排版 → 替换 → 引号检查 → 专有词库 → 还原",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "示例：\n"

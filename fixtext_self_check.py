@@ -3,7 +3,7 @@
 
 Windows 侧构建完成后，在包目录里执行：
 
-    FixText.exe --self-check
+    FixTextGUI.exe --self-check
 
 输出全部是人话 + 可核对的键值，不打印内部路径，用来回答四个问题：
 
@@ -14,7 +14,7 @@ Windows 侧构建完成后，在包目录里执行：
    这条是打包正确性的关键断言：包内若夹带 ``workspace/settings.ini``
    且带 ``wizardSeen=1``，新用户就永远看不到向导。
 
-用 ``FixText.exe --self-check`` 运行；退码 0 = 全部通过。
+用 ``FixTextGUI.exe --self-check`` 运行；退码 0 = 全部通过。
 """
 from __future__ import annotations
 

@@ -55,7 +55,7 @@ def _fmt_seconds(value: float | None) -> str:
 def render_markdown(report: dict[str, Any]) -> str:
     """把报告渲染成 Markdown（给评论与归档用）。"""
     lines: list[str] = []
-    lines.append("# FixText 一键校正编排器 · 运行报告")
+    lines.append("# FixTextGUI 一键校正编排器 · 运行报告")
     lines.append("")
     lines.append(f"- 输入 EPUB：`{report['epub']}`")
     lines.append(f"- 工作目录：`{report['workdir']}`")

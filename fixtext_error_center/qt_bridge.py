@@ -128,7 +128,7 @@ def show_error_card(resolved, parent: Any = None) -> Any:
     _close_active()
 
     dlg = QDialog(parent if parent is not None else None)
-    dlg.setWindowTitle("FixText")
+    dlg.setWindowTitle("FixTextGUI")
     dlg.setModal(False)
     dlg.setMinimumWidth(460)
 

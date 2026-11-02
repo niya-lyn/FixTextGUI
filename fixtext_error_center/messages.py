@@ -41,13 +41,13 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     ErrorCode.IMPORT_INTERNAL_DATA.value: {
         "title": "工作数据出了点问题",
-        "what": "FixText 自己的中间数据对不上了。你的原始文件不受任何影响。",
+        "what": "FixTextGUI 自己的中间数据对不上了。你的原始文件不受任何影响。",
         "guidance": "重新导入这本书再试一次；如果反复出现，打开「设置」里的诊断日志目录，把最新的日志发给支持人员。",
     },
     ErrorCode.PROC_ENGINE_MISSING.value: {
         "title": "校正引擎没有就位",
         "what": "负责校正的组件没有随软件一起运行——最常见的原因是杀毒软件把它拦截或隔离了。",
-        "guidance": "在杀毒软件的隔离区找到 FixText 并选择放行/信任，然后重新解压一份完整软件，再打开试一次。",
+        "guidance": "在杀毒软件的隔离区找到 FixTextGUI 并选择放行/信任，然后重新解压一份完整软件，再打开试一次。",
     },
     ErrorCode.PROC_ENGINE_FAILED.value: {
         "title": "校正中途停了",
@@ -66,7 +66,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     },
     ErrorCode.PROC_NO_PERMISSION.value: {
         "title": "没有足够的权限",
-        "what": "系统不允许 FixText 读取或使用这个位置，常见于系统目录或其他账户的文件。",
+        "what": "系统不允许 FixTextGUI 读取或使用这个位置，常见于系统目录或其他账户的文件。",
         "guidance": "把文件复制到「文档」或「下载」文件夹再试；如果软件放在系统盘的受限目录，请把整个软件文件夹移动到桌面后重新打开。",
     },
     ErrorCode.EXPORT_DIR_UNWRITABLE.value: {

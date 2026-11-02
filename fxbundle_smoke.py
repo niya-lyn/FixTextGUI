@@ -3,7 +3,7 @@
 
 只在试打包包里存在（构建脚本以字节码形式放入，正式绿色包不含）。用法：
 
-    QT_QPA_PLATFORM=offscreen ./FixText --smoke
+    QT_QPA_PLATFORM=offscreen ./FixTextGUI --smoke
 
 断言的是一条完整用户路径，不是某个函数：
 

@@ -1,4 +1,4 @@
-# FixText V1 运行时依赖（安装：python -m pip install -r requirements.txt）
+# FixTextGUI 运行时依赖（安装：python -m pip install -r requirements.txt）
 # 仅列运行主程序所需的第三方库；跑测试需要的 pytest 等开发工具不在其列。
 # 实测环境：Python 3.12.11 + PySide6 6.11.2 + lxml 6.0.2（Linux）。
 

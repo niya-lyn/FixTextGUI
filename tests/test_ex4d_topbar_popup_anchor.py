@@ -155,7 +155,7 @@ def test_more_menu_items_still_work(qapp, window):
 
     assert texts == [
         "新手向导（重新观看）", "重新生成样式表",
-        "打开设计依据目录", "关于 FixText V1",
+        "打开设计依据目录", "关于 FixTextGUI",
     ], f"☰ 菜单项变了：{texts}"
     assert len(captured[0]) == 2, f"☰ 菜单分隔线数量变了：{captured}"
 

@@ -74,7 +74,7 @@ def run_pipeline(cfg: PipelineConfig) -> tuple[int, dict[str, Any]]:
     error = ""
 
     with StageLogger(run_log, echo=False) as log:
-        log.log(f"=== FixText 一键校正编排器 · {time.strftime('%Y-%m-%d %H:%M:%S')} ===")
+        log.log(f"=== FixTextGUI 一键校正编排器 · {time.strftime('%Y-%m-%d %H:%M:%S')} ===")
         log.log(f"输入 EPUB：{cfg.epub}")
         log.log(f"工作目录：{cfg.workdir}")
         log.log(f"排版档案：{cfg.layout_profile}　替换趟数：{cfg.replace_count}")

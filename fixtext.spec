@@ -6,7 +6,7 @@
 
 产物布局（默认 contents_directory，程序内部文件都收在 `_internal/`）：
 
-    <包根>/FixText(.exe)            主程序
+    <包根>/FixTextGUI(.exe)            主程序
     <包根>/_internal/               程序内部文件（Qt 插件、Python 运行时）
     <包根>/data/rules/              词库规则（构建脚本拷贝，出厂只读）
     <包根>/pipeline/vendor/.../bin/  Go 替换引擎（构建脚本拷贝，只带目标平台那一个）
@@ -166,7 +166,7 @@ exe = EXE(                             # noqa: F821
     a.scripts,
     [],
     exclude_binaries=True,
-    name="FixText",
+    name="FixTextGUI",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -188,5 +188,5 @@ coll = COLLECT(                        # noqa: F821
     upx=False,
     upx_exclude=[],
     # 默认 _internal：程序内部文件收进子目录，包根只留主程序 + 可见的数据目录
-    name="FixText",
+    name="FixTextGUI",
 )

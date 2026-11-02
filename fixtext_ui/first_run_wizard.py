@@ -161,7 +161,7 @@ class FirstRunWizard(QDialog):
     def __init__(self, import_module=None, oneclick_module=None,
                  export_module=None, parent=None, has_current_book=False):
         super().__init__(parent)
-        self.setWindowTitle("新手向导 · FixText V1")
+        self.setWindowTitle("新手向导 · FixTextGUI")
         self.setModal(True)
         self.setMinimumWidth(560)
         self.import_module = import_module
@@ -302,7 +302,7 @@ class FirstRunWizard(QDialog):
     def _copy(self) -> tuple[str, str, str]:
         if self.step == 0:
             return ("第 1 步 · 导入一本书",
-                    "先把要校正的书导入工作区。原文件只读保护，FixText 会在"
+                    "先把要校正的书导入工作区。原文件只读保护，FixTextGUI 会在"
                     "工作区里留下一份副本和初始快照，随时能回到这一刻。",
                     "📥")
         if self.step == 1:

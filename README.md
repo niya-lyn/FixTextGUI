@@ -1,4 +1,4 @@
-# FixText
+# FixTextGUI
 
 简体中文小说的桌面校对工具：**导入 → 一键校正 → 逐处检查 → 导出**。把网上常见的 TXT / EPUB 书稿里那些不干净的排版、错别字替换、乱标点整理成一本可以正常阅读的书。
 
@@ -106,8 +106,8 @@ lxml              : 6.0.2
 | 4/7 | PyInstaller `onedir` 打包 | 走 `fixtext.spec` |
 | 5/7 | 拷贝词库、设计依据与**目标平台**的替换引擎 | 只带当前平台那一个二进制 |
 | 5.5/7 | 确认包内不含 `workspace/` | 防止新用户首次启动跳过新手向导 |
-| 6/7 | 用 `FixText.exe --self-check` 让程序自己验一遍 | 最常见是引擎被杀软隔离 → 加白名单重试 |
-| 7/7 | 压成 `release\FixText_绿色版_v1_<日期>.zip` | 可手动把 `dist\FixText` 打包，目录结构须原样保留 |
+| 6/7 | 用 `FixTextGUI.exe --self-check` 让程序自己验一遍 | 最常见是引擎被杀软隔离 → 加白名单重试 |
+| 7/7 | 压成 `release\FixTextGUI_绿色版_v1_<日期>.zip` | 可手动把 `dist\FixTextGUI` 打包，目录结构须原样保留 |
 
 说明几点打包设计（摘自 `fixtext.spec`，改打包时必须守住）：
 
@@ -122,7 +122,7 @@ python -m pip install pyinstaller
 pyinstaller --noconfirm --clean fixtext.spec
 ```
 
-产物在 `dist/FixText/`。打包后还需要把 `data/rules/`、`reference/`、目标平台的引擎二进制拷进包根——`构建绿色版.bat` 的第 5 步做的就是这件事，手动做容易漏，建议直接用脚本。
+产物在 `dist/FixTextGUI/`。打包后还需要把 `data/rules/`、`reference/`、目标平台的引擎二进制拷进包根——`构建绿色版.bat` 的第 5 步做的就是这件事，手动做容易漏，建议直接用脚本。
 
 ### 重新编译 Go 替换引擎
 
@@ -165,7 +165,7 @@ PYTHONPATH=vendor python -m fixtext.engine.builder --rebuild   # 强制重编当
 .
 ├── main_app.py                 # 界面入口：建 QApplication → 加载 QSS → 初始化错误中心 → 主窗口
 ├── fixtext_paths.py            # 包根解析唯一入口（适配打包容器的路径漂移）
-├── fixtext_self_check.py       # FixText.exe --self-check 的实现
+├── fixtext_self_check.py       # FixTextGUI.exe --self-check 的实现
 ├── fixtext.spec                # PyInstaller onedir 配置
 ├── 构建绿色版.bat               # Windows 绿色版一键构建（7 步）
 ├── requirements.txt            # 运行时依赖（3 个）
@@ -268,7 +268,7 @@ QT_QPA_PLATFORM=offscreen python -m pytest tests -q
 
 ```bash
 # 打包版自检：不打开界面，只打印包根 / 词库 / 引擎 / 向导可见性
-FixText.exe --self-check
+FixTextGUI.exe --self-check
 
 # 命令行链路体检
 cd pipeline && python -m fixtext_pipeline doctor --epub <书> --wordbank-dir ../data/rules

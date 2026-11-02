@@ -635,7 +635,7 @@ def build_stats(source: ExportSource,
         f"命中数：{hits}",
         f"涉及词库：{summary['涉及词库']}",
         "",
-        "说明：本文件由 FixText 在导出时自动生成，记录这一次导出对应的替换情况。",
+        "说明：本文件由 FixTextGUI 在导出时自动生成，记录这一次导出对应的替换情况。",
     ]
     if rule_note:
         lines.append(rule_note)

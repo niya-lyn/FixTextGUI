@@ -127,7 +127,7 @@ def epub_blank_page() -> str:
 # ---------------------------------------------------------------------------
 
 def copied_note() -> str:
-    return "书已经复制到 FixText 的工作区，你原来的文件和其它位置的文件都不会被改动。"
+    return "书已经复制到 FixTextGUI 的工作区，你原来的文件和其它位置的文件都不会被改动。"
 
 
 def unchanged_note() -> str:

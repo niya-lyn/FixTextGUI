@@ -17,14 +17,14 @@ set -u
 
 SRC=${SRC:-$(cd "$(dirname "$0")/.." && pwd)}
 OUT=${OUT:-/tmp/u/green}
-DIST="$SRC/dist/FixText"
-D="$OUT/FixText"
+DIST="$SRC/dist/FixTextGUI"
+D="$OUT/FixTextGUI"
 
 echo "SRC=$SRC"
 echo "OUT=$OUT"
 
-if [ ! -x "$DIST/FixText" ]; then
-    echo "[FAIL] 找不到打包产物 $DIST/FixText，先跑 PyInstaller"
+if [ ! -x "$DIST/FixTextGUI" ]; then
+    echo "[FAIL] 找不到打包产物 $DIST/FixTextGUI，先跑 PyInstaller"
     exit 1
 fi
 

@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 FixText contributors
+Copyright (c) 2026 FixTextGUI contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -63,7 +63,7 @@ SOFTWARE.
 1. **本仓库不含任何在售书籍的正文。** 测试样本全部来自 Project Gutenberg 公版书，
    其中 `tests/samples/book_public_domain.epub` 由 `tools/build_fixture_epub.py`
    现场合成；大体积语料与真实书籍一律不进版本库。
-2. **版权行可按需替换。** 上面写的是 `Copyright (c) 2026 FixText contributors`；
+2. **版权行可按需替换。** 上面写的是 `Copyright (c) 2026 FixTextGUI contributors`；
    若要指名实际著作权人（个人姓名或组织名），改这一行即可。
 
 ## 第三方与数据来源声明（建议随 LICENSE 一并保留）

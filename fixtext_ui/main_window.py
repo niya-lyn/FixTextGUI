@@ -1198,7 +1198,7 @@ class MainWindow(QMainWindow):
     def _act_help(self):
         """帮助：六个入口各自负责什么（等权，没有先后）。"""
         m = Modal(icon="?", title="帮助")
-        m.add_note("FixText V1 把电子书校对收敛成六个入口，点左边导航或首页卡片就能进去；"
+        m.add_note("FixTextGUI 把电子书校对收敛成六个入口，点左边导航或首页卡片就能进去；"
                    "六者等权，没有先后顺序。", "info")
         for entry in ENTRIES:
             row = QWidget()
@@ -1225,7 +1225,7 @@ class MainWindow(QMainWindow):
         a_regen = menu.addAction("重新生成样式表")
         a_regen.triggered.connect(self._regen_qss)
         menu.addSeparator()
-        a_about = menu.addAction("关于 FixText V1")
+        a_about = menu.addAction("关于 FixTextGUI")
         a_about.triggered.connect(self._about)
         # M4-EX.4d：锚点必须是触发那颗按钮本身。这里不再依赖 sender() 是否
         # 有效，锚点解析统一收在 _popup_anchor（真实点击取 sender，脚本直调
@@ -1257,8 +1257,8 @@ class MainWindow(QMainWindow):
             self._flash("!", "样式表生成失败", f"这次没能生成：{e}", "warn")
 
     def _about(self):
-        self._flash("ℹ", "关于 FixText V1",
-                    "FixText V1 · 面向写作者的电子书排版校正工具。\n"
+        self._flash("ℹ", "关于 FixTextGUI",
+                    "FixTextGUI · 面向写作者的电子书排版校正工具。\n"
                     "六个入口：导入书籍、一键校正、检查问题、词库管理、导出结果、历史记录。\n"
                     "软件只读取你交给它的书，不会改动你的原文件。", "info")
 
