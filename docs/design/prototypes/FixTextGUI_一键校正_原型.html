@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixText V1 · 一键校正 交互原型</title>
+<style>
+  :root{
+    /* ============================================================
+       单一令牌源：下方基础令牌逐字复制自 FixTextGUI_设计系统_薄地基.html
+       的 :root（颜色/字体/圆角在此之外不得另行定义，避免再度漂移）。
+       本原型局部命名已在本轮直接改名回地基令牌（如 --c-ink → --c-neutral-800、
+       --r-m → --r-md），不再保留别名层；改一处地基值即全产品生效。
+       ============================================================ */
+    --c-primary-50:#EEF0FB; --c-primary-100:#DDE1F6; --c-primary-200:#C0C6EE;
+    --c-primary-300:#9AA3E2; --c-primary-400:#6F79D1; --c-primary-500:#4F59C0;
+    --c-primary-600:#3F48A2; --c-primary-700:#333B83; --c-primary-800:#2B3169; --c-primary-900:#232852;
+    --c-neutral-0:#FFFFFF; --c-neutral-50:#F7F8FA; --c-neutral-100:#EEF1F5;
+    --c-neutral-200:#DDE2EA; --c-neutral-300:#C2CAD6; --c-neutral-400:#9AA4B4;
+    --c-neutral-500:#6B7585; --c-neutral-600:#4A5363; --c-neutral-700:#333B48;
+    --c-neutral-800:#222831; --c-neutral-900:#15191F;
+    --c-success:#15803D; --c-success-bg:#E7F4EC; --c-success-border:#B6E0C5;
+    --c-warning:#B45309; --c-warning-bg:#FBF1DF; --c-warning-border:#F0D6A8;
+    --c-error:#C0392B;   --c-error-bg:#FBEAE8;   --c-error-border:#F1C4BD;
+    --c-info:#3F48A2;    --c-info-bg:#ECEEF9;    --c-info-border:#C8CDEC;
+    --c-focus:#4F59C0;
+    --font-sans:"Segoe UI","Microsoft YaHei UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --font-mono:"Cascadia Code","JetBrains Mono",Consolas,monospace;
+    --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:16px; --fs-lg:18px;
+    --fs-xl:20px; --fs-2xl:24px; --fs-3xl:30px; --fs-4xl:36px;
+    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+    --lh-tight:1.25; --lh-normal:1.5; --lh-relaxed:1.7;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
+    --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px; --sp-16:64px;
+    --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-full:999px;
+    --sh-sm:0 1px 2px rgba(21,25,31,.06),0 1px 3px rgba(21,25,31,.08);
+    --sh-md:0 4px 10px rgba(21,25,31,.08),0 2px 4px rgba(21,25,31,.06);
+    --sh-lg:0 12px 28px rgba(21,25,31,.12),0 4px 8px rgba(21,25,31,.06);
+    --sh-focus:0 0 0 3px rgba(79,89,192,.28);
+
+  }
+  *{box-sizing:border-box} html,body{margin:0;height:100%}
+  body{font-family:var(--font-sans);background:var(--c-neutral-50);color:var(--c-neutral-800);font-size:var(--fs-base);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:212px 1fr;grid-template-rows:52px 1fr;height:100vh}
+  .topbar{grid-column:1/3;display:flex;align-items:center;gap:var(--sp-4);background:var(--c-neutral-900);color:#fff;padding:0 var(--sp-5)}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:var(--fs-md);letter-spacing:.5px}
+  .brand .logo{width:22px;height:22px;border-radius:6px;background:#fff;color:var(--c-primary-700);display:grid;place-items:center;font-size:13px;font-weight:800}
+  .topbar .mod{opacity:.85;font-weight:500}
+  .topbar .spacer{flex:1}
+  .topbar .icon-btn{background:rgba(255,255,255,.14);border:none;color:#fff;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:15px}
+  .topbar .icon-btn:hover{background:rgba(255,255,255,.26)}
+  .rail{background:var(--c-neutral-0);border-right:1px solid var(--c-neutral-200);padding:var(--sp-3) var(--sp-2);display:flex;flex-direction:column;gap:2px;overflow:auto;min-height:0}
+  .rail .rail-title{font-size:var(--fs-xs);color:var(--c-neutral-500);padding:6px 10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);color:var(--c-neutral-600);cursor:pointer;font-weight:500;border:1px solid transparent}
+  .nav-item .n-ico{width:24px;height:24px;border-radius:7px;background:var(--c-neutral-100);display:grid;place-items:center;font-size:13px}
+  .nav-item:hover{background:var(--c-primary-50)}
+  .nav-item.active{background:var(--c-primary-100);color:var(--c-primary-700);border-color:var(--c-primary-100);font-weight:600}
+  .nav-item.active .n-ico{background:#fff;color:var(--c-primary-700)}
+  .nav-item .n-tag{margin-left:auto;font-size:10px;background:var(--c-warning-bg);color:var(--c-warning);padding:1px 6px;border-radius:999px;font-weight:700}
+
+  .main{overflow:auto;min-height:0;padding:var(--sp-5) var(--sp-6) 60px;display:flex;flex-direction:column;gap:var(--sp-4)}
+  /* 滚动条：低分辨率下展开全部选项时内容滚动而非被裁切（grid 子项需 min-height:0） */
+  .main::-webkit-scrollbar,.rail::-webkit-scrollbar{width:10px;height:10px}
+  .main::-webkit-scrollbar-thumb,.rail::-webkit-scrollbar-thumb{background:var(--c-neutral-200);border-radius:999px;border:2px solid var(--c-neutral-50);background-clip:content-box}
+  .main::-webkit-scrollbar-thumb:hover,.rail::-webkit-scrollbar-thumb:hover{background:var(--c-neutral-300);background-clip:content-box}
+  .main,.rail{scrollbar-color:var(--c-neutral-300) var(--c-neutral-50);scrollbar-width:thin}
+
+  /* 视图切换（导航决策：全程侧栏 + 首页概览） */
+  .view[hidden]{display:none}
+  .overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--sp-4)}
+  .ov-card{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);padding:var(--sp-5);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;display:flex;flex-direction:column;gap:10px}
+  .ov-card:hover{transform:translateY(-2px);box-shadow:var(--sh-md);border-color:var(--c-primary-100)}
+  .ov-card .ov-ico{width:42px;height:42px;border-radius:10px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center;font-size:20px}
+  .ov-card h3{margin:0;font-size:var(--fs-md)}
+  .ov-card p{margin:0;font-size:var(--fs-xs);color:var(--c-neutral-500);line-height:1.6}
+  .ov-card .ov-go{margin-top:auto;font-size:var(--fs-xs);font-weight:700;color:var(--c-primary-700)}
+  .page-head h1{font-size:var(--fs-xl);margin:0 0 2px}
+  .page-head p{margin:0;color:var(--c-neutral-500);font-size:var(--fs-sm)}
+
+  /* 书源状态条（P0 只读保护 + 人话提示） */
+  .book-bar{display:flex;align-items:center;gap:14px;background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);padding:14px 18px;box-shadow:var(--sh-sm)}
+  .book-bar .bk-ico{width:40px;height:40px;border-radius:10px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center;font-size:20px}
+  .book-bar .bk-name{font-weight:700;font-size:var(--fs-md)}
+  .book-bar .bk-meta{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:2px}
+  .book-bar .bk-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .pill{font-size:var(--fs-xs);padding:4px 10px;border-radius:999px;background:var(--c-success-bg);color:var(--c-success);font-weight:700}
+  .pill.info{background:var(--c-info-bg);color:var(--c-info)}
+  .pill.warn{background:var(--c-warning-bg);color:var(--c-warning)}
+
+  /* 主按钮区 */
+  .hero{background:linear-gradient(135deg,var(--c-primary-700),var(--c-primary-500));border-radius:var(--r-lg);padding:26px 28px;color:#fff;display:flex;align-items:center;gap:24px;box-shadow:var(--sh-md)}
+  .hero .h-text{flex:1}
+  .hero h2{margin:0 0 6px;font-size:var(--fs-lg)}
+  .hero p{margin:0;opacity:.9;font-size:var(--fs-sm)}
+  .hero .btn-primary-lg{background:#fff;color:var(--c-primary-700);border:none;padding:16px 34px;border-radius:12px;font-weight:800;font-size:var(--fs-md);cursor:pointer;box-shadow:var(--sh-md);white-space:nowrap}
+  .hero .btn-primary-lg:hover{transform:translateY(-1px)}
+  .hero .btn-primary-lg:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+  .card{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);overflow:hidden}
+  .card .c-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--c-neutral-100);cursor:pointer}
+  .card .c-head h3{margin:0;font-size:var(--fs-base)}
+  .card .c-head .c-sub{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .card .c-head .chev{margin-left:auto;color:var(--c-neutral-500);transition:transform .2s}
+  .card.open .c-head .chev{transform:rotate(90deg)}
+  .card .c-body{padding:6px 18px 18px}
+  .card:not(.open) .c-body{display:none}
+
+  /* 折叠面板行 */
+  .frow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--c-neutral-100)}
+  .frow:last-child{border-bottom:none}
+  .frow .f-no{width:22px;height:22px;border-radius:6px;background:var(--c-neutral-100);color:var(--c-neutral-500);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+  .frow .f-name{font-weight:600;min-width:150px}
+  .frow .f-desc{font-size:var(--fs-xs);color:var(--c-neutral-500);flex:1}
+  .frow .f-ctrl{display:flex;align-items:center;gap:8px}
+  .auto-chip{font-size:11px;background:var(--c-neutral-100);color:var(--c-neutral-500);padding:3px 9px;border-radius:999px;font-weight:700}
+  .switch{position:relative;width:40px;height:22px;background:var(--c-neutral-200);border-radius:999px;cursor:pointer;transition:background .2s;flex:none}
+  .switch.on{background:var(--c-primary-500)}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:var(--sh-sm)}
+  .switch.on::after{left:20px}
+  select{padding:7px 10px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-sm);color:var(--c-neutral-800);background:#fff;outline:none}
+  select:focus{border-color:var(--c-primary-500);box-shadow:0 0 0 3px var(--c-primary-100)}
+  .mini-input{width:64px;padding:6px 8px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-sm);outline:none}
+  .mini-input:focus{border-color:var(--c-primary-500);box-shadow:0 0 0 3px var(--c-primary-100)}
+  .f-foot{display:flex;align-items:center;justify-content:space-between;padding-top:12px;font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .link{background:none;border:none;color:var(--c-primary-700);cursor:pointer;font-weight:600;font-size:var(--fs-xs)}
+  .link:hover{text-decoration:underline}
+
+  /* 高级选项 */
+  .opt-group{padding:12px 4px;border-bottom:1px solid var(--c-neutral-100)}
+  .opt-group:last-child{border-bottom:none}
+  .opt-label{font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .opt-label .badge{font-size:10px;background:var(--c-warning-bg);color:var(--c-warning);padding:1px 7px;border-radius:999px;font-weight:700}
+  .radio-row{display:flex;gap:10px;flex-wrap:wrap}
+  .radio{flex:1;min-width:140px;border:1px solid var(--c-neutral-200);border-radius:10px;padding:12px 14px;cursor:pointer;background:#fff}
+  .radio:hover{border-color:var(--c-primary-100)}
+  .radio.sel{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .radio .r-title{font-weight:700}
+  .radio .r-desc{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:3px}
+  .sub{margin:10px 0 0;padding:12px 14px;background:var(--c-neutral-50);border-radius:10px;border:1px dashed var(--c-neutral-200)}
+  .sub:empty{display:none}
+  .sub .s-line{display:flex;align-items:center;gap:12px;margin:8px 0}
+  .sub .s-line>label{font-weight:600;min-width:96px;font-size:var(--fs-sm)}
+  .hint{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:6px}
+
+  /* 进度遮罩 */
+  .mask{position:fixed;inset:0;background:rgba(20,24,35,.45);display:none;align-items:center;justify-content:center;z-index:50}
+  .mask.show{display:flex}
+  .modal{background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:min(560px,92vw);max-height:88vh;overflow:auto}
+  .modal .m-head{padding:18px 22px;border-bottom:1px solid var(--c-neutral-100);display:flex;align-items:center;gap:10px}
+  .modal .m-head h2{margin:0;font-size:var(--fs-lg)}
+  .modal .m-head .m-ico{width:30px;height:30px;border-radius:8px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center}
+  .modal .m-body{padding:20px 22px}
+  .modal .m-foot{padding:14px 22px;border-top:1px solid var(--c-neutral-100);display:flex;justify-content:flex-end;gap:10px}
+  .close-x{border:none;background:none;font-size:20px;cursor:pointer;color:var(--c-neutral-500);margin-left:auto}
+
+  .prog-step{display:flex;align-items:center;gap:12px;padding:10px 4px}
+  .prog-step .dot{width:22px;height:22px;border-radius:50%;background:var(--c-neutral-100);display:grid;place-items:center;font-size:12px;color:var(--c-neutral-500);flex:none}
+  .prog-step.active .dot{background:var(--c-primary-500);color:#fff}
+  .prog-step.done .dot{background:var(--c-success);color:#fff}
+  .prog-step .s-name{font-weight:600}
+  .prog-step.active .s-name{color:var(--c-primary-700)}
+  .prog-step .s-desc{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .bar{height:10px;background:var(--c-neutral-100);border-radius:999px;overflow:hidden;margin:16px 0 6px}
+  .bar .fill{height:100%;background:var(--c-primary-500);width:0;border-radius:999px;transition:width .4s ease}
+  .bar-meta{display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .btn{border:1px solid var(--c-neutral-200);background:#fff;color:var(--c-neutral-800);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:var(--fs-sm);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{border-color:var(--c-primary-100);background:var(--c-primary-50)}
+  .btn.danger{color:var(--c-error);border-color:var(--c-error-border)}
+  .btn.danger:hover{background:var(--c-error-bg)}
+  .btn.primary{background:var(--c-primary-500);color:#fff;border-color:var(--c-primary-500)}
+  .btn.primary:hover{background:var(--c-primary-600)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* 结果卡 */
+  .result{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);padding:20px 22px}
+  .result .r-h{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .result .r-h .ok{width:34px;height:34px;border-radius:10px;background:var(--c-success);color:#fff;display:grid;place-items:center;font-size:18px}
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:10px 0 16px}
+  .stat{background:var(--c-primary-50);border-radius:10px;padding:14px;text-align:center}
+  .stat .num{font-size:var(--fs-xl);font-weight:800;color:var(--c-primary-700)}
+  .stat .lab{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:2px}
+  .diff{background:var(--c-neutral-50);border-radius:10px;padding:12px 14px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:var(--fs-xs);line-height:1.7}
+  .diff .del{color:var(--c-error);text-decoration:line-through;opacity:.8}
+  .diff .add{color:var(--c-success)}
+  .result .r-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+  /* 标注层 */
+  .annot{position:relative}
+  .annot>.tag{position:absolute;top:-10px;left:12px;font-size:10px;background:var(--c-primary-500);color:#fff;padding:2px 9px;border-radius:999px;font-weight:700;white-space:nowrap;box-shadow:var(--sh-sm);z-index:5;display:none}
+  body.show-annot .annot>.tag{display:inline-block}
+  body.show-annot .annot.show{outline:2px dashed var(--c-primary-500);outline-offset:3px;border-radius:var(--r-lg)}
+  .toggle-annot{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--c-neutral-600);cursor:pointer;user-select:none}
+  .legend{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:4px}
+
+  .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;z-index:60}
+  .toast{background:var(--c-neutral-800);color:#fff;padding:12px 16px;border-radius:10px;box-shadow:var(--sh-lg);font-size:var(--fs-sm);animation:rise .25s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand" onclick="showView('home')" title="回到首页概览" style="cursor:pointer"><span class="logo">F</span> FixText</div>
+    <span class="mod">/ 一键校正</span>
+    <div class="spacer"></div>
+    <button class="icon-btn" title="设置">⚙</button>
+  </div>
+
+  <nav class="rail">
+    <div class="rail-title">功能导航</div>
+    <div class="nav-item active" data-view="home" onclick="showView('home',this)"><span class="n-ico">🏠</span> 首页概览</div>
+    <div class="nav-item" data-view="import" onclick="showView('import',this)"><span class="n-ico">📥</span> 导入书籍</div>
+    <div class="nav-item" data-view="correction" onclick="showView('correction',this)"><span class="n-ico">⚡</span> 一键校正</div>
+    <div class="nav-item" data-view="check" onclick="showView('check',this)"><span class="n-ico">🔍</span> 检查问题</div>
+    <div class="nav-item" data-view="vocab" onclick="showView('vocab',this)"><span class="n-ico">📚</span> 词库管理</div>
+    <div class="nav-item" data-view="export" onclick="showView('export',this)"><span class="n-ico">📤</span> 导出结果</div>
+    <div class="nav-item" data-view="history" onclick="showView('history',this)"><span class="n-ico">🕓</span> 历史记录</div>
+  </nav>
+
+  <main class="main">
+  <!-- ===== 首页概览视图（导航决策：全程侧栏 + 首页概览） ===== -->
+  <div class="view" data-view="home" id="view-home">
+    <div class="page-head">
+      <div>
+        <h1>首页概览</h1>
+        <p>FixText 六步流水线，全程左侧常驻入口可达；点击下方卡片或左侧入口进入模块。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+    <div class="overview-grid">
+      <div class="ov-card annot" onclick="showView('import')"><span class="tag">§2.2 入口①</span><span class="ov-ico">📥</span><h3>导入书籍</h3><p>拖放或选择 TXT / EPUB，自动识别编码并转 UTF-8，原文件只读保护。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('correction')"><span class="tag">§2.2 入口②</span><span class="ov-ico">⚡</span><h3>一键校正</h3><p>默认组合一次跑完备份→排版→替换→校验，可逐项微调。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('check')"><span class="tag">§2.2 入口③</span><span class="ov-ico">🔍</span><h3>检查问题</h3><p>引号配对与逐处交互修复，定位未替 / 漏替与标点异常。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('vocab')"><span class="tag">§2.2 入口④</span><span class="ov-ico">📚</span><h3>词库管理</h3><p>新增 / 检索 / 查重 / 删除 / 合并，维护你的校正词库与安全底线。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('export')"><span class="tag">§2.2 入口⑤</span><span class="ov-ico">📤</span><h3>导出结果</h3><p>导出干净 TXT / EPUB，附替换报告与本书专有词条反馈。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('history')"><span class="tag">§2.2 入口⑥</span><span class="ov-ico">🕓</span><h3>历史记录</h3><p>任务列表、快照恢复、重新导出，随时回到任一时间点。</p><span class="ov-go">进入 →</span></div>
+    </div>
+  </div>
+
+  <!-- ===== 一键校正视图 ===== -->
+  <div class="view" data-view="correction" id="view-correction" hidden>
+    <div class="page-head">
+      <div>
+        <h1>一键校正</h1>
+        <p>默认配置一键完成「排版规范化 + 词库替换 + 标点标准化」。需要微调时，展开下方可选项。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+
+    <!-- 书源状态（P0 只读保护 + 人话提示） -->
+    <div class="book-bar annot">
+      <span class="tag">P0 只读保护 · 人话提示</span>
+      <div class="bk-ico">📖</div>
+      <div>
+        <div class="bk-name">《星河彼端》.txt</div>
+        <div class="bk-meta">37.2 MB · 已复制到工作区（原文件未改动）</div>
+      </div>
+      <div class="bk-right">
+        <span class="pill info">编码 GBK → 已自动转为 UTF-8</span>
+        <span class="pill">已就绪</span>
+      </div>
+    </div>
+
+    <!-- 主按钮 -->
+    <div class="hero annot">
+      <span class="tag">§2.2 入口② · 主按钮=默认组合</span>
+      <div class="h-text">
+        <h2>一键校正</h2>
+        <p>使用「常规校正」词库 + Go 引擎 + 默认排版项，一次跑完备份→排版→替换→校验。</p>
+      </div>
+      <button class="btn-primary-lg" id="runBtn" onclick="startCorrection()">⚡ 开始校正</button>
+    </div>
+
+    <!-- 折叠面板：排版规范化（可选） -->
+    <div class="card open annot" id="fmtCard">
+      <span class="tag">§2.7.1 · 14 项折叠 · 默认开 7/10</span>
+      <div class="c-head" onclick="toggleCard('fmtCard')">
+        <h3>排版规范化（可选）</h3>
+        <span class="c-sub">展开可逐项调整；配置自动保存，下次沿用</span>
+        <span class="chev">▶</span>
+      </div>
+      <div class="c-body" id="fmtBody"></div>
+    </div>
+
+    <!-- 高级选项 -->
+    <div class="card annot" id="advCard">
+      <span class="tag">§2.7.2 · 高级选项收进面板</span>
+      <div class="c-head" onclick="toggleCard('advCard')">
+        <h3>高级选项</h3>
+        <span class="c-sub">运行模式 / 子模式 / 词库组合 / 引擎</span>
+        <span class="chev">▶</span>
+      </div>
+      <div class="c-body">
+        <div class="opt-group">
+          <div class="opt-label">运行模式 <span class="badge">主按钮之外才用到</span></div>
+          <div class="radio-row" id="modeRow">
+            <div class="radio sel" data-mode="full" onclick="setMode('full',this)">
+              <div class="r-title">完整流程（默认）</div>
+              <div class="r-desc">备份 → 排版 → 词库替换 → 校验，一条龙</div>
+            </div>
+            <div class="radio" data-mode="skip" onclick="setMode('skip',this)">
+              <div class="r-title">跳过预处理</div>
+              <div class="r-desc">不做排版，直接用词库校正（展开子模式）</div>
+            </div>
+          </div>
+          <div class="sub" id="subModes"></div>
+        </div>
+
+        <div class="opt-group">
+          <div class="opt-label">使用哪套词库</div>
+          <select id="mapSelect" style="width:100%">
+            <option value="常规校正">常规校正 — 默认组合，覆盖常见错词与标点</option>
+            <option value="严格校正">严格校正 — 规则更紧，减少漏替</option>
+            <option value="繁简转换">繁简转换 — 繁体转简体专用</option>
+            <option value="标点规范">标点规范 — 仅做全半角与引号统一</option>
+            <option value="专有名词">专有名词 — 人名/地名/书名</option>
+            <option value="生僻字注音">生僻字注音 — 配合子模式使用</option>
+            <option value="网络用语">网络用语 — 口语化词归一</option>
+            <option value="古籍整理">古籍整理 — 竖排与异体字</option>
+            <option value="同义词">同义词 — 表述统一</option>
+            <option value="自定义组合">自定义组合 — 用户在词库管理拼装</option>
+          </select>
+          <div class="hint">共 10 组，带人话说明，默认「常规校正」。V1 主按钮不询问此组合（§2.2）。</div>
+        </div>
+
+        <div class="opt-group">
+          <div class="opt-label">替换引擎</div>
+          <select id="engineSelect" style="width:100%">
+            <option value="auto">自动（Go 内置，异常时自动降级 Python）</option>
+            <option value="force">强制标准引擎（Go）</option>
+            <option value="degrade">降级模式（Python greedy）</option>
+          </select>
+          <div class="hint">落点与「设置页」共用；Go 缺失/异常时按 3.3 降级路径自动接管并提示（不露命令行）。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 校正结果（执行后插入） -->
+    <div id="resultSlot"></div>
+
+    <div class="legend">勾选「显示设计依据」可看到每个 UI 元素对应的文档条款，证明不是把命令面板直接包装成产品。</div>
+  </div><!-- /view-correction -->
+
+  <!-- 占位视图：其余入口原型待扩展，导航壳已就绪 -->
+  <div class="view" id="view-ph" hidden>
+    <div class="page-head"><div><h1 id="phTitle">模块</h1><p>本原型聚焦「一键校正」；其余模块各有独立的交互原型文件，见下方提示。</p></div></div>
+    <div class="card" style="padding:36px 32px;text-align:center;color:var(--c-neutral-500)">
+      <div style="font-size:38px;margin-bottom:10px">🧩</div>
+      <div style="font-weight:700;color:var(--c-neutral-700);font-size:var(--fs-lg)" id="phName">模块</div>
+      <div style="font-size:var(--fs-sm);margin-top:6px">该模块的完整交互原型在独立文件中</div>
+      <div style="margin-top:14px;font-family:var(--font-mono);font-size:var(--fs-sm);background:var(--c-neutral-50);border:1px dashed var(--c-neutral-200);border-radius:8px;padding:10px 14px;display:inline-block" id="phFile">—</div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- 进度 / 通用 Modal -->
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ===== 排版 14 项（§2.7.1） ===== */
+const FMT = [
+  {n:1, name:"编码与换行符转换", desc:"源编码自动识别，换行统一", ctrl:"auto"},
+  {n:2, name:"英文大小写转换", desc:"数百个固定大小写词组", ctrl:"switch", on:false},
+  {n:3, name:"数字转换", desc:"阿拉伯↔中文数字互转（防误伤）", ctrl:"dropdown", opts:["不转换","转中文","转阿拉伯"], val:"不转换"},
+  {n:4, name:"去中文间空格", desc:"清除汉字之间多余空格", ctrl:"switch", on:false},
+  {n:5, name:"按标点分行/还原", desc:"在标点处断行或合并为整段", ctrl:"dropdown", opts:["不动","分行","还原为整段"], val:"不动"},
+  {n:6, name:"特殊字符转义还原", desc:"还原 EPUB/HTML 转义实体", ctrl:"auto"},
+  {n:7, name:"标点规范化", desc:"全半角/省略号/破折号统一（含引号转换）", ctrl:"switch", on:true, def:true},
+  {n:8, name:"多行引号处理", desc:"跨行引语补/去行首引号", ctrl:"dropdown", opts:["不动","补引号","去引号"], val:"不动"},
+  {n:9, name:"HTML 转 TXT", desc:"剥离 HTML 标签转纯文本", ctrl:"auto"},
+  {n:10, name:"TXT 排版", desc:"去空行/加缩进/插章节分隔", ctrl:"switch+input", on:true, def:true, input:"缩进字符数", inputVal:2},
+  {n:11, name:"分级标题", desc:"◎ 标记转「第X部/卷/章」", ctrl:"dropdown", opts:["不处理","一级","两级","三级"], val:"不处理"},
+  {n:12, name:"书籍信息提取", desc:"从正文提取书名/作者", ctrl:"auto"},
+  {n:13, name:"附加校对声明", desc:"文末追加校对声明", ctrl:"switch+input", on:false, input:"署名", inputVal:""},
+  {n:14, name:"中英文之间加空格", desc:"pangu 风格，汉字与字母/数字间补空格", ctrl:"switch", on:false},
+];
+function renderFmt(){
+  const body=document.getElementById("fmtBody");
+  body.innerHTML = FMT.map(it=>{
+    let ctrl="";
+    if(it.ctrl==="auto"){ ctrl=`<span class="auto-chip">导入时自动</span>`; }
+    else if(it.ctrl==="switch"){ ctrl=`<div class="switch ${it.on?'on':''}" onclick="toggleSwitch(${it.n},this)"></div>`; }
+    else if(it.ctrl==="dropdown"){ ctrl=`<select onchange="it.val=this.value">${it.opts.map(o=>`<option ${o===it.val?'selected':''}>${o}</option>`).join("")}</select>`; }
+    else if(it.ctrl==="switch+input"){ ctrl=`<div class="switch ${it.on?'on':''}" onclick="toggleSwitch(${it.n},this)"></div><input class="mini-input" value="${it.inputVal}" placeholder="${it.input}" title="${it.input}" onchange="it.inputVal=this.value">`; }
+    return `<div class="frow">
+      <span class="f-no">${it.n}</span>
+      <span class="f-name">${it.name}</span>
+      <span class="f-desc">${it.desc}</span>
+      <span class="f-ctrl">${ctrl}</span>
+    </div>`;
+  }).join("") + `<div class="f-foot"><span>默认仅开启第 7、10 两项；其余按上次要用的配置自动恢复。</span><button class="link" onclick="resetFmt()">恢复默认</button></div>`;
+}
+function toggleSwitch(n,el){ const it=FMT.find(x=>x.n===n); it.on=!it.on; el.classList.toggle("on",it.on); persist(); }
+function resetFmt(){ FMT.forEach(it=>{ if(it.ctrl.includes("switch")) it.on=!!it.def; }); renderFmt(); persist(); toast("已恢复默认排版项（仅开 7、10）"); }
+function persist(){ toast("排版配置已保存，下次沿用"); }
+
+function toggleCard(id){ document.getElementById(id).classList.toggle("open"); }
+
+/* ===== 高级：运行模式 + 子模式 ===== */
+function setMode(mode,el){
+  document.querySelectorAll("#modeRow .radio").forEach(r=>r.classList.remove("sel")); el.classList.add("sel");
+  const sub=document.getElementById("subModes");
+  if(mode==="skip"){
+    sub.innerHTML=`
+      <div class="s-line"><label>词库严格度</label>
+        <select id="strictSel"><option>常规</option><option>严格</option></select></div>
+      <div class="s-line"><label>生僻字注音</label>
+        <select id="zhuSel" onchange="zhuChange(this.value)">
+          <option>不注音</option><option>仅注一次</option><option>所有位置</option><option>取第一读音</option><option>多音字拆分</option>
+        </select></div>
+      <div class="s-line" id="zhuMapLine" style="display:none"><label>拆分用词库</label>
+        <select><option>生僻字注音词库</option><option>自定义组合</option><option>专有名词</option></select></div>
+      <div class="hint">子模式为 2 号 bat 实质内容，必须可被用户触达（§2.7.2）。多音字拆分需先选词库。</div>`;
+  } else { sub.innerHTML=""; }
+}
+function zhuChange(v){ document.getElementById("zhuMapLine").style.display = (v==="多音字拆分")?"flex":"none"; }
+
+/* ===== 执行：进度 + 可取消 + 自动快照（§2.2 入口② 验收②④） ===== */
+let running=false, timer=null;
+function startCorrection(){
+  if(running) return;
+  running=true;
+  // 处理前自动快照（验收④）
+  openModal(`
+    <div class="m-head"><div class="m-ico">⚡</div><h2>正在校正《星河彼端》</h2></div>
+    <div class="m-body">
+      <div class="note" style="background:var(--c-info-bg);border-color:var(--c-info-border);color:var(--c-info)">已为本次校正自动创建快照，可随时恢复到校正前。</div>
+      <div id="stepList"></div>
+      <div class="bar"><div class="fill" id="progFill"></div></div>
+      <div class="bar-meta"><span id="progStep">准备中…</span><span id="progEta">预计 8 秒</span></div>
+    </div>
+    <div class="m-foot"><button class="btn danger" id="cancelBtn" onclick="cancelCorrection()">取消（不留下半成品）</button></div>`, false);
+  runSteps();
+}
+const STEPS=[
+  {name:"备份原书", desc:"复制到工作区并生成快照基准", dur:900},
+  {name:"排版规范化", desc:"按所选开关整理正文（默认 7、10）", dur:1600},
+  {name:"词库批量替换", desc:"常规校正词库 · Go 引擎", dur:2200},
+  {name:"标点标准化 / 校验", desc:"引号配对与结果校验", dur:1300},
+];
+function runSteps(){
+  const list=document.getElementById("stepList"); list.innerHTML="";
+  let i=0, total=STEPS.reduce((a,s)=>a+s.dur,0), acc=0;
+  function next(){
+    if(i>0){ const prev=list.children[i-1]; prev.className="prog-step done"; prev.querySelector(".dot").textContent="✓"; }
+    if(i>=STEPS.length){ finishCorrection(); return; }
+    const s=STEPS[i];
+    const node=document.createElement("div"); node.className="prog-step active";
+    node.innerHTML=`<span class="dot">${i+1}</span><div><div class="s-name">${s.name}</div><div class="s-desc">${s.desc}</div></div>`;
+    list.appendChild(node);
+    document.getElementById("progStep").textContent=s.name+"…";
+    document.getElementById("progEta").textContent="预计 "+(Math.max(1,Math.round((total-acc)/1000)))+" 秒";
+    timer=setTimeout(()=>{ acc+=s.dur; document.getElementById("progFill").style.width=Math.round(acc/total*100)+"%"; i++; next(); }, s.dur);
+  }
+  next();
+}
+function cancelCorrection(){
+  if(timer) clearTimeout(timer);
+  running=false;
+  closeModal();
+  toast("已取消，未产生任何半成品文件（原书完好）");
+  renderResult(null);
+}
+function finishCorrection(){
+  running=false;
+  document.getElementById("progFill").style.width="100%";
+  document.getElementById("progStep").textContent="完成";
+  document.getElementById("progEta").textContent="0 秒";
+  // 完成：标记全部 done
+  document.querySelectorAll("#stepList .prog-step").forEach(n=>{n.className="prog-step done"; n.querySelector(".dot").textContent="✓";});
+  setTimeout(()=>{ closeModal(); renderResult({hits:1284, maps:3, caseFix:42}); toast("校正完成，已生成替换报告"); }, 600);
+}
+
+/* ===== 结果卡（替换统计 + 本书专有词条提示 2.4.2 + 恢复校正前） ===== */
+function renderResult(r){
+  const slot=document.getElementById("resultSlot");
+  if(!r){ slot.innerHTML=""; return; }
+  slot.innerHTML=`
+  <div class="result annot">
+    <span class="tag">§2.2 入口⑤ · 替换统计 + 2.4.2 反馈回路</span>
+    <div class="r-h"><div class="ok">✓</div><div><div style="font-weight:700;font-size:var(--fs-md)">《星河彼端》校正完成</div>
+      <div style="font-size:var(--fs-xs);color:var(--c-neutral-500)">处理前已自动快照，可随时恢复</div></div></div>
+    <div class="stat-grid">
+      <div class="stat"><div class="num">${r.hits}</div><div class="lab">替换命中（处）</div></div>
+      <div class="stat"><div class="num">${r.maps}</div><div class="lab">涉及词库（套）</div></div>
+      <div class="stat"><div class="num">${r.caseFix}</div><div class="lab">英文大小写修正</div></div>
+    </div>
+    <div class="diff">
+      <div>原：他<span class="del">好象</span>在<span class="del">在次</span>见面。</div>
+      <div>改：他<span class="add">好像</span>在<span class="add">再次</span>见面。</div>
+    </div>
+    <div class="r-actions">
+      <button class="btn primary" onclick="toast('替换报告已留存（CSV/文本），可在导出页查看',false)">📄 查看替换报告</button>
+      <button class="btn" onclick="toast('已恢复到校正前（快照）',false)">↺ 恢复到校正前</button>
+      <button class="btn" onclick="toast('已跳转导出结果（原型示意）',false)">📤 去导出</button>
+      <button class="btn" style="margin-left:auto" onclick="openBookWords()">✨ 把本书专有词条加入词库</button>
+    </div>
+  </div>`;
+}
+function openBookWords(){
+  const bw=[{w:"星陨大陆",note:"本书专有地名"},{w:"墨羽",note:"角色名"},{w:"九转玄功",note:"功法名"}];
+  const rows=bw.map((x,i)=>`<tr><td><input type="checkbox" checked data-bw="${i}"></td><td>${x.w}</td><td>${x.note}</td></tr>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">✨</div><h2>本书专有词条（加入预览）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note" style="background:var(--c-info-bg);border-color:var(--c-info-border);color:var(--c-info)">2.4.2：加入前预览，可逐条或整组确认；加入后下次校正自动生效。</div>
+      <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm)"><thead><tr style="text-align:left;color:var(--c-neutral-600)"><th>加入</th><th>原词</th><th>说明</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="closeModal();toast('已加入 3 条专有词条到「我的词库」',false)">加入选中词条</button></div>`, false);
+}
+
+/* ===== 通用工具 ===== */
+function openModal(html){ document.getElementById("modal").innerHTML=html; document.getElementById("mask").classList.add("show"); }
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="mask") closeModal(); });
+let toastTimer;
+function toast(msg){ const w=document.getElementById("toastWrap"); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; w.appendChild(t); setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),300);},2600); }
+
+/* ===== 导航：全程侧栏 + 首页概览（§2.2 / 决策文档） ===== */
+const VIEW_NAMES={import:'导入书籍',correction:'一键校正',check:'检查问题',vocab:'词库管理',export:'导出结果',history:'历史记录'};
+function showView(key, el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const navEl = el || document.querySelector('.nav-item[data-view="'+key+'"]');
+  if(navEl) navEl.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.hidden=true);
+  const real=document.getElementById('view-'+key);
+  if(real){ real.hidden=false; }
+  else {
+    const ph=document.getElementById('view-ph'); ph.hidden=false;
+    document.getElementById('phTitle').textContent=VIEW_NAMES[key]||'模块';
+    document.getElementById('phName').textContent=VIEW_NAMES[key]||'模块';
+    document.getElementById('phFile').textContent='FixTextGUI_'+(VIEW_NAMES[key]||'模块')+'_原型.html';
+  }
+  const main=document.querySelector('.main'); if(main) main.scrollTop=0;
+}
+renderFmt();
+showView('home');
+</script>
+</body>
+</html>

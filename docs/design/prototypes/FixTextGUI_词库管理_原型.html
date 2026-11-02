@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixText V1 · 词库管理 交互原型</title>
+<style>
+  :root{
+    /* ============================================================
+       单一令牌源：下方基础令牌逐字复制自 FixTextGUI_设计系统_薄地基.html
+       的 :root（颜色/字体/圆角在此之外不得另行定义，避免再度漂移）。
+       本原型局部命名已在本轮直接改名回地基令牌（如 --c-ink → --c-neutral-800、
+       --r-m → --r-md），不再保留别名层；改一处地基值即全产品生效。
+       ============================================================ */
+    --c-primary-50:#EEF0FB; --c-primary-100:#DDE1F6; --c-primary-200:#C0C6EE;
+    --c-primary-300:#9AA3E2; --c-primary-400:#6F79D1; --c-primary-500:#4F59C0;
+    --c-primary-600:#3F48A2; --c-primary-700:#333B83; --c-primary-800:#2B3169; --c-primary-900:#232852;
+    --c-neutral-0:#FFFFFF; --c-neutral-50:#F7F8FA; --c-neutral-100:#EEF1F5;
+    --c-neutral-200:#DDE2EA; --c-neutral-300:#C2CAD6; --c-neutral-400:#9AA4B4;
+    --c-neutral-500:#6B7585; --c-neutral-600:#4A5363; --c-neutral-700:#333B48;
+    --c-neutral-800:#222831; --c-neutral-900:#15191F;
+    --c-success:#15803D; --c-success-bg:#E7F4EC; --c-success-border:#B6E0C5;
+    --c-warning:#B45309; --c-warning-bg:#FBF1DF; --c-warning-border:#F0D6A8;
+    --c-error:#C0392B;   --c-error-bg:#FBEAE8;   --c-error-border:#F1C4BD;
+    --c-info:#3F48A2;    --c-info-bg:#ECEEF9;    --c-info-border:#C8CDEC;
+    --c-focus:#4F59C0;
+    --font-sans:"Segoe UI","Microsoft YaHei UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --font-mono:"Cascadia Code","JetBrains Mono",Consolas,monospace;
+    --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:16px; --fs-lg:18px;
+    --fs-xl:20px; --fs-2xl:24px; --fs-3xl:30px; --fs-4xl:36px;
+    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+    --lh-tight:1.25; --lh-normal:1.5; --lh-relaxed:1.7;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
+    --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px; --sp-16:64px;
+    --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-full:999px;
+    --sh-sm:0 1px 2px rgba(21,25,31,.06),0 1px 3px rgba(21,25,31,.08);
+    --sh-md:0 4px 10px rgba(21,25,31,.08),0 2px 4px rgba(21,25,31,.06);
+    --sh-lg:0 12px 28px rgba(21,25,31,.12),0 4px 8px rgba(21,25,31,.06);
+    --sh-focus:0 0 0 3px rgba(79,89,192,.28);
+
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:var(--font-sans);
+    background:var(--c-neutral-50); color:var(--c-neutral-800); font-size:var(--fs-base); line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ===== App 框架（首屏 6 入口导航壳） ===== */
+  .app{display:grid; grid-template-columns:212px 1fr; grid-template-rows:52px 1fr; height:100vh;}
+  .topbar{grid-column:1/3; display:flex; align-items:center; gap:var(--sp-4);
+    background:var(--c-neutral-900); color:#fff; padding:0 var(--sp-5);}
+  .brand{display:flex; align-items:center; gap:8px; font-weight:700; font-size:var(--fs-md); letter-spacing:.5px}
+  .brand .logo{width:22px;height:22px;border-radius:6px;background:#fff;color:var(--c-primary-700);
+    display:grid;place-items:center;font-size:13px;font-weight:800}
+  .topbar .mod{opacity:.85; font-weight:500; font-size:var(--fs-base)}
+  .topbar .spacer{flex:1}
+  .safe-badge{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);
+    padding:6px 10px;border-radius:999px;font-size:var(--fs-xs)}
+  .safe-badge .dot{width:7px;height:7px;border-radius:50%;background:#7FE3B0}
+  .topbar .icon-btn{background:rgba(255,255,255,.14);border:none;color:#fff;width:34px;height:34px;
+    border-radius:8px;cursor:pointer;font-size:15px}
+  .topbar .icon-btn:hover{background:rgba(255,255,255,.26)}
+
+  .rail{background:var(--c-neutral-0); border-right:1px solid var(--c-neutral-200); padding:var(--sp-3) var(--sp-2);
+    display:flex; flex-direction:column; gap:2px; overflow:auto; min-height:0}
+  .rail .rail-title{font-size:var(--fs-xs); color:var(--c-neutral-500); padding:6px 10px; font-weight:600; text-transform:uppercase; letter-spacing:.6px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);
+    color:var(--c-neutral-600); cursor:pointer; font-weight:500; border:1px solid transparent;}
+  .nav-item .n-ico{width:24px;height:24px;border-radius:7px;background:var(--c-neutral-100);display:grid;place-items:center;font-size:13px}
+  .nav-item:hover{background:var(--c-primary-50)}
+  .nav-item.active{background:var(--c-primary-100); color:var(--c-primary-700); border-color:var(--c-primary-100); font-weight:600}
+  .nav-item.active .n-ico{background:#fff;color:var(--c-primary-700)}
+  .nav-item .n-tag{margin-left:auto;font-size:10px;background:var(--c-warning-bg);color:var(--c-warning);
+    padding:1px 6px;border-radius:999px;font-weight:700}
+
+  /* ===== 主内容 ===== */
+  .main{overflow:auto; min-height:0; padding:var(--sp-5) var(--sp-6) 60px; display:flex; flex-direction:column; gap:var(--sp-4)}
+  /* 滚动条：低分辨率下展开全部选项时内容滚动而非被裁切（grid 子项需 min-height:0） */
+  .main::-webkit-scrollbar,.rail::-webkit-scrollbar{width:10px;height:10px}
+  .main::-webkit-scrollbar-thumb,.rail::-webkit-scrollbar-thumb{background:var(--c-neutral-200);border-radius:999px;border:2px solid var(--c-neutral-50);background-clip:content-box}
+  .main::-webkit-scrollbar-thumb:hover,.rail::-webkit-scrollbar-thumb:hover{background:var(--c-neutral-300);background-clip:content-box}
+  .main,.rail{scrollbar-color:var(--c-neutral-300) var(--c-neutral-50);scrollbar-width:thin}
+
+  /* 视图切换（导航决策：全程侧栏 + 首页概览） */
+  .view[hidden]{display:none}
+  .overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--sp-4)}
+  .ov-card{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);padding:var(--sp-5);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;display:flex;flex-direction:column;gap:10px}
+  .ov-card:hover{transform:translateY(-2px);box-shadow:var(--sh-md);border-color:var(--c-primary-100)}
+  .ov-card .ov-ico{width:42px;height:42px;border-radius:10px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center;font-size:20px}
+  .ov-card h3{margin:0;font-size:var(--fs-md)}
+  .ov-card p{margin:0;font-size:var(--fs-xs);color:var(--c-neutral-500);line-height:1.6}
+  .ov-card .ov-go{margin-top:auto;font-size:var(--fs-xs);font-weight:700;color:var(--c-primary-700)}
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .page-head h1{font-size:var(--fs-xl);margin:0 0 2px}
+  .page-head p{margin:0;color:var(--c-neutral-500);font-size:var(--fs-sm)}
+
+  /* 分级切换（自定义/内置分级 底线⑤） */
+  .tier-tabs{display:inline-flex;background:var(--c-neutral-100);border-radius:999px;padding:3px;gap:2px}
+  .tier-tab{border:none;background:transparent;padding:7px 16px;border-radius:999px;cursor:pointer;
+    font-weight:600;color:var(--c-neutral-600);font-size:var(--fs-sm)}
+  .tier-tab.active{background:#fff;color:var(--c-primary-700);box-shadow:var(--sh-sm)}
+
+  .layout{display:grid;grid-template-columns:230px 1fr;gap:var(--sp-4);align-items:start}
+  /* 左侧词库列表（文件不暴露：用友好名而非 1.自定义词库.php） */
+  .dict-list{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);
+    padding:var(--sp-3);box-shadow:var(--sh-sm)}
+  .dict-list h3{margin:2px 8px 10px;font-size:var(--fs-xs);color:var(--c-neutral-500);text-transform:uppercase;letter-spacing:.6px}
+  .dict-group{font-size:var(--fs-xs);color:var(--c-neutral-500);font-weight:700;margin:10px 8px 4px}
+  .dict{border:1px solid var(--c-neutral-200);border-radius:var(--r-md);padding:10px 12px;margin:6px 0;cursor:pointer;
+    display:flex;align-items:center;gap:10px;background:#fff}
+  .dict:hover{border-color:var(--c-primary-100)}
+  .dict.active{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .dict .d-name{font-weight:600}
+  .dict .d-meta{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .dict .lock{margin-left:auto;font-size:12px;color:var(--c-neutral-500)}
+  .dict .lock.custom{color:var(--c-success)}
+
+  /* 工具条 */
+  .toolbar{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+    background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);
+    padding:var(--sp-3) var(--sp-4);box-shadow:var(--sh-sm)}
+  .search{display:flex;align-items:center;gap:8px;background:var(--c-neutral-50);border:1px solid var(--c-neutral-200);
+    border-radius:8px;padding:8px 12px;flex:1;min-width:200px}
+  .search input{border:none;background:transparent;outline:none;flex:1;font-size:var(--fs-base);color:var(--c-neutral-800)}
+  .btn{border:1px solid var(--c-neutral-200);background:#fff;color:var(--c-neutral-800);padding:8px 14px;border-radius:8px;
+    cursor:pointer;font-weight:600;font-size:var(--fs-sm);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{border-color:var(--c-primary-100);background:var(--c-primary-50)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--c-primary-500);color:#fff;border-color:var(--c-primary-500)}
+  .btn.primary:hover{background:var(--c-primary-600)}
+  .btn.danger{color:var(--c-error);border-color:var(--c-error-border)}
+  .btn.danger:hover{background:var(--c-error-bg)}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--c-neutral-600)}
+  .btn.ghost:hover{background:var(--c-neutral-100)}
+  .sel-count{font-size:var(--fs-xs);color:var(--c-neutral-500);font-weight:600}
+
+  /* 表格（结果用结构化表格，不露 PHP 代码 底线③） */
+  .card{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+  thead th{background:var(--c-neutral-100);text-align:left;padding:11px 14px;color:var(--c-neutral-600);font-weight:700;
+    font-size:var(--fs-xs);border-bottom:1px solid var(--c-neutral-200);position:sticky;top:0}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--c-neutral-100);color:var(--c-neutral-800)}
+  tbody tr:hover{background:var(--c-primary-50)}
+  tbody tr.sel{background:#FFF6E9}
+  .word{font-weight:700;font-family:"JetBrains Mono",ui-monospace,monospace}
+  .arrow{color:var(--c-neutral-500);margin:0 6px}
+  .val{color:var(--c-primary-700)}
+  .chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+  .chip.builtin{background:var(--c-info-bg);color:var(--c-info)}
+  .chip.custom{background:var(--c-success-bg);color:var(--c-success)}
+  .hit{color:var(--c-neutral-600);font-size:var(--fs-xs)}
+  .row-act{display:flex;gap:6px}
+  .link-btn{background:none;border:none;color:var(--c-primary-700);cursor:pointer;font-weight:600;font-size:var(--fs-xs);padding:4px 6px;border-radius:6px}
+  .link-btn:hover{background:var(--c-primary-100)}
+  .link-btn.del{color:var(--c-error)}
+  .empty{padding:48px;text-align:center;color:var(--c-neutral-500)}
+
+  /* 本书专有词库横幅（2.4.2 标准反馈回路） */
+  .banner{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,var(--c-primary-50),#fff);
+    border:1px solid var(--c-primary-100);border-radius:var(--r-lg);padding:14px 18px}
+  .banner .b-ico{width:38px;height:38px;border-radius:10px;background:var(--c-primary-500);color:#fff;display:grid;place-items:center;font-size:18px}
+  .banner .b-text{flex:1}
+  .banner .b-text b{font-size:var(--fs-base)}
+  .banner .b-text div{color:var(--c-neutral-500);font-size:var(--fs-sm);margin-top:2px}
+
+  /* 历史与快照面板（底线②） */
+  .panel{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm)}
+  .panel .p-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--c-neutral-100)}
+  .panel .p-head h3{margin:0;font-size:var(--fs-base)}
+  .snap-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--c-neutral-100);font-size:var(--fs-sm)}
+  .snap-item:last-child{border-bottom:none}
+  .snap-dot{width:9px;height:9px;border-radius:50%;background:var(--c-neutral-200);flex:none}
+  .snap-item.cur .snap-dot{background:var(--c-success);box-shadow:0 0 0 3px var(--c-success-bg)}
+  .snap-item .s-time{color:var(--c-neutral-500);font-size:var(--fs-xs);margin-left:auto}
+  .snap-item .s-act{font-weight:600}
+
+  /* Toast（撤销入口 底线①） */
+  .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;z-index:60}
+  .toast{background:var(--c-neutral-800);color:#fff;padding:12px 16px;border-radius:10px;box-shadow:var(--sh-lg);
+    display:flex;align-items:center;gap:14px;font-size:var(--fs-sm);animation:rise .25s ease}
+  .toast .t-undo{background:var(--c-primary-500);color:#fff;border:none;padding:6px 12px;border-radius:7px;font-weight:700;cursor:pointer}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Modal */
+  .mask{position:fixed;inset:0;background:rgba(20,24,35,.42);display:none;align-items:center;justify-content:center;z-index:50}
+  .mask.show{display:flex}
+  .modal{background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:min(620px,92vw);max-height:88vh;overflow:auto}
+  .modal.wide{width:min(820px,94vw)}
+  .modal .m-head{padding:18px 22px;border-bottom:1px solid var(--c-neutral-100);display:flex;align-items:center;gap:10px}
+  .modal .m-head h2{margin:0;font-size:var(--fs-lg)}
+  .modal .m-head .m-ico{width:30px;height:30px;border-radius:8px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center}
+  .modal .m-body{padding:20px 22px}
+  .modal .m-foot{padding:14px 22px;border-top:1px solid var(--c-neutral-100);display:flex;justify-content:flex-end;gap:10px}
+  .note{background:var(--c-warning-bg);border:1px solid var(--c-warning-border);color:var(--c-warning);padding:10px 14px;border-radius:8px;font-size:var(--fs-sm);margin-bottom:14px}
+  .note.info{background:var(--c-info-bg);border-color:var(--c-info-border);color:var(--c-info)}
+  .note.warn{background:var(--c-warning-bg);border-color:var(--c-warning-border);color:var(--c-warning)}
+  .field{margin:12px 0}
+  .field label{display:block;font-weight:600;margin-bottom:6px;font-size:var(--fs-sm)}
+  .field input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-base);outline:none}
+  .field input[type=text]:focus{border-color:var(--c-primary-500);box-shadow:0 0 0 3px var(--c-primary-100)}
+  .mini-table{width:100%;border-collapse:collapse;font-size:var(--fs-xs);margin-top:8px}
+  .mini-table th{background:var(--c-neutral-100);text-align:left;padding:8px 10px;color:var(--c-neutral-600);font-weight:700}
+  .mini-table td{padding:8px 10px;border-bottom:1px solid var(--c-neutral-100)}
+  .dup-group{margin:14px 0;padding:12px 14px;border:1px solid var(--c-neutral-200);border-radius:10px;background:var(--c-neutral-50)}
+  .dup-group h4{margin:0 0 8px;font-size:var(--fs-sm);color:var(--c-warning)}
+  .grp-tag{font-size:11px;background:var(--c-warning-bg);color:var(--c-warning);padding:2px 8px;border-radius:999px;font-weight:700;margin-left:8px}
+  .close-x{border:none;background:none;font-size:20px;cursor:pointer;color:var(--c-neutral-500);margin-left:auto}
+
+  /* 设计依据标注层 */
+  .annot{position:relative}
+  .annot .tag{position:absolute;top:-9px;left:10px;font-size:10px;background:var(--c-primary-500);color:#fff;
+    padding:2px 8px;border-radius:999px;font-weight:700;white-space:nowrap;box-shadow:var(--sh-sm);z-index:5;display:none}
+  body.show-annot .annot .tag{display:inline-block}
+  .annot.show{outline:2px dashed var(--c-primary-500);outline-offset:3px;border-radius:var(--r-lg)}
+  body.show-annot .annot.show{outline:2px dashed var(--c-primary-500)}
+
+  .toggle-annot{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--c-neutral-600);cursor:pointer;user-select:none}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:4px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:9px;height:9px;border-radius:2px;background:var(--c-primary-500);display:inline-block}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- 顶栏 -->
+  <div class="topbar">
+    <div class="brand" onclick="showView('home')" title="回到首页概览" style="cursor:pointer"><span class="logo">F</span> FixText</div>
+    <span class="mod">/ 词库管理</span>
+    <div class="spacer"></div>
+    <div class="safe-badge"><span class="dot"></span> 安全保护已开启</div>
+    <button class="icon-btn" title="历史与快照" onclick="toggleHistory()">🕑</button>
+    <button class="icon-btn" title="撤销上一步 (Ctrl+Z)" onclick="undo()">↩</button>
+  </div>
+
+  <!-- 导航轨（全程常驻 6 入口等权 + 首页概览） -->
+  <nav class="rail">
+    <div class="rail-title">功能导航</div>
+    <div class="nav-item active" data-view="home" onclick="showView('home',this)"><span class="n-ico">🏠</span> 首页概览</div>
+    <div class="nav-item" data-view="import" onclick="showView('import',this)"><span class="n-ico">📥</span> 导入书籍</div>
+    <div class="nav-item" data-view="correction" onclick="showView('correction',this)"><span class="n-ico">⚡</span> 一键校正</div>
+    <div class="nav-item" data-view="check" onclick="showView('check',this)"><span class="n-ico">🔍</span> 检查问题</div>
+    <div class="nav-item" data-view="vocab" onclick="showView('vocab',this)"><span class="n-ico">📚</span> 词库管理 <span class="n-tag">核心</span></div>
+    <div class="nav-item" data-view="export" onclick="showView('export',this)"><span class="n-ico">📤</span> 导出结果</div>
+    <div class="nav-item" data-view="history" onclick="showView('history',this)"><span class="n-ico">🕓</span> 历史记录</div>
+  </nav>
+
+  <!-- 主内容 -->
+  <main class="main">
+  <!-- ===== 首页概览视图（导航决策：全程侧栏 + 首页概览） ===== -->
+  <div class="view" data-view="home" id="view-home">
+    <div class="page-head">
+      <div>
+        <h1>首页概览</h1>
+        <p>FixText 六步流水线，全程左侧常驻入口可达；点击下方卡片或左侧入口进入模块。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+    <div class="overview-grid">
+      <div class="ov-card annot" onclick="showView('import')"><span class="tag">§2.2 入口①</span><span class="ov-ico">📥</span><h3>导入书籍</h3><p>拖放或选择 TXT / EPUB，自动识别编码并转 UTF-8，原文件只读保护。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('correction')"><span class="tag">§2.2 入口②</span><span class="ov-ico">⚡</span><h3>一键校正</h3><p>默认组合一次跑完备份→排版→替换→校验，可逐项微调。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('check')"><span class="tag">§2.2 入口③</span><span class="ov-ico">🔍</span><h3>检查问题</h3><p>引号配对与逐处交互修复，定位未替 / 漏替与标点异常。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('vocab')"><span class="tag">§2.2 入口④</span><span class="ov-ico">📚</span><h3>词库管理</h3><p>新增 / 新增 / 检索 / 查重 / 删除 / 合并，维护你的校正词库与安全底线。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('export')"><span class="tag">§2.2 入口⑤</span><span class="ov-ico">📤</span><h3>导出结果</h3><p>导出干净 TXT / EPUB，附替换报告与本书专有词条反馈。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('history')"><span class="tag">§2.2 入口⑥</span><span class="ov-ico">🕓</span><h3>历史记录</h3><p>任务列表、快照恢复、重新导出，随时回到任一时间点。</p><span class="ov-go">进入 →</span></div>
+    </div>
+  </div>
+
+  <!-- ===== 词库管理视图 ===== -->
+  <div class="view" data-view="vocab" id="view-vocab" hidden>
+    <div class="page-head">
+      <div>
+        <h1>词库管理</h1>
+        <p>新增、检索、查重、合并、删除词条，并安全维护你的校正词库。</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+        <div class="tier-tabs">
+          <button class="tier-tab active" data-tier="all" onclick="setTier('all',this)">全部</button>
+          <button class="tier-tab" data-tier="custom" onclick="setTier('custom',this)">自定义</button>
+          <button class="tier-tab" data-tier="builtin" onclick="setTier('builtin',this)">内置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 本书专有词库横幅（2.4.2） -->
+    <div class="banner" id="bookBanner">
+      <div class="b-ico">✨</div>
+      <div class="b-text">
+        <b>《星河彼端》校正完成，发现 3 条本书专有词条</b>
+        <div>是否把它们加入你的自定义词库？加入后，下次校正同类错误将自动生效。</div>
+      </div>
+      <button class="btn primary" onclick="openBookWords()">查看并加入</button>
+      <button class="btn ghost" onclick="hideBanner()">稍后</button>
+    </div>
+
+    <div class="layout">
+      <!-- 左侧词库分级（文件不暴露 + 自定义/内置分级） -->
+      <aside class="dict-list annot">
+        <span class="tag">底线③ 文件不暴露 · 友好名</span>
+        <h3>词库</h3>
+        <div class="dict active" data-dict="custom" onclick="selectDict('custom',this)">
+          <span class="n-ico" style="width:22px;height:22px;border-radius:6px;background:var(--c-success-bg);display:grid;place-items:center">✎</span>
+          <div><div class="d-name">我的词库</div><div class="d-meta" id="metaCustom">0 条 · 可编辑</div></div>
+          <span class="lock custom">✎</span>
+        </div>
+
+        <div class="dict-group">内置词库（只读 · 可恢复默认）</div>
+        <div class="dict" data-dict="b1" onclick="selectDict('b1',this)">
+          <span class="n-ico" style="width:22px;height:22px;border-radius:6px;background:var(--c-info-bg);display:grid;place-items:center">📕</span>
+          <div><div class="d-name">常规校正词库</div><div class="d-meta" id="metaB1">0 条 · 只读</div></div>
+          <span class="lock">🔒</span>
+        </div>
+        <div class="dict" data-dict="b2" onclick="selectDict('b2',this)">
+          <span class="n-ico" style="width:22px;height:22px;border-radius:6px;background:var(--c-info-bg);display:grid;place-items:center">📗</span>
+          <div><div class="d-name">标点规范词库</div><div class="d-meta" id="metaB2">0 条 · 只读</div></div>
+          <span class="lock">🔒</span>
+        </div>
+        <div class="dict" data-dict="b3" onclick="selectDict('b3',this)">
+          <span class="n-ico" style="width:22px;height:22px;border-radius:6px;background:var(--c-info-bg);display:grid;place-items:center">📘</span>
+          <div><div class="d-name">繁简转换词库</div><div class="d-meta" id="metaB3">0 条 · 只读</div></div>
+          <span class="lock">🔒</span>
+        </div>
+      </aside>
+
+      <!-- 右侧工作区 -->
+      <section style="display:flex;flex-direction:column;gap:var(--sp-4)">
+        <!-- 工具条 -->
+        <div class="toolbar annot">
+          <span class="tag">§2.4.1 五操作 · 新增为 V1 补入</span>
+          <button class="btn primary" onclick="openAdd()">＋ 新增词条</button>
+          <div class="search">🔍<input id="searchInput" type="text" placeholder="检索词或替换值…（双向）" oninput="render()"></div>
+          <button class="btn" onclick="openDup()">🔁 查重</button>
+          <button class="btn" id="mergeBtn" onclick="openMerge()" disabled>合并</button>
+          <button class="btn danger" id="delBtn" onclick="confirmDelete()" disabled>🗑 删除选中</button>
+          <button class="btn" onclick="openExpand()">📋 展开核对</button>
+          <span class="sel-count" id="selCount">未选择</span>
+        </div>
+
+        <!-- 词条表格 -->
+        <div class="card annot">
+          <span class="tag">底线③ 结构化表格 · 不露 PHP</span>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px"><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th>
+                <th>原词</th><th>替换为</th><th>类型</th><th>来源</th><th>命中书籍</th><th style="width:120px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- 历史与快照 -->
+        <div class="panel annot" id="historyPanel" style="display:none">
+          <span class="tag">底线② 自动快照 · 可恢复</span>
+          <div class="p-head">
+            <h3>历史与快照</h3>
+            <button class="btn ghost" onclick="restoreDefault()">↺ 恢复默认词库（保留自定义）</button>
+          </div>
+          <div id="snapList"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="legend">
+      <span><i></i> 原型标注说明：每个 <b>显示设计依据</b> 标签对应文档一条约束，证明界面不是把命令面板直接包装成产品。</span>
+    </div>
+  </div><!-- /view-vocab -->
+
+  <!-- 占位视图：其余入口原型待扩展，导航壳已就绪 -->
+  <div class="view" id="view-ph" hidden>
+    <div class="page-head"><div><h1 id="phTitle">模块</h1><p>本原型聚焦「词库管理」；其余模块各有独立的交互原型文件，见下方提示。</p></div></div>
+    <div class="card" style="padding:36px 32px;text-align:center;color:var(--c-neutral-500)">
+      <div style="font-size:38px;margin-bottom:10px">🧩</div>
+      <div style="font-weight:700;color:var(--c-neutral-700);font-size:var(--fs-lg)" id="phName">模块</div>
+      <div style="font-size:var(--fs-sm);margin-top:6px">该模块的完整交互原型在独立文件中</div>
+      <div style="margin-top:14px;font-family:var(--font-mono);font-size:var(--fs-sm);background:var(--c-neutral-50);border:1px dashed var(--c-neutral-200);border-radius:8px;padding:10px 14px;display:inline-block" id="phFile">—</div>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- Toast -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- 通用 Modal -->
+<div class="mask" id="mask">
+  <div class="modal" id="modal"><!-- 动态填充 --></div>
+</div>
+
+<script>
+/* ============ 数据模型 ============ */
+const ENTRY_TYPES = ["错词校正","角色名","专有名词","其他"];
+let ENTRIES = [
+  // 自定义词库（可编辑；「新增」写入此分级，见 §2.4.1 / 2.4.3）
+  {id:1, word:"星河彼端", value:"星河彼岸", type:"专有名词", pinyin:"", dict:"custom", tier:"custom", books:["《星河彼端》"]},
+  {id:2, word:"绯红之翼", value:"绯红之翌", type:"专有名词", pinyin:"", dict:"custom", tier:"custom", books:["《绯红之翼》","《黎明誓约》"]},
+  {id:3, word:"萧衍", value:"萧彦", type:"角色名", pinyin:"xiāo yàn", dict:"custom", tier:"custom", books:["《九域志》"]},
+  {id:4, word:"地煞", value:"第煞", type:"错词校正", pinyin:"", dict:"custom", tier:"custom", books:[]},
+  {id:5, word:"玄机阁", value:"悬机阁", type:"专有名词", pinyin:"", dict:"custom", tier:"custom", books:["《玄机阁秘录》"]},
+  // 内置词库 b1
+  {id:11, word:"好象", value:"好像", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:12, word:"做为一个", value:"作为一个", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:13, word:"他门", value:"他们", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:14, word:"在次", value:"再次", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  // 内置词库 b2（标点）
+  {id:21, word:"“", value:"“", type:"其他", pinyin:"", dict:"b2", tier:"builtin", books:[]},
+  {id:22, word:"''", value:"“”,", type:"其他", pinyin:"", dict:"b2", tier:"builtin", books:[]},
+  // 内置词库 b3（繁简）
+  {id:31, word:"網", value:"网", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+  {id:32, word:"國", value:"国", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+  {id:33, word:"對", value:"对", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+];
+const DICT_NAMES = {custom:"我的词库", b1:"常规校正词库", b2:"标点规范词库", b3:"繁简转换词库"};
+
+let state = { tier:"all", dict:"custom", search:"", selected:new Set(), snapshots:[], seq:100 };
+let undoStack = []; // 底线① 撤销
+
+/* ============ 快照（底线② 每次变更自动快照） ============ */
+function snap(label){
+  state.seq++;
+  state.snapshots.unshift({id:state.seq, time:nowStr(), label, data:JSON.parse(JSON.stringify(ENTRIES)), sel:new Set(state.selected)});
+  if(state.snapshots.length>12) state.snapshots.pop();
+  renderSnaps();
+}
+function nowStr(){
+  const d=new Date(); const p=n=>String(n).padStart(2,"0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/* ============ 渲染 ============ */
+function getFiltered(){
+  let list = ENTRIES.slice();
+  if(state.tier==="custom") list=list.filter(e=>e.tier==="custom");
+  else if(state.tier==="builtin") list=list.filter(e=>e.tier==="builtin");
+  if(state.dict!=="custom" && state.dict!=="all") list=list.filter(e=>e.dict===state.dict);
+  const q=(state.search||"").trim().toLowerCase();
+  if(q) list=list.filter(e=>e.word.toLowerCase().includes(q)||e.value.toLowerCase().includes(q));
+  return list;
+}
+function render(){
+  state.search = document.getElementById("searchInput").value;
+  const list=getFiltered();
+  const tb=document.getElementById("tbody");
+  if(list.length===0){ tb.innerHTML=`<tr><td colspan="7"><div class="empty">没有匹配的词条</div></td></tr>`; }
+  else{
+    tb.innerHTML=list.map(e=>{
+      const sel=state.selected.has(e.id);
+      const isBuiltin=e.tier==="builtin";
+      const typ=e.type||"—";
+      const py=e.pinyin? ` <span class="hit">/${esc(e.pinyin)}</span>` : "";
+      return `<tr class="${sel?'sel':''}">
+        <td><input type="checkbox" ${sel?'checked':''} onchange="toggleRow(${e.id},this.checked)"></td>
+        <td class="word">${esc(e.word)}${py}</td>
+        <td><span class="val">${esc(e.value)}</span></td>
+        <td class="hit">${esc(typ)}</td>
+        <td><span class="chip ${isBuiltin?'builtin':'custom'}">${isBuiltin?'内置':'自定义'}</span></td>
+        <td class="hit">${e.books.length? '📖 '+e.books.join('、') : '—'}</td>
+        <td><div class="row-act">
+          <button class="link-btn" onclick="editEntry(${e.id})">编辑</button>
+          ${isBuiltin? '<span class="hit">只读</span>' : `<button class="link-btn del" onclick="confirmDelete([${e.id}])">删除</button>`}
+        </div></td>
+      </tr>`;
+    }).join("");
+  }
+  // 选择计数与按钮态
+  const selArr=[...state.selected];
+  const validSel=selArr.filter(id=>ENTRIES.find(e=>e.id===id && e.tier==="custom"));
+  document.getElementById("selCount").textContent = state.selected.size? `已选 ${state.selected.size} 条（可删 ${validSel.length}）` : "未选择";
+  document.getElementById("delBtn").disabled = validSel.length===0;
+  document.getElementById("mergeBtn").disabled = validSel.length<2;
+  // 词典计数
+  const c=ENTRIES.filter(e=>e.tier==="custom").length;
+  const b1=ENTRIES.filter(e=>e.dict==="b1").length, b2=ENTRIES.filter(e=>e.dict==="b2").length, b3=ENTRIES.filter(e=>e.dict==="b3").length;
+  document.getElementById("metaCustom").textContent=`${c} 条 · 可编辑`;
+  document.getElementById("metaB1").textContent=`${b1} 条 · 只读`;
+  document.getElementById("metaB2").textContent=`${b2} 条 · 只读`;
+  document.getElementById("metaB3").textContent=`${b3} 条 · 只读`;
+}
+function esc(s){return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+function renderSnaps(){
+  const el=document.getElementById("snapList");
+  el.innerHTML=state.snapshots.map((s,i)=>`
+    <div class="snap-item ${i===0?'cur':''}">
+      <span class="snap-dot"></span>
+      <span class="s-act">${esc(s.label)}</span>
+      <span class="s-time">${s.time}${i===0?' · 当前':''}</span>
+      ${i>0?`<button class="link-btn" onclick="restoreSnap(${s.id})">恢复到此</button>`:''}
+    </div>`).join("");
+}
+
+/* ============ 选择 ============ */
+function toggleRow(id,on){ if(on) state.selected.add(id); else state.selected.delete(id); render(); }
+function toggleAll(on){
+  getFiltered().forEach(e=>{ if(on) state.selected.add(e.id); else state.selected.delete(e.id); });
+  render();
+}
+function setTier(t,btn){ state.tier=t; document.querySelectorAll(".tier-tab").forEach(b=>b.classList.remove("active")); btn.classList.add("active");
+  if(t==="custom") {state.dict="custom"; document.querySelectorAll(".dict").forEach(d=>d.classList.remove("active")); document.querySelector('.dict[data-dict="custom"]').classList.add("active");}
+  render();
+}
+function selectDict(d,el){ state.dict=d; document.querySelectorAll(".dict").forEach(x=>x.classList.remove("active")); el.classList.add("active");
+  if(d!=="custom"&&d!=="all"){ state.tier="all"; document.querySelectorAll(".tier-tab").forEach(b=>b.classList.remove("active")); document.querySelector('.tier-tab[data-tier="all"]').classList.add("active"); }
+  render();
+}
+
+/* ============ 删除（底线①④） ============ */
+function confirmDelete(ids){
+  const sel = ids || [...state.selected];
+  const targets = ENTRIES.filter(e=>sel.includes(e.id) && e.tier==="custom");
+  if(targets.length===0){ toast("没有可删除的自定义词条"); return; }
+  // 影响范围：命中过哪些书（底线① 删除前展示影响范围）
+  const bookMap={};
+  targets.forEach(e=>e.books.forEach(b=>{ bookMap[b]=(bookMap[b]||0)+1; }));
+  const bookLines = Object.keys(bookMap).length? Object.entries(bookMap).map(([b,n])=>`${b}：涉及 ${n} 条`).join("；") : "无（这些词条尚未在任何校正中命中）";
+  openModal(`
+    <div class="m-head"><div class="m-ico">🗑</div><h2>删除确认（批量先预览）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线④：批量删除必须先给预览清单，确认后执行；底线①：误删可撤销。</div>
+      <p>即将删除 <b>${targets.length}</b> 条自定义词条，删除后可通过顶栏「↩ 撤销」恢复。</p>
+      <p style="font-weight:600;margin-bottom:4px">影响范围（命中过哪些书）：</p>
+      <div class="note info">${bookLines}</div>
+      <table class="mini-table"><thead><tr><th>原词</th><th>替换为</th></tr></thead><tbody>
+        ${targets.map(e=>`<tr><td>${esc(e.word)}</td><td>${esc(e.value)}</td></tr>`).join("")}
+      </tbody></table>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="doDelete(${JSON.stringify(sel)})">确认删除 ${targets.length} 条</button>
+    </div>`, false);
+}
+function doDelete(ids){
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  const n=ids.length;
+  ENTRIES=ENTRIES.filter(e=>!ids.includes(e.id));
+  state.selected.clear();
+  snap(`删除 ${n} 条`);
+  undoStack.push({type:"delete", before, ids});
+  closeModal(); render();
+  toast(`已删除 ${n} 条自定义词条`, true);
+}
+
+/* ============ 撤销（底线①） ============ */
+function undo(){
+  if(undoStack.length===0){ toast("没有可撤销的操作"); return; }
+  const last=undoStack.pop();
+  if(last.type==="delete"){
+    // 恢复被删条目（以快照为准重建更简单，这里直接合并 before 中的差异）
+    const have=new Set(ENTRIES.map(e=>e.id));
+    last.before.forEach(e=>{ if(!have.has(e.id)) ENTRIES.push(e); });
+    snap("撤销删除");
+    closeModal(); render(); toast("已撤销删除，词条已恢复", false);
+  } else if(last.type==="merge"){
+    ENTRIES=JSON.parse(JSON.stringify(last.before));
+    snap("撤销合并");
+    closeModal(); render(); toast("已撤销合并", false);
+  } else if(last.type==="bookwords"){
+    ENTRIES=JSON.parse(JSON.stringify(last.before));
+    snap("撤销加入专有词");
+    closeModal(); render(); toast("已撤销加入，词条已移除", false);
+  } else if(last.type==="add"){
+    ENTRIES=JSON.parse(JSON.stringify(last.before));
+    snap("撤销新增");
+    closeModal(); render(); toast("已撤销新增，词条已移除", false);
+  }
+}
+
+/* ============ 新增词条（§2.4.1 五操作 · V1 补入） ============ */
+function openAdd(){
+  // 新增只写入「我的词库」；若当前在内置库，自动切到自定义
+  if(state.dict!=="custom"){
+    const el=document.querySelector('.dict[data-dict="custom"]');
+    if(el) selectDict("custom", el);
+  }
+  const typeOpts=ENTRY_TYPES.map(t=>`<option value="${t}">${t}</option>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">＋</div><h2>新增词条</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note info">§2.4.1：写入「我的词库」（自定义分级）；加入前自动查重；操作可撤销（同五条底线）。</div>
+      <div class="field"><label>原词（词 / 角色名）</label><input id="addWord" type="text" placeholder="例如：萧衍" autofocus></div>
+      <div class="field"><label>替换为</label><input id="addVal" type="text" placeholder="例如：萧彦"></div>
+      <div class="field"><label>类型</label>
+        <select id="addType" style="width:100%;padding:10px 12px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-base)">${typeOpts}</select>
+      </div>
+      <div class="field"><label>注音（可选）</label><input id="addPy" type="text" placeholder="例如：xiāo yàn"></div>
+      <div id="addConflict" style="display:none"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="previewAdd()">预览并查重</button>
+    </div>`, false);
+}
+function collectAddForm(){
+  const word=(document.getElementById("addWord").value||"").trim();
+  const value=(document.getElementById("addVal").value||"").trim();
+  const type=document.getElementById("addType").value||ENTRY_TYPES[0];
+  const pinyin=(document.getElementById("addPy").value||"").trim();
+  return {word, value, type, pinyin};
+}
+function findAddConflicts(word, value){
+  const sameWord=ENTRIES.filter(e=>e.word===word);
+  const sameVal=ENTRIES.filter(e=>e.value===value && e.word!==word);
+  return {sameWord, sameVal};
+}
+function previewAdd(){
+  const f=collectAddForm();
+  if(!f.word){ toast("请填写原词"); return; }
+  if(!f.value){ toast("请填写替换为"); return; }
+  if(f.word===f.value){ toast("原词与替换值相同，无需新增"); return; }
+  const {sameWord, sameVal}=findAddConflicts(f.word, f.value);
+  state._pendingAdd=f;
+  let conflictHtml="";
+  if(sameWord.length||sameVal.length){
+    const rows=[
+      ...sameWord.map(e=>`<tr><td>同词</td><td>${esc(e.word)}</td><td>${esc(e.value)}</td><td>${DICT_NAMES[e.dict]}（${e.tier==="builtin"?"内置":"自定义"}）</td></tr>`),
+      ...sameVal.map(e=>`<tr><td>同值</td><td>${esc(e.word)}</td><td>${esc(e.value)}</td><td>${DICT_NAMES[e.dict]}（${e.tier==="builtin"?"内置":"自定义"}）</td></tr>`),
+    ].join("");
+    conflictHtml=`
+      <div class="note warn" style="margin-top:12px">加入前查重：发现冲突，请确认是否仍要写入「我的词库」。</div>
+      <table class="mini-table"><thead><tr><th>冲突</th><th>原词</th><th>替换为</th><th>所在</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } else {
+    conflictHtml=`<div class="note info" style="margin-top:12px">查重通过：未发现同词 / 同值冲突。</div>`;
+  }
+  openModal(`
+    <div class="m-head"><div class="m-ico">✍</div><h2>写入词库（二次确认）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线④：批量 / 写动作先预览再执行；新增可撤销。</div>
+      <table class="mini-table"><thead><tr><th>原词</th><th>替换为</th><th>类型</th><th>注音</th><th>写入</th></tr></thead>
+        <tbody><tr>
+          <td class="word">${esc(f.word)}</td>
+          <td class="val">${esc(f.value)}</td>
+          <td>${esc(f.type)}</td>
+          <td>${f.pinyin?esc(f.pinyin):"—"}</td>
+          <td>我的词库</td>
+        </tr></tbody>
+      </table>
+      ${conflictHtml}
+      <p style="font-size:12px;color:var(--c-neutral-500);margin-top:10px">本次将写入 <b>1</b> 条到自定义词库；与内置词库分开管理（底线⑤）。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="openAdd()">返回修改</button>
+      <button class="btn primary" onclick="confirmAdd()">确认写入</button>
+    </div>`, false);
+}
+function confirmAdd(){
+  const f=state._pendingAdd; if(!f){ toast("没有待写入的词条"); return; }
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  const id=++state.seq + 1000;
+  ENTRIES.push({
+    id, word:f.word, value:f.value, type:f.type, pinyin:f.pinyin||"",
+    dict:"custom", tier:"custom", books:[]
+  });
+  undoStack.push({type:"add", before});
+  snap(`新增「${f.word}」`);
+  state._pendingAdd=null;
+  state.dict="custom";
+  state.tier="custom";
+  document.querySelectorAll(".tier-tab").forEach(t=>t.classList.toggle("active", t.dataset.tier==="custom"));
+  closeModal(); render();
+  toast(`已新增「${f.word}」到我的词库`, true);
+}
+
+/* ============ 查重（底线④ 先预览） ============ */
+function computeDups(){
+  const list=ENTRIES.filter(e=>e.tier==="custom");
+  const byWord={}, byVal={}, groups=[];
+  list.forEach(e=>{ (byWord[e.word]=byWord[e.word]||[]).push(e); (byVal[e.value]=byVal[e.value]||[]).push(e); });
+  Object.entries(byWord).forEach(([w,arr])=>{ if(arr.length>1) groups.push({type:"同词不同值", key:w, items:arr}); });
+  Object.entries(byVal).forEach(([v,arr])=>{ if(arr.length>1) groups.push({type:"同值不同词", key:v, items:arr}); });
+  return groups;
+}
+function openDup(){
+  const groups=computeDups();
+  if(groups.length===0){ toast("未发现重复词条"); return; }
+  const body=groups.map(g=>`
+    <div class="dup-group">
+      <h4>${g.type}：${esc(g.key)}<span class="grp-tag">${g.items.length} 条</span></h4>
+      <table class="mini-table"><thead><tr><th>原词</th><th>替换为</th><th>来源</th></tr></thead><tbody>
+        ${g.items.map(e=>`<tr><td>${esc(e.word)}</td><td>${esc(e.value)}</td><td>${DICT_NAMES[e.dict]}</td></tr>`).join("")}
+      </tbody></table>
+    </div>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">🔁</div><h2>查重结果（先预览，确认后处理）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线④：查重结果先给预览清单，确认后才执行；处理动作可撤销。</div>
+      ${body}
+      <p style="font-size:13px;color:var(--c-neutral-500)">建议合并同词不同值冲突，或保留其一。可撤销，请放心处理。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">暂时不处理</button>
+      <button class="btn primary" onclick="closeModal();toast('已确认查重结果，可继续合并或删除',false)">我知道了</button>
+    </div>`, true);
+}
+
+/* ============ 合并（底线④ 预览改/删/留 + 写入二次确认） ============ */
+function openMerge(){
+  const sel=[...state.selected].filter(id=>ENTRIES.find(e=>e.id===id&&e.tier==="custom"));
+  if(sel.length<2){ toast("请至少选择 2 条自定义词条进行合并"); return; }
+  const items=ENTRIES.filter(e=>sel.includes(e.id));
+  state._mergeSel=sel;
+  const opt=items.map(e=>`<option value="${e.word}">${esc(e.word)} → ${esc(e.value)}</option>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">➕</div><h2>合并词条（先预览清单）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线④：合并前给预览清单（改哪些、删哪些、留哪个）；合并可撤销。</div>
+      <div class="field"><label>合并为「原词」（保留其一作为主词，其余并入其替换值）</label>
+        <select id="mergeTarget" class="field" style="width:100%;padding:10px;border:1px solid var(--c-neutral-200);border-radius:8px">${opt}</select>
+      </div>
+      <table class="mini-table"><thead><tr><th>处理</th><th>原词</th><th>替换为</th></tr></thead><tbody>
+        ${items.map(e=>`<tr><td>并入</td><td>${esc(e.word)}</td><td>${esc(e.value)}</td></tr>`).join("")}
+      </tbody></table>
+      <p style="font-size:12px;color:var(--c-neutral-500)">合并后需「写入词库」二次确认（展示将写入条数）。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="doMerge()">预览写入</button>
+    </div>`, false);
+}
+function doMerge(){
+  const target=document.getElementById("mergeTarget").value;
+  const sel=state._mergeSel||[];
+  const items=ENTRIES.filter(e=>sel.includes(e.id));
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  // 以 target 为主词，其余删除
+  ENTRIES=ENTRIES.filter(e=>!(sel.includes(e.id) && e.word!==target));
+  const keep=ENTRIES.find(e=>e.word===target);
+  const removed=items.filter(e=>e.word!==target).length;
+  undoStack.push({type:"merge", before});
+  state.selected.clear();
+  snap(`合并为「${target}」`);
+  openModal(`
+    <div class="m-head"><div class="m-ico">✍</div><h2>写入词库（二次确认）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note info">将把合并结果写入「我的词库」，主词保留「${esc(target)}」，移除 ${removed} 条重复词条。</div>
+      <p>本次将写入 <b>1</b> 条主词、移除 <b>${removed}</b> 条（合并动作可撤销）。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="closeModal();render();toast('已写入词库，合并完成',true)">确认写入</button>
+    </div>`, false);
+}
+
+/* ============ 展开核对（只读排序） ============ */
+function openExpand(){
+  const list=ENTRIES.filter(e=>state.dict==="all"||e.dict===state.dict).slice().sort((a,b)=>a.word.localeCompare(b.word,'zh'));
+  openModal(`
+    <div class="m-head"><div class="m-ico">📋</div><h2>展开核对（只读）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">结果以结构化表格呈现，不暴露 PHP 代码 / 行号（底线③）。</div>
+      <table class="mini-table"><thead><tr><th>#</th><th>原词</th><th>替换为</th><th>来源</th></tr></thead><tbody>
+        ${list.map((e,i)=>`<tr><td>${i+1}</td><td>${esc(e.word)}</td><td>${esc(e.value)}</td><td>${DICT_NAMES[e.dict]}</td></tr>`).join("")}
+      </tbody></table>
+    </div>
+    <div class="m-foot"><button class="btn" onclick="closeModal()">关闭</button></div>`, true);
+}
+
+/* ============ 编辑 ============ */
+function editEntry(id){
+  const e=ENTRIES.find(x=>x.id===id); if(!e||e.tier==="builtin") return;
+  const typeOpts=ENTRY_TYPES.map(t=>`<option value="${t}" ${t===(e.type||"错词校正")?"selected":""}>${t}</option>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">✎</div><h2>编辑词条</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="field"><label>原词</label><input id="edWord" type="text" value="${esc(e.word)}"></div>
+      <div class="field"><label>替换为</label><input id="edVal" type="text" value="${esc(e.value)}"></div>
+      <div class="field"><label>类型</label>
+        <select id="edType" style="width:100%;padding:10px 12px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-base)">${typeOpts}</select>
+      </div>
+      <div class="field"><label>注音（可选）</label><input id="edPy" type="text" value="${esc(e.pinyin||"")}"></div>
+      <div class="note info">修改后自动快照，可撤销（底线①②）。</div>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="saveEdit(${id})">保存</button>
+    </div>`, false);
+}
+function saveEdit(id){
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  const e=ENTRIES.find(x=>x.id===id);
+  e.word=document.getElementById("edWord").value.trim()||e.word;
+  e.value=document.getElementById("edVal").value.trim()||e.value;
+  e.type=document.getElementById("edType").value||e.type||"错词校正";
+  e.pinyin=document.getElementById("edPy").value.trim();
+  undoStack.push({type:"merge", before}); // 复用撤销：恢复整份
+  snap(`编辑「${e.word}」`);
+  closeModal(); render(); toast("已保存修改", true);
+}
+
+/* ============ 本书专有词条（2.4.2） ============ */
+function openBookWords(){
+  const bookWords=[
+    {word:"星陨大陆", value:"星陨大陆", note:"本书专有地名"},
+    {word:"墨羽", value:"墨羽", note:"角色名"},
+    {word:"九转玄功", value:"九转玄功", note:"功法名"},
+  ];
+  state._bookWords=bookWords;
+  const rows=bookWords.map((w,i)=>`<tr><td><input type="checkbox" checked data-bw="${i}"></td><td>${esc(w.word)}</td><td>${esc(w.note)}</td></tr>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">✨</div><h2>本书专有词条（加入预览）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">2.4.2：加入前有预览，可逐条或整组确认；加入后下次校正自动生效。</div>
+      <table class="mini-table"><thead><tr><th>加入</th><th>原词</th><th>说明</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="addBookWords()">加入选中词条到「我的词库」</button>
+    </div>`, false);
+}
+function addBookWords(){
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  const checks=document.querySelectorAll('[data-bw]');
+  const added=[];
+  checks.forEach(c=>{ if(c.checked){ const w=state._bookWords[+c.dataset.bw]; if(!ENTRIES.find(e=>e.word===w.word&&e.dict==="custom")){ const id=900+ENTRIES.length; ENTRIES.push({id, word:w.word, value:w.value, type:"专有名词", pinyin:"", dict:"custom", tier:"custom", books:["《星河彼端》"]}); added.push(w.word);} } });
+  undoStack.push({type:"bookwords", before});
+  snap(`加入 ${added.length} 条专有词`);
+  hideBanner(); closeModal(); render();
+  toast(`已加入 ${added.length} 条专有词条到「我的词库」`, true);
+}
+function hideBanner(){ document.getElementById("bookBanner").style.display="none"; }
+
+/* ============ 恢复默认 / 恢复快照（底线②⑤） ============ */
+function restoreDefault(){
+  openModal(`
+    <div class="m-head"><div class="m-ico">↺</div><h2>恢复默认词库</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线⑤：恢复默认词库只重置内置词库，<b>不影响你的自定义词条</b>。</div>
+      <p>将把内置词库（常规校正 / 标点规范 / 繁简转换）重置为出厂版本，自定义词条保持不变。可撤销。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="doRestoreDefault()">确认恢复</button>
+    </div>`, false);
+}
+function doRestoreDefault(){
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  // 重新播种内置词库（仅内置），保留 custom
+  const custom=ENTRIES.filter(e=>e.tier==="custom");
+  ENTRIES=custom.concat(SEED_BUILTIN());
+  undoStack.push({type:"merge", before});
+  snap("恢复默认词库");
+  closeModal(); render(); toast("已恢复默认词库（自定义词条保留）", true);
+}
+function SEED_BUILTIN(){ return JSON.parse(JSON.stringify(SEED)); }
+const SEED=[
+  {id:11, word:"好象", value:"好像", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:12, word:"做为一个", value:"作为一个", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:13, word:"他门", value:"他们", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:14, word:"在次", value:"再次", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:21, word:"“", value:"“", type:"其他", pinyin:"", dict:"b2", tier:"builtin", books:[]},
+  {id:22, word:"''", value:"“”,", type:"其他", pinyin:"", dict:"b2", tier:"builtin", books:[]},
+  {id:31, word:"網", value:"网", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+  {id:32, word:"國", value:"国", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+  {id:33, word:"對", value:"对", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+];
+function restoreSnap(id){
+  const s=state.snapshots.find(x=>x.id===id); if(!s) return;
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  ENTRIES=JSON.parse(JSON.stringify(s.data));
+  undoStack.push({type:"merge", before});
+  snap(`恢复到 ${s.time}`);
+  closeModal(); render(); toast("已恢复到所选时间点", false);
+}
+
+/* ============ Modal / Toast 工具 ============ */
+function openModal(html,wide){ const m=document.getElementById("modal"); m.className="modal"+(wide?" wide":""); m.innerHTML=html; document.getElementById("mask").classList.add("show"); }
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="mask") closeModal(); });
+document.addEventListener("keydown",e=>{ if((e.ctrlKey||e.metaKey)&&e.key==="z"){ e.preventDefault(); undo(); } });
+
+let toastTimer;
+function toast(msg, withUndo){
+  const wrap=document.getElementById("toastWrap");
+  const t=document.createElement("div"); t.className="toast";
+  t.innerHTML=`<span>${esc(msg)}</span>` + (withUndo?`<button class="t-undo" onclick="undoFromToast(this)">撤销</button>`:"");
+  wrap.appendChild(t);
+  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .3s"; setTimeout(()=>t.remove(),300); }, withUndo?6000:3000);
+}
+function undoFromToast(btn){ const t=btn.closest(".toast"); t.remove(); undo(); }
+function toggleHistory(){ const p=document.getElementById("historyPanel"); p.style.display = p.style.display==="none"?"block":"none"; }
+
+/* ============ 导航：全程侧栏 + 首页概览（§2.2 / 决策文档） ============ */
+const VIEW_NAMES={import:'导入书籍',correction:'一键校正',check:'检查问题',vocab:'词库管理',export:'导出结果',history:'历史记录'};
+function showView(key, el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const navEl = el || document.querySelector('.nav-item[data-view="'+key+'"]');
+  if(navEl) navEl.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.hidden=true);
+  const real=document.getElementById('view-'+key);
+  if(real){ real.hidden=false; }
+  else {
+    const ph=document.getElementById('view-ph'); ph.hidden=false;
+    document.getElementById('phTitle').textContent=VIEW_NAMES[key]||'模块';
+    document.getElementById('phName').textContent=VIEW_NAMES[key]||'模块';
+    document.getElementById('phFile').textContent='FixTextGUI_'+(VIEW_NAMES[key]||'模块')+'_原型.html';
+  }
+  const main=document.querySelector('.main'); if(main) main.scrollTop=0;
+}
+
+/* ============ 初始化 ============ */
+render(); renderSnaps();
+showView('home');
+</script>
+</body>
+</html>

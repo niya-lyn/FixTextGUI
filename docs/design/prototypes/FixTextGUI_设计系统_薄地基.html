@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixText V1 · UI 设计系统（薄地基）</title>
+<style>
+  :root{
+    --c-primary-50:#EEF0FB; --c-primary-100:#DDE1F6; --c-primary-200:#C0C6EE;
+    --c-primary-300:#9AA3E2; --c-primary-400:#6F79D1; --c-primary-500:#4F59C0;
+    --c-primary-600:#3F48A2; --c-primary-700:#333B83; --c-primary-800:#2B3169; --c-primary-900:#232852;
+    --c-neutral-0:#FFFFFF; --c-neutral-50:#F7F8FA; --c-neutral-100:#EEF1F5;
+    --c-neutral-200:#DDE2EA; --c-neutral-300:#C2CAD6; --c-neutral-400:#9AA4B4;
+    --c-neutral-500:#6B7585; --c-neutral-600:#4A5363; --c-neutral-700:#333B48;
+    --c-neutral-800:#222831; --c-neutral-900:#15191F;
+    --c-success:#15803D; --c-success-bg:#E7F4EC; --c-success-border:#B6E0C5;
+    --c-warning:#B45309; --c-warning-bg:#FBF1DF; --c-warning-border:#F0D6A8;
+    --c-error:#C0392B;   --c-error-bg:#FBEAE8;   --c-error-border:#F1C4BD;
+    --c-info:#3F48A2;    --c-info-bg:#ECEEF9;    --c-info-border:#C8CDEC;
+    --c-focus:#4F59C0;
+    --font-sans:"Segoe UI","Microsoft YaHei UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --font-mono:"Cascadia Code","JetBrains Mono",Consolas,monospace;
+    --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:16px; --fs-lg:18px;
+    --fs-xl:20px; --fs-2xl:24px; --fs-3xl:30px; --fs-4xl:36px;
+    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+    --lh-tight:1.25; --lh-normal:1.5; --lh-relaxed:1.7;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
+    --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px; --sp-16:64px;
+    --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-full:999px;
+    --sh-sm:0 1px 2px rgba(21,25,31,.06),0 1px 3px rgba(21,25,31,.08);
+    --sh-md:0 4px 10px rgba(21,25,31,.08),0 2px 4px rgba(21,25,31,.06);
+    --sh-lg:0 12px 28px rgba(21,25,31,.12),0 4px 8px rgba(21,25,31,.06);
+    --sh-focus:0 0 0 3px rgba(79,89,192,.28);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-sans);font-size:var(--fs-base);line-height:var(--lh-normal);
+    color:var(--c-neutral-800);background:var(--c-neutral-50);-webkit-font-smoothing:antialiased}
+  a{color:var(--c-primary-600);text-decoration:none}
+  .layout{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+  .sidebar{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;
+    background:var(--c-neutral-0);color:var(--c-neutral-700);padding:var(--sp-6) var(--sp-4);
+    border-right:1px solid var(--c-neutral-200)}
+  .sidebar h1{font-size:var(--fs-lg);font-weight:var(--fw-bold);color:var(--c-neutral-900);margin-bottom:var(--sp-1)}
+  .sidebar .sub{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-bottom:var(--sp-6);line-height:1.6}
+  .nav a{display:block;padding:var(--sp-2) var(--sp-3);border-radius:var(--r-sm);
+    color:var(--c-neutral-700);font-size:var(--fs-sm);margin-bottom:2px}
+  .nav a:hover{background:var(--c-neutral-100);color:var(--c-neutral-900)}
+  .nav .grp{font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.08em;
+    color:var(--c-neutral-400);margin:var(--sp-4) 0 var(--sp-2) var(--sp-3)}
+  main{padding:var(--sp-10) var(--sp-12);max-width:1080px}
+  section{margin-bottom:var(--sp-16);scroll-margin-top:var(--sp-6)}
+  h2{font-size:var(--fs-2xl);font-weight:var(--fw-bold);color:var(--c-neutral-900);
+    padding-bottom:var(--sp-3);border-bottom:2px solid var(--c-neutral-200);margin-bottom:var(--sp-6)}
+  h3{font-size:var(--fs-lg);font-weight:var(--fw-semibold);color:var(--c-neutral-800);
+    margin:var(--sp-8) 0 var(--sp-3)}
+  h4{font-size:var(--fs-md);font-weight:var(--fw-semibold);color:var(--c-neutral-700);margin-bottom:var(--sp-2)}
+  p{margin-bottom:var(--sp-3);color:var(--c-neutral-700)}
+  .lead{font-size:var(--fs-md);color:var(--c-neutral-600);max-width:72ch}
+  .meta{font-size:var(--fs-sm);color:var(--c-neutral-500);margin-bottom:var(--sp-8)}
+  code{font-family:var(--font-mono);font-size:.92em;background:var(--c-neutral-100);
+    padding:1px 6px;border-radius:var(--r-sm);color:var(--c-neutral-800)}
+  .grid{display:grid;gap:var(--sp-4)}
+  .grid-2{grid-template-columns:repeat(2,1fr)}
+  .grid-3{grid-template-columns:repeat(3,1fr)}
+  .panel{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);
+    border-radius:var(--r-lg);padding:var(--sp-5);box-shadow:var(--sh-sm)}
+  .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:var(--sp-3)}
+  .sw{height:60px;border-radius:var(--r-md);border:1px solid rgba(0,0,0,.06)}
+  .sw .lbl{font-size:var(--fs-xs);padding:var(--sp-2);color:#fff;display:flex;
+    flex-direction:column;justify-content:flex-end;height:100%;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .sw .lbl.dark{color:var(--c-neutral-800);text-shadow:none}
+  .demo{display:flex;flex-wrap:wrap;gap:var(--sp-3);align-items:center;padding:var(--sp-4);
+    background:var(--c-neutral-50);border:1px dashed var(--c-neutral-300);border-radius:var(--r-md);margin-bottom:var(--sp-4)}
+  .btn{font-family:var(--font-sans);font-size:var(--fs-base);font-weight:var(--fw-medium);
+    border:none;border-radius:var(--r-md);padding:var(--sp-2) var(--sp-4);cursor:pointer;
+    display:inline-flex;align-items:center;gap:var(--sp-2);transition:all .15s ease}
+  .btn:focus-visible{outline:none;box-shadow:var(--sh-focus)}
+  .btn-primary{background:var(--c-primary-500);color:#fff}
+  .btn-primary:hover{background:var(--c-primary-600)}
+  .btn-primary:active{transform:translateY(1px)}
+  .btn-secondary{background:var(--c-neutral-0);color:var(--c-neutral-700);border:1px solid var(--c-neutral-300)}
+  .btn-secondary:hover{background:var(--c-neutral-100);border-color:var(--c-neutral-400)}
+  .btn-ghost{background:transparent;color:var(--c-primary-600)}
+  .btn-ghost:hover{background:var(--c-primary-50)}
+  .btn-danger{background:var(--c-error);color:#fff}
+  .btn-danger:hover{background:#a82e22}
+  .btn:disabled{opacity:.5;cursor:not-allowed;pointer-events:none}
+  .btn-sm{padding:var(--sp-1) var(--sp-3);font-size:var(--fs-sm)}
+  .btn-lg{padding:var(--sp-3) var(--sp-6);font-size:var(--fs-md)}
+  .progress{width:100%;height:10px;background:var(--c-neutral-200);border-radius:var(--r-full);overflow:hidden}
+  .progress > i{display:block;height:100%;background:var(--c-primary-500);border-radius:var(--r-full);transition:width .3s ease}
+  .progress-wrap{width:440px;max-width:100%}
+  .progress-meta{display:flex;justify-content:space-between;font-size:var(--fs-sm);color:var(--c-neutral-600);margin-bottom:var(--sp-2)}
+  table.spec{width:100%;border-collapse:collapse;font-size:var(--fs-sm);background:var(--c-neutral-0);
+    border:1px solid var(--c-neutral-200);border-radius:var(--r-md);overflow:hidden}
+  table.spec th,table.spec td{text-align:left;padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--c-neutral-100);vertical-align:top}
+  table.spec th{background:var(--c-neutral-100);font-weight:var(--fw-semibold);color:var(--c-neutral-700)}
+  table.spec tr:last-child td{border-bottom:none}
+  table.spec code{background:var(--c-neutral-100)}
+  .tag{display:inline-block;font-size:var(--fs-xs);font-weight:var(--fw-medium);padding:2px 8px;
+    border-radius:var(--r-full);background:var(--c-neutral-100);color:var(--c-neutral-600);white-space:nowrap}
+  .tag.p{background:var(--c-primary-50);color:var(--c-primary-700)}
+  .tag.s{background:var(--c-success-bg);color:var(--c-success)}
+  .tag.w{background:var(--c-warning-bg);color:var(--c-warning)}
+  .tag.e{background:var(--c-error-bg);color:var(--c-error)}
+  .tag.i{background:var(--c-info-bg);color:var(--c-info)}
+  .principle{border-left:4px solid var(--c-primary-500);background:var(--c-neutral-0);
+    padding:var(--sp-4) var(--sp-5);border-radius:0 var(--r-md) var(--r-md) 0;box-shadow:var(--sh-sm)}
+  .principle h4{color:var(--c-primary-700)}
+  .app-shell{border:1px solid var(--c-neutral-300);border-radius:var(--r-lg);overflow:hidden;
+    background:var(--c-neutral-0);box-shadow:var(--sh-md)}
+  .app-topbar{display:flex;align-items:center;justify-content:space-between;
+    background:var(--c-neutral-900);color:#fff;padding:var(--sp-3) var(--sp-5)}
+  .app-topbar .brand{font-weight:var(--fw-bold);font-size:var(--fs-md);display:flex;align-items:center;gap:var(--sp-2)}
+  .app-topbar .brand .logo{width:22px;height:22px;border-radius:6px;background:var(--c-primary-500);display:inline-block}
+  .app-topbar .acts{display:flex;gap:var(--sp-2)}
+  .app-topbar .acts .ic{width:30px;height:30px;border-radius:var(--r-sm);background:rgba(255,255,255,.12);
+    display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-sm)}
+  .app-body{display:grid;grid-template-columns:184px 1fr}
+  .app-rail{background:var(--c-neutral-0);border-right:1px solid var(--c-neutral-200);padding:var(--sp-3) var(--sp-2);display:flex;flex-direction:column;gap:2px}
+  .app-rail .rt{font-size:var(--fs-xs);color:var(--c-neutral-500);padding:6px 10px;font-weight:600;letter-spacing:.5px}
+  .app-rail a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-md);color:var(--c-neutral-600);font-size:var(--fs-sm);font-weight:500;cursor:pointer;text-decoration:none}
+  .app-rail a:hover{background:var(--c-primary-50)}
+  .app-rail a.active{background:var(--c-primary-100);color:var(--c-primary-700);font-weight:600}
+  .app-content{padding:var(--sp-6)}
+  .app-hint{font-size:var(--fs-sm);color:var(--c-neutral-500);margin-bottom:var(--sp-4)}
+  .entry-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-4)}
+  @media(max-width:680px){.entry-grid{grid-template-columns:repeat(2,1fr)}}
+  .entry{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);
+    padding:var(--sp-4);cursor:pointer;transition:all .15s ease;min-height:120px;display:flex;flex-direction:column;gap:var(--sp-2)}
+  .entry:hover{box-shadow:var(--sh-md);border-color:var(--c-primary-300);transform:translateY(-2px)}
+  .entry .ico{width:38px;height:38px;border-radius:var(--r-md);background:var(--c-primary-50);
+    color:var(--c-primary-600);display:inline-flex;align-items:center;justify-content:center;font-size:20px}
+  .entry .t{font-weight:var(--fw-semibold);color:var(--c-neutral-800);font-size:var(--fs-md)}
+  .entry .d{font-size:var(--fs-xs);color:var(--c-neutral-500);line-height:1.5}
+  .entry .badge{font-size:10px;color:var(--c-warning);font-weight:var(--fw-semibold)}
+  .callout{background:var(--c-info-bg);border:1px solid var(--c-info-border);border-radius:var(--r-md);
+    padding:var(--sp-4);font-size:var(--fs-sm);color:var(--c-neutral-700);margin:var(--sp-4) 0}
+  .callout b{color:var(--c-info)}
+  .callout.w{background:var(--c-warning-bg);border-color:var(--c-warning-border)}
+  .callout.w b{color:var(--c-warning)}
+  .footer{font-size:var(--fs-xs);color:var(--c-neutral-400);border-top:1px solid var(--c-neutral-200);padding-top:var(--sp-4);margin-top:var(--sp-8)}
+  ul.tk{list-style:none;display:grid;gap:var(--sp-2)}
+  ul.tk li{display:flex;align-items:center;gap:var(--sp-3);font-size:var(--fs-sm)}
+  ul.tk .box{width:18px;height:18px;border-radius:4px;flex:none}
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar">
+    <h1>FixText V1</h1>
+    <div class="sub">UI 设计系统 · 薄地基版<br>主界面框架 + 核心组件规范<br>对应文档 §2.2 / §2.7.9 / §3.1</div>
+    <nav class="nav">
+      <a href="#principle">设计三原则</a>
+      <a href="#color">色彩系统</a>
+      <a href="#type">字体系统</a>
+      <a href="#space">间距 / 圆角 / 阴影</a>
+      <a href="#components">核心组件</a>
+      <a href="#controls">九种控件形态</a>
+      <a href="#shell">主窗口框架（6 入口）</a>
+      <a href="#a11y">无障碍基线</a>
+    </nav>
+  </aside>
+
+  <main>
+    <h2>FixText V1 · UI 设计系统（薄地基）</h2>
+    <div class="meta">版本：薄地基 v0.1 · 日期：2026-10-26 · 角色：UI Designer（像素君） · 落地目标：PySide6 / Qt QSS 可直接映射</div>
+    <p class="lead">本规范是 V1 的「薄地基」：只建最必要的设计令牌、主窗口框架与 5 个高频核心组件，以及文档已钉死的 9 种控件形态映射。它不替后续模块做视觉决策，只保证<strong>全产品一致、不把老命令面板直接包装成产品界面</strong>（文档 T2.x 明确点名的坑）。</p>
+
+    <section id="principle">
+      <h2>设计三原则（来自需求文档的硬约束）</h2>
+      <div class="grid grid-3">
+        <div class="principle"><h4>① 藏住代码概念</h4><p>界面永不出现 <code>books/</code>、<code>booksBak/</code>、<code>spine/OPF</code>、PHP 词库文件名等内部术语。用户只看到「书 / 工作区 / 词库」。</p></div>
+        <div class="principle"><h4>② 安全底线优先</h4><p>词库误删可撤销、批量先预览、原文件只读保护——任何界面状态都要优先暴露「可撤销 / 需确认」，而非追求一步到位。</p></div>
+        <div class="principle"><h4>③ 零文档可上手</h4><p>首屏 6 入口即主干闭环，新用户不看文档 2 分钟走完向导并出第一个结果（文档 §2.3 验收项）。</p></div>
+      </div>
+      <div class="callout"><b>落地提示：</b>以上三条不是装饰，而是组件规范的「验收门禁」。例如删除类按钮一律带二次确认对话框；写动作一律进撤销栈；进度超过 3 秒的操作必须有反馈（文档 §2.3）。</div>
+    </section>
+
+    <section id="color">
+      <h2>色彩系统</h2>
+      <h3>主色（Primary）— 平静、文档感、可信赖</h3>
+      <p class="lead">FixText 是给作者用的校正工具，主色取低饱和靛蓝，传递「专注、可靠、不喧宾夺主」。深色仅用于顶栏与危险操作的克制对比。</p>
+      <div class="swatches">
+        <div class="sw" style="background:var(--c-primary-50)"><span class="lbl dark">50 #EEF0FB</span></div>
+        <div class="sw" style="background:var(--c-primary-100)"><span class="lbl dark">100 #DDE1F6</span></div>
+        <div class="sw" style="background:var(--c-primary-300)"><span class="lbl dark">300 #9AA3E2</span></div>
+        <div class="sw" style="background:var(--c-primary-500)"><span class="lbl">500 #4F59C0</span></div>
+        <div class="sw" style="background:var(--c-primary-600)"><span class="lbl">600 #3F48A2</span></div>
+        <div class="sw" style="background:var(--c-primary-800)"><span class="lbl">800 #2B3169</span></div>
+      </div>
+      <h3>中性色（Neutral）— 文本与背景</h3>
+      <div class="swatches">
+        <div class="sw" style="background:var(--c-neutral-0)"><span class="lbl dark">0 #FFFFFF</span></div>
+        <div class="sw" style="background:var(--c-neutral-50)"><span class="lbl dark">50 #F7F8FA</span></div>
+        <div class="sw" style="background:var(--c-neutral-200)"><span class="lbl dark">200 #DDE2EA</span></div>
+        <div class="sw" style="background:var(--c-neutral-400)"><span class="lbl dark">400 #9AA4B4</span></div>
+        <div class="sw" style="background:var(--c-neutral-600)"><span class="lbl">600 #4A5363</span></div>
+        <div class="sw" style="background:var(--c-neutral-900)"><span class="lbl">900 #15191F</span></div>
+      </div>
+      <h3>语义色（Semantic）— 状态与反馈</h3>
+      <div class="grid grid-2">
+        <div class="panel">
+          <h4 style="color:var(--c-success)">Success 成功 / 已修复</h4>
+          <div class="swatches">
+            <div class="sw" style="background:var(--c-success-bg)"><span class="lbl dark">bg #E7F4EC</span></div>
+            <div class="sw" style="background:var(--c-success)"><span class="lbl">#15803D</span></div>
+          </div>
+          <p style="font-size:var(--fs-sm);margin-top:var(--sp-2)">用于「已修复 / 导出成功 / 校验通过」等正向反馈。</p>
+        </div>
+        <div class="panel">
+          <h4 style="color:var(--c-warning)">Warning 需确认 / 预览</h4>
+          <div class="swatches">
+            <div class="sw" style="background:var(--c-warning-bg)"><span class="lbl dark">bg #FBF1DF</span></div>
+            <div class="sw" style="background:var(--c-warning)"><span class="lbl">#B45309</span></div>
+          </div>
+          <p style="font-size:var(--fs-sm);margin-top:var(--sp-2)">用于批量预览、二次确认、耗时提示（降级路径）。</p>
+        </div>
+        <div class="panel">
+          <h4 style="color:var(--c-error)">Error 危险 / 只读保护</h4>
+          <div class="swatches">
+            <div class="sw" style="background:var(--c-error-bg)"><span class="lbl dark">bg #FBEAE8</span></div>
+            <div class="sw" style="background:var(--c-error)"><span class="lbl">#C0392B</span></div>
+          </div>
+          <p style="font-size:var(--fs-sm);margin-top:var(--sp-2)">用于删除、破坏性操作、原文件保护告警。</p>
+        </div>
+        <div class="panel">
+          <h4 style="color:var(--c-info)">Info 引擎 / 提示</h4>
+          <div class="swatches">
+            <div class="sw" style="background:var(--c-info-bg)"><span class="lbl dark">bg #ECEEF9</span></div>
+            <div class="sw" style="background:var(--c-info)"><span class="lbl">#3F48A2</span></div>
+          </div>
+          <p style="font-size:var(--fs-sm);margin-top:var(--sp-2)">用于引擎状态、人话提示、下一步指引。</p>
+        </div>
+      </div>
+      <div class="callout"><b>对比度：</b>主色 500(#4F59C0) 配白字 ≈ 6.3:1，中性 600 配白底 ≈ 7:1，均满足 WCAG AA（正文 4.5:1）。语义色文字均按上述值，不使用更浅的 tint 作为正文。</div>
+    </section>
+
+    <section id="type">
+      <h2>字体系统</h2>
+      <p class="lead">Windows 桌面应用，优先 Segoe UI（系统原生），中文回退微软雅黑。等宽字体仅用于替换对、命中数等技术信息。字重仅用 400/500/600/700 四档。</p>
+      <div class="panel">
+        <h4>字号阶梯</h4>
+        <ul class="tk">
+          <li><span class="box" style="background:var(--c-primary-500)"></span> <code>--fs-2xl 24px</code> · 页面标题 H2（区块标题）</li>
+          <li><span class="box" style="background:var(--c-primary-400)"></span> <code>--fs-xl 20px</code> · 模块标题 H3</li>
+          <li><span class="box" style="background:var(--c-primary-300)"></span> <code>--fs-md 16px</code> · 入口标题 / 强调正文</li>
+          <li><span class="box" style="background:var(--c-neutral-400)"></span> <code>--fs-base 14px</code> · 默认正文 / 控件文字</li>
+          <li><span class="box" style="background:var(--c-neutral-300)"></span> <code>--fs-sm 13px</code> · 次要说明 / 表格</li>
+          <li><span class="box" style="background:var(--c-neutral-200)"></span> <code>--fs-xs 12px</code> · 标签 / 元信息</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="space">
+      <h2>间距 / 圆角 / 阴影</h2>
+      <div class="grid grid-3">
+        <div class="panel">
+          <h4>间距（4px 基准）</h4>
+          <p style="font-size:var(--fs-sm)"><code>--sp-1</code> 4 · <code>--sp-2</code> 8 · <code>--sp-3</code> 12 · <code>--sp-4</code> 16 · <code>--sp-6</code> 24 · <code>--sp-8</code> 32 · <code>--sp-12</code> 48 · <code>--sp-16</code> 64</p>
+          <p style="font-size:var(--fs-sm);color:var(--c-neutral-500)">组件内边距默认 16，卡片间距 16–24，区块间距 64。</p>
+        </div>
+        <div class="panel">
+          <h4>圆角</h4>
+          <p style="font-size:var(--fs-sm)"><code>--r-sm</code> 4（标签/输入框）· <code>--r-md</code> 8（按钮/卡片）· <code>--r-lg</code> 12（面板/对话框）· <code>--r-full</code> 胶囊/进度条</p>
+        </div>
+        <div class="panel">
+          <h4>阴影（克制使用）</h4>
+          <p style="font-size:var(--fs-sm)"><code>--sh-sm</code> 静态卡片 · <code>--sh-md</code> hover / 对话框 · <code>--sh-lg</code> 浮层/下拉 · 焦点环 <code>--sh-focus</code></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="components">
+      <h2>核心组件（V1 高频 5 件）</h2>
+      <p class="lead">以下组件覆盖首屏 6 入口 90% 的界面需求。每个组件给出「实时预览 + 规范要点」，可直接映射为 Qt QSS。</p>
+
+      <h3>1 · 按钮 Button</h3>
+      <div class="demo">
+        <button class="btn btn-primary">一键校正</button>
+        <button class="btn btn-secondary">取消</button>
+        <button class="btn btn-ghost">查看详情</button>
+        <button class="btn btn-danger">删除词条</button>
+        <button class="btn btn-primary btn-sm">小号</button>
+        <button class="btn btn-primary btn-lg">大号主操作</button>
+        <button class="btn btn-primary" disabled>禁用</button>
+      </div>
+      <table class="spec">
+        <tr><th>变体</th><th>用途</th><th>规范</th></tr>
+        <tr><td><span class="tag p">primary</span></td><td>每屏唯一主操作（如「开始校正」「导出」）</td><td>实心主色；hover 加深；active 下沉 1px</td></tr>
+        <tr><td><span class="tag">secondary</span></td><td>次级 / 取消 / 关闭</td><td>白底 + 1px 中性描边；hover 浅灰底</td></tr>
+        <tr><td><span class="tag i">ghost</span></td><td>低强调文字按钮（查看/更多）</td><td>透明底；hover 主色浅底</td></tr>
+        <tr><td><span class="tag e">danger</span></td><td>删除 / 破坏性操作</td><td>错误红实心；<b>必带二次确认对话框</b></td></tr>
+      </table>
+      <div class="callout"><b>规则：</b>单屏主操作不超过 1 个 primary；所有按钮最小高度 32px（桌面可点即可）；焦点环统一 <code>--sh-focus</code>。</div>
+
+      <h3>2 · 卡片 Card（含首屏入口卡）</h3>
+      <div class="demo" style="align-items:stretch">
+        <div class="panel" style="width:200px">
+          <div class="entry" style="border:none;padding:0;min-height:auto;cursor:default">
+            <span class="ico">📥</span>
+            <span class="t">导入书籍</span>
+            <span class="d">拖放或选择 TXT / EPUB，自动识别编码</span>
+          </div>
+        </div>
+        <div class="panel" style="width:200px">
+          <div class="entry" style="border:none;padding:0;min-height:auto;cursor:default">
+            <span class="ico">✅</span>
+            <span class="t">一键校正</span>
+            <span class="d">默认配置执行排版+替换+标点</span>
+          </div>
+        </div>
+      </div>
+      <p style="font-size:var(--fs-sm)">卡片是首屏 6 入口的承载单元（见 §主窗口框架）。规范：白底、1px 中性边、<code>--sh-sm</code>；hover 抬升 + 主色描边。内部含「图标 + 标题 + 一句说明」三层，不堆功能。</p>
+
+      <h3>3 · 对话框 Dialog（二次确认 / 批量预览）</h3>
+      <div class="demo">
+        <div class="panel" style="width:340px">
+          <h4 style="color:var(--c-error)">确认删除 3 条词条？</h4>
+          <p style="font-size:var(--fs-sm)">这些词条曾命中过《雀魂：开局国士无双》等 2 本书。删除后可在操作历史中撤销。</p>
+          <div style="display:flex;gap:var(--sp-2);justify-content:flex-end;margin-top:var(--sp-3)">
+            <button class="btn btn-secondary btn-sm">取消</button>
+            <button class="btn btn-danger btn-sm">删除</button>
+          </div>
+        </div>
+      </div>
+      <table class="spec">
+        <tr><th>类型</th><th>触发场景（来自文档）</th></tr>
+        <tr><td>二次确认</td><td>删除 / 清理历史 / 覆盖同名词库（§2.4.3、§2.2⑥）</td></tr>
+        <tr><td>批量预览清单</td><td>查重 / 合并 / 批量删除必须先给清单再执行（§2.4.1）</td></tr>
+        <tr><td>人话错误</td><td>编码转 UTF-8 提示、引擎被杀软隔离提示（§2.3）</td></tr>
+      </table>
+
+      <h3>4 · 进度条 Progress（带步骤 + 可取消）</h3>
+      <div class="demo" style="flex-direction:column;align-items:stretch">
+        <div class="progress-wrap">
+          <div class="progress-meta"><span>步骤 2/3 · 词库替换中…</span><span>预计剩余 6 秒</span></div>
+          <div class="progress"><i style="width:62%"></i></div>
+          <div style="margin-top:var(--sp-3);text-align:right">
+            <button class="btn btn-secondary btn-sm">取消</button>
+          </div>
+        </div>
+      </div>
+      <table class="spec">
+        <tr><th>规范要点（文档 §2.3）</th><th>说明</th></tr>
+        <tr><td>任何 &gt;3 秒的操作必须有进度反馈</td><td>步骤说明 + 预计剩余时间</td></tr>
+        <tr><td>可取消且不留脏状态</td><td>取消后回滚到处理前快照（§2.2②）</td></tr>
+        <tr><td>无命令行窗口露出</td><td>Go 子进程静默后台调用（§3.2）</td></tr>
+      </table>
+
+      <h3>5 · 表格 Table（词库 / 检查结果 / 历史）</h3>
+      <div class="demo" style="flex-direction:column;align-items:stretch">
+        <table class="spec">
+          <tr><th>词条</th><th>类型</th><th>命中数</th><th>状态</th><th></th></tr>
+          <tr><td>国窖1573</td><td><span class="tag">数字保护</span></td><td>12</td><td><span class="tag s">已生效</span></td><td><button class="btn btn-ghost btn-sm">编辑</button></td></tr>
+          <tr><td>地→得</td><td><span class="tag">extra 子表</span></td><td>340</td><td><span class="tag w">待确认</span></td><td><button class="btn btn-ghost btn-sm">预览</button></td></tr>
+        </table>
+      </div>
+      <p style="font-size:var(--fs-sm)">表格是词库管理、检查结果、历史记录的主载体。规范：斑马纹关闭（靠 1px 行分隔）、表头中性浅底、状态用语义色标签、行操作放最右 ghost 按钮。30 万条量级下检索需秒级（§2.4.1）。</p>
+    </section>
+
+    <section id="controls">
+      <h2>九种控件形态（文档 §2.7 已钉死，直接映射）</h2>
+      <p class="lead">文档规定 V1 所有功能只使用以下 9 种控件形态，不自造。这是组件库的「封闭集」——后续模块的控件只能从这 9 种里选。</p>
+      <table class="spec">
+        <tr><th>形态</th><th>语义</th><th>典型落点（举例）</th></tr>
+        <tr><td><span class="tag p">开关</span></td><td>二元开/关，立即生效或随配置持久化</td><td>标点规范化、清理正文空格、中英混排加空格（§2.7.1）</td></tr>
+        <tr><td><span class="tag p">单选</span></td><td>互斥选项，选一</td><td>断行方式、运行模式（完整流程/跳过预处理）、生僻字注音（§2.7.2）</td></tr>
+        <tr><td><span class="tag p">多选</span></td><td>可多选组合</td><td>（文档未高频使用，预留）</td></tr>
+        <tr><td><span class="tag p">下拉</span></td><td>从一组选项中选一，省空间</td><td>数字格式、使用哪套词库（10 组）、替换引擎、词库文件选择（§2.7.2/2.7.5）</td></tr>
+        <tr><td><span class="tag p">输入框</span></td><td>自由文本录入</td><td>缩进字符数、署名、可改名输入框（§2.7.1/2.7.6）</td></tr>
+        <tr><td><span class="tag p">按钮</span></td><td>触发动作</td><td>主操作、批量操作（二次确认+预览影响条数）</td></tr>
+        <tr><td><span class="tag p">对话框</span></td><td>阻断式确认/预览</td><td>删除确认、批量预览清单、人话错误（见组件 3）</td></tr>
+        <tr><td><span class="tag p">向导页</span></td><td>分步引导</td><td>导入向导（编码识别/EPUB 合并询问）、首次使用三步向导（§2.3）</td></tr>
+        <tr><td><span class="tag p">只读展示</span></td><td>展示不可改信息</td><td>写入范围说明、章节顺序预览列表、报告文件位置（§2.7.6/2.7.3）</td></tr>
+      </table>
+      <div class="callout w"><b>设计风险点：</b>文档 §2.7 强调「GUI 必须复现入口提供的完整选项，而不是入口名」。例如 formatting 背后是 14 个可独立开关的处理项——若只做一个「一键校正」按钮而折叠掉这些开关，等于把现有能力砍掉大半。折叠面板（accordion）是承载这类「可选项」的推荐容器，但默认只开 2 项，展开后逐项可调。</div>
+    </section>
+
+    <section id="shell">
+      <h2>主窗口框架（首屏 6 入口线框）</h2>
+      <p class="lead">对应文档 §2.7.9：原「统一控制台」改造为主界面框架。导航模型已定稿为 <strong>全程左侧常驻 6 入口轨 + 内容区</strong>；原「首页 6 卡片」降级为内容区里的概览页（首页概览）。下方为 V1 主窗口线框（HTML/CSS 还原，非图片）。</p>
+      <div class="app-shell">
+        <div class="app-topbar">
+          <div class="brand" title="点击回到首页概览"><span class="logo"></span> FixText</div>
+          <div class="acts">
+            <span class="ic">⚙</span>
+            <span class="ic">?</span>
+            <span class="ic">☰</span>
+          </div>
+        </div>
+        <div class="app-body">
+          <div class="app-rail">
+            <div class="rt">功能导航</div>
+            <a class="active">🏠 首页概览</a>
+            <a>📥 导入书籍</a>
+            <a>⚡ 一键校正</a>
+            <a>🔍 检查问题</a>
+            <a>📚 词库管理</a>
+            <a>📤 导出结果</a>
+            <a>🕓 历史记录</a>
+          </div>
+          <div class="app-content">
+            <div class="app-hint">首页概览（内容区页）：6 入口等权卡片。左侧常驻轨可一键跳模块，顶栏品牌点击回此页；chrome 不切换。</div>
+            <div class="entry-grid">
+              <div class="entry"><span class="ico">📥</span><span class="t">导入书籍</span><span class="d">拖放或选择 TXT / EPUB，自动识别编码并转 UTF-8</span></div>
+              <div class="entry"><span class="ico">⚡</span><span class="t">一键校正</span><span class="d">默认配置执行排版+替换+标点，可取消</span></div>
+              <div class="entry"><span class="ico">🔍</span><span class="t">检查问题</span><span class="d">引号配对检查与逐处交互修复</span></div>
+              <div class="entry"><span class="ico">📚</span><span class="t">词库管理<span class="badge">首屏一级</span></span><span class="d">新增/检索/查重/删除/合并 + 安全底线</span></div>
+              <div class="entry"><span class="ico">📤</span><span class="t">导出结果</span><span class="d">导出干净 TXT / EPUB，附替换报告</span></div>
+              <div class="entry"><span class="ico">🕓</span><span class="t">历史记录</span><span class="d">任务列表、快照恢复、重新导出</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="callout"><b>框架规则（已与导航决策文档对齐）：</b>
+        ① 顶栏只保留品牌 + 设置(⚙) + 帮助(?) + 菜单(☰)，品牌点击回到「首页概览」；不暴露任何内部任务；
+        ② 左侧常驻 6 入口轨（等权），任何模块都可见、可一键跳模块，<strong>chrome 不切换</strong>；
+        ③ 首页概览是内容区的一页（含 6 入口卡片），非独立首页；导入拖放区可作常驻引导；
+        ④ 词库管理从「高级功能」提拔为「首屏一级入口」，与另 5 个等权并列（文档 §2.4 拍板）；
+        ⑤ 任何进入 V1.1 / 移除的功能<strong>不出现在框架里</strong>，避免「隐藏但可激活」的半成品状态（文档 §2.7.9）。
+      </div>
+    </section>
+
+    <section id="a11y">
+      <h2>无障碍基线（WCAG AA）</h2>
+      <div class="grid grid-2">
+        <div class="panel"><h4>对比度</h4><p style="font-size:var(--fs-sm)">正文文本 ≥ 4.5:1，大号文本 / 图标 ≥ 3:1。主色 500 配白满足；禁用浅 tint 作正文。</p></div>
+        <div class="panel"><h4>键盘可达</h4><p style="font-size:var(--fs-sm)">全功能无鼠标可用；Tab 顺序 = 视觉顺序；焦点环统一 <code>--sh-focus</code>，不移除 outline。</p></div>
+        <div class="panel"><h4>触控目标</h4><p style="font-size:var(--fs-sm)">桌面控件最小 32px；涉及触屏场景（如平板）≥ 44px。</p></div>
+        <div class="panel"><h4>动效克制</h4><p style="font-size:var(--fs-sm)">统一 150ms 过渡；尊重系统「减少动效」偏好，不强制动画。</p></div>
+        <div class="panel"><h4>错误可恢复</h4><p style="font-size:var(--fs-sm)">每类错误有人话文案 + 下一步指引（§2.3），不露堆栈/命令行。</p></div>
+        <div class="panel"><h4>语义标签</h4><p style="font-size:var(--fs-sm)">控件配 ARIA label / Qt 无障碍名，进度条暴露 value/max。</p></div>
+      </div>
+    </section>
+
+    <div class="footer">
+      FixText V1 · UI 设计系统（薄地基 v0.1）— 由 UI Designer（像素君）产出 · 2026-10-26<br>
+      本文档仅含「地基」：令牌 + 框架 + 5 核心组件 + 9 控件形态。后续模块（词库管理原型、一键校正折叠面板等）在此之上扩展，不另起炉灶。
+    </div>
+  </main>
+</div>
+</body>
+</html>

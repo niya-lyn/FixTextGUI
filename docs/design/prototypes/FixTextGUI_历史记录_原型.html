@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixText V1 · 历史记录 交互原型</title>
+<style>
+  :root{
+    /* ============================================================
+       单一令牌源：下方基础令牌逐字复制自 FixTextGUI_设计系统_薄地基.html
+       的 :root（颜色/字体/圆角在此之外不得另行定义，避免再度漂移）。
+       本原型局部命名已直接改名回地基令牌（如 --c-ink → --c-neutral-800、
+       --r-m → --r-md），不再保留别名层；改一处地基值即全产品生效。
+       ============================================================ */
+    --c-primary-50:#EEF0FB; --c-primary-100:#DDE1F6; --c-primary-200:#C0C6EE;
+    --c-primary-300:#9AA3E2; --c-primary-400:#6F79D1; --c-primary-500:#4F59C0;
+    --c-primary-600:#3F48A2; --c-primary-700:#333B83; --c-primary-800:#2B3169; --c-primary-900:#232852;
+    --c-neutral-0:#FFFFFF; --c-neutral-50:#F7F8FA; --c-neutral-100:#EEF1F5;
+    --c-neutral-200:#DDE2EA; --c-neutral-300:#C2CAD6; --c-neutral-400:#9AA4B4;
+    --c-neutral-500:#6B7585; --c-neutral-600:#4A5363; --c-neutral-700:#333B48;
+    --c-neutral-800:#222831; --c-neutral-900:#15191F;
+    --c-success:#15803D; --c-success-bg:#E7F4EC; --c-success-border:#B6E0C5;
+    --c-warning:#B45309; --c-warning-bg:#FBF1DF; --c-warning-border:#F0D6A8;
+    --c-error:#C0392B;   --c-error-bg:#FBEAE8;   --c-error-border:#F1C4BD;
+    --c-info:#3F48A2;    --c-info-bg:#ECEEF9;    --c-info-border:#C8CDEC;
+    --c-focus:#4F59C0;
+    --font-sans:"Segoe UI","Microsoft YaHei UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --font-mono:"Cascadia Code","JetBrains Mono",Consolas,monospace;
+    --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:16px; --fs-lg:18px;
+    --fs-xl:20px; --fs-2xl:24px; --fs-3xl:30px; --fs-4xl:36px;
+    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+    --lh-tight:1.25; --lh-normal:1.5; --lh-relaxed:1.7;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
+    --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px; --sp-16:64px;
+    --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-full:999px;
+    --sh-sm:0 1px 2px rgba(21,25,31,.06),0 1px 3px rgba(21,25,31,.08);
+    --sh-md:0 4px 10px rgba(21,25,31,.08),0 2px 4px rgba(21,25,31,.06);
+    --sh-lg:0 12px 28px rgba(21,25,31,.12),0 4px 8px rgba(21,25,31,.06);
+    --sh-focus:0 0 0 3px rgba(79,89,192,.28);
+
+  }
+  *{box-sizing:border-box} html,body{margin:0;height:100%}
+  body{font-family:var(--font-sans);background:var(--c-neutral-50);color:var(--c-neutral-800);font-size:var(--fs-base);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:212px 1fr;grid-template-rows:52px 1fr;height:100vh}
+  .topbar{grid-column:1/3;display:flex;align-items:center;gap:var(--sp-4);background:var(--c-neutral-900);color:#fff;padding:0 var(--sp-5)}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:var(--fs-md);letter-spacing:.5px}
+  .brand .logo{width:22px;height:22px;border-radius:6px;background:#fff;color:var(--c-primary-700);display:grid;place-items:center;font-size:13px;font-weight:800}
+  .topbar .mod{opacity:.85;font-weight:500}
+  .topbar .spacer{flex:1}
+  .topbar .icon-btn{background:rgba(255,255,255,.14);border:none;color:#fff;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:15px}
+  .topbar .icon-btn:hover{background:rgba(255,255,255,.26)}
+  .rail{background:var(--c-neutral-0);border-right:1px solid var(--c-neutral-200);padding:var(--sp-3) var(--sp-2);display:flex;flex-direction:column;gap:2px;overflow:auto;min-height:0}
+  .rail .rail-title{font-size:var(--fs-xs);color:var(--c-neutral-500);padding:6px 10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);color:var(--c-neutral-600);cursor:pointer;font-weight:500;border:1px solid transparent}
+  .nav-item .n-ico{width:24px;height:24px;border-radius:7px;background:var(--c-neutral-100);display:grid;place-items:center;font-size:13px}
+  .nav-item:hover{background:var(--c-primary-50)}
+  .nav-item.active{background:var(--c-primary-100);color:var(--c-primary-700);border-color:var(--c-primary-100);font-weight:600}
+  .nav-item.active .n-ico{background:#fff;color:var(--c-primary-700)}
+  .nav-item .n-tag{margin-left:auto;font-size:10px;background:var(--c-warning-bg);color:var(--c-warning);padding:1px 6px;border-radius:999px;font-weight:700}
+
+  .main{overflow:auto;min-height:0;padding:var(--sp-5) var(--sp-6) 60px;display:flex;flex-direction:column;gap:var(--sp-4)}
+  /* 滚动条：低分辨率下展开全部选项时内容滚动而非被裁切（grid 子项需 min-height:0） */
+  .main::-webkit-scrollbar,.rail::-webkit-scrollbar{width:10px;height:10px}
+  .main::-webkit-scrollbar-thumb,.rail::-webkit-scrollbar-thumb{background:var(--c-neutral-200);border-radius:999px;border:2px solid var(--c-neutral-50);background-clip:content-box}
+  .main::-webkit-scrollbar-thumb:hover,.rail::-webkit-scrollbar-thumb:hover{background:var(--c-neutral-300);background-clip:content-box}
+  .main,.rail{scrollbar-color:var(--c-neutral-300) var(--c-neutral-50);scrollbar-width:thin}
+
+  /* 视图切换（导航决策：全程侧栏 + 首页概览） */
+  .view[hidden]{display:none}
+  .overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--sp-4)}
+  .ov-card{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);padding:var(--sp-5);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;display:flex;flex-direction:column;gap:10px}
+  .ov-card:hover{transform:translateY(-2px);box-shadow:var(--sh-md);border-color:var(--c-primary-100)}
+  .ov-card .ov-ico{width:42px;height:42px;border-radius:10px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center;font-size:20px}
+  .ov-card h3{margin:0;font-size:var(--fs-md)}
+  .ov-card p{margin:0;font-size:var(--fs-xs);color:var(--c-neutral-500);line-height:1.6}
+  .ov-card .ov-go{margin-top:auto;font-size:var(--fs-xs);font-weight:700;color:var(--c-primary-700)}
+  .page-head{display:flex;align-items:flex-start;gap:var(--sp-4)}
+  .page-head>div:first-child{flex:1}
+  .page-head h1{font-size:var(--fs-xl);margin:0 0 2px}
+  .page-head p{margin:0;color:var(--c-neutral-500);font-size:var(--fs-sm)}
+
+  /* 书源状态条（P0 只读保护 + 人话提示） */
+  .book-bar{display:flex;align-items:center;gap:14px;background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);padding:14px 18px;box-shadow:var(--sh-sm)}
+  .book-bar .bk-ico{width:40px;height:40px;border-radius:10px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center;font-size:20px}
+  .book-bar .bk-name{font-weight:700;font-size:var(--fs-md)}
+  .book-bar .bk-meta{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:2px}
+  .book-bar .bk-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .pill{font-size:var(--fs-xs);padding:4px 10px;border-radius:999px;background:var(--c-success-bg);color:var(--c-success);font-weight:700}
+  .pill.info{background:var(--c-info-bg);color:var(--c-info)}
+  .pill.warn{background:var(--c-warning-bg);color:var(--c-warning)}
+  .pill.err{background:var(--c-error-bg);color:var(--c-error)}
+
+  .card{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);overflow:hidden}
+  .card .c-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--c-neutral-100);cursor:pointer}
+  .card .c-head h3{margin:0;font-size:var(--fs-base)}
+  .card .c-head .c-sub{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .card .c-head .chev{margin-left:auto;color:var(--c-neutral-500);transition:transform .2s}
+  .card.open .c-head .chev{transform:rotate(90deg)}
+  .card .c-body{padding:14px 18px 18px}
+  .card:not(.open) .c-body{display:none}
+  .card .c-sep{height:1px;background:var(--c-neutral-100)}
+
+  /* 折叠面板行 / 控件 */
+  .frow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--c-neutral-100)}
+  .frow:last-child{border-bottom:none}
+  .frow .f-no{width:22px;height:22px;border-radius:6px;background:var(--c-neutral-100);color:var(--c-neutral-500);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+  .frow .f-name{font-weight:600;min-width:150px}
+  .frow .f-desc{font-size:var(--fs-xs);color:var(--c-neutral-500);flex:1}
+  .frow .f-ctrl{display:flex;align-items:center;gap:8px}
+  .auto-chip{font-size:11px;background:var(--c-neutral-100);color:var(--c-neutral-500);padding:3px 9px;border-radius:999px;font-weight:700}
+  .switch{position:relative;width:40px;height:22px;background:var(--c-neutral-200);border-radius:999px;cursor:pointer;transition:background .2s;flex:none}
+  .switch.on{background:var(--c-primary-500)}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:var(--sh-sm)}
+  .switch.on::after{left:20px}
+  select{padding:7px 10px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-sm);color:var(--c-neutral-800);background:#fff;outline:none}
+  select:focus{border-color:var(--c-primary-500);box-shadow:0 0 0 3px var(--c-primary-100)}
+  .mini-input{width:64px;padding:6px 8px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-sm);outline:none}
+  .mini-input:focus{border-color:var(--c-primary-500);box-shadow:0 0 0 3px var(--c-primary-100)}
+  .f-foot{display:flex;align-items:center;justify-content:space-between;padding-top:12px;font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .link{background:none;border:none;color:var(--c-primary-700);cursor:pointer;font-weight:600;font-size:var(--fs-xs)}
+  .link:hover{text-decoration:underline}
+  .sub{margin:10px 0 0;padding:12px 14px;background:var(--c-neutral-50);border-radius:10px;border:1px dashed var(--c-neutral-200)}
+  .sub:empty{display:none}
+  .sub .s-line{display:flex;align-items:center;gap:12px;margin:8px 0}
+  .sub .s-line>label{font-weight:600;min-width:96px;font-size:var(--fs-sm)}
+  .hint{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:6px}
+  .opt-group{padding:12px 4px;border-bottom:1px solid var(--c-neutral-100)}
+  .opt-group:last-child{border-bottom:none}
+  .opt-label{font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .opt-label .badge{font-size:10px;background:var(--c-warning-bg);color:var(--c-warning);padding:1px 7px;border-radius:999px;font-weight:700}
+  .radio-row{display:flex;gap:10px;flex-wrap:wrap}
+  .radio{flex:1;min-width:140px;border:1px solid var(--c-neutral-200);border-radius:10px;padding:12px 14px;cursor:pointer;background:#fff}
+  .radio:hover{border-color:var(--c-primary-100)}
+  .radio.sel{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .radio .r-title{font-weight:700}
+  .radio .r-desc{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:3px}
+  .bl{margin:0;padding-left:18px;font-size:var(--fs-sm);color:var(--c-neutral-600);line-height:1.9}
+
+  /* 导入：拖放区 + 向导 */
+  .drop{background:var(--c-neutral-0);border:2px dashed var(--c-neutral-300);border-radius:var(--r-lg);padding:var(--sp-8) var(--sp-6);text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+  .drop:hover{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .drop .d-ico{font-size:34px}
+  .drop .d-t{font-weight:700;font-size:var(--fs-md);margin-top:6px}
+  .drop .d-d{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:4px}
+  .drop .d-samples{margin-top:var(--sp-4);display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .wsteps{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:var(--sp-3)}
+  .wstep{display:flex;align-items:center;gap:7px;font-size:var(--fs-sm);color:var(--c-neutral-500)}
+  .wstep .wn{width:22px;height:22px;border-radius:50%;background:var(--c-neutral-100);display:grid;place-items:center;font-size:11px;font-weight:700}
+  .wstep.active{color:var(--c-primary-700);font-weight:700}
+  .wstep.active .wn{background:var(--c-primary-500);color:#fff}
+  .wstep.done .wn{background:var(--c-success);color:#fff}
+  .wline{width:40px;height:2px;background:var(--c-neutral-100);border-radius:2px}
+  .wiz-nav{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--c-neutral-100);margin-top:14px;padding-top:12px}
+
+  /* 检查：两栏 + 列表 + 编辑器 + 操作条 */
+  .chk-top{display:flex;align-items:center;gap:14px;background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);padding:12px 16px;box-shadow:var(--sh-sm)}
+  .chk-top .ct-stats{font-size:var(--fs-sm);color:var(--c-neutral-600)}
+  .chk-top .ct-stats b{color:var(--c-primary-700)}
+  .chk-top .ct-acts{margin-left:auto;display:flex;gap:10px}
+  .chk-layout{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);align-items:start}
+  @media(max-width:1180px){.chk-layout{grid-template-columns:1fr}}
+  .clist{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto}
+  .prow{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--c-neutral-100);border-radius:10px;cursor:pointer;background:#fff}
+  .prow:hover{border-color:var(--c-primary-100);background:var(--c-primary-50)}
+  .prow.sel{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .prow.done{opacity:.5}
+  .prow .p-no{font-size:11px;font-weight:700;color:var(--c-neutral-500);font-family:var(--font-mono);flex:none}
+  .prow .p-t{font-weight:600;font-size:var(--fs-sm);flex:none}
+  .prow .p-ctx{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-neutral-500);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prow .p-b{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--c-warning-bg);color:var(--c-warning);font-weight:700;flex:none}
+  .prow .p-b.ok{background:var(--c-success-bg);color:var(--c-success)}
+  .prow .p-b.skip{background:var(--c-neutral-100);color:var(--c-neutral-500)}
+  .editor{background:var(--c-neutral-50);border:1px solid var(--c-neutral-200);border-radius:var(--r-md);padding:var(--sp-4);font-family:var(--font-mono);font-size:var(--fs-sm);line-height:2;min-height:130px}
+  .editor .e-ln{color:var(--c-neutral-400);margin-right:8px;font-size:var(--fs-xs)}
+  .editor .hl{background:var(--c-warning-bg);border-bottom:2px solid var(--c-warning);padding:2px 3px;border-radius:3px;font-weight:700}
+  .editor .hl.fixed{background:var(--c-success-bg);border-bottom-color:var(--c-success)}
+  .ql-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .qbtn{border:1px solid var(--c-neutral-200);background:#fff;border-radius:8px;padding:6px 10px;font-size:var(--fs-xs);cursor:pointer;font-weight:600}
+  .qbtn:hover{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .qbtn kbd{font-family:var(--font-mono);font-size:10px;color:var(--c-neutral-500);margin-left:5px}
+  .actbar{display:flex;align-items:center;gap:10px;background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);padding:12px 16px;box-shadow:var(--sh-sm);flex-wrap:wrap}
+  .actbar .ab-spacer{flex:1}
+
+  /* 表格（历史 / 报告） */
+  .tbl{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+  .tbl th{text-align:left;color:var(--c-neutral-600);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--c-neutral-200);font-size:var(--fs-xs)}
+  .tbl td{padding:12px;border-bottom:1px solid var(--c-neutral-100);vertical-align:middle}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl .t-acts{display:flex;gap:8px;justify-content:flex-end}
+  .kv{display:flex;gap:var(--sp-8);flex-wrap:wrap}
+  .kv .k{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .kv .v{font-weight:700;font-size:var(--fs-md);color:var(--c-primary-700)}
+  .pathrow{display:flex;align-items:center;gap:10px;background:var(--c-neutral-50);border:1px dashed var(--c-neutral-200);border-radius:10px;padding:10px 12px;font-size:var(--fs-sm);font-family:var(--font-mono);color:var(--c-neutral-600)}
+  .pathrow .pbtn{margin-left:auto}
+  .diff{background:var(--c-neutral-50);border-radius:10px;padding:12px 14px;font-family:var(--font-mono);font-size:var(--fs-xs);line-height:1.9}
+  .diff .del{color:var(--c-error);text-decoration:line-through;opacity:.8}
+  .diff .add{color:var(--c-success)}
+
+  /* 进度遮罩 */
+  .mask{position:fixed;inset:0;background:rgba(20,24,35,.45);display:none;align-items:center;justify-content:center;z-index:50}
+  .mask.show{display:flex}
+  .modal{background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:min(560px,92vw);max-height:88vh;overflow:auto}
+  .modal .m-head{padding:18px 22px;border-bottom:1px solid var(--c-neutral-100);display:flex;align-items:center;gap:10px}
+  .modal .m-head h2{margin:0;font-size:var(--fs-lg)}
+  .modal .m-head .m-ico{width:30px;height:30px;border-radius:8px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center}
+  .modal .m-body{padding:20px 22px}
+  .modal .m-foot{padding:14px 22px;border-top:1px solid var(--c-neutral-100);display:flex;justify-content:flex-end;gap:10px}
+  .close-x{border:none;background:none;font-size:20px;cursor:pointer;color:var(--c-neutral-500);margin-left:auto}
+  .note{background:var(--c-info-bg);border:1px solid var(--c-info-border);color:var(--c-info);border-radius:10px;padding:10px 14px;font-size:var(--fs-sm);margin-bottom:12px}
+  .note.warn{background:var(--c-warning-bg);border-color:var(--c-warning-border);color:var(--c-warning)}
+  .prog-step{display:flex;align-items:center;gap:12px;padding:10px 4px}
+  .prog-step .dot{width:22px;height:22px;border-radius:50%;background:var(--c-neutral-100);display:grid;place-items:center;font-size:12px;color:var(--c-neutral-500);flex:none}
+  .prog-step.active .dot{background:var(--c-primary-500);color:#fff}
+  .prog-step.done .dot{background:var(--c-success);color:#fff}
+  .prog-step .s-name{font-weight:600}
+  .prog-step.active .s-name{color:var(--c-primary-700)}
+  .prog-step .s-desc{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .bar{height:10px;background:var(--c-neutral-100);border-radius:999px;overflow:hidden;margin:16px 0 6px}
+  .bar .fill{height:100%;background:var(--c-primary-500);width:0;border-radius:999px;transition:width .4s ease}
+  .bar-meta{display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .btn{border:1px solid var(--c-neutral-200);background:#fff;color:var(--c-neutral-800);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:var(--fs-sm);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{border-color:var(--c-primary-100);background:var(--c-primary-50)}
+  .btn.danger{color:var(--c-error);border-color:var(--c-error-border)}
+  .btn.danger:hover{background:var(--c-error-bg)}
+  .btn.primary{background:var(--c-primary-500);color:#fff;border-color:var(--c-primary-500)}
+  .btn.primary:hover{background:var(--c-primary-600)}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  .result{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);padding:20px 22px}
+  .result .r-h{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .result .r-h .ok{width:34px;height:34px;border-radius:10px;background:var(--c-success);color:#fff;display:grid;place-items:center;font-size:18px}
+  .result .r-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+  /* 标注层 */
+  .annot{position:relative}
+  .annot>.tag{position:absolute;top:-10px;left:12px;font-size:10px;background:var(--c-primary-500);color:#fff;padding:2px 9px;border-radius:999px;font-weight:700;white-space:nowrap;box-shadow:var(--sh-sm);z-index:5;display:none}
+  body.show-annot .annot>.tag{display:inline-block}
+  body.show-annot .annot.show{outline:2px dashed var(--c-primary-500);outline-offset:3px;border-radius:var(--r-lg)}
+  .toggle-annot{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--c-neutral-600);cursor:pointer;user-select:none;flex:none}
+  .legend{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:4px}
+
+  .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;z-index:60}
+  .toast{background:var(--c-neutral-800);color:#fff;padding:12px 16px;border-radius:10px;box-shadow:var(--sh-lg);font-size:var(--fs-sm);animation:rise .25s ease;
+    display:flex;align-items:center;gap:14px;min-width:280px;justify-content:space-between}
+  .toast .t-undo{background:var(--c-primary-500);color:#fff;border:none;padding:6px 12px;border-radius:7px;font-weight:700;cursor:pointer}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand" onclick="showView('home')" title="回到首页概览" style="cursor:pointer"><span class="logo">F</span> FixText</div>
+    <span class="mod">/ 历史记录</span>
+    <div class="spacer"></div>
+    <button class="icon-btn" title="设置">⚙</button>
+  </div>
+
+  <nav class="rail">
+    <div class="rail-title">功能导航</div>
+    <div class="nav-item" data-view="home" onclick="showView('home',this)"><span class="n-ico">🏠</span> 首页概览</div>
+    <div class="nav-item" data-view="import" onclick="showView('import',this)"><span class="n-ico">📥</span> 导入书籍</div>
+    <div class="nav-item" data-view="correction" onclick="showView('correction',this)"><span class="n-ico">⚡</span> 一键校正</div>
+    <div class="nav-item" data-view="check" onclick="showView('check',this)"><span class="n-ico">🔍</span> 检查问题</div>
+    <div class="nav-item" data-view="vocab" onclick="showView('vocab',this)"><span class="n-ico">📚</span> 词库管理</div>
+    <div class="nav-item" data-view="export" onclick="showView('export',this)"><span class="n-ico">📤</span> 导出结果</div>
+    <div class="nav-item" data-view="history" onclick="showView('history',this)"><span class="n-ico">🕓</span> 历史记录</div>
+  </nav>
+
+  <main class="main">
+
+  <!-- ===== 首页概览视图（导航决策：全程侧栏 + 首页概览） ===== -->
+  <div class="view" data-view="home" id="view-home">
+    <div class="page-head">
+      <div>
+        <h1>首页概览</h1>
+        <p>FixText 六步流水线，全程左侧常驻入口可达；点击下方卡片或左侧入口进入模块。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+    <div class="overview-grid">
+      <div class="ov-card annot" onclick="showView('import')"><span class="tag">§2.2 入口①</span><span class="ov-ico">📥</span><h3>导入书籍</h3><p>拖放或选择 TXT / EPUB，自动识别编码并转 UTF-8，原文件只读保护。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('correction')"><span class="tag">§2.2 入口②</span><span class="ov-ico">⚡</span><h3>一键校正</h3><p>默认组合一次跑完备份→排版→替换→校验，可逐项微调。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('check')"><span class="tag">§2.2 入口③</span><span class="ov-ico">🔍</span><h3>检查问题</h3><p>引号配对与逐处交互修复，可定位、可单独处理、可撤销。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('vocab')"><span class="tag">§2.2 入口④</span><span class="ov-ico">📚</span><h3>词库管理</h3><p>新增 / 检索 / 查重 / 删除 / 合并，维护你的校正词库与安全底线。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('export')"><span class="tag">§2.2 入口⑤</span><span class="ov-ico">📤</span><h3>导出结果</h3><p>导出干净 TXT / EPUB，自动附替换报告（文件留存）。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('history')"><span class="tag">§2.2 入口⑥</span><span class="ov-ico">🕓</span><h3>历史记录</h3><p>任务列表、快照恢复、重新导出，随时回到任一时间点。</p><span class="ov-go">进入 →</span></div>
+    </div>
+  </div>
+
+  <!-- ===== 历史记录视图 ===== -->
+  <div class="view" data-view="history" id="view-history" hidden>
+    <div class="page-head">
+      <div>
+        <h1>历史记录</h1>
+        <p>每次校正的任务列表：书名、时间、替换数；可从任一快照完整恢复现场并重新导出。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+
+    <div class="card open annot">
+      <span class="tag">§2.2 入口⑥ · 验收① 跨会话保留</span>
+      <div class="c-head" onclick="toggleCard('taskCard')"><h3>任务列表</h3><span class="c-sub">重启不丢 · 清理历史为显式操作且需二次确认</span><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="taskCard">
+        <table class="tbl">
+          <thead><tr><th>书名</th><th>时间</th><th>替换数</th><th>状态</th><th style="text-align:right">操作</th></tr></thead>
+          <tbody id="taskBody"></tbody>
+        </table>
+        <div class="f-foot">
+          <span>历史记录跨会话保留；同步失败不阻断主流程，但在此留痕。</span>
+          <button class="btn danger" onclick="clearHistory()">清理全部历史</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card open annot">
+      <span class="tag">§2.7.8 · 失败兜底留痕</span>
+      <div class="c-head" onclick="toggleCard('snapCard')"><h3>快照与恢复</h3><span class="c-sub">恢复到任意时间点</span><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="snapCard">
+        <ul class="bl">
+          <li>每次处理前自动创建快照，任一快照可<b>完整恢复现场</b>并重新导出。</li>
+          <li>基准同步失败<b>不阻断主流程</b>，仅在历史记录中留痕（状态列标记）。</li>
+          <li>恢复与单条删除均可撤销；清理全部历史不可恢复（均需二次确认）（2.4.3 底线）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="legend">勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。清理历史是破坏性操作，必须显式触发 + 二次确认（§2.2 入口⑥ 验收③）。</div>
+  </div><!-- /view-history -->
+
+  <!-- 占位视图：其余 5 个模块各有独立原型文件 -->
+  <div class="view" id="view-ph" hidden>
+    <div class="page-head"><div><h1 id="phTitle">模块</h1><p>本原型聚焦「__MODNAME__」；其余模块各有独立的交互原型文件，见下方提示。</p></div></div>
+    <div class="card" style="padding:36px 32px;text-align:center;color:var(--c-neutral-500)">
+      <div style="font-size:38px;margin-bottom:10px">🧩</div>
+      <div style="font-weight:700;color:var(--c-neutral-700);font-size:var(--fs-lg)" id="phName">模块</div>
+      <div style="font-size:var(--fs-sm);margin-top:6px">该模块的完整交互原型在独立文件中</div>
+      <div style="margin-top:14px;font-family:var(--font-mono);font-size:var(--fs-sm);background:var(--c-neutral-50);border:1px dashed var(--c-neutral-200);border-radius:8px;padding:10px 14px;display:inline-block" id="phFile">—</div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- 进度 / 通用 Modal -->
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ===== 通用工具 ===== */
+function toggleCard(id){ document.getElementById(id).classList.toggle("open"); }
+function openModal(html){ document.getElementById("modal").innerHTML=html; document.getElementById("mask").classList.add("show"); }
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+document.getElementById("mask").addEventListener("click",e=>{ if(e.target.id==="mask") closeModal(); });
+function toast(msg, withUndo){
+  const w=document.getElementById("toastWrap");
+  const t=document.createElement("div"); t.className="toast";
+  t.innerHTML=`<span>${msg}</span>` + (withUndo?`<button class="t-undo" onclick="undoFromToast(this)">撤销</button>`:"");
+  w.appendChild(t);
+  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .3s"; setTimeout(()=>t.remove(),300); }, withUndo?6000:3000);
+}
+function undoFromToast(btn){ const t=btn.closest(".toast"); if(t) t.remove(); undoHistory(); }
+
+/* ===== 导航：全程侧栏 + 首页概览（§2.2 / 决策文档） ===== */
+const VIEW_NAMES={import:'导入书籍',correction:'一键校正',check:'检查问题',vocab:'词库管理',export:'导出结果',history:'历史记录'};
+function showView(key, el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const navEl = el || document.querySelector('.nav-item[data-view="'+key+'"]');
+  if(navEl) navEl.classList.add('active');
+  document.querySelectorAll('.view').forEach(v=>v.hidden=true);
+  const real=document.getElementById('view-'+key);
+  if(real){ real.hidden=false; }
+  else {
+    const ph=document.getElementById('view-ph'); ph.hidden=false;
+    document.getElementById('phTitle').textContent=VIEW_NAMES[key]||'模块';
+    document.getElementById('phName').textContent=VIEW_NAMES[key]||'模块';
+    document.getElementById('phFile').textContent='FixTextGUI_'+(VIEW_NAMES[key]||'模块')+'_原型.html';
+  }
+  const main=document.querySelector('.main'); if(main) main.scrollTop=0;
+}
+
+/* ===== 历史记录 ===== */
+let TASKS=[
+  {book:"《星河彼端》",time:"2026-10-26 17:42",hits:1284,status:"ok"},
+  {book:"《旧巷杂记》",time:"2026-10-25 09:10",hits:356,status:"ok"},
+  {book:"《灯下漫笔》",time:"2026-10-22 21:03",hits:87,status:"syncfail"}
+];
+/* 工作区当前快照（原型态）；恢复可撤销 = 回到恢复前状态（2.4.3） */
+let workspace={ book:null, time:null, hits:null };
+let histUndoStack=[];
+
+function renderTasks(){
+  document.getElementById("taskBody").innerHTML=TASKS.length?TASKS.map((t,i)=>`
+    <tr>
+      <td><b>${t.book}</b></td>
+      <td style="color:var(--c-neutral-500)">${t.time}</td>
+      <td>${t.hits} 处</td>
+      <td>${t.status==="ok"
+        ? `<span class="pill">正常</span>`
+        : `<span class="pill warn">基准同步失败</span><div style="font-size:11px;color:var(--c-neutral-500);margin-top:4px">已在历史留痕，不影响本书</div>`}</td>
+      <td><div class="t-acts">
+        <button class="btn" onclick="restoreTask(${i})">↺ 恢复</button>
+        <button class="btn" onclick="reexport(${i})">📤 重新导出</button>
+        <button class="btn danger" onclick="delTask(${i})">删除</button>
+      </div></td>
+    </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;color:var(--c-neutral-500);padding:28px">暂无历史记录</td></tr>`;
+}
+function doRestore(i){
+  const t=TASKS[i];
+  if(!t) return;
+  histUndoStack.push({ type:"restore", prev: Object.assign({}, workspace) });
+  workspace={ book:t.book, time:t.time, hits:t.hits };
+  closeModal();
+  toast(`已恢复 ${t.book} 到 ${t.time} 的快照`, true);
+}
+function restoreTask(i){
+  const t=TASKS[i];
+  openModal(`
+    <div class="m-head"><div class="m-ico">↺</div><h2>恢复到该快照？</h2></div>
+    <div class="m-body">
+      <div class="note">将把 ${t.book} 恢复到 ${t.time} 的状态（替换 ${t.hits} 处时点）。当前未保存的改动会被覆盖。确认后可在 Toast 中撤销。</div>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="doRestore(${i})">确认恢复</button></div>`);
+}
+function reexport(i){ toast("已从历史结果重新导出 "+TASKS[i].book); }
+function doDelete(i){
+  if(i<0||i>=TASKS.length) return;
+  const item=TASKS[i];
+  histUndoStack.push({ type:"delete", item: Object.assign({}, item), index:i });
+  TASKS.splice(i,1);
+  closeModal(); renderTasks();
+  toast("已删除该条历史", true);
+}
+function delTask(i){
+  const t=TASKS[i];
+  openModal(`
+    <div class="m-head"><div class="m-ico">🗑</div><h2>删除这条历史？</h2></div>
+    <div class="m-body">
+      <div class="note warn">删除该快照可通过 Toast「撤销」恢复（二次确认）。受影响：${t.book} · ${t.time}。</div>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="doDelete(${i})">确认删除</button></div>`);
+}
+function clearHistory(){
+  openModal(`
+    <div class="m-head"><div class="m-ico">🧹</div><h2>清理全部历史？</h2></div>
+    <div class="m-body">
+      <div class="note warn">将删除全部 ${TASKS.length} 条任务及其快照，且不可恢复。清理历史为显式操作，需二次确认（§2.2 入口⑥ 验收③）。</div>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="closeModal();histUndoStack=[];TASKS=[];renderTasks();toast('已清理全部历史',false)">确认清理全部</button></div>`);
+}
+/* 撤销：仅恢复 / 单条删除可撤销；清理全部不可撤销（2.4.3） */
+function undoHistory(){
+  if(histUndoStack.length===0){ toast("没有可撤销的操作"); return; }
+  const last=histUndoStack.pop();
+  if(last.type==="delete"){
+    const idx=Math.min(last.index, TASKS.length);
+    TASKS.splice(idx, 0, last.item);
+    renderTasks();
+    toast("已撤销删除，该条历史已恢复");
+  } else if(last.type==="restore"){
+    workspace=last.prev || { book:null, time:null, hits:null };
+    if(workspace.book){
+      toast(`已撤销恢复，回到此前状态（${workspace.book} · ${workspace.time||"未恢复快照"}）`);
+    } else {
+      toast("已撤销恢复，回到恢复前状态");
+    }
+  }
+}
+document.addEventListener("keydown",e=>{ if((e.ctrlKey||e.metaKey)&&e.key==="z"){ e.preventDefault(); undoHistory(); } });
+renderTasks();
+
+showView('history');
+</script>
+</body>
+</html>

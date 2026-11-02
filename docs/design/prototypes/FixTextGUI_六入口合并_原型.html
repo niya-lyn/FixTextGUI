@@ -1,0 +1,2150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FixText V1 · 六入口合并原型</title>
+<!--
+  本文件由 _merge_six_prototypes.py 从 6 份独立原型只读合并生成。
+  请勿手改业务交互；改各模块请编辑原文件后重跑：python _merge_six_prototypes.py
+  源文件（未改动）：
+    - FixTextGUI_导入书籍_原型.html
+    - FixTextGUI_一键校正_原型.html
+    - FixTextGUI_检查问题_原型.html
+    - FixTextGUI_词库管理_原型.html
+    - FixTextGUI_导出结果_原型.html
+    - FixTextGUI_历史记录_原型.html
+-->
+<style>
+:root{
+    /* ============================================================
+       单一令牌源：下方基础令牌逐字复制自 FixTextGUI_设计系统_薄地基.html
+       的 :root（颜色/字体/圆角在此之外不得另行定义，避免再度漂移）。
+       本原型局部命名已直接改名回地基令牌（如 --c-ink → --c-neutral-800、
+       --r-m → --r-md），不再保留别名层；改一处地基值即全产品生效。
+       ============================================================ */
+    --c-primary-50:#EEF0FB; --c-primary-100:#DDE1F6; --c-primary-200:#C0C6EE;
+    --c-primary-300:#9AA3E2; --c-primary-400:#6F79D1; --c-primary-500:#4F59C0;
+    --c-primary-600:#3F48A2; --c-primary-700:#333B83; --c-primary-800:#2B3169; --c-primary-900:#232852;
+    --c-neutral-0:#FFFFFF; --c-neutral-50:#F7F8FA; --c-neutral-100:#EEF1F5;
+    --c-neutral-200:#DDE2EA; --c-neutral-300:#C2CAD6; --c-neutral-400:#9AA4B4;
+    --c-neutral-500:#6B7585; --c-neutral-600:#4A5363; --c-neutral-700:#333B48;
+    --c-neutral-800:#222831; --c-neutral-900:#15191F;
+    --c-success:#15803D; --c-success-bg:#E7F4EC; --c-success-border:#B6E0C5;
+    --c-warning:#B45309; --c-warning-bg:#FBF1DF; --c-warning-border:#F0D6A8;
+    --c-error:#C0392B;   --c-error-bg:#FBEAE8;   --c-error-border:#F1C4BD;
+    --c-info:#3F48A2;    --c-info-bg:#ECEEF9;    --c-info-border:#C8CDEC;
+    --c-focus:#4F59C0;
+    --font-sans:"Segoe UI","Microsoft YaHei UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    --font-mono:"Cascadia Code","JetBrains Mono",Consolas,monospace;
+    --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:16px; --fs-lg:18px;
+    --fs-xl:20px; --fs-2xl:24px; --fs-3xl:30px; --fs-4xl:36px;
+    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+    --lh-tight:1.25; --lh-normal:1.5; --lh-relaxed:1.7;
+    --sp-1:4px; --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-5:20px;
+    --sp-6:24px; --sp-8:32px; --sp-10:40px; --sp-12:48px; --sp-16:64px;
+    --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-full:999px;
+    --sh-sm:0 1px 2px rgba(21,25,31,.06),0 1px 3px rgba(21,25,31,.08);
+    --sh-md:0 4px 10px rgba(21,25,31,.08),0 2px 4px rgba(21,25,31,.06);
+    --sh-lg:0 12px 28px rgba(21,25,31,.12),0 4px 8px rgba(21,25,31,.06);
+    --sh-focus:0 0 0 3px rgba(79,89,192,.28);
+
+  }
+  *{box-sizing:border-box} html,body{margin:0;height:100%}
+  body{font-family:var(--font-sans);background:var(--c-neutral-50);color:var(--c-neutral-800);font-size:var(--fs-base);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .app{display:grid;grid-template-columns:212px 1fr;grid-template-rows:52px 1fr;height:100vh}
+  .topbar{grid-column:1/3;display:flex;align-items:center;gap:var(--sp-4);background:var(--c-neutral-900);color:#fff;padding:0 var(--sp-5)}
+  .brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:var(--fs-md);letter-spacing:.5px}
+  .brand .logo{width:22px;height:22px;border-radius:6px;background:#fff;color:var(--c-primary-700);display:grid;place-items:center;font-size:13px;font-weight:800}
+  .topbar .mod{opacity:.85;font-weight:500}
+  .topbar .spacer{flex:1}
+  .topbar .icon-btn{background:rgba(255,255,255,.14);border:none;color:#fff;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:15px}
+  .topbar .icon-btn:hover{background:rgba(255,255,255,.26)}
+  .rail{background:var(--c-neutral-0);border-right:1px solid var(--c-neutral-200);padding:var(--sp-3) var(--sp-2);display:flex;flex-direction:column;gap:2px;overflow:auto;min-height:0}
+  .rail .rail-title{font-size:var(--fs-xs);color:var(--c-neutral-500);padding:6px 10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-md);color:var(--c-neutral-600);cursor:pointer;font-weight:500;border:1px solid transparent}
+  .nav-item .n-ico{width:24px;height:24px;border-radius:7px;background:var(--c-neutral-100);display:grid;place-items:center;font-size:13px}
+  .nav-item:hover{background:var(--c-primary-50)}
+  .nav-item.active{background:var(--c-primary-100);color:var(--c-primary-700);border-color:var(--c-primary-100);font-weight:600}
+  .nav-item.active .n-ico{background:#fff;color:var(--c-primary-700)}
+  .nav-item .n-tag{margin-left:auto;font-size:10px;background:var(--c-warning-bg);color:var(--c-warning);padding:1px 6px;border-radius:999px;font-weight:700}
+
+  .main{overflow:auto;min-height:0;padding:var(--sp-5) var(--sp-6) 60px;display:flex;flex-direction:column;gap:var(--sp-4)}
+  /* 滚动条：低分辨率下展开全部选项时内容滚动而非被裁切（grid 子项需 min-height:0） */
+  .main::-webkit-scrollbar,.rail::-webkit-scrollbar{width:10px;height:10px}
+  .main::-webkit-scrollbar-thumb,.rail::-webkit-scrollbar-thumb{background:var(--c-neutral-200);border-radius:999px;border:2px solid var(--c-neutral-50);background-clip:content-box}
+  .main::-webkit-scrollbar-thumb:hover,.rail::-webkit-scrollbar-thumb:hover{background:var(--c-neutral-300);background-clip:content-box}
+  .main,.rail{scrollbar-color:var(--c-neutral-300) var(--c-neutral-50);scrollbar-width:thin}
+
+  /* 视图切换（导航决策：全程侧栏 + 首页概览） */
+  .view[hidden]{display:none}
+  .overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:var(--sp-4)}
+  .ov-card{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);padding:var(--sp-5);cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s;display:flex;flex-direction:column;gap:10px}
+  .ov-card:hover{transform:translateY(-2px);box-shadow:var(--sh-md);border-color:var(--c-primary-100)}
+  .ov-card .ov-ico{width:42px;height:42px;border-radius:10px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center;font-size:20px}
+  .ov-card h3{margin:0;font-size:var(--fs-md)}
+  .ov-card p{margin:0;font-size:var(--fs-xs);color:var(--c-neutral-500);line-height:1.6}
+  .ov-card .ov-go{margin-top:auto;font-size:var(--fs-xs);font-weight:700;color:var(--c-primary-700)}
+  .page-head{display:flex;align-items:flex-start;gap:var(--sp-4)}
+  .page-head>div:first-child{flex:1}
+  .page-head h1{font-size:var(--fs-xl);margin:0 0 2px}
+  .page-head p{margin:0;color:var(--c-neutral-500);font-size:var(--fs-sm)}
+
+  /* 书源状态条（P0 只读保护 + 人话提示） */
+  .book-bar{display:flex;align-items:center;gap:14px;background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);padding:14px 18px;box-shadow:var(--sh-sm)}
+  .book-bar .bk-ico{width:40px;height:40px;border-radius:10px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center;font-size:20px}
+  .book-bar .bk-name{font-weight:700;font-size:var(--fs-md)}
+  .book-bar .bk-meta{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:2px}
+  .book-bar .bk-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+  .pill{font-size:var(--fs-xs);padding:4px 10px;border-radius:999px;background:var(--c-success-bg);color:var(--c-success);font-weight:700}
+  .pill.info{background:var(--c-info-bg);color:var(--c-info)}
+  .pill.warn{background:var(--c-warning-bg);color:var(--c-warning)}
+  .pill.err{background:var(--c-error-bg);color:var(--c-error)}
+
+  .card{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);overflow:hidden}
+  .card .c-head{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--c-neutral-100);cursor:pointer}
+  .card .c-head h3{margin:0;font-size:var(--fs-base)}
+  .card .c-head .c-sub{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .card .c-head .chev{margin-left:auto;color:var(--c-neutral-500);transition:transform .2s}
+  .card.open .c-head .chev{transform:rotate(90deg)}
+  .card .c-body{padding:14px 18px 18px}
+  .card:not(.open) .c-body{display:none}
+  .card .c-sep{height:1px;background:var(--c-neutral-100)}
+
+  /* 折叠面板行 / 控件 */
+  .frow{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid var(--c-neutral-100)}
+  .frow:last-child{border-bottom:none}
+  .frow .f-no{width:22px;height:22px;border-radius:6px;background:var(--c-neutral-100);color:var(--c-neutral-500);display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+  .frow .f-name{font-weight:600;min-width:150px}
+  .frow .f-desc{font-size:var(--fs-xs);color:var(--c-neutral-500);flex:1}
+  .frow .f-ctrl{display:flex;align-items:center;gap:8px}
+  .auto-chip{font-size:11px;background:var(--c-neutral-100);color:var(--c-neutral-500);padding:3px 9px;border-radius:999px;font-weight:700}
+  .switch{position:relative;width:40px;height:22px;background:var(--c-neutral-200);border-radius:999px;cursor:pointer;transition:background .2s;flex:none}
+  .switch.on{background:var(--c-primary-500)}
+  .switch::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;background:#fff;border-radius:50%;transition:left .2s;box-shadow:var(--sh-sm)}
+  .switch.on::after{left:20px}
+  select{padding:7px 10px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-sm);color:var(--c-neutral-800);background:#fff;outline:none}
+  select:focus{border-color:var(--c-primary-500);box-shadow:0 0 0 3px var(--c-primary-100)}
+  .mini-input{width:64px;padding:6px 8px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-sm);outline:none}
+  .mini-input:focus{border-color:var(--c-primary-500);box-shadow:0 0 0 3px var(--c-primary-100)}
+  .f-foot{display:flex;align-items:center;justify-content:space-between;padding-top:12px;font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .link{background:none;border:none;color:var(--c-primary-700);cursor:pointer;font-weight:600;font-size:var(--fs-xs)}
+  .link:hover{text-decoration:underline}
+  .sub{margin:10px 0 0;padding:12px 14px;background:var(--c-neutral-50);border-radius:10px;border:1px dashed var(--c-neutral-200)}
+  .sub:empty{display:none}
+  .sub .s-line{display:flex;align-items:center;gap:12px;margin:8px 0}
+  .sub .s-line>label{font-weight:600;min-width:96px;font-size:var(--fs-sm)}
+  .hint{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:6px}
+  .opt-group{padding:12px 4px;border-bottom:1px solid var(--c-neutral-100)}
+  .opt-group:last-child{border-bottom:none}
+  .opt-label{font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .opt-label .badge{font-size:10px;background:var(--c-warning-bg);color:var(--c-warning);padding:1px 7px;border-radius:999px;font-weight:700}
+  .radio-row{display:flex;gap:10px;flex-wrap:wrap}
+  .radio{flex:1;min-width:140px;border:1px solid var(--c-neutral-200);border-radius:10px;padding:12px 14px;cursor:pointer;background:#fff}
+  .radio:hover{border-color:var(--c-primary-100)}
+  .radio.sel{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .radio .r-title{font-weight:700}
+  .radio .r-desc{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:3px}
+  .bl{margin:0;padding-left:18px;font-size:var(--fs-sm);color:var(--c-neutral-600);line-height:1.9}
+
+  /* 导入：拖放区 + 向导 */
+  .drop{background:var(--c-neutral-0);border:2px dashed var(--c-neutral-300);border-radius:var(--r-lg);padding:var(--sp-8) var(--sp-6);text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+  .drop:hover{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .drop .d-ico{font-size:34px}
+  .drop .d-t{font-weight:700;font-size:var(--fs-md);margin-top:6px}
+  .drop .d-d{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:4px}
+  .drop .d-samples{margin-top:var(--sp-4);display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .wsteps{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:var(--sp-3)}
+  .wstep{display:flex;align-items:center;gap:7px;font-size:var(--fs-sm);color:var(--c-neutral-500)}
+  .wstep .wn{width:22px;height:22px;border-radius:50%;background:var(--c-neutral-100);display:grid;place-items:center;font-size:11px;font-weight:700}
+  .wstep.active{color:var(--c-primary-700);font-weight:700}
+  .wstep.active .wn{background:var(--c-primary-500);color:#fff}
+  .wstep.done .wn{background:var(--c-success);color:#fff}
+  .wline{width:40px;height:2px;background:var(--c-neutral-100);border-radius:2px}
+  .wiz-nav{display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--c-neutral-100);margin-top:14px;padding-top:12px}
+
+  /* 检查：两栏 + 列表 + 编辑器 + 操作条 */
+  .chk-top{display:flex;align-items:center;gap:14px;background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);padding:12px 16px;box-shadow:var(--sh-sm)}
+  .chk-top .ct-stats{font-size:var(--fs-sm);color:var(--c-neutral-600)}
+  .chk-top .ct-stats b{color:var(--c-primary-700)}
+  .chk-top .ct-acts{margin-left:auto;display:flex;gap:10px}
+  .chk-layout{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);align-items:start}
+  @media(max-width:1180px){.chk-layout{grid-template-columns:1fr}}
+  .clist{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto}
+  .prow{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--c-neutral-100);border-radius:10px;cursor:pointer;background:#fff}
+  .prow:hover{border-color:var(--c-primary-100);background:var(--c-primary-50)}
+  .prow.sel{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .prow.done{opacity:.5}
+  .prow .p-no{font-size:11px;font-weight:700;color:var(--c-neutral-500);font-family:var(--font-mono);flex:none}
+  .prow .p-t{font-weight:600;font-size:var(--fs-sm);flex:none}
+  .prow .p-ctx{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--c-neutral-500);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .prow .p-b{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--c-warning-bg);color:var(--c-warning);font-weight:700;flex:none}
+  .prow .p-b.ok{background:var(--c-success-bg);color:var(--c-success)}
+  .prow .p-b.skip{background:var(--c-neutral-100);color:var(--c-neutral-500)}
+  .editor{background:var(--c-neutral-50);border:1px solid var(--c-neutral-200);border-radius:var(--r-md);padding:var(--sp-4);font-family:var(--font-mono);font-size:var(--fs-sm);line-height:2;min-height:130px}
+  .editor .e-ln{color:var(--c-neutral-400);margin-right:8px;font-size:var(--fs-xs)}
+  .editor .hl{background:var(--c-warning-bg);border-bottom:2px solid var(--c-warning);padding:2px 3px;border-radius:3px;font-weight:700}
+  .editor .hl.fixed{background:var(--c-success-bg);border-bottom-color:var(--c-success)}
+  .ql-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .qbtn{border:1px solid var(--c-neutral-200);background:#fff;border-radius:8px;padding:6px 10px;font-size:var(--fs-xs);cursor:pointer;font-weight:600}
+  .qbtn:hover{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .qbtn kbd{font-family:var(--font-mono);font-size:10px;color:var(--c-neutral-500);margin-left:5px}
+  .actbar{display:flex;align-items:center;gap:10px;background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);padding:12px 16px;box-shadow:var(--sh-sm);flex-wrap:wrap}
+  .actbar .ab-spacer{flex:1}
+
+  /* 表格（历史 / 报告） */
+  .tbl{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+  .tbl th{text-align:left;color:var(--c-neutral-600);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--c-neutral-200);font-size:var(--fs-xs)}
+  .tbl td{padding:12px;border-bottom:1px solid var(--c-neutral-100);vertical-align:middle}
+  .tbl tr:last-child td{border-bottom:none}
+  .tbl .t-acts{display:flex;gap:8px;justify-content:flex-end}
+  .kv{display:flex;gap:var(--sp-8);flex-wrap:wrap}
+  .kv .k{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .kv .v{font-weight:700;font-size:var(--fs-md);color:var(--c-primary-700)}
+  .pathrow{display:flex;align-items:center;gap:10px;background:var(--c-neutral-50);border:1px dashed var(--c-neutral-200);border-radius:10px;padding:10px 12px;font-size:var(--fs-sm);font-family:var(--font-mono);color:var(--c-neutral-600)}
+  .pathrow .pbtn{margin-left:auto}
+  .diff{background:var(--c-neutral-50);border-radius:10px;padding:12px 14px;font-family:var(--font-mono);font-size:var(--fs-xs);line-height:1.9}
+  .diff .del{color:var(--c-error);text-decoration:line-through;opacity:.8}
+  .diff .add{color:var(--c-success)}
+
+  /* 进度遮罩 */
+  .mask{position:fixed;inset:0;background:rgba(20,24,35,.45);display:none;align-items:center;justify-content:center;z-index:50}
+  .mask.show{display:flex}
+  .modal{background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:min(560px,92vw);max-height:88vh;overflow:auto}
+  .modal .m-head{padding:18px 22px;border-bottom:1px solid var(--c-neutral-100);display:flex;align-items:center;gap:10px}
+  .modal .m-head h2{margin:0;font-size:var(--fs-lg)}
+  .modal .m-head .m-ico{width:30px;height:30px;border-radius:8px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center}
+  .modal .m-body{padding:20px 22px}
+  .modal .m-foot{padding:14px 22px;border-top:1px solid var(--c-neutral-100);display:flex;justify-content:flex-end;gap:10px}
+  .close-x{border:none;background:none;font-size:20px;cursor:pointer;color:var(--c-neutral-500);margin-left:auto}
+  .note{background:var(--c-info-bg);border:1px solid var(--c-info-border);color:var(--c-info);border-radius:10px;padding:10px 14px;font-size:var(--fs-sm);margin-bottom:12px}
+  .note.warn{background:var(--c-warning-bg);border-color:var(--c-warning-border);color:var(--c-warning)}
+  .prog-step{display:flex;align-items:center;gap:12px;padding:10px 4px}
+  .prog-step .dot{width:22px;height:22px;border-radius:50%;background:var(--c-neutral-100);display:grid;place-items:center;font-size:12px;color:var(--c-neutral-500);flex:none}
+  .prog-step.active .dot{background:var(--c-primary-500);color:#fff}
+  .prog-step.done .dot{background:var(--c-success);color:#fff}
+  .prog-step .s-name{font-weight:600}
+  .prog-step.active .s-name{color:var(--c-primary-700)}
+  .prog-step .s-desc{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .bar{height:10px;background:var(--c-neutral-100);border-radius:999px;overflow:hidden;margin:16px 0 6px}
+  .bar .fill{height:100%;background:var(--c-primary-500);width:0;border-radius:999px;transition:width .4s ease}
+  .bar-meta{display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .btn{border:1px solid var(--c-neutral-200);background:#fff;color:var(--c-neutral-800);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:var(--fs-sm);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{border-color:var(--c-primary-100);background:var(--c-primary-50)}
+  .btn.danger{color:var(--c-error);border-color:var(--c-error-border)}
+  .btn.danger:hover{background:var(--c-error-bg)}
+  .btn.primary{background:var(--c-primary-500);color:#fff;border-color:var(--c-primary-500)}
+  .btn.primary:hover{background:var(--c-primary-600)}
+  .btn.ghost{background:transparent}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  .result{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);padding:20px 22px}
+  .result .r-h{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .result .r-h .ok{width:34px;height:34px;border-radius:10px;background:var(--c-success);color:#fff;display:grid;place-items:center;font-size:18px}
+  .result .r-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+  /* 标注层 */
+  .annot{position:relative}
+  .annot>.tag{position:absolute;top:-10px;left:12px;font-size:10px;background:var(--c-primary-500);color:#fff;padding:2px 9px;border-radius:999px;font-weight:700;white-space:nowrap;box-shadow:var(--sh-sm);z-index:5;display:none}
+  body.show-annot .annot>.tag{display:inline-block}
+  body.show-annot .annot.show{outline:2px dashed var(--c-primary-500);outline-offset:3px;border-radius:var(--r-lg)}
+  .toggle-annot{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--c-neutral-600);cursor:pointer;user-select:none;flex:none}
+  .legend{font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:4px}
+
+  .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;z-index:60}
+  .toast{background:var(--c-neutral-800);color:#fff;padding:12px 16px;border-radius:10px;box-shadow:var(--sh-lg);font-size:var(--fs-sm);animation:rise .25s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* --- 词库模块专用样式 --- */
+/* 分级切换（自定义/内置分级 底线⑤） */
+  .tier-tabs{display:inline-flex;background:var(--c-neutral-100);border-radius:999px;padding:3px;gap:2px}
+  .tier-tab{border:none;background:transparent;padding:7px 16px;border-radius:999px;cursor:pointer;
+    font-weight:600;color:var(--c-neutral-600);font-size:var(--fs-sm)}
+  .tier-tab.active{background:#fff;color:var(--c-primary-700);box-shadow:var(--sh-sm)}
+
+  .layout{display:grid;grid-template-columns:230px 1fr;gap:var(--sp-4);align-items:start}
+  /* 左侧词库列表（文件不暴露：用友好名而非 1.自定义词库.php） */
+  .dict-list{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);
+    padding:var(--sp-3);box-shadow:var(--sh-sm)}
+  .dict-list h3{margin:2px 8px 10px;font-size:var(--fs-xs);color:var(--c-neutral-500);text-transform:uppercase;letter-spacing:.6px}
+  .dict-group{font-size:var(--fs-xs);color:var(--c-neutral-500);font-weight:700;margin:10px 8px 4px}
+  .dict{border:1px solid var(--c-neutral-200);border-radius:var(--r-md);padding:10px 12px;margin:6px 0;cursor:pointer;
+    display:flex;align-items:center;gap:10px;background:#fff}
+  .dict:hover{border-color:var(--c-primary-100)}
+  .dict.active{border-color:var(--c-primary-500);background:var(--c-primary-50)}
+  .dict .d-name{font-weight:600}
+  .dict .d-meta{font-size:var(--fs-xs);color:var(--c-neutral-500)}
+  .dict .lock{margin-left:auto;font-size:12px;color:var(--c-neutral-500)}
+  .dict .lock.custom{color:var(--c-success)}
+
+  /* 工具条 */
+  .toolbar{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;
+    background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);
+    padding:var(--sp-3) var(--sp-4);box-shadow:var(--sh-sm)}
+  .search{display:flex;align-items:center;gap:8px;background:var(--c-neutral-50);border:1px solid var(--c-neutral-200);
+    border-radius:8px;padding:8px 12px;flex:1;min-width:200px}
+  .search input{border:none;background:transparent;outline:none;flex:1;font-size:var(--fs-base);color:var(--c-neutral-800)}
+  .btn{border:1px solid var(--c-neutral-200);background:#fff;color:var(--c-neutral-800);padding:8px 14px;border-radius:8px;
+    cursor:pointer;font-weight:600;font-size:var(--fs-sm);display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{border-color:var(--c-primary-100);background:var(--c-primary-50)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:var(--c-primary-500);color:#fff;border-color:var(--c-primary-500)}
+  .btn.primary:hover{background:var(--c-primary-600)}
+  .btn.danger{color:var(--c-error);border-color:var(--c-error-border)}
+  .btn.danger:hover{background:var(--c-error-bg)}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--c-neutral-600)}
+  .btn.ghost:hover{background:var(--c-neutral-100)}
+  .sel-count{font-size:var(--fs-xs);color:var(--c-neutral-500);font-weight:600}
+
+  /* 表格（结果用结构化表格，不露 PHP 代码 底线③） */
+  .card{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm);overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+  thead th{background:var(--c-neutral-100);text-align:left;padding:11px 14px;color:var(--c-neutral-600);font-weight:700;
+    font-size:var(--fs-xs);border-bottom:1px solid var(--c-neutral-200);position:sticky;top:0}
+  tbody td{padding:11px 14px;border-bottom:1px solid var(--c-neutral-100);color:var(--c-neutral-800)}
+  tbody tr:hover{background:var(--c-primary-50)}
+  tbody tr.sel{background:#FFF6E9}
+  .word{font-weight:700;font-family:"JetBrains Mono",ui-monospace,monospace}
+  .arrow{color:var(--c-neutral-500);margin:0 6px}
+  .val{color:var(--c-primary-700)}
+  .chip{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700}
+  .chip.builtin{background:var(--c-info-bg);color:var(--c-info)}
+  .chip.custom{background:var(--c-success-bg);color:var(--c-success)}
+  .hit{color:var(--c-neutral-600);font-size:var(--fs-xs)}
+  .row-act{display:flex;gap:6px}
+  .link-btn{background:none;border:none;color:var(--c-primary-700);cursor:pointer;font-weight:600;font-size:var(--fs-xs);padding:4px 6px;border-radius:6px}
+  .link-btn:hover{background:var(--c-primary-100)}
+  .link-btn.del{color:var(--c-error)}
+  .empty{padding:48px;text-align:center;color:var(--c-neutral-500)}
+
+  /* 本书专有词库横幅（2.4.2 标准反馈回路） */
+  .banner{display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,var(--c-primary-50),#fff);
+    border:1px solid var(--c-primary-100);border-radius:var(--r-lg);padding:14px 18px}
+  .banner .b-ico{width:38px;height:38px;border-radius:10px;background:var(--c-primary-500);color:#fff;display:grid;place-items:center;font-size:18px}
+  .banner .b-text{flex:1}
+  .banner .b-text b{font-size:var(--fs-base)}
+  .banner .b-text div{color:var(--c-neutral-500);font-size:var(--fs-sm);margin-top:2px}
+
+  /* 历史与快照面板（底线②） */
+  .panel{background:var(--c-neutral-0);border:1px solid var(--c-neutral-200);border-radius:var(--r-lg);box-shadow:var(--sh-sm)}
+  .panel .p-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--c-neutral-100)}
+  .panel .p-head h3{margin:0;font-size:var(--fs-base)}
+  .snap-item{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--c-neutral-100);font-size:var(--fs-sm)}
+  .snap-item:last-child{border-bottom:none}
+  .snap-dot{width:9px;height:9px;border-radius:50%;background:var(--c-neutral-200);flex:none}
+  .snap-item.cur .snap-dot{background:var(--c-success);box-shadow:0 0 0 3px var(--c-success-bg)}
+  .snap-item .s-time{color:var(--c-neutral-500);font-size:var(--fs-xs);margin-left:auto}
+  .snap-item .s-act{font-weight:600}
+
+  /* Toast（撤销入口 底线①） */
+  .toast-wrap{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:10px;z-index:60}
+  .toast{background:var(--c-neutral-800);color:#fff;padding:12px 16px;border-radius:10px;box-shadow:var(--sh-lg);
+    display:flex;align-items:center;gap:14px;font-size:var(--fs-sm);animation:rise .25s ease}
+  .toast .t-undo{background:var(--c-primary-500);color:#fff;border:none;padding:6px 12px;border-radius:7px;font-weight:700;cursor:pointer}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Modal */
+  .mask{position:fixed;inset:0;background:rgba(20,24,35,.42);display:none;align-items:center;justify-content:center;z-index:50}
+  .mask.show{display:flex}
+  .modal{background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-lg);width:min(620px,92vw);max-height:88vh;overflow:auto}
+  .modal.wide{width:min(820px,94vw)}
+  .modal .m-head{padding:18px 22px;border-bottom:1px solid var(--c-neutral-100);display:flex;align-items:center;gap:10px}
+  .modal .m-head h2{margin:0;font-size:var(--fs-lg)}
+  .modal .m-head .m-ico{width:30px;height:30px;border-radius:8px;background:var(--c-primary-100);color:var(--c-primary-700);display:grid;place-items:center}
+  .modal .m-body{padding:20px 22px}
+  .modal .m-foot{padding:14px 22px;border-top:1px solid var(--c-neutral-100);display:flex;justify-content:flex-end;gap:10px}
+  .note{background:var(--c-warning-bg);border:1px solid var(--c-warning-border);color:var(--c-warning);padding:10px 14px;border-radius:8px;font-size:var(--fs-sm);margin-bottom:14px}
+  .note.info{background:var(--c-info-bg);border-color:var(--c-info-border);color:var(--c-info)}
+  .note.warn{background:var(--c-warning-bg);border-color:var(--c-warning-border);color:var(--c-warning)}
+  .field{margin:12px 0}
+  .field label{display:block;font-weight:600;margin-bottom:6px;font-size:var(--fs-sm)}
+  .field input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-base);outline:none}
+  .field input[type=text]:focus{border-color:var(--c-primary-500);box-shadow:0 0 0 3px var(--c-primary-100)}
+  .mini-table{width:100%;border-collapse:collapse;font-size:var(--fs-xs);margin-top:8px}
+  .mini-table th{background:var(--c-neutral-100);text-align:left;padding:8px 10px;color:var(--c-neutral-600);font-weight:700}
+  .mini-table td{padding:8px 10px;border-bottom:1px solid var(--c-neutral-100)}
+  .dup-group{margin:14px 0;padding:12px 14px;border:1px solid var(--c-neutral-200);border-radius:10px;background:var(--c-neutral-50)}
+  .dup-group h4{margin:0 0 8px;font-size:var(--fs-sm);color:var(--c-warning)}
+  .grp-tag{font-size:11px;background:var(--c-warning-bg);color:var(--c-warning);padding:2px 8px;border-radius:999px;font-weight:700;margin-left:8px}
+  .close-x{border:none;background:none;font-size:20px;cursor:pointer;color:var(--c-neutral-500);margin-left:auto}
+
+  /* 设计依据标注层 */
+  .annot{position:relative}
+  .annot .tag{position:absolute;top:-9px;left:10px;font-size:10px;background:var(--c-primary-500);color:#fff;
+    padding:2px 8px;border-radius:999px;font-weight:700;white-space:nowrap;box-shadow:var(--sh-sm);z-index:5;display:none}
+  body.show-annot .annot .tag{display:inline-block}
+  .annot.show{outline:2px dashed var(--c-primary-500);outline-offset:3px;border-radius:var(--r-lg)}
+  body.show-annot .annot.show{outline:2px dashed var(--c-primary-500)}
+
+  .toggle-annot{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);color:var(--c-neutral-600);cursor:pointer;user-select:none}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:var(--fs-xs);color:var(--c-neutral-500);margin-top:4px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:9px;height:9px;border-radius:2px;background:var(--c-primary-500);display:inline-block}
+  .safe-badge{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.14);
+    padding:6px 10px;border-radius:999px;font-size:var(--fs-xs)}
+  .safe-badge .dot{width:7px;height:7px;border-radius:50%;background:#7FE3B0}
+
+
+  /* 合并壳：词库顶栏控件默认隐藏（进入词库页再显示） */
+  #vocabSafe, #vocabHistBtn, #vocabUndoBtn { display: none; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar">
+    <div class="brand" onclick="showView('home')" title="回到首页概览" style="cursor:pointer">
+      <span class="logo">F</span> FixText
+    </div>
+    <span class="mod" id="topMod">/ 首页概览</span>
+    <div class="spacer"></div>
+    <div class="safe-badge" id="vocabSafe"><span class="dot"></span> 安全保护已开启</div>
+    <button type="button" class="icon-btn" id="vocabHistBtn" title="历史与快照" onclick="toggleHistory()">🕑</button>
+    <button type="button" class="icon-btn" id="vocabUndoBtn" title="撤销上一步 (Ctrl+Z)" onclick="vocabUndo()">↩</button>
+  </div>
+
+  <nav class="rail">
+    <div class="rail-title">功能导航</div>
+    <div class="nav-item active" data-view="home" onclick="showView('home',this)"><span class="n-ico">🏠</span> 首页概览</div>
+    <div class="nav-item" data-view="import" onclick="showView('import',this)"><span class="n-ico">📥</span> 导入书籍</div>
+    <div class="nav-item" data-view="correction" onclick="showView('correction',this)"><span class="n-ico">⚡</span> 一键校正</div>
+    <div class="nav-item" data-view="check" onclick="showView('check',this)"><span class="n-ico">🔍</span> 检查问题</div>
+    <div class="nav-item" data-view="vocab" onclick="showView('vocab',this)"><span class="n-ico">📚</span> 词库管理 <span class="n-tag">核心</span></div>
+    <div class="nav-item" data-view="export" onclick="showView('export',this)"><span class="n-ico">📤</span> 导出结果</div>
+    <div class="nav-item" data-view="history" onclick="showView('history',this)"><span class="n-ico">🕓</span> 历史记录</div>
+  </nav>
+
+  <main class="main">
+<!-- ===== 首页概览视图（导航决策：全程侧栏 + 首页概览） ===== -->
+  <div class="view" data-view="home" id="view-home">
+    <div class="page-head">
+      <div>
+        <h1>首页概览</h1>
+        <p>FixText 六步流水线，全程左侧常驻入口可达；点击下方卡片或左侧入口进入模块。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+    <div class="overview-grid">
+      <div class="ov-card annot" onclick="showView('import')"><span class="tag">§2.2 入口①</span><span class="ov-ico">📥</span><h3>导入书籍</h3><p>拖放或选择 TXT / EPUB，自动识别编码并转 UTF-8，原文件只读保护。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('correction')"><span class="tag">§2.2 入口②</span><span class="ov-ico">⚡</span><h3>一键校正</h3><p>默认组合一次跑完备份→排版→替换→校验，可逐项微调。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('check')"><span class="tag">§2.2 入口③</span><span class="ov-ico">🔍</span><h3>检查问题</h3><p>引号配对与逐处交互修复，可定位、可单独处理、可撤销。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('vocab')"><span class="tag">§2.2 入口④</span><span class="ov-ico">📚</span><h3>词库管理</h3><p>新增 / 检索 / 查重 / 删除 / 合并，维护你的校正词库与安全底线。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('export')"><span class="tag">§2.2 入口⑤</span><span class="ov-ico">📤</span><h3>导出结果</h3><p>导出干净 TXT / EPUB，自动附替换报告（文件留存）。</p><span class="ov-go">进入 →</span></div>
+      <div class="ov-card annot" onclick="showView('history')"><span class="tag">§2.2 入口⑥</span><span class="ov-ico">🕓</span><h3>历史记录</h3><p>任务列表、快照恢复、重新导出，随时回到任一时间点。</p><span class="ov-go">进入 →</span></div>
+    </div>
+  </div>
+
+  
+
+<!-- ===== 导入书籍视图 ===== -->
+  <div class="view" data-view="import" id="view-import" hidden>
+    <div class="page-head">
+      <div>
+        <h1>导入书籍</h1>
+        <p>拖放或选择 TXT / EPUB；自动识别编码并转为 UTF-8，导入即复制到工作区，不触碰原文件。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+
+    <!-- 拖放 + 文件选择双通道 -->
+    <div class="drop annot" id="dropZone" onclick="pickFile('epub')">
+      <span class="tag">§2.2 入口① · 验收① 双通道</span>
+      <div class="d-ico">📥</div>
+      <div class="d-t">把书拖到这里，或点击选择文件</div>
+      <div class="d-d">支持 TXT / EPUB · 导入后自动复制到工作区，原文件不会被修改</div>
+      <div class="d-samples">
+        <button class="btn" onclick="event.stopPropagation();pickFile('epub')">示例：《星河彼端》.epub</button>
+        <button class="btn" onclick="event.stopPropagation();pickFile('txt')">示例：《旧巷杂记》.txt</button>
+      </div>
+    </div>
+
+    <!-- 导入向导 -->
+    <div class="card open annot" id="wizCard" style="display:none">
+      <span class="tag">§2.7.3 · 3 步向导</span>
+      <div class="c-head" onclick="toggleCard('wizCard')">
+        <h3 id="wizTitle">导入向导</h3>
+        <span class="c-sub">EPUB 走 3 步（含章节预览）；TXT 走 2 步</span>
+        <span class="chev">▶</span>
+      </div>
+      <div class="c-body">
+        <div class="wsteps" id="wizSteps"></div>
+        <div id="wizBody" class="sub"></div>
+      </div>
+    </div>
+
+    <!-- 安全说明 -->
+    <div class="card open annot">
+      <span class="tag">2.4.3 底线① · 只读保护 + 人话提示</span>
+      <div class="c-head" onclick="toggleCard('safeCard')"><h3>导入安全说明</h3><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="safeCard">
+        <ul class="bl">
+          <li>导入即把书<b>复制</b>到内部工作区，绝不直接修改你原来的文件（验收①「原文件字节不被修改」）。</li>
+          <li>编码自动识别（UTF-8 / GBK / GB18030），转换时以人话提示，<b>不出现任何命令行窗口</b>（§2.2 入口② 验收①）。</li>
+          <li>EPUB 导入不暴露 spine / OPF 等内部概念（§2.2 入口① 验收③）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div id="impResultSlot"></div>
+    <div class="legend">勾选「显示设计依据」可看到每个 UI 元素对应的文档条款，证明不是把命令面板直接包装成产品。</div>
+  </div><!-- /view-import -->
+
+<!-- ===== 一键校正视图 ===== -->
+  <div class="view" data-view="correction" id="view-correction" hidden>
+    <div class="page-head">
+      <div>
+        <h1>一键校正</h1>
+        <p>默认配置一键完成「排版规范化 + 词库替换 + 标点标准化」。需要微调时，展开下方可选项。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+
+    <!-- 书源状态（P0 只读保护 + 人话提示） -->
+    <div class="book-bar annot">
+      <span class="tag">P0 只读保护 · 人话提示</span>
+      <div class="bk-ico">📖</div>
+      <div>
+        <div class="bk-name">《星河彼端》.txt</div>
+        <div class="bk-meta">37.2 MB · 已复制到工作区（原文件未改动）</div>
+      </div>
+      <div class="bk-right">
+        <span class="pill info">编码 GBK → 已自动转为 UTF-8</span>
+        <span class="pill">已就绪</span>
+      </div>
+    </div>
+
+    <!-- 主按钮 -->
+    <div class="hero annot">
+      <span class="tag">§2.2 入口② · 主按钮=默认组合</span>
+      <div class="h-text">
+        <h2>一键校正</h2>
+        <p>使用「常规校正」词库 + Go 引擎 + 默认排版项，一次跑完备份→排版→替换→校验。</p>
+      </div>
+      <button class="btn-primary-lg" id="runBtn" onclick="startCorrection()">⚡ 开始校正</button>
+    </div>
+
+    <!-- 折叠面板：排版规范化（可选） -->
+    <div class="card open annot" id="fmtCard">
+      <span class="tag">§2.7.1 · 14 项折叠 · 默认开 7/10</span>
+      <div class="c-head" onclick="toggleCard('fmtCard')">
+        <h3>排版规范化（可选）</h3>
+        <span class="c-sub">展开可逐项调整；配置自动保存，下次沿用</span>
+        <span class="chev">▶</span>
+      </div>
+      <div class="c-body" id="fmtBody"></div>
+    </div>
+
+    <!-- 高级选项 -->
+    <div class="card annot" id="advCard">
+      <span class="tag">§2.7.2 · 高级选项收进面板</span>
+      <div class="c-head" onclick="toggleCard('advCard')">
+        <h3>高级选项</h3>
+        <span class="c-sub">运行模式 / 子模式 / 词库组合 / 引擎</span>
+        <span class="chev">▶</span>
+      </div>
+      <div class="c-body">
+        <div class="opt-group">
+          <div class="opt-label">运行模式 <span class="badge">主按钮之外才用到</span></div>
+          <div class="radio-row" id="modeRow">
+            <div class="radio sel" data-mode="full" onclick="setMode('full',this)">
+              <div class="r-title">完整流程（默认）</div>
+              <div class="r-desc">备份 → 排版 → 词库替换 → 校验，一条龙</div>
+            </div>
+            <div class="radio" data-mode="skip" onclick="setMode('skip',this)">
+              <div class="r-title">跳过预处理</div>
+              <div class="r-desc">不做排版，直接用词库校正（展开子模式）</div>
+            </div>
+          </div>
+          <div class="sub" id="subModes"></div>
+        </div>
+
+        <div class="opt-group">
+          <div class="opt-label">使用哪套词库</div>
+          <select id="mapSelect" style="width:100%">
+            <option value="常规校正">常规校正 — 默认组合，覆盖常见错词与标点</option>
+            <option value="严格校正">严格校正 — 规则更紧，减少漏替</option>
+            <option value="繁简转换">繁简转换 — 繁体转简体专用</option>
+            <option value="标点规范">标点规范 — 仅做全半角与引号统一</option>
+            <option value="专有名词">专有名词 — 人名/地名/书名</option>
+            <option value="生僻字注音">生僻字注音 — 配合子模式使用</option>
+            <option value="网络用语">网络用语 — 口语化词归一</option>
+            <option value="古籍整理">古籍整理 — 竖排与异体字</option>
+            <option value="同义词">同义词 — 表述统一</option>
+            <option value="自定义组合">自定义组合 — 用户在词库管理拼装</option>
+          </select>
+          <div class="hint">共 10 组，带人话说明，默认「常规校正」。V1 主按钮不询问此组合（§2.2）。</div>
+        </div>
+
+        <div class="opt-group">
+          <div class="opt-label">替换引擎</div>
+          <select id="engineSelect" style="width:100%">
+            <option value="auto">自动（Go 内置，异常时自动降级 Python）</option>
+            <option value="force">强制标准引擎（Go）</option>
+            <option value="degrade">降级模式（Python greedy）</option>
+          </select>
+          <div class="hint">落点与「设置页」共用；Go 缺失/异常时按 3.3 降级路径自动接管并提示（不露命令行）。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 校正结果（执行后插入） -->
+    <div id="resultSlot"></div>
+
+    <div class="legend">勾选「显示设计依据」可看到每个 UI 元素对应的文档条款，证明不是把命令面板直接包装成产品。</div>
+  </div><!-- /view-correction -->
+
+<!-- ===== 检查问题视图 ===== -->
+  <div class="view" data-view="check" id="view-check" hidden>
+    <div class="page-head">
+      <div>
+        <h1>检查问题</h1>
+        <p>引号配对检查 + 逐处交互修复。检查结果可定位、可单独处理、可撤销（§2.2 入口③ 验收②）。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+
+    <div class="book-bar annot">
+      <span class="tag">§2.2 入口③ · 逐处人工确认</span>
+      <div class="bk-ico">📖</div>
+      <div>
+        <div class="bk-name">《星河彼端》</div>
+        <div class="bk-meta">已校正 · 共 <b id="ckTotal">7</b> 处待确认</div>
+      </div>
+      <div class="bk-right"><span class="pill info">编辑器可改文并保存回写</span></div>
+    </div>
+
+    <!-- 顶部：只统计 / 结束检查 -->
+    <div class="chk-top annot">
+      <span class="tag">§2.7.4 · 只统计 / 结束检查</span>
+      <div class="ct-stats">共 <b>7</b> 处 · 已处理 <b id="ckDone">0</b> · 当前第 <b id="ckIdx">1</b> 处</div>
+      <div class="ct-acts">
+        <button class="btn" onclick="onlyCount()">只统计不修复</button>
+        <button class="btn danger" onclick="endCheck()">结束检查</button>
+      </div>
+    </div>
+
+    <div class="chk-layout">
+      <!-- 左：检查项 + 问题清单 -->
+      <div class="card open annot">
+        <span class="tag">§2.7.4 · 检查项自动执行无开关</span>
+        <div class="c-head" onclick="toggleCard('chkItemCard')"><h3>检查项（自动执行）</h3><span class="chev" style="margin-left:auto">▶</span></div>
+        <div class="c-body" id="chkItemCard">
+          <div class="frow"><span class="f-no">1</span><span class="f-name">缺左引号 / 缺右引号</span><span class="f-desc">配对栈中发现未闭合或多余</span><span class="f-ctrl"><span class="auto-chip">2 处</span></span></div>
+          <div class="frow"><span class="f-no">2</span><span class="f-name">引号交叉错乱</span><span class="f-desc">双套内又出现独立双引号</span><span class="f-ctrl"><span class="auto-chip">1 处</span></span></div>
+          <div class="frow"><span class="f-no">3</span><span class="f-name">空引号</span><span class="f-desc">成对出现但内容为空</span><span class="f-ctrl"><span class="auto-chip">1 处</span></span></div>
+          <div class="frow"><span class="f-no">4</span><span class="f-name">跨行未闭合</span><span class="f-desc">向下最多探测 100 行</span><span class="f-ctrl"><span class="auto-chip">1 处</span></span></div>
+          <div class="frow"><span class="f-no">5</span><span class="f-name">英文撇号误报过滤</span><span class="f-desc">前后为字母的撇号不计错</span><span class="f-ctrl"><span class="auto-chip">内部</span></span></div>
+        </div>
+      </div>
+
+      <div class="card open annot">
+        <span class="tag">§2.7.4 · 问题清单 · 点击定位</span>
+        <div class="c-head" onclick="toggleCard('probCard')"><h3>问题清单</h3><span class="c-sub">点击任一问题，右侧定位</span><span class="chev" style="margin-left:auto">▶</span></div>
+        <div class="c-body" id="probCard">
+          <div class="clist" id="probList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右：编辑器 + 快捷操作 -->
+    <div class="card open annot">
+      <span class="tag">§2.7.4 · 右栏编辑器 · 保存并下一处</span>
+      <div class="c-head" onclick="toggleCard('edCard')"><h3>正文（当前问题上下文）</h3><span class="c-sub">可直接改文，保存后自动跳下一处</span><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="edCard">
+        <div class="editor" id="editor"></div>
+        <div class="opt-label" style="margin-top:14px">四类引号快捷变换 <span class="badge">Alt+1~4</span></div>
+        <div class="ql-group">
+          <button class="qbtn" onclick="qx(1)">前后引号互换<kbd>Alt+1</kbd></button>
+          <button class="qbtn" onclick="qx(2)">单双引号互转<kbd>Alt+2</kbd></button>
+          <button class="qbtn" onclick="qx(3)">合并行<kbd>Alt+3</kbd></button>
+          <button class="qbtn" onclick="qx(4)">单引号转〔〕<kbd>Alt+4</kbd></button>
+        </div>
+        <div class="opt-label" style="margin-top:12px">插入四种引号 <span class="badge">F1~F4</span></div>
+        <div class="ql-group">
+          <button class="qbtn" onclick="ins('“')">插入 “<kbd>F1</kbd></button>
+          <button class="qbtn" onclick="ins('”')">插入 ”<kbd>F2</kbd></button>
+          <button class="qbtn" onclick="ins('‘')">插入 ‘<kbd>F3</kbd></button>
+          <button class="qbtn" onclick="ins('’')">插入 ’<kbd>F4</kbd></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部操作条 -->
+    <div class="actbar annot">
+      <span class="tag">§2.7.4 · 逐处操作 + 撤销</span>
+      <button class="btn" onclick="nextIssue()">下一处</button>
+      <button class="btn primary" onclick="fixHere()">修复此处</button>
+      <button class="btn" onclick="skipHere()">跳过此处</button>
+      <button class="btn" onclick="saveAndNext()">保存并下一处</button>
+      <div class="ab-spacer"></div>
+      <button class="btn" onclick="undo()">↺ 撤销上一步</button>
+    </div>
+
+    <!-- 自动修复规则 -->
+    <div class="card annot">
+      <span class="tag">§2.7.4 · 7 条规则逐条可开关</span>
+      <div class="c-head" onclick="toggleCard('ruleCard')">
+        <h3>自动修复规则</h3><span class="c-sub">7 条，逐条可开关</span><span class="chev">▶</span>
+      </div>
+      <div class="c-body" id="ruleCard"></div>
+    </div>
+
+    <!-- 批量操作 -->
+    <div class="card open annot">
+      <span class="tag">§2.7.4 · 批量操作二次确认 + 预览</span>
+      <div class="c-head" onclick="toggleCard('batchCard')"><h3>批量操作</h3><span class="c-sub">执行前预览影响条数</span><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="batchCard">
+        <div class="frow">
+          <span class="f-name" style="min-width:190px">最外层单引号批量改双引号</span>
+          <span class="f-desc">把最外层的 ‘…’ 统一改为 “…”</span>
+          <span class="f-ctrl"><button class="btn" onclick="batchOp()">执行</button></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。「逐处人工确认」是这个模块的核心价值，不能只做「一键修复全部」（§2.7.4）。</div>
+  </div><!-- /view-check -->
+
+<!-- ===== 词库管理视图 ===== -->
+  <div class="view" data-view="vocab" id="view-vocab" hidden>
+    <div class="page-head">
+      <div>
+        <h1>词库管理</h1>
+        <p>新增、检索、查重、合并、删除词条，并安全维护你的校正词库。</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px">
+        <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+        <div class="tier-tabs">
+          <button class="tier-tab active" data-tier="all" onclick="setTier('all',this)">全部</button>
+          <button class="tier-tab" data-tier="custom" onclick="setTier('custom',this)">自定义</button>
+          <button class="tier-tab" data-tier="builtin" onclick="setTier('builtin',this)">内置</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 本书专有词库横幅（2.4.2） -->
+    <div class="banner" id="bookBanner">
+      <div class="b-ico">✨</div>
+      <div class="b-text">
+        <b>《星河彼端》校正完成，发现 3 条本书专有词条</b>
+        <div>是否把它们加入你的自定义词库？加入后，下次校正同类错误将自动生效。</div>
+      </div>
+      <button class="btn primary" onclick="openBookWords()">查看并加入</button>
+      <button class="btn ghost" onclick="hideBanner()">稍后</button>
+    </div>
+
+    <div class="layout">
+      <!-- 左侧词库分级（文件不暴露 + 自定义/内置分级） -->
+      <aside class="dict-list annot">
+        <span class="tag">底线③ 文件不暴露 · 友好名</span>
+        <h3>词库</h3>
+        <div class="dict active" data-dict="custom" onclick="selectDict('custom',this)">
+          <span class="n-ico" style="width:22px;height:22px;border-radius:6px;background:var(--c-success-bg);display:grid;place-items:center">✎</span>
+          <div><div class="d-name">我的词库</div><div class="d-meta" id="metaCustom">0 条 · 可编辑</div></div>
+          <span class="lock custom">✎</span>
+        </div>
+
+        <div class="dict-group">内置词库（只读 · 可恢复默认）</div>
+        <div class="dict" data-dict="b1" onclick="selectDict('b1',this)">
+          <span class="n-ico" style="width:22px;height:22px;border-radius:6px;background:var(--c-info-bg);display:grid;place-items:center">📕</span>
+          <div><div class="d-name">常规校正词库</div><div class="d-meta" id="metaB1">0 条 · 只读</div></div>
+          <span class="lock">🔒</span>
+        </div>
+        <div class="dict" data-dict="b2" onclick="selectDict('b2',this)">
+          <span class="n-ico" style="width:22px;height:22px;border-radius:6px;background:var(--c-info-bg);display:grid;place-items:center">📗</span>
+          <div><div class="d-name">标点规范词库</div><div class="d-meta" id="metaB2">0 条 · 只读</div></div>
+          <span class="lock">🔒</span>
+        </div>
+        <div class="dict" data-dict="b3" onclick="selectDict('b3',this)">
+          <span class="n-ico" style="width:22px;height:22px;border-radius:6px;background:var(--c-info-bg);display:grid;place-items:center">📘</span>
+          <div><div class="d-name">繁简转换词库</div><div class="d-meta" id="metaB3">0 条 · 只读</div></div>
+          <span class="lock">🔒</span>
+        </div>
+      </aside>
+
+      <!-- 右侧工作区 -->
+      <section style="display:flex;flex-direction:column;gap:var(--sp-4)">
+        <!-- 工具条 -->
+        <div class="toolbar annot">
+          <span class="tag">§2.4.1 五操作 · 新增为 V1 补入</span>
+          <button class="btn primary" onclick="openAdd()">＋ 新增词条</button>
+          <div class="search">🔍<input id="searchInput" type="text" placeholder="检索词或替换值…（双向）" oninput="render()"></div>
+          <button class="btn" onclick="openDup()">🔁 查重</button>
+          <button class="btn" id="mergeBtn" onclick="openMerge()" disabled>合并</button>
+          <button class="btn danger" id="delBtn" onclick="confirmDelete()" disabled>🗑 删除选中</button>
+          <button class="btn" onclick="openExpand()">📋 展开核对</button>
+          <span class="sel-count" id="selCount">未选择</span>
+        </div>
+
+        <!-- 词条表格 -->
+        <div class="card annot">
+          <span class="tag">底线③ 结构化表格 · 不露 PHP</span>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px"><input type="checkbox" id="chkAll" onchange="toggleAll(this.checked)"></th>
+                <th>原词</th><th>替换为</th><th>类型</th><th>来源</th><th>命中书籍</th><th style="width:120px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- 历史与快照 -->
+        <div class="panel annot" id="historyPanel" style="display:none">
+          <span class="tag">底线② 自动快照 · 可恢复</span>
+          <div class="p-head">
+            <h3>历史与快照</h3>
+            <button class="btn ghost" onclick="restoreDefault()">↺ 恢复默认词库（保留自定义）</button>
+          </div>
+          <div id="snapList"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="legend">
+      <span><i></i> 原型标注说明：每个 <b>显示设计依据</b> 标签对应文档一条约束，证明界面不是把命令面板直接包装成产品。</span>
+    </div>
+  </div><!-- /view-vocab -->
+
+<!-- ===== 导出结果视图 ===== -->
+  <div class="view" data-view="export" id="view-export" hidden>
+    <div class="page-head">
+      <div>
+        <h1>导出结果</h1>
+        <p>导出干净 TXT；EPUB 来源自动拆分还原为 EPUB。每次导出自动附替换统计（报告以文件留存）。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+
+    <div class="book-bar annot">
+      <span class="tag">§2.2 入口⑤ · 验收③ 自动附统计</span>
+      <div class="bk-ico">📖</div>
+      <div>
+        <div class="bk-name">《星河彼端》</div>
+        <div class="bk-meta">来源 EPUB · 已校正 · 替换命中 1284 处</div>
+      </div>
+      <div class="bk-right"><span class="pill">就绪</span></div>
+    </div>
+
+    <!-- 导出目标 -->
+    <div class="card open annot">
+      <span class="tag">§2.2 入口⑤ · 验收② EPUB 还原</span>
+      <div class="c-head" onclick="toggleCard('tgtCard')"><h3>导出目标</h3><span class="c-sub">来源为 EPUB 时才出现「还原为 EPUB」</span><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="tgtCard">
+        <div class="opt-group" style="padding:0">
+          <div class="radio-row" id="expTargetRow">
+            <div class="radio" data-t="txt" onclick="setExpTarget('txt',this)">
+              <div class="r-title">导出干净 TXT</div><div class="r-desc">得到整理好的纯文本</div>
+            </div>
+            <div class="radio sel" data-t="epub" onclick="setExpTarget('epub',this)">
+              <div class="r-title">还原为 EPUB</div><div class="r-desc">按章节边界标记还原，可直接用阅读器打开</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 章节标题分级 -->
+    <div class="card open annot">
+      <span class="tag">§2.7.1 第 11 项 · 结果在导出页可修正</span>
+      <div class="c-head" onclick="toggleCard('lvCard')"><h3>章节标题分级</h3><span class="c-sub">导入时自动判断，此处可修正</span><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="lvCard">
+        <div class="s-line" style="margin:0">
+          <label>分级方式</label>
+          <select id="lvSel" onchange="toast('章节分级已设为：'+this.value,false)">
+            <option>不处理</option><option selected>一级</option><option>两级</option><option>三级</option>
+          </select>
+        </div>
+        <div class="hint">导入时自动识别 ◎ 标记并转「第X部/卷/章」，结果在导出页可修正。</div>
+      </div>
+    </div>
+
+    <!-- 导出目录 -->
+    <div class="card open annot">
+      <span class="tag">§2.7.7 · 报告落在导出目录旁</span>
+      <div class="c-head" onclick="toggleCard('dirCard')"><h3>导出到</h3><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="dirCard">
+        <div class="pathrow"><span id="expDir">D:\FixText\导出\星河彼端\</span><span class="pbtn"><button class="btn" onclick="toast('原型示意：打开目录选择',false)">浏览…</button></span></div>
+      </div>
+    </div>
+
+    <!-- 替换报告（只读展示 + 内部机制） -->
+    <div class="card open annot">
+      <span class="tag">§2.7.7 · 报告文件留存（GUI 呈现属 V1.1）</span>
+      <div class="c-head" onclick="toggleCard('repCard')"><h3>替换报告（自动附）</h3><span class="c-sub">以 CSV / 文本留存，不做 GUI 对比视图</span><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="repCard">
+        <div class="kv" style="margin-bottom:12px">
+          <div><div class="k">替换命中</div><div class="v">1284</div></div>
+          <div><div class="k">涉及词库</div><div class="v">3 套</div></div>
+          <div><div class="k">报告格式</div><div class="v">CSV / 文本</div></div>
+        </div>
+        <div class="diff">
+          <div>原：他<span class="del">好象</span>在<span class="del">在次</span>见面。</div>
+          <div>改：他<span class="add">好像</span>在<span class="add">再次</span>见面。</div>
+        </div>
+        <div class="hint">报告以上次校正备份为基准反推本轮实际替换；导出时自动生成，无独立按钮。若未跑过校正则无差异，自动跳过并说明（§2.7.7 前置条件）。</div>
+        <div style="margin-top:10px"><button class="btn" onclick="noDiffDemo()">演示：未跑过校正（无差异）</button></div>
+      </div>
+    </div>
+
+    <!-- 导出动作 -->
+    <div class="hero annot">
+      <span class="tag">§2.2 入口⑤ · 导出 + 报告 + 基准同步</span>
+      <div class="h-text">
+        <h2>导出《星河彼端》</h2>
+        <p>导出干净文件 → 自动附替换报告 → 内部同步基准（保证下轮统计不重复）。</p>
+      </div>
+      <button class="btn-primary-lg" id="expBtn" onclick="startExport()">📤 开始导出</button>
+    </div>
+
+    <div id="expResultSlot"></div>
+    <div class="legend">勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。替换报告的 GUI 对比视图属 V1.1，V1 只做文件留存 + 提示位置。</div>
+  </div><!-- /view-export -->
+
+<!-- ===== 历史记录视图 ===== -->
+  <div class="view" data-view="history" id="view-history" hidden>
+    <div class="page-head">
+      <div>
+        <h1>历史记录</h1>
+        <p>每次校正的任务列表：书名、时间、替换数；可从任一快照完整恢复现场并重新导出。</p>
+      </div>
+      <label class="toggle-annot"><input type="checkbox" onchange="document.body.classList.toggle('show-annot',this.checked)"> 显示设计依据</label>
+    </div>
+
+    <div class="card open annot">
+      <span class="tag">§2.2 入口⑥ · 验收① 跨会话保留</span>
+      <div class="c-head" onclick="toggleCard('taskCard')"><h3>任务列表</h3><span class="c-sub">重启不丢 · 清理历史为显式操作且需二次确认</span><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="taskCard">
+        <table class="tbl">
+          <thead><tr><th>书名</th><th>时间</th><th>替换数</th><th>状态</th><th style="text-align:right">操作</th></tr></thead>
+          <tbody id="taskBody"></tbody>
+        </table>
+        <div class="f-foot">
+          <span>历史记录跨会话保留；同步失败不阻断主流程，但在此留痕。</span>
+          <button class="btn danger" onclick="clearHistory()">清理全部历史</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card open annot">
+      <span class="tag">§2.7.8 · 失败兜底留痕</span>
+      <div class="c-head" onclick="toggleCard('snapCard')"><h3>快照与恢复</h3><span class="c-sub">恢复到任意时间点</span><span class="chev" style="margin-left:auto">▶</span></div>
+      <div class="c-body" id="snapCard">
+        <ul class="bl">
+          <li>每次处理前自动创建快照，任一快照可<b>完整恢复现场</b>并重新导出。</li>
+          <li>基准同步失败<b>不阻断主流程</b>，仅在历史记录中留痕（状态列标记）。</li>
+          <li>恢复与单条删除均可撤销；清理全部历史不可恢复（均需二次确认）（2.4.3 底线）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="legend">勾选「显示设计依据」可看到每个 UI 元素对应的文档条款。清理历史是破坏性操作，必须显式触发 + 二次确认（§2.2 入口⑥ 验收③）。</div>
+  </div><!-- /view-history -->
+  </main>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+
+<script>
+document.getElementById("mask").addEventListener("click", function(e){
+  if (e.target.id === "mask") closeModal();
+});
+
+/* ===== 模块：导入书籍（源自 FixTextGUI_导入书籍_原型.html，只读合并） ===== */
+/* ===== 通用工具 ===== */
+function toggleCard(id){ document.getElementById(id).classList.toggle("open"); }
+function openModal(html){ document.getElementById("modal").innerHTML=html; document.getElementById("mask").classList.add("show"); }
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+function toast(msg){ const w=document.getElementById("toastWrap"); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; w.appendChild(t); setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),300);},2600); }
+
+
+
+/* ===== 导入：示例书 + 向导 ===== */
+const SAMPLES={
+  epub:{name:"《星河彼端》.epub",size:"18.4 MB",enc:"UTF-8",encHint:"已是 UTF-8，无需转换",kind:"epub"},
+  txt:{name:"《旧巷杂记》.txt",size:"2.1 MB",enc:"GBK",encHint:"检测到 GBK，已自动转为 UTF-8",kind:"txt"}
+};
+const CHAPS=["第一章 坠落之始","第二章 无名信笺","第三章 旧港夜雨","第四章 星图残页","第五章 归途","第六章 彼端"];
+let cur=null, wstep=0, impMode="direct";
+
+function pickFile(k){
+  cur=SAMPLES[k]; wstep=0; impMode="direct";
+  document.getElementById("wizCard").style.display="";
+  document.getElementById("wizTitle").textContent="导入向导 · "+cur.name;
+  document.getElementById("impResultSlot").innerHTML="";
+  renderWiz();
+  toast("已选择 "+cur.name);
+}
+function wizSteps(){ return cur.kind==="epub" ? ["选择文件","EPUB 导入方式","预览章节列表"] : ["选择文件","确认导入"]; }
+function setImpMode(m,el){ impMode=m; document.querySelectorAll("#impModeRow .radio").forEach(r=>r.classList.remove("sel")); el.classList.add("sel"); }
+
+function renderWiz(){
+  if(!cur) return;
+  const names=wizSteps();
+  document.getElementById("wizSteps").innerHTML=names.map((n,i)=>{
+    const cls=i<wstep?"done":(i===wstep?"active":"");
+    return `<div class="wstep ${cls}"><span class="wn">${i<wstep?"✓":i+1}</span>${n}</div>`+(i<names.length-1?`<span class="wline"></span>`:"");
+  }).join("");
+  const b=document.getElementById("wizBody");
+  if(wstep===0){
+    b.innerHTML=`
+      <div class="s-line"><label>文件</label><b>${cur.name}</b></div>
+      <div class="s-line"><label>大小</label>${cur.size}</div>
+      <div class="s-line"><label>编码</label>${cur.enc} · ${cur.encHint}</div>
+      <div class="hint">编码与换行符转换在导入时自动执行，不作为可选项（§2.7.1 第 1 项 · 导入时机自动处理）。</div>`;
+  } else if(cur.kind==="epub" && wstep===1){
+    b.innerHTML=`
+      <div class="opt-label" style="margin-bottom:10px">EPUB 导入方式</div>
+      <div class="radio-row" id="impModeRow">
+        <div class="radio sel" data-m="direct" onclick="setImpMode('direct',this)">
+          <div class="r-title">直接处理 EPUB</div><div class="r-desc">内部先合并为工作文本，导出时还原</div>
+        </div>
+        <div class="radio" data-m="totxt" onclick="setImpMode('totxt',this)">
+          <div class="r-title">先转成 TXT</div><div class="r-desc">得到同名 TXT 再处理</div>
+        </div>
+      </div>
+      <div class="hint">原 5 号 bat 的参数空间以选项形式露在向导里，不设独立入口（§2.7.3）。</div>`;
+  } else if(cur.kind==="epub" && wstep===2){
+    b.innerHTML=`
+      <div class="s-line"><label>章节顺序</label>严格按原书顺序合并</div>
+      <div class="clist">${CHAPS.map((c,i)=>`<div class="prow"><span class="p-no">${i+1}</span><span class="p-t">${c}</span></div>`).join("")}</div>
+      <div style="margin-top:10px;display:flex;gap:10px">
+        <button class="btn" onclick="orderIssue()">顺序有问题，反馈一下</button>
+      </div>
+      <div class="hint">章节顺序异常时由 ChapterAnalyzer 提示；合并时插入章节边界标记，导出时据此还原（§2.7.3）。</div>`;
+  } else {
+    b.innerHTML=`
+      <div class="s-line"><label>文件</label><b>${cur.name}</b></div>
+      <div class="s-line"><label>编码</label>${cur.enc} → 已转为 UTF-8</div>
+      <div class="hint">TXT 无章节结构，跳过章节预览，可直接导入。</div>`;
+  }
+  const last = wstep===names.length-1;
+  b.innerHTML += `
+    <div class="wiz-nav">
+      <span>第 ${wstep+1} / ${names.length} 步</span>
+      <div style="display:flex;gap:10px">
+        <button class="btn" ${wstep===0?"disabled":""} onclick="prevWiz()">上一步</button>
+        <button class="btn ${last?"primary":""}" onclick="nextWiz()">${last?"开始导入":"下一步"}</button>
+      </div>
+    </div>`;
+}
+function prevWiz(){ if(wstep>0){wstep--; renderWiz();} }
+function nextWiz(){
+  const names=wizSteps();
+  if(wstep===names.length-1){ doImport(); return; }
+  wstep++; renderWiz();
+}
+function orderIssue(){ toast("已记录：章节顺序存疑，导入后可在「检查问题」复核"); }
+
+/* ===== 执行导入：进度 + 可取消 + 自动快照 ===== */
+let impRunning=false, impTimer=null;
+function doImport(){
+  if(impRunning) return;
+  impRunning=true;
+  const isE=cur.kind==="epub";
+  const steps=[
+    {name:"复制到工作区", desc:"原文件保持只读，不做任何修改", dur:800},
+    {name:"编码与换行转换", desc:cur.encHint, dur:900}
+  ];
+  if(isE) steps.push({name:"EPUB 文本合并", desc:impMode==="direct"?"按章节顺序合并为工作文本":"先转成同名 TXT", dur:1500});
+  steps.push({name:"创建初始快照", desc:"导入后即可随时恢复到此状态", dur:600});
+  openModal(`
+    <div class="m-head"><div class="m-ico">📥</div><h2>正在导入 ${cur.name}</h2></div>
+    <div class="m-body">
+      <div class="note">原文件保持只读，导入的是复制到工作区的副本。</div>
+      <div id="impStepList"></div>
+      <div class="bar"><div class="fill" id="impFill"></div></div>
+      <div class="bar-meta"><span id="impStepName">准备中…</span><span id="impEta">—</span></div>
+    </div>
+    <div class="m-foot"><button class="btn danger" onclick="cancelImport()">取消（不留半成品）</button></div>`);
+  runImportSteps(steps);
+}
+function runImportSteps(steps){
+  const list=document.getElementById("impStepList"); list.innerHTML="";
+  let i=0,total=steps.reduce((a,s)=>a+s.dur,0),acc=0;
+  (function next(){
+    if(i>0){ const p=list.children[i-1]; p.className="prog-step done"; p.querySelector(".dot").textContent="✓"; }
+    if(i>=steps.length){ finishImport(); return; }
+    const s=steps[i];
+    const node=document.createElement("div"); node.className="prog-step active";
+    node.innerHTML=`<span class="dot">${i+1}</span><div><div class="s-name">${s.name}</div><div class="s-desc">${s.desc}</div></div>`;
+    list.appendChild(node);
+    document.getElementById("impStepName").textContent=s.name+"…";
+    document.getElementById("impEta").textContent="预计 "+Math.max(1,Math.round((total-acc)/1000))+" 秒";
+    impTimer=setTimeout(()=>{ acc+=s.dur; document.getElementById("impFill").style.width=Math.round(acc/total*100)+"%"; i++; next(); }, s.dur);
+  })();
+}
+function cancelImport(){
+  if(impTimer) clearTimeout(impTimer);
+  impRunning=false; closeModal();
+  toast("已取消导入，未留下任何半成品文件");
+}
+function finishImport(){
+  impRunning=false;
+  document.getElementById("impFill").style.width="100%";
+  document.getElementById("impStepName").textContent="导入完成";
+  document.getElementById("impEta").textContent="0 秒";
+  document.querySelectorAll("#impStepList .prog-step").forEach(n=>{n.className="prog-step done"; n.querySelector(".dot").textContent="✓";});
+  setTimeout(()=>{
+    closeModal();
+    const isE=cur.kind==="epub";
+    document.getElementById("impResultSlot").innerHTML=`
+      <div class="result annot">
+        <span class="tag">§2.2 入口① · 验收② 编码零配置</span>
+        <div class="r-h"><div class="ok">✓</div><div>
+          <div style="font-weight:700;font-size:var(--fs-md)">${cur.name} 已导入工作区</div>
+          <div style="font-size:var(--fs-xs);color:var(--c-neutral-500)">原文件未被修改 · 已创建初始快照${isE?" · 已按章节顺序合并":""}</div>
+        </div></div>
+        <div class="kv">
+          <div><div class="k">编码</div><div class="v">${cur.enc} → UTF-8</div></div>
+          <div><div class="k">大小</div><div class="v">${cur.size}</div></div>
+          <div><div class="k">章节</div><div class="v">${isE?CHAPS.length+" 章":"—"}</div></div>
+        </div>
+        <div class="r-actions">
+          <button class="btn primary" onclick="toast('原型示意：下一步进入「一键校正」',false)">⚡ 去一键校正</button>
+          <button class="btn" onclick="toast('原型示意：进入「检查问题」',false)">🔍 先检查问题</button>
+          <button class="btn" onclick="toast('已恢复到刚导入的状态（快照）',false)">↺ 恢复到导入时</button>
+        </div>
+      </div>`;
+    toast("导入完成，已自动创建快照");
+  },600);
+}
+
+/* ===== 模块：一键校正（源自 FixTextGUI_一键校正_原型.html，只读合并） ===== */
+/* ===== 排版 14 项（§2.7.1） ===== */
+const FMT = [
+  {n:1, name:"编码与换行符转换", desc:"源编码自动识别，换行统一", ctrl:"auto"},
+  {n:2, name:"英文大小写转换", desc:"数百个固定大小写词组", ctrl:"switch", on:false},
+  {n:3, name:"数字转换", desc:"阿拉伯↔中文数字互转（防误伤）", ctrl:"dropdown", opts:["不转换","转中文","转阿拉伯"], val:"不转换"},
+  {n:4, name:"去中文间空格", desc:"清除汉字之间多余空格", ctrl:"switch", on:false},
+  {n:5, name:"按标点分行/还原", desc:"在标点处断行或合并为整段", ctrl:"dropdown", opts:["不动","分行","还原为整段"], val:"不动"},
+  {n:6, name:"特殊字符转义还原", desc:"还原 EPUB/HTML 转义实体", ctrl:"auto"},
+  {n:7, name:"标点规范化", desc:"全半角/省略号/破折号统一（含引号转换）", ctrl:"switch", on:true, def:true},
+  {n:8, name:"多行引号处理", desc:"跨行引语补/去行首引号", ctrl:"dropdown", opts:["不动","补引号","去引号"], val:"不动"},
+  {n:9, name:"HTML 转 TXT", desc:"剥离 HTML 标签转纯文本", ctrl:"auto"},
+  {n:10, name:"TXT 排版", desc:"去空行/加缩进/插章节分隔", ctrl:"switch+input", on:true, def:true, input:"缩进字符数", inputVal:2},
+  {n:11, name:"分级标题", desc:"◎ 标记转「第X部/卷/章」", ctrl:"dropdown", opts:["不处理","一级","两级","三级"], val:"不处理"},
+  {n:12, name:"书籍信息提取", desc:"从正文提取书名/作者", ctrl:"auto"},
+  {n:13, name:"附加校对声明", desc:"文末追加校对声明", ctrl:"switch+input", on:false, input:"署名", inputVal:""},
+  {n:14, name:"中英文之间加空格", desc:"pangu 风格，汉字与字母/数字间补空格", ctrl:"switch", on:false},
+];
+function renderFmt(){
+  const body=document.getElementById("fmtBody");
+  body.innerHTML = FMT.map(it=>{
+    let ctrl="";
+    if(it.ctrl==="auto"){ ctrl=`<span class="auto-chip">导入时自动</span>`; }
+    else if(it.ctrl==="switch"){ ctrl=`<div class="switch ${it.on?'on':''}" onclick="toggleSwitch(${it.n},this)"></div>`; }
+    else if(it.ctrl==="dropdown"){ ctrl=`<select onchange="it.val=this.value">${it.opts.map(o=>`<option ${o===it.val?'selected':''}>${o}</option>`).join("")}</select>`; }
+    else if(it.ctrl==="switch+input"){ ctrl=`<div class="switch ${it.on?'on':''}" onclick="toggleSwitch(${it.n},this)"></div><input class="mini-input" value="${it.inputVal}" placeholder="${it.input}" title="${it.input}" onchange="it.inputVal=this.value">`; }
+    return `<div class="frow">
+      <span class="f-no">${it.n}</span>
+      <span class="f-name">${it.name}</span>
+      <span class="f-desc">${it.desc}</span>
+      <span class="f-ctrl">${ctrl}</span>
+    </div>`;
+  }).join("") + `<div class="f-foot"><span>默认仅开启第 7、10 两项；其余按上次要用的配置自动恢复。</span><button class="link" onclick="resetFmt()">恢复默认</button></div>`;
+}
+function toggleSwitch(n,el){ const it=FMT.find(x=>x.n===n); it.on=!it.on; el.classList.toggle("on",it.on); persist(); }
+function resetFmt(){ FMT.forEach(it=>{ if(it.ctrl.includes("switch")) it.on=!!it.def; }); renderFmt(); persist(); toast("已恢复默认排版项（仅开 7、10）"); }
+function persist(){ toast("排版配置已保存，下次沿用"); }
+
+function toggleCard(id){ document.getElementById(id).classList.toggle("open"); }
+
+/* ===== 高级：运行模式 + 子模式 ===== */
+function setMode(mode,el){
+  document.querySelectorAll("#modeRow .radio").forEach(r=>r.classList.remove("sel")); el.classList.add("sel");
+  const sub=document.getElementById("subModes");
+  if(mode==="skip"){
+    sub.innerHTML=`
+      <div class="s-line"><label>词库严格度</label>
+        <select id="strictSel"><option>常规</option><option>严格</option></select></div>
+      <div class="s-line"><label>生僻字注音</label>
+        <select id="zhuSel" onchange="zhuChange(this.value)">
+          <option>不注音</option><option>仅注一次</option><option>所有位置</option><option>取第一读音</option><option>多音字拆分</option>
+        </select></div>
+      <div class="s-line" id="zhuMapLine" style="display:none"><label>拆分用词库</label>
+        <select><option>生僻字注音词库</option><option>自定义组合</option><option>专有名词</option></select></div>
+      <div class="hint">子模式为 2 号 bat 实质内容，必须可被用户触达（§2.7.2）。多音字拆分需先选词库。</div>`;
+  } else { sub.innerHTML=""; }
+}
+function zhuChange(v){ document.getElementById("zhuMapLine").style.display = (v==="多音字拆分")?"flex":"none"; }
+
+/* ===== 执行：进度 + 可取消 + 自动快照（§2.2 入口② 验收②④） ===== */
+let running=false, timer=null;
+function startCorrection(){
+  if(running) return;
+  running=true;
+  // 处理前自动快照（验收④）
+  openModal(`
+    <div class="m-head"><div class="m-ico">⚡</div><h2>正在校正《星河彼端》</h2></div>
+    <div class="m-body">
+      <div class="note" style="background:var(--c-info-bg);border-color:var(--c-info-border);color:var(--c-info)">已为本次校正自动创建快照，可随时恢复到校正前。</div>
+      <div id="stepList"></div>
+      <div class="bar"><div class="fill" id="progFill"></div></div>
+      <div class="bar-meta"><span id="progStep">准备中…</span><span id="progEta">预计 8 秒</span></div>
+    </div>
+    <div class="m-foot"><button class="btn danger" id="cancelBtn" onclick="cancelCorrection()">取消（不留下半成品）</button></div>`, false);
+  runSteps();
+}
+const STEPS=[
+  {name:"备份原书", desc:"复制到工作区并生成快照基准", dur:900},
+  {name:"排版规范化", desc:"按所选开关整理正文（默认 7、10）", dur:1600},
+  {name:"词库批量替换", desc:"常规校正词库 · Go 引擎", dur:2200},
+  {name:"标点标准化 / 校验", desc:"引号配对与结果校验", dur:1300},
+];
+function runSteps(){
+  const list=document.getElementById("stepList"); list.innerHTML="";
+  let i=0, total=STEPS.reduce((a,s)=>a+s.dur,0), acc=0;
+  function next(){
+    if(i>0){ const prev=list.children[i-1]; prev.className="prog-step done"; prev.querySelector(".dot").textContent="✓"; }
+    if(i>=STEPS.length){ finishCorrection(); return; }
+    const s=STEPS[i];
+    const node=document.createElement("div"); node.className="prog-step active";
+    node.innerHTML=`<span class="dot">${i+1}</span><div><div class="s-name">${s.name}</div><div class="s-desc">${s.desc}</div></div>`;
+    list.appendChild(node);
+    document.getElementById("progStep").textContent=s.name+"…";
+    document.getElementById("progEta").textContent="预计 "+(Math.max(1,Math.round((total-acc)/1000)))+" 秒";
+    timer=setTimeout(()=>{ acc+=s.dur; document.getElementById("progFill").style.width=Math.round(acc/total*100)+"%"; i++; next(); }, s.dur);
+  }
+  next();
+}
+function cancelCorrection(){
+  if(timer) clearTimeout(timer);
+  running=false;
+  closeModal();
+  toast("已取消，未产生任何半成品文件（原书完好）");
+  renderResult(null);
+}
+function finishCorrection(){
+  running=false;
+  document.getElementById("progFill").style.width="100%";
+  document.getElementById("progStep").textContent="完成";
+  document.getElementById("progEta").textContent="0 秒";
+  // 完成：标记全部 done
+  document.querySelectorAll("#stepList .prog-step").forEach(n=>{n.className="prog-step done"; n.querySelector(".dot").textContent="✓";});
+  setTimeout(()=>{ closeModal(); renderResult({hits:1284, maps:3, caseFix:42}); toast("校正完成，已生成替换报告"); }, 600);
+}
+
+/* ===== 结果卡（替换统计 + 本书专有词条提示 2.4.2 + 恢复校正前） ===== */
+function renderResult(r){
+  const slot=document.getElementById("resultSlot");
+  if(!r){ slot.innerHTML=""; return; }
+  slot.innerHTML=`
+  <div class="result annot">
+    <span class="tag">§2.2 入口⑤ · 替换统计 + 2.4.2 反馈回路</span>
+    <div class="r-h"><div class="ok">✓</div><div><div style="font-weight:700;font-size:var(--fs-md)">《星河彼端》校正完成</div>
+      <div style="font-size:var(--fs-xs);color:var(--c-neutral-500)">处理前已自动快照，可随时恢复</div></div></div>
+    <div class="stat-grid">
+      <div class="stat"><div class="num">${r.hits}</div><div class="lab">替换命中（处）</div></div>
+      <div class="stat"><div class="num">${r.maps}</div><div class="lab">涉及词库（套）</div></div>
+      <div class="stat"><div class="num">${r.caseFix}</div><div class="lab">英文大小写修正</div></div>
+    </div>
+    <div class="diff">
+      <div>原：他<span class="del">好象</span>在<span class="del">在次</span>见面。</div>
+      <div>改：他<span class="add">好像</span>在<span class="add">再次</span>见面。</div>
+    </div>
+    <div class="r-actions">
+      <button class="btn primary" onclick="toast('替换报告已留存（CSV/文本），可在导出页查看',false)">📄 查看替换报告</button>
+      <button class="btn" onclick="toast('已恢复到校正前（快照）',false)">↺ 恢复到校正前</button>
+      <button class="btn" onclick="toast('已跳转导出结果（原型示意）',false)">📤 去导出</button>
+      <button class="btn" style="margin-left:auto" onclick="openCorrectionBookWords()">✨ 把本书专有词条加入词库</button>
+    </div>
+  </div>`;
+}
+function openCorrectionBookWords(){
+  const bw=[{w:"星陨大陆",note:"本书专有地名"},{w:"墨羽",note:"角色名"},{w:"九转玄功",note:"功法名"}];
+  const rows=bw.map((x,i)=>`<tr><td><input type="checkbox" checked data-bw="${i}"></td><td>${x.w}</td><td>${x.note}</td></tr>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">✨</div><h2>本书专有词条（加入预览）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note" style="background:var(--c-info-bg);border-color:var(--c-info-border);color:var(--c-info)">2.4.2：加入前预览，可逐条或整组确认；加入后下次校正自动生效。</div>
+      <table style="width:100%;border-collapse:collapse;font-size:var(--fs-sm)"><thead><tr style="text-align:left;color:var(--c-neutral-600)"><th>加入</th><th>原词</th><th>说明</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="closeModal();toast('已加入 3 条专有词条到「我的词库」',false)">加入选中词条</button></div>`, false);
+}
+
+/* ===== 通用工具 ===== */
+function openModal(html){ document.getElementById("modal").innerHTML=html; document.getElementById("mask").classList.add("show"); }
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+function toast(msg){ const w=document.getElementById("toastWrap"); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; w.appendChild(t); setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),300);},2600); }
+
+
+renderFmt();
+
+/* ===== 模块：检查问题（源自 FixTextGUI_检查问题_原型.html，只读合并） ===== */
+/* ===== 通用工具 ===== */
+function toggleCard(id){ document.getElementById(id).classList.toggle("open"); }
+function openModal(html){ document.getElementById("modal").innerHTML=html; document.getElementById("mask").classList.add("show"); }
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+function toast(msg){ const w=document.getElementById("toastWrap"); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; w.appendChild(t); setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),300);},2600); }
+
+
+
+/* ===== 检查问题：逐处交互 ===== */
+const PROBS=[
+  {line:128,type:"缺右引号",pre:"他说道：",hl:"“今天天气不错，我们出去走走…",post:"",fix:"“今天天气不错，我们出去走走…”"},
+  {line:214,type:"引号交叉错乱",pre:"他摇头：",hl:"“我见过「那种人」的做法”",post:"",fix:"“我见过『那种人』的做法”"},
+  {line:377,type:"空引号",pre:"她愣了一下：",hl:"“”",post:"",fix:""},
+  {line:502,type:"跨行未闭合",pre:"",hl:"“这句话从这里开始，",post:"（下一行继续）",fix:"“这句话从这里开始，”"},
+  {line:640,type:"缺左引号",pre:"",hl:"明天再告诉你”",post:"",fix:"“明天再告诉你”"},
+  {line:811,type:"写反引号",pre:"",hl:"”这样写反了“",post:"",fix:"“这样写反了”"},
+  {line:1024,type:"连续同向引号",pre:"",hl:"““这样连着两个左引号”",post:"",fix:"“这样连着两个左引号”"}
+];
+const RULES=[
+  {n:1,name:"双套双引号改单引号",desc:"外层双引号内再出现双引号时，把内层改为单引号",on:true},
+  {n:2,name:"写反引号反转",desc:"左右引号写反时调换",on:true},
+  {n:3,name:"连续同向引号归一",desc:"连续两个左 / 右引号收回一个",on:true},
+  {n:4,name:"句尾孤立右引号移除",desc:"句末无配对的右引号删除",on:true},
+  {n:5,name:"补左引号",desc:"缺左引号处补入",on:true},
+  {n:6,name:"按文件类型补右引号",desc:"依文件类型（TXT / EPUB 合并）规则补右引号",on:true},
+  {n:7,name:"最外层单引号批量改双引号",desc:"批量把最外层单引号统一改双引号",on:true}
+];
+let ck=0, insBuf="", undoLog=[];
+const st=()=>PROBS[ck];
+
+function renderRules(){
+  document.getElementById("ruleCard").innerHTML=RULES.map(r=>`
+    <div class="frow">
+      <span class="f-no">${r.n}</span>
+      <span class="f-name">${r.name}</span>
+      <span class="f-desc">${r.desc}</span>
+      <span class="f-ctrl"><div class="switch ${r.on?'on':''}" onclick="toggleRule(${r.n},this)"></div></span>
+    </div>`).join("") + `<div class="f-foot"><span>7 条规则逐条可开关，配置按用户持久化。</span><button class="link" onclick="toast('规则配置已保存',false)">保存配置</button></div>`;
+}
+function toggleRule(n,el){ const r=RULES.find(x=>x.n===n); r.on=!r.on; el.classList.toggle("on",r.on); }
+
+function renderProbs(){
+  document.getElementById("probList").innerHTML=PROBS.map((p,i)=>{
+    const bCls=p.state==="fixed"?"ok":(p.state==="skip"?"skip":"");
+    const bTxt=p.state==="fixed"?"已修复":(p.state==="skip"?"已跳过":"待确认");
+    return `<div class="prow ${i===ck?'sel':''} ${p.state?'done':''}" onclick="selectProb(${i})">
+      <span class="p-no">L${p.line}</span>
+      <span class="p-t">${p.type}</span>
+      <span class="p-ctx">${p.pre}${p.hl}${p.post}</span>
+      <span class="p-b ${bCls}">${bTxt}</span>
+    </div>`;
+  }).join("");
+  const done=PROBS.filter(p=>p.state).length;
+  document.getElementById("ckDone").textContent=done;
+  document.getElementById("ckIdx").textContent=ck+1;
+}
+function renderEditor(){
+  const p=st();
+  const fixed=p.state==="fixed";
+  document.getElementById("editor").innerHTML=
+    `<span class="e-ln">L${p.line}</span>${p.pre}<span class="hl ${fixed?'fixed':''}">${p.hl}</span>${p.post}<span id="insSlot">${insBuf}</span>`;
+}
+function selectProb(i){ ck=i; insBuf=""; renderProbs(); renderEditor(); }
+function nextIssue(){
+  for(let k=1;k<=PROBS.length;k++){ const n=(ck+k)%PROBS.length; if(!PROBS[n].state){ ck=n; break; } }
+  insBuf=""; renderProbs(); renderEditor();
+}
+function fixHere(){
+  const p=st(); undoLog.push({i:ck,prev:p.hl,prevState:p.state});
+  p.hl=p.fix; p.state="fixed"; renderProbs(); renderEditor(); nextIssue();
+  toast("已按自动修复规则修复 L"+p.line);
+}
+function skipHere(){ const p=st(); undoLog.push({i:ck,prev:p.hl,prevState:p.state,skipped:true}); p.state="skip"; renderProbs(); renderEditor(); nextIssue(); toast("已跳过，记入跳过清单"); }
+function saveAndNext(){ const p=st(); p.state="fixed"; renderEditor(); renderProbs(); nextIssue(); toast("已保存回写，自动跳到下一处"); }
+function undo(){
+  const a=undoLog.pop();
+  if(!a){ toast("没有可撤销的操作"); return; }
+  PROBS[a.i].hl=a.prev; PROBS[a.i].state=a.prevState; ck=a.i; insBuf="";
+  renderProbs(); renderEditor(); toast("已撤销上一步");
+}
+function qx(n){
+  const p=st(); let t=p.hl;
+  if(n===1){ t=t.replace(/^(.)/,"").replace(/”$/,""); t="”"+t+"“"; }
+  else if(n===2){ t=t.replace(/“/g,"‘").replace(/”/g,"’"); }
+  else if(n===3){ p.post=""; t=t+"（已合并到本行）"; }
+  else if(n===4){ t=t.replace(/‘/g,"〔").replace(/’/g,"〕"); }
+  undoLog.push({i:ck,prev:p.hl,prevState:p.state});
+  p.hl=t; renderEditor(); renderProbs();
+  toast("已应用快捷变换 Alt+"+n);
+}
+function ins(ch){ insBuf+=ch; document.getElementById("insSlot").textContent=insBuf; toast("已插入 "+ch); }
+function onlyCount(){ toast("共检出 "+PROBS.length+" 处问题，未做任何修改（仅统计）"); }
+function endCheck(){
+  openModal(`
+    <div class="m-head"><div class="m-ico">🔍</div><h2>结束检查？</h2></div>
+    <div class="m-body">
+      <div class="note warn">已处理 ${PROBS.filter(p=>p.state).length} / ${PROBS.length} 处；未处理的 ${PROBS.filter(p=>!p.state).length} 处将保持原样。</div>
+      <div class="hint">结束检查后仍可从左侧入口重新进入。</div>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">继续检查</button>
+      <button class="btn primary" onclick="closeModal();toast('已结束本轮检查',false)">结束检查</button></div>`);
+}
+function batchOp(){
+  openModal(`
+    <div class="m-head"><div class="m-ico">🔧</div><h2>批量操作确认</h2></div>
+    <div class="m-body">
+      <div class="note">最外层单引号改双引号 · 影响 <b>42</b> 处。执行前预览影响条数，执行后可撤销。</div>
+      <div class="diff"><div>原：<span class="del">‘这里的引号是外层的’</span></div><div>改：<span class="add">“这里的引号是外层的”</span></div></div>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="closeModal();toast('已批量修改 42 处（Ctrl+Z 可撤销）',false)">确认执行</button></div>`);
+}
+renderRules(); renderProbs(); renderEditor();
+
+/* ===== 模块：词库管理（源自 FixTextGUI_词库管理_原型.html，只读合并） ===== */
+/* ============ 数据模型 ============ */
+const ENTRY_TYPES = ["错词校正","角色名","专有名词","其他"];
+let ENTRIES = [
+  // 自定义词库（可编辑；「新增」写入此分级，见 §2.4.1 / 2.4.3）
+  {id:1, word:"星河彼端", value:"星河彼岸", type:"专有名词", pinyin:"", dict:"custom", tier:"custom", books:["《星河彼端》"]},
+  {id:2, word:"绯红之翼", value:"绯红之翌", type:"专有名词", pinyin:"", dict:"custom", tier:"custom", books:["《绯红之翼》","《黎明誓约》"]},
+  {id:3, word:"萧衍", value:"萧彦", type:"角色名", pinyin:"xiāo yàn", dict:"custom", tier:"custom", books:["《九域志》"]},
+  {id:4, word:"地煞", value:"第煞", type:"错词校正", pinyin:"", dict:"custom", tier:"custom", books:[]},
+  {id:5, word:"玄机阁", value:"悬机阁", type:"专有名词", pinyin:"", dict:"custom", tier:"custom", books:["《玄机阁秘录》"]},
+  // 内置词库 b1
+  {id:11, word:"好象", value:"好像", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:12, word:"做为一个", value:"作为一个", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:13, word:"他门", value:"他们", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:14, word:"在次", value:"再次", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  // 内置词库 b2（标点）
+  {id:21, word:"“", value:"“", type:"其他", pinyin:"", dict:"b2", tier:"builtin", books:[]},
+  {id:22, word:"''", value:"“”,", type:"其他", pinyin:"", dict:"b2", tier:"builtin", books:[]},
+  // 内置词库 b3（繁简）
+  {id:31, word:"網", value:"网", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+  {id:32, word:"國", value:"国", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+  {id:33, word:"對", value:"对", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+];
+const DICT_NAMES = {custom:"我的词库", b1:"常规校正词库", b2:"标点规范词库", b3:"繁简转换词库"};
+
+let state = { tier:"all", dict:"custom", search:"", selected:new Set(), snapshots:[], seq:100 };
+let undoStack = []; // 底线① 撤销
+
+/* ============ 快照（底线② 每次变更自动快照） ============ */
+function snap(label){
+  state.seq++;
+  state.snapshots.unshift({id:state.seq, time:nowStr(), label, data:JSON.parse(JSON.stringify(ENTRIES)), sel:new Set(state.selected)});
+  if(state.snapshots.length>12) state.snapshots.pop();
+  renderSnaps();
+}
+function nowStr(){
+  const d=new Date(); const p=n=>String(n).padStart(2,"0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/* ============ 渲染 ============ */
+function getFiltered(){
+  let list = ENTRIES.slice();
+  if(state.tier==="custom") list=list.filter(e=>e.tier==="custom");
+  else if(state.tier==="builtin") list=list.filter(e=>e.tier==="builtin");
+  if(state.dict!=="custom" && state.dict!=="all") list=list.filter(e=>e.dict===state.dict);
+  const q=(state.search||"").trim().toLowerCase();
+  if(q) list=list.filter(e=>e.word.toLowerCase().includes(q)||e.value.toLowerCase().includes(q));
+  return list;
+}
+function render(){
+  state.search = document.getElementById("searchInput").value;
+  const list=getFiltered();
+  const tb=document.getElementById("tbody");
+  if(list.length===0){ tb.innerHTML=`<tr><td colspan="7"><div class="empty">没有匹配的词条</div></td></tr>`; }
+  else{
+    tb.innerHTML=list.map(e=>{
+      const sel=state.selected.has(e.id);
+      const isBuiltin=e.tier==="builtin";
+      const typ=e.type||"—";
+      const py=e.pinyin? ` <span class="hit">/${esc(e.pinyin)}</span>` : "";
+      return `<tr class="${sel?'sel':''}">
+        <td><input type="checkbox" ${sel?'checked':''} onchange="toggleRow(${e.id},this.checked)"></td>
+        <td class="word">${esc(e.word)}${py}</td>
+        <td><span class="val">${esc(e.value)}</span></td>
+        <td class="hit">${esc(typ)}</td>
+        <td><span class="chip ${isBuiltin?'builtin':'custom'}">${isBuiltin?'内置':'自定义'}</span></td>
+        <td class="hit">${e.books.length? '📖 '+e.books.join('、') : '—'}</td>
+        <td><div class="row-act">
+          <button class="link-btn" onclick="editEntry(${e.id})">编辑</button>
+          ${isBuiltin? '<span class="hit">只读</span>' : `<button class="link-btn del" onclick="confirmDelete([${e.id}])">删除</button>`}
+        </div></td>
+      </tr>`;
+    }).join("");
+  }
+  // 选择计数与按钮态
+  const selArr=[...state.selected];
+  const validSel=selArr.filter(id=>ENTRIES.find(e=>e.id===id && e.tier==="custom"));
+  document.getElementById("selCount").textContent = state.selected.size? `已选 ${state.selected.size} 条（可删 ${validSel.length}）` : "未选择";
+  document.getElementById("delBtn").disabled = validSel.length===0;
+  document.getElementById("mergeBtn").disabled = validSel.length<2;
+  // 词典计数
+  const c=ENTRIES.filter(e=>e.tier==="custom").length;
+  const b1=ENTRIES.filter(e=>e.dict==="b1").length, b2=ENTRIES.filter(e=>e.dict==="b2").length, b3=ENTRIES.filter(e=>e.dict==="b3").length;
+  document.getElementById("metaCustom").textContent=`${c} 条 · 可编辑`;
+  document.getElementById("metaB1").textContent=`${b1} 条 · 只读`;
+  document.getElementById("metaB2").textContent=`${b2} 条 · 只读`;
+  document.getElementById("metaB3").textContent=`${b3} 条 · 只读`;
+}
+function esc(s){return String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));}
+function renderSnaps(){
+  const el=document.getElementById("snapList");
+  el.innerHTML=state.snapshots.map((s,i)=>`
+    <div class="snap-item ${i===0?'cur':''}">
+      <span class="snap-dot"></span>
+      <span class="s-act">${esc(s.label)}</span>
+      <span class="s-time">${s.time}${i===0?' · 当前':''}</span>
+      ${i>0?`<button class="link-btn" onclick="restoreSnap(${s.id})">恢复到此</button>`:''}
+    </div>`).join("");
+}
+
+/* ============ 选择 ============ */
+function toggleRow(id,on){ if(on) state.selected.add(id); else state.selected.delete(id); render(); }
+function toggleAll(on){
+  getFiltered().forEach(e=>{ if(on) state.selected.add(e.id); else state.selected.delete(e.id); });
+  render();
+}
+function setTier(t,btn){ state.tier=t; document.querySelectorAll(".tier-tab").forEach(b=>b.classList.remove("active")); btn.classList.add("active");
+  if(t==="custom") {state.dict="custom"; document.querySelectorAll(".dict").forEach(d=>d.classList.remove("active")); document.querySelector('.dict[data-dict="custom"]').classList.add("active");}
+  render();
+}
+function selectDict(d,el){ state.dict=d; document.querySelectorAll(".dict").forEach(x=>x.classList.remove("active")); el.classList.add("active");
+  if(d!=="custom"&&d!=="all"){ state.tier="all"; document.querySelectorAll(".tier-tab").forEach(b=>b.classList.remove("active")); document.querySelector('.tier-tab[data-tier="all"]').classList.add("active"); }
+  render();
+}
+
+/* ============ 删除（底线①④） ============ */
+function confirmDelete(ids){
+  const sel = ids || [...state.selected];
+  const targets = ENTRIES.filter(e=>sel.includes(e.id) && e.tier==="custom");
+  if(targets.length===0){ toast("没有可删除的自定义词条"); return; }
+  // 影响范围：命中过哪些书（底线① 删除前展示影响范围）
+  const bookMap={};
+  targets.forEach(e=>e.books.forEach(b=>{ bookMap[b]=(bookMap[b]||0)+1; }));
+  const bookLines = Object.keys(bookMap).length? Object.entries(bookMap).map(([b,n])=>`${b}：涉及 ${n} 条`).join("；") : "无（这些词条尚未在任何校正中命中）";
+  openModal(`
+    <div class="m-head"><div class="m-ico">🗑</div><h2>删除确认（批量先预览）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线④：批量删除必须先给预览清单，确认后执行；底线①：误删可撤销。</div>
+      <p>即将删除 <b>${targets.length}</b> 条自定义词条，删除后可通过顶栏「↩ 撤销」恢复。</p>
+      <p style="font-weight:600;margin-bottom:4px">影响范围（命中过哪些书）：</p>
+      <div class="note info">${bookLines}</div>
+      <table class="mini-table"><thead><tr><th>原词</th><th>替换为</th></tr></thead><tbody>
+        ${targets.map(e=>`<tr><td>${esc(e.word)}</td><td>${esc(e.value)}</td></tr>`).join("")}
+      </tbody></table>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="doDelete(${JSON.stringify(sel)})">确认删除 ${targets.length} 条</button>
+    </div>`, false);
+}
+function doDelete(ids){
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  const n=ids.length;
+  ENTRIES=ENTRIES.filter(e=>!ids.includes(e.id));
+  state.selected.clear();
+  snap(`删除 ${n} 条`);
+  undoStack.push({type:"delete", before, ids});
+  closeModal(); render();
+  toast(`已删除 ${n} 条自定义词条`, true);
+}
+
+/* ============ 撤销（底线①） ============ */
+function vocabUndo(){
+  if(undoStack.length===0){ toast("没有可撤销的操作"); return; }
+  const last=undoStack.pop();
+  if(last.type==="delete"){
+    // 恢复被删条目（以快照为准重建更简单，这里直接合并 before 中的差异）
+    const have=new Set(ENTRIES.map(e=>e.id));
+    last.before.forEach(e=>{ if(!have.has(e.id)) ENTRIES.push(e); });
+    snap("撤销删除");
+    closeModal(); render(); toast("已撤销删除，词条已恢复", false);
+  } else if(last.type==="merge"){
+    ENTRIES=JSON.parse(JSON.stringify(last.before));
+    snap("撤销合并");
+    closeModal(); render(); toast("已撤销合并", false);
+  } else if(last.type==="bookwords"){
+    ENTRIES=JSON.parse(JSON.stringify(last.before));
+    snap("撤销加入专有词");
+    closeModal(); render(); toast("已撤销加入，词条已移除", false);
+  } else if(last.type==="add"){
+    ENTRIES=JSON.parse(JSON.stringify(last.before));
+    snap("撤销新增");
+    closeModal(); render(); toast("已撤销新增，词条已移除", false);
+  }
+}
+
+/* ============ 新增词条（§2.4.1 五操作 · V1 补入） ============ */
+function openAdd(){
+  // 新增只写入「我的词库」；若当前在内置库，自动切到自定义
+  if(state.dict!=="custom"){
+    const el=document.querySelector('.dict[data-dict="custom"]');
+    if(el) selectDict("custom", el);
+  }
+  const typeOpts=ENTRY_TYPES.map(t=>`<option value="${t}">${t}</option>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">＋</div><h2>新增词条</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note info">§2.4.1：写入「我的词库」（自定义分级）；加入前自动查重；操作可撤销（同五条底线）。</div>
+      <div class="field"><label>原词（词 / 角色名）</label><input id="addWord" type="text" placeholder="例如：萧衍" autofocus></div>
+      <div class="field"><label>替换为</label><input id="addVal" type="text" placeholder="例如：萧彦"></div>
+      <div class="field"><label>类型</label>
+        <select id="addType" style="width:100%;padding:10px 12px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-base)">${typeOpts}</select>
+      </div>
+      <div class="field"><label>注音（可选）</label><input id="addPy" type="text" placeholder="例如：xiāo yàn"></div>
+      <div id="addConflict" style="display:none"></div>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="previewAdd()">预览并查重</button>
+    </div>`, false);
+}
+function collectAddForm(){
+  const word=(document.getElementById("addWord").value||"").trim();
+  const value=(document.getElementById("addVal").value||"").trim();
+  const type=document.getElementById("addType").value||ENTRY_TYPES[0];
+  const pinyin=(document.getElementById("addPy").value||"").trim();
+  return {word, value, type, pinyin};
+}
+function findAddConflicts(word, value){
+  const sameWord=ENTRIES.filter(e=>e.word===word);
+  const sameVal=ENTRIES.filter(e=>e.value===value && e.word!==word);
+  return {sameWord, sameVal};
+}
+function previewAdd(){
+  const f=collectAddForm();
+  if(!f.word){ toast("请填写原词"); return; }
+  if(!f.value){ toast("请填写替换为"); return; }
+  if(f.word===f.value){ toast("原词与替换值相同，无需新增"); return; }
+  const {sameWord, sameVal}=findAddConflicts(f.word, f.value);
+  state._pendingAdd=f;
+  let conflictHtml="";
+  if(sameWord.length||sameVal.length){
+    const rows=[
+      ...sameWord.map(e=>`<tr><td>同词</td><td>${esc(e.word)}</td><td>${esc(e.value)}</td><td>${DICT_NAMES[e.dict]}（${e.tier==="builtin"?"内置":"自定义"}）</td></tr>`),
+      ...sameVal.map(e=>`<tr><td>同值</td><td>${esc(e.word)}</td><td>${esc(e.value)}</td><td>${DICT_NAMES[e.dict]}（${e.tier==="builtin"?"内置":"自定义"}）</td></tr>`),
+    ].join("");
+    conflictHtml=`
+      <div class="note warn" style="margin-top:12px">加入前查重：发现冲突，请确认是否仍要写入「我的词库」。</div>
+      <table class="mini-table"><thead><tr><th>冲突</th><th>原词</th><th>替换为</th><th>所在</th></tr></thead><tbody>${rows}</tbody></table>`;
+  } else {
+    conflictHtml=`<div class="note info" style="margin-top:12px">查重通过：未发现同词 / 同值冲突。</div>`;
+  }
+  openModal(`
+    <div class="m-head"><div class="m-ico">✍</div><h2>写入词库（二次确认）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线④：批量 / 写动作先预览再执行；新增可撤销。</div>
+      <table class="mini-table"><thead><tr><th>原词</th><th>替换为</th><th>类型</th><th>注音</th><th>写入</th></tr></thead>
+        <tbody><tr>
+          <td class="word">${esc(f.word)}</td>
+          <td class="val">${esc(f.value)}</td>
+          <td>${esc(f.type)}</td>
+          <td>${f.pinyin?esc(f.pinyin):"—"}</td>
+          <td>我的词库</td>
+        </tr></tbody>
+      </table>
+      ${conflictHtml}
+      <p style="font-size:12px;color:var(--c-neutral-500);margin-top:10px">本次将写入 <b>1</b> 条到自定义词库；与内置词库分开管理（底线⑤）。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="openAdd()">返回修改</button>
+      <button class="btn primary" onclick="confirmAdd()">确认写入</button>
+    </div>`, false);
+}
+function confirmAdd(){
+  const f=state._pendingAdd; if(!f){ toast("没有待写入的词条"); return; }
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  const id=++state.seq + 1000;
+  ENTRIES.push({
+    id, word:f.word, value:f.value, type:f.type, pinyin:f.pinyin||"",
+    dict:"custom", tier:"custom", books:[]
+  });
+  undoStack.push({type:"add", before});
+  snap(`新增「${f.word}」`);
+  state._pendingAdd=null;
+  state.dict="custom";
+  state.tier="custom";
+  document.querySelectorAll(".tier-tab").forEach(t=>t.classList.toggle("active", t.dataset.tier==="custom"));
+  closeModal(); render();
+  toast(`已新增「${f.word}」到我的词库`, true);
+}
+
+/* ============ 查重（底线④ 先预览） ============ */
+function computeDups(){
+  const list=ENTRIES.filter(e=>e.tier==="custom");
+  const byWord={}, byVal={}, groups=[];
+  list.forEach(e=>{ (byWord[e.word]=byWord[e.word]||[]).push(e); (byVal[e.value]=byVal[e.value]||[]).push(e); });
+  Object.entries(byWord).forEach(([w,arr])=>{ if(arr.length>1) groups.push({type:"同词不同值", key:w, items:arr}); });
+  Object.entries(byVal).forEach(([v,arr])=>{ if(arr.length>1) groups.push({type:"同值不同词", key:v, items:arr}); });
+  return groups;
+}
+function openDup(){
+  const groups=computeDups();
+  if(groups.length===0){ toast("未发现重复词条"); return; }
+  const body=groups.map(g=>`
+    <div class="dup-group">
+      <h4>${g.type}：${esc(g.key)}<span class="grp-tag">${g.items.length} 条</span></h4>
+      <table class="mini-table"><thead><tr><th>原词</th><th>替换为</th><th>来源</th></tr></thead><tbody>
+        ${g.items.map(e=>`<tr><td>${esc(e.word)}</td><td>${esc(e.value)}</td><td>${DICT_NAMES[e.dict]}</td></tr>`).join("")}
+      </tbody></table>
+    </div>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">🔁</div><h2>查重结果（先预览，确认后处理）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线④：查重结果先给预览清单，确认后才执行；处理动作可撤销。</div>
+      ${body}
+      <p style="font-size:13px;color:var(--c-neutral-500)">建议合并同词不同值冲突，或保留其一。可撤销，请放心处理。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">暂时不处理</button>
+      <button class="btn primary" onclick="closeModal();toast('已确认查重结果，可继续合并或删除',false)">我知道了</button>
+    </div>`, true);
+}
+
+/* ============ 合并（底线④ 预览改/删/留 + 写入二次确认） ============ */
+function openMerge(){
+  const sel=[...state.selected].filter(id=>ENTRIES.find(e=>e.id===id&&e.tier==="custom"));
+  if(sel.length<2){ toast("请至少选择 2 条自定义词条进行合并"); return; }
+  const items=ENTRIES.filter(e=>sel.includes(e.id));
+  state._mergeSel=sel;
+  const opt=items.map(e=>`<option value="${e.word}">${esc(e.word)} → ${esc(e.value)}</option>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">➕</div><h2>合并词条（先预览清单）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线④：合并前给预览清单（改哪些、删哪些、留哪个）；合并可撤销。</div>
+      <div class="field"><label>合并为「原词」（保留其一作为主词，其余并入其替换值）</label>
+        <select id="mergeTarget" class="field" style="width:100%;padding:10px;border:1px solid var(--c-neutral-200);border-radius:8px">${opt}</select>
+      </div>
+      <table class="mini-table"><thead><tr><th>处理</th><th>原词</th><th>替换为</th></tr></thead><tbody>
+        ${items.map(e=>`<tr><td>并入</td><td>${esc(e.word)}</td><td>${esc(e.value)}</td></tr>`).join("")}
+      </tbody></table>
+      <p style="font-size:12px;color:var(--c-neutral-500)">合并后需「写入词库」二次确认（展示将写入条数）。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="doMerge()">预览写入</button>
+    </div>`, false);
+}
+function doMerge(){
+  const target=document.getElementById("mergeTarget").value;
+  const sel=state._mergeSel||[];
+  const items=ENTRIES.filter(e=>sel.includes(e.id));
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  // 以 target 为主词，其余删除
+  ENTRIES=ENTRIES.filter(e=>!(sel.includes(e.id) && e.word!==target));
+  const keep=ENTRIES.find(e=>e.word===target);
+  const removed=items.filter(e=>e.word!==target).length;
+  undoStack.push({type:"merge", before});
+  state.selected.clear();
+  snap(`合并为「${target}」`);
+  openModal(`
+    <div class="m-head"><div class="m-ico">✍</div><h2>写入词库（二次确认）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note info">将把合并结果写入「我的词库」，主词保留「${esc(target)}」，移除 ${removed} 条重复词条。</div>
+      <p>本次将写入 <b>1</b> 条主词、移除 <b>${removed}</b> 条（合并动作可撤销）。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="closeModal();render();toast('已写入词库，合并完成',true)">确认写入</button>
+    </div>`, false);
+}
+
+/* ============ 展开核对（只读排序） ============ */
+function openExpand(){
+  const list=ENTRIES.filter(e=>state.dict==="all"||e.dict===state.dict).slice().sort((a,b)=>a.word.localeCompare(b.word,'zh'));
+  openModal(`
+    <div class="m-head"><div class="m-ico">📋</div><h2>展开核对（只读）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">结果以结构化表格呈现，不暴露 PHP 代码 / 行号（底线③）。</div>
+      <table class="mini-table"><thead><tr><th>#</th><th>原词</th><th>替换为</th><th>来源</th></tr></thead><tbody>
+        ${list.map((e,i)=>`<tr><td>${i+1}</td><td>${esc(e.word)}</td><td>${esc(e.value)}</td><td>${DICT_NAMES[e.dict]}</td></tr>`).join("")}
+      </tbody></table>
+    </div>
+    <div class="m-foot"><button class="btn" onclick="closeModal()">关闭</button></div>`, true);
+}
+
+/* ============ 编辑 ============ */
+function editEntry(id){
+  const e=ENTRIES.find(x=>x.id===id); if(!e||e.tier==="builtin") return;
+  const typeOpts=ENTRY_TYPES.map(t=>`<option value="${t}" ${t===(e.type||"错词校正")?"selected":""}>${t}</option>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">✎</div><h2>编辑词条</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="field"><label>原词</label><input id="edWord" type="text" value="${esc(e.word)}"></div>
+      <div class="field"><label>替换为</label><input id="edVal" type="text" value="${esc(e.value)}"></div>
+      <div class="field"><label>类型</label>
+        <select id="edType" style="width:100%;padding:10px 12px;border:1px solid var(--c-neutral-200);border-radius:8px;font-size:var(--fs-base)">${typeOpts}</select>
+      </div>
+      <div class="field"><label>注音（可选）</label><input id="edPy" type="text" value="${esc(e.pinyin||"")}"></div>
+      <div class="note info">修改后自动快照，可撤销（底线①②）。</div>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="saveEdit(${id})">保存</button>
+    </div>`, false);
+}
+function saveEdit(id){
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  const e=ENTRIES.find(x=>x.id===id);
+  e.word=document.getElementById("edWord").value.trim()||e.word;
+  e.value=document.getElementById("edVal").value.trim()||e.value;
+  e.type=document.getElementById("edType").value||e.type||"错词校正";
+  e.pinyin=document.getElementById("edPy").value.trim();
+  undoStack.push({type:"merge", before}); // 复用撤销：恢复整份
+  snap(`编辑「${e.word}」`);
+  closeModal(); render(); toast("已保存修改", true);
+}
+
+/* ============ 本书专有词条（2.4.2） ============ */
+function openBookWords(){
+  const bookWords=[
+    {word:"星陨大陆", value:"星陨大陆", note:"本书专有地名"},
+    {word:"墨羽", value:"墨羽", note:"角色名"},
+    {word:"九转玄功", value:"九转玄功", note:"功法名"},
+  ];
+  state._bookWords=bookWords;
+  const rows=bookWords.map((w,i)=>`<tr><td><input type="checkbox" checked data-bw="${i}"></td><td>${esc(w.word)}</td><td>${esc(w.note)}</td></tr>`).join("");
+  openModal(`
+    <div class="m-head"><div class="m-ico">✨</div><h2>本书专有词条（加入预览）</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">2.4.2：加入前有预览，可逐条或整组确认；加入后下次校正自动生效。</div>
+      <table class="mini-table"><thead><tr><th>加入</th><th>原词</th><th>说明</th></tr></thead><tbody>${rows}</tbody></table>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="addBookWords()">加入选中词条到「我的词库」</button>
+    </div>`, false);
+}
+function addBookWords(){
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  const checks=document.querySelectorAll('[data-bw]');
+  const added=[];
+  checks.forEach(c=>{ if(c.checked){ const w=state._bookWords[+c.dataset.bw]; if(!ENTRIES.find(e=>e.word===w.word&&e.dict==="custom")){ const id=900+ENTRIES.length; ENTRIES.push({id, word:w.word, value:w.value, type:"专有名词", pinyin:"", dict:"custom", tier:"custom", books:["《星河彼端》"]}); added.push(w.word);} } });
+  undoStack.push({type:"bookwords", before});
+  snap(`加入 ${added.length} 条专有词`);
+  hideBanner(); closeModal(); render();
+  toast(`已加入 ${added.length} 条专有词条到「我的词库」`, true);
+}
+function hideBanner(){ document.getElementById("bookBanner").style.display="none"; }
+
+/* ============ 恢复默认 / 恢复快照（底线②⑤） ============ */
+function restoreDefault(){
+  openModal(`
+    <div class="m-head"><div class="m-ico">↺</div><h2>恢复默认词库</h2><button class="close-x" onclick="closeModal()">×</button></div>
+    <div class="m-body">
+      <div class="note">底线⑤：恢复默认词库只重置内置词库，<b>不影响你的自定义词条</b>。</div>
+      <p>将把内置词库（常规校正 / 标点规范 / 繁简转换）重置为出厂版本，自定义词条保持不变。可撤销。</p>
+    </div>
+    <div class="m-foot">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="doRestoreDefault()">确认恢复</button>
+    </div>`, false);
+}
+function doRestoreDefault(){
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  // 重新播种内置词库（仅内置），保留 custom
+  const custom=ENTRIES.filter(e=>e.tier==="custom");
+  ENTRIES=custom.concat(SEED_BUILTIN());
+  undoStack.push({type:"merge", before});
+  snap("恢复默认词库");
+  closeModal(); render(); toast("已恢复默认词库（自定义词条保留）", true);
+}
+function SEED_BUILTIN(){ return JSON.parse(JSON.stringify(SEED)); }
+const SEED=[
+  {id:11, word:"好象", value:"好像", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:12, word:"做为一个", value:"作为一个", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:13, word:"他门", value:"他们", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:14, word:"在次", value:"再次", type:"错词校正", pinyin:"", dict:"b1", tier:"builtin", books:[]},
+  {id:21, word:"“", value:"“", type:"其他", pinyin:"", dict:"b2", tier:"builtin", books:[]},
+  {id:22, word:"''", value:"“”,", type:"其他", pinyin:"", dict:"b2", tier:"builtin", books:[]},
+  {id:31, word:"網", value:"网", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+  {id:32, word:"國", value:"国", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+  {id:33, word:"對", value:"对", type:"其他", pinyin:"", dict:"b3", tier:"builtin", books:[]},
+];
+function restoreSnap(id){
+  const s=state.snapshots.find(x=>x.id===id); if(!s) return;
+  const before=JSON.parse(JSON.stringify(ENTRIES));
+  ENTRIES=JSON.parse(JSON.stringify(s.data));
+  undoStack.push({type:"merge", before});
+  snap(`恢复到 ${s.time}`);
+  closeModal(); render(); toast("已恢复到所选时间点", false);
+}
+
+/* ============ Modal / Toast 工具 ============ */
+function openModal(html,wide){ const m=document.getElementById("modal"); m.className="modal"+(wide?" wide":""); m.innerHTML=html; document.getElementById("mask").classList.add("show"); }
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+
+function toast(msg, withUndo){
+  const wrap=document.getElementById("toastWrap");
+  const t=document.createElement("div"); t.className="toast";
+  t.innerHTML=`<span>${esc(msg)}</span>` + (withUndo?`<button class="t-undo" onclick="undoFromToast(this)">撤销</button>`:"");
+  wrap.appendChild(t);
+  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .3s"; setTimeout(()=>t.remove(),300); }, withUndo?6000:3000);
+}
+function undoFromToast(btn){ const t=btn.closest(".toast"); t.remove(); vocabUndo(); }
+function toggleHistory(){ const p=document.getElementById("historyPanel"); p.style.display = p.style.display==="none"?"block":"none"; }
+
+/* ============ 导航：全程侧栏 + 首页概览（§2.2 / 决策文档） ============ */
+
+
+/* ============ 初始化 ============ */
+render(); renderSnaps();
+
+/* ===== 模块：导出结果（源自 FixTextGUI_导出结果_原型.html，只读合并） ===== */
+/* ===== 通用工具 ===== */
+function toggleCard(id){ document.getElementById(id).classList.toggle("open"); }
+function openModal(html){ document.getElementById("modal").innerHTML=html; document.getElementById("mask").classList.add("show"); }
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+function toast(msg){ const w=document.getElementById("toastWrap"); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; w.appendChild(t); setTimeout(()=>{t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(()=>t.remove(),300);},2600); }
+
+
+
+/* ===== 导出 ===== */
+let expTarget="epub", expNoDiff=false;
+function setExpTarget(t,el){ expTarget=t; document.querySelectorAll("#expTargetRow .radio").forEach(r=>r.classList.remove("sel")); el.classList.add("sel"); }
+function noDiffDemo(){ expNoDiff=!expNoDiff; toast(expNoDiff?"已切换为「未跑过校正」：导出时将跳过报告并说明":"已切换回正常状态：导出时附替换报告"); }
+
+let expRunning=false, expTimer=null;
+function startExport(){
+  if(expRunning) return;
+  expRunning=true;
+  const targetName = expTarget==="epub" ? "《星河彼端》.epub" : "《星河彼端》.txt";
+  const steps=[{name:"准备导出目录",desc:"D:\\FixText\\导出\\星河彼端\\",dur:700}];
+  steps.push(expTarget==="epub"
+    ? {name:"EPUB 拆分还原",desc:"按章节边界标记还原，保证章节顺序不乱",dur:1600}
+    : {name:"生成干净 TXT",desc:"按当前章节分级输出纯文本",dur:1200});
+  steps.push(expNoDiff
+    ? {name:"生成替换报告",desc:"未检出差异，跳过并说明",dur:700}
+    : {name:"生成替换报告",desc:"以上次校正备份为基准反推本轮替换",dur:1200});
+  if(!expNoDiff) steps.push({name:"同步校正备份",desc:"内部机制，保证下轮报告不重复统计",dur:600});
+  openModal(`
+    <div class="m-head"><div class="m-ico">📤</div><h2>正在导出 ${targetName}</h2></div>
+    <div class="m-body">
+      <div id="expStepList"></div>
+      <div class="bar"><div class="fill" id="expFill"></div></div>
+      <div class="bar-meta"><span id="expStepName">准备中…</span><span id="expEta">—</span></div>
+    </div>
+    <div class="m-foot"><button class="btn danger" onclick="cancelExport()">取消</button></div>`);
+  const list=document.getElementById("expStepList"); list.innerHTML="";
+  let i=0,total=steps.reduce((a,s)=>a+s.dur,0),acc=0;
+  (function next(){
+    if(i>0){ const p=list.children[i-1]; p.className="prog-step done"; p.querySelector(".dot").textContent="✓"; }
+    if(i>=steps.length){ finishExport(targetName); return; }
+    const s=steps[i];
+    const node=document.createElement("div"); node.className="prog-step active";
+    node.innerHTML=`<span class="dot">${i+1}</span><div><div class="s-name">${s.name}</div><div class="s-desc">${s.desc}</div></div>`;
+    list.appendChild(node);
+    document.getElementById("expStepName").textContent=s.name+"…";
+    document.getElementById("expEta").textContent="预计 "+Math.max(1,Math.round((total-acc)/1000))+" 秒";
+    expTimer=setTimeout(()=>{ acc+=s.dur; document.getElementById("expFill").style.width=Math.round(acc/total*100)+"%"; i++; next(); }, s.dur);
+  })();
+}
+function cancelExport(){ if(expTimer) clearTimeout(expTimer); expRunning=false; closeModal(); toast("已取消导出"); }
+function finishExport(targetName){
+  expRunning=false;
+  document.getElementById("expFill").style.width="100%";
+  document.getElementById("expStepName").textContent="导出完成";
+  document.getElementById("expEta").textContent="0 秒";
+  document.querySelectorAll("#expStepList .prog-step").forEach(n=>{n.className="prog-step done"; n.querySelector(".dot").textContent="✓";});
+  setTimeout(()=>{
+    closeModal();
+    document.getElementById("expResultSlot").innerHTML=`
+      <div class="result annot">
+        <span class="tag">§2.2 入口⑤ · 验收①②③</span>
+        <div class="r-h"><div class="ok">✓</div><div>
+          <div style="font-weight:700;font-size:var(--fs-md)">${targetName} 已导出</div>
+          <div style="font-size:var(--fs-xs);color:var(--c-neutral-500)">可直接导入主流阅读器打开</div>
+        </div></div>
+        <div class="pathrow" style="margin-bottom:12px"><span id="outPath">D:\\FixText\\导出\\星河彼端\\${targetName}</span><span class="pbtn"><button class="btn" onclick="toast('原型示意：打开导出目录',false)">打开目录</button></span></div>
+        ${expNoDiff
+          ? `<div class="note warn">未检出与基准的差异，本次已跳过替换报告生成（§2.7.7 前置条件）。</div>`
+          : `<div class="pathrow"><span>D:\\FixText\\导出\\星河彼端\\替换报告_20261026.csv</span><span class="pbtn"><button class="btn" onclick="toast('原型示意：打开替换报告',false)">打开报告</button></span></div>`}
+        <div class="r-actions">
+          <button class="btn primary" onclick="toast('原型示意：本次任务已记入「历史记录」',false)">🕓 查看历史记录</button>
+          <button class="btn" onclick="toast('原型示意：回到「一键校正」再跑一轮',false)">⚡ 再校正一轮</button>
+        </div>
+      </div>`;
+    toast("导出完成"+(expNoDiff?"（未检出差异，已跳过报告）":"，替换报告已留存"));
+  },600);
+}
+
+/* ===== 模块：历史记录（源自 FixTextGUI_历史记录_原型.html，只读合并） ===== */
+/* ===== 通用工具 ===== */
+function toggleCard(id){ document.getElementById(id).classList.toggle("open"); }
+function openModal(html){ document.getElementById("modal").innerHTML=html; document.getElementById("mask").classList.add("show"); }
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+function toast(msg, withUndo){
+  const w=document.getElementById("toastWrap");
+  const t=document.createElement("div"); t.className="toast";
+  t.innerHTML=`<span>${msg}</span>` + (withUndo?`<button class="t-undo" onclick="undoFromToast(this)">撤销</button>`:"");
+  w.appendChild(t);
+  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .3s"; setTimeout(()=>t.remove(),300); }, withUndo?6000:3000);
+}
+function undoFromToast(btn){ const t=btn.closest(".toast"); if(t) t.remove(); undoHistory(); }
+
+
+
+/* ===== 历史记录 ===== */
+let TASKS=[
+  {book:"《星河彼端》",time:"2026-10-26 17:42",hits:1284,status:"ok"},
+  {book:"《旧巷杂记》",time:"2026-10-25 09:10",hits:356,status:"ok"},
+  {book:"《灯下漫笔》",time:"2026-10-22 21:03",hits:87,status:"syncfail"}
+];
+/* 工作区当前快照（原型态）；恢复可撤销 = 回到恢复前状态（2.4.3） */
+let workspace={ book:null, time:null, hits:null };
+let histUndoStack=[];
+
+function renderTasks(){
+  document.getElementById("taskBody").innerHTML=TASKS.length?TASKS.map((t,i)=>`
+    <tr>
+      <td><b>${t.book}</b></td>
+      <td style="color:var(--c-neutral-500)">${t.time}</td>
+      <td>${t.hits} 处</td>
+      <td>${t.status==="ok"
+        ? `<span class="pill">正常</span>`
+        : `<span class="pill warn">基准同步失败</span><div style="font-size:11px;color:var(--c-neutral-500);margin-top:4px">已在历史留痕，不影响本书</div>`}</td>
+      <td><div class="t-acts">
+        <button class="btn" onclick="restoreTask(${i})">↺ 恢复</button>
+        <button class="btn" onclick="reexport(${i})">📤 重新导出</button>
+        <button class="btn danger" onclick="delTask(${i})">删除</button>
+      </div></td>
+    </tr>`).join("") : `<tr><td colspan="5" style="text-align:center;color:var(--c-neutral-500);padding:28px">暂无历史记录</td></tr>`;
+}
+function histDoRestore(i){
+  const t=TASKS[i];
+  if(!t) return;
+  histUndoStack.push({ type:"restore", prev: Object.assign({}, workspace) });
+  workspace={ book:t.book, time:t.time, hits:t.hits };
+  closeModal();
+  toast(`已恢复 ${t.book} 到 ${t.time} 的快照`, true);
+}
+function restoreTask(i){
+  const t=TASKS[i];
+  openModal(`
+    <div class="m-head"><div class="m-ico">↺</div><h2>恢复到该快照？</h2></div>
+    <div class="m-body">
+      <div class="note">将把 ${t.book} 恢复到 ${t.time} 的状态（替换 ${t.hits} 处时点）。当前未保存的改动会被覆盖。确认后可在 Toast 中撤销。</div>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn primary" onclick="histDoRestore(${i})">确认恢复</button></div>`);
+}
+function reexport(i){ toast("已从历史结果重新导出 "+TASKS[i].book); }
+function histDoDelete(i){
+  if(i<0||i>=TASKS.length) return;
+  const item=TASKS[i];
+  histUndoStack.push({ type:"delete", item: Object.assign({}, item), index:i });
+  TASKS.splice(i,1);
+  closeModal(); renderTasks();
+  toast("已删除该条历史", true);
+}
+function delTask(i){
+  const t=TASKS[i];
+  openModal(`
+    <div class="m-head"><div class="m-ico">🗑</div><h2>删除这条历史？</h2></div>
+    <div class="m-body">
+      <div class="note warn">删除该快照可通过 Toast「撤销」恢复（二次确认）。受影响：${t.book} · ${t.time}。</div>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="histDoDelete(${i})">确认删除</button></div>`);
+}
+function clearHistory(){
+  openModal(`
+    <div class="m-head"><div class="m-ico">🧹</div><h2>清理全部历史？</h2></div>
+    <div class="m-body">
+      <div class="note warn">将删除全部 ${TASKS.length} 条任务及其快照，且不可恢复。清理历史为显式操作，需二次确认（§2.2 入口⑥ 验收③）。</div>
+    </div>
+    <div class="m-foot"><button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="closeModal();histUndoStack=[];TASKS=[];renderTasks();toast('已清理全部历史',false)">确认清理全部</button></div>`);
+}
+/* 撤销：仅恢复 / 单条删除可撤销；清理全部不可撤销（2.4.3） */
+function undoHistory(){
+  if(histUndoStack.length===0){ toast("没有可撤销的操作"); return; }
+  const last=histUndoStack.pop();
+  if(last.type==="delete"){
+    const idx=Math.min(last.index, TASKS.length);
+    TASKS.splice(idx, 0, last.item);
+    renderTasks();
+    toast("已撤销删除，该条历史已恢复");
+  } else if(last.type==="restore"){
+    workspace=last.prev || { book:null, time:null, hits:null };
+    if(workspace.book){
+      toast(`已撤销恢复，回到此前状态（${workspace.book} · ${workspace.time||"未恢复快照"}）`);
+    } else {
+      toast("已撤销恢复，回到恢复前状态");
+    }
+  }
+}
+renderTasks();
+
+/* ===== 合并壳：统一导航 / Toast / 顶栏（覆盖模块内同名函数） ===== */
+var VIEW_NAMES = {home:'首页概览',import:'导入书籍',correction:'一键校正',check:'检查问题',vocab:'词库管理',export:'导出结果',history:'历史记录'};
+
+function openModal(html, wide){
+  var m = document.getElementById("modal");
+  if (m) {
+    m.className = "modal" + (wide ? " wide" : "");
+    m.innerHTML = html;
+  }
+  document.getElementById("mask").classList.add("show");
+}
+function closeModal(){ document.getElementById("mask").classList.remove("show"); }
+
+function toast(msg, withUndo){
+  var wrap = document.getElementById("toastWrap");
+  var t = document.createElement("div");
+  t.className = "toast";
+  if (withUndo) {
+    var safe = (typeof esc === "function") ? esc(msg) : String(msg);
+    t.innerHTML = "<span>" + safe + "</span>" +
+      "<button class=\"t-undo\" onclick=\"undoFromToast(this)\">撤销</button>";
+  } else {
+    t.textContent = msg;
+  }
+  wrap.appendChild(t);
+  var life = withUndo ? 6000 : 2800;
+  setTimeout(function(){
+    t.style.opacity = "0";
+    t.style.transition = "opacity .3s";
+    setTimeout(function(){ t.remove(); }, 300);
+  }, life);
+}
+function activeViewKey(){
+  var view = document.querySelector(".view:not([hidden])");
+  return view ? (view.getAttribute("data-view") || "") : "";
+}
+function undoFromToast(btn){
+  var t = btn.closest(".toast");
+  if (t) t.remove();
+  var key = activeViewKey();
+  if (key === "history" && typeof undoHistory === "function") undoHistory();
+  else if (typeof vocabUndo === "function") vocabUndo();
+}
+document.addEventListener("keydown", function(e){
+  if (!(e.ctrlKey || e.metaKey) || e.key !== "z") return;
+  e.preventDefault();
+  var key = activeViewKey();
+  if (key === "history" && typeof undoHistory === "function") undoHistory();
+  else if (key === "vocab" && typeof vocabUndo === "function") vocabUndo();
+});
+
+function showView(key, el){
+  document.querySelectorAll(".nav-item").forEach(function(n){ n.classList.remove("active"); });
+  var navEl = el || document.querySelector('.nav-item[data-view="'+key+'"]');
+  if (navEl) navEl.classList.add("active");
+  document.querySelectorAll(".view").forEach(function(v){ v.hidden = true; });
+  var real = document.getElementById("view-" + key);
+  if (real) real.hidden = false;
+  var main = document.querySelector(".main");
+  if (main) main.scrollTop = 0;
+  var mod = document.getElementById("topMod");
+  if (mod) mod.textContent = "/ " + (VIEW_NAMES[key] || "");
+  var onVocab = key === "vocab";
+  ["vocabSafe","vocabHistBtn","vocabUndoBtn"].forEach(function(id){
+    var n = document.getElementById(id);
+    if (n) n.style.display = onVocab ? "" : "none";
+  });
+}
+
+if (typeof renderFmt === "function") renderFmt();
+if (typeof renderRules === "function") renderRules();
+if (typeof renderProbs === "function") renderProbs();
+if (typeof renderEditor === "function") renderEditor();
+if (typeof render === "function") render();
+if (typeof renderSnaps === "function") renderSnaps();
+if (typeof renderTasks === "function") renderTasks();
+showView("home");
+</script>
+</body>
+</html>
