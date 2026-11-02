@@ -4,8 +4,12 @@
 # 与 .bat 的拷贝清单**逐条对齐**：
 #   data/rules     出厂词库（只此一份，绝不从 workspace/ 来）
 #   reference/     设计依据
-#   示例书/        一本示例书
 #   引擎二进制     只带**本平台那一个**
+#
+# M5-OS.1：**不附带示例书**。与 构建绿色版.bat 第 211 行「产品不附带示例书」
+# 一致（用户导入自己的书；冒烟靠 FIXTEXT_SMOKE_EPUB 或源码树里的公版样本）。
+# 历史：此处原会从 tests/samples/ 拷一本测试样本进 示例书/，那份是盗版站
+# 来源的网文全文，已随本卡删除，分支一并去掉。
 #   workspace/     一个字节都不带（存在即失败）
 #
 # 用法：SRC=<源码包根> OUT=<输出目录> bash tools/assemble_green.sh
@@ -41,16 +45,9 @@ if [ -d "$SRC/reference" ]; then
     cp -a "$SRC/reference" "$D/reference"
 fi
 
-# ---- 示例书：源码包有 示例书/ 就用它，没有就从测试样例取一本 ------------
-if [ -d "$SRC/示例书" ]; then
-    cp -a "$SRC/示例书" "$D/示例书"
-elif [ -f "$SRC/tests/samples/book_paohuo.epub" ]; then
-    mkdir -p "$D/示例书"
-    cp -a "$SRC/tests/samples/book_paohuo.epub" "$D/示例书/book_paohuo.epub"
-else
-    echo "[FAIL] 没有可放的示例书（示例书/ 与 tests/samples/book_paohuo.epub 都没有）"
-    exit 1
-fi
+# ---- 示例书：不附带（M5-OS.1，对齐 构建绿色版.bat 第 211 行）------------
+# 产品交付包里不放任何书：用户导入自己的书即可。这条是有意为之的省略，
+# 不是遗漏 —— 组装完成后 示例书/ 目录**不应存在**（下方自检会验）。
 
 # ---- 引擎：只带本平台那一个 ---------------------------------------------
 ENGDIR="$D/pipeline/vendor/fixtext/engine/go_src/bin"
@@ -107,6 +104,23 @@ if [ -e "$D/workspace" ]; then
     exit 1
 fi
 echo "[OK] 已确认包内不含 workspace/"
+
+# ---- 硬防线：不附带示例书（M5-OS.1）-------------------------------------
+# 与 构建绿色版.bat 第 211 行一致。以前这里会从 tests/samples/ 拷一本测试
+# 样本进来，那份是盗版站来源的网文全文；现在既不能带旧样本，也不该带任何书。
+if [ -e "$D/示例书" ]; then
+    echo "[FAIL] 打包结果里出现了 示例书/ —— 产品不附带任何书"
+    ls -la "$D/示例书"
+    exit 1
+fi
+# 兜底：任何 EPUB 都不许随包（用户导入自己的书，包内不带书）
+CNT_EPUB=$(find "$D" -name "*.epub" | wc -l)
+if [ "$CNT_EPUB" -ne 0 ]; then
+    echo "[FAIL] 打包结果里有 $CNT_EPUB 个 EPUB —— 产品包不应夹带任何书"
+    find "$D" -name "*.epub"
+    exit 1
+fi
+echo "[OK] 已确认包内不含示例书 / 任何 EPUB"
 
 # ---- 硬防线：包内不得有 .py 源码残留 ------------------------------------
 CNT=$(find "$D" -name "*.py" -not -path "*/workspace/*" | wc -l)

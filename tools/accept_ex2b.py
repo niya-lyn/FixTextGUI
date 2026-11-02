@@ -185,7 +185,7 @@ def main() -> int:
         shutil.rmtree(fx_root)
     fx_root.mkdir(parents=True)
     fx.build_run(fx_root, name="run-1")
-    fx.build_run(fx_root, name="run-2", hits=356, title="炮火弧线·续")
+    fx.build_run(fx_root, name="run-2", hits=356, title="示例书稿·续")
     hist = hm.HistoryModule()
     hist.set_runs_root(fx_root)
     hist.refresh()

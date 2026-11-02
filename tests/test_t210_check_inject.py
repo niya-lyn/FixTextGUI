@@ -3,8 +3,8 @@
 验收点：把一次真实运行的引号报告注入页面后，清单条目数与报告声明的
 error_count 一致，且分页不静默丢数据；没有运行时给空状态、不显示假数据。
 
-数据来自 `tests/samples/` 里那份**真实跑出来的** 108 条引号报告
-（《炮火弧线》788 章 / 108 问题），不是编造的样例。
+数据来自 `tests/samples/` 里那份**真实跑出来的**引号报告（公版样本整本），
+条数与章数都从 `_public_fixture` 的运行记录推导，不是写死的数字。
 """
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(PKG / "fixtext_ui"))
 
 import _fixture_run as fxr  # noqa: E402
+import _public_fixture as PF  # noqa: E402  M5-OS.1：期望值来源
 
 
 @pytest.fixture()
@@ -60,8 +61,11 @@ def test_injected_report_matches_error_count(run_env, qapp):
     data = fc.load_report(run_env)
     mod.set_report(data)
 
-    assert data["declared"] == 108, "真实报告声明的引号问题数应为 108"
-    assert data["found"] == 108, "必须读到全量事件，不能只读 first_errors 的 20 条"
+    # 期望值来自 fixture 的真实运行记录，不是写死的数字
+    want = PF.quote_errors()
+    assert data["declared"] == want, (
+        f"报告声明的引号问题数应为 {want}（fixture 运行记录），实得 {data['declared']}")
+    assert data["found"] == want, "必须读到全量事件，不能只读 first_errors 的 20 条"
     assert data["consistent"] is True
     assert mod.has_data is True
     assert len(mod.probs) == data["declared"]
@@ -76,8 +80,10 @@ def test_pagination_covers_every_item(run_env, qapp):
     mod = _module()
     mod.set_report(fc.load_report(run_env))
 
-    assert len(mod.probs) == 108
-    assert mod.pages == _m.ceil(108 / cm.PAGE_SIZE) == 3, "108 条 / 每页 40 条应为 3 页"
+    want = PF.quote_errors()
+    assert len(mod.probs) == want
+    assert mod.pages == _m.ceil(want / cm.PAGE_SIZE), (
+        f"{want} 条 / 每页 {cm.PAGE_SIZE} 条应为 {_m.ceil(want / cm.PAGE_SIZE)} 页")
 
     seen: list[int] = []
     for _ in range(mod.pages):
@@ -86,7 +92,7 @@ def test_pagination_covers_every_item(run_env, qapp):
         seen.extend(range(start, end))
         mod.turn_page(1)
 
-    assert sorted(seen) == list(range(108)), "翻页应覆盖全部 108 条，不静默丢数据"
+    assert sorted(seen) == list(range(want)), "翻页应覆盖全部条目，不静默丢数据"
     assert len(set(seen)) == len(seen), "同一条不应在分页里重复出现"
 
 

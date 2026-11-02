@@ -12,7 +12,7 @@ for _p in (PKG, PKG / "pipeline", PKG / "pipeline" / "vendor", PKG / "fixtext_ui
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 
-EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
+from _public_fixture import EPUB  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 RULES = PKG / "data" / "rules"
 
 

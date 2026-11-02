@@ -29,13 +29,13 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 PKG = HERE.parent
 UI = PKG / "fixtext_ui"
-for p in (str(PKG), str(UI), str(PKG / "pipeline")):
+for p in (str(PKG), str(UI), str(PKG / "pipeline"), str(PKG / "tests")):
     if p not in sys.path:
         sys.path.insert(0, p)
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
+from _public_fixture import EPUB  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 ENGINE = (PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src"
           / "bin" / "replace_by_go-linux-amd64")
 RULES = PKG / "data" / "rules"

@@ -96,7 +96,7 @@ def run_scenario(app, name: str, *, cancel_at_stage: int | None = None,
         rules_before=RULES_DIR / "before.json",
         rules_after=RULES_DIR / "after.json",
         engine_path=PIPELINE_ROOT / "vendor" / "fixtext" / "engine" / "go_src" / "bin" / "replace_by_go-linux-amd64",
-        runs_root=RUNS_ROOT, title="炮火弧线",
+        runs_root=RUNS_ROOT, title="示例书稿",
     ))
     app.processEvents()
 
@@ -377,7 +377,7 @@ def main() -> int:
     # ---- 汇总判定 ----
     evidence = {
         "corpus": {
-            "book": "炮火弧线（EPUB，788 章 / 约 314 万字符）",
+            "book": "公版样本整本（EPUB）",
             "rules": "304,255 条规则 × 2 趟",
             "epub_bytes": EPUB.stat().st_size,
         },

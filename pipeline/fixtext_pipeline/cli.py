@@ -1,8 +1,8 @@
 """命令行入口。
 
     python -m fixtext_pipeline run \\
-        --epub 《炮火弧线》.epub \\
-        --workdir ./runs/paohuo \\
+        --epub 你的书.epub \\
+        --workdir ./runs/mybook \\
         --wordbank-dir .../build/dictionary/rules \\
         --engine .../replace_by_go-linux-amd64
 
@@ -331,8 +331,8 @@ def build_parser() -> argparse.ArgumentParser:
         epilog=(
             "示例：\n"
             "  python -m fixtext_pipeline run \\\n"
-            "      --epub 《炮火弧线》.epub \\\n"
-            "      --workdir ./runs/paohuo \\\n"
+            "      --epub 你的书.epub \\\n"
+            "      --workdir ./runs/mybook \\\n"
             "      --wordbank-dir ./wordbank/rules \\\n"
             "      --engine ./vendor/fixtext/engine/go_src/bin/replace_by_go-linux-amd64\n"
         ),

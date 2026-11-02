@@ -36,11 +36,14 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PKG = HERE.parent
-for p in (str(PKG), str(PKG / "fixtext_ui"), str(PKG / "pipeline")):
+for p in (str(PKG), str(PKG / "fixtext_ui"), str(PKG / "pipeline"),
+          str(PKG / "tests")):
     if p not in sys.path:
         sys.path.insert(0, p)
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+import _public_fixture as PF  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 
 EVID = PKG / "evidence"
 RUN_DIR = PKG / "runs" / "t33_real" / "work"
@@ -138,12 +141,12 @@ def ui_words(facts: dict) -> list:
     from fixtext_worker import CorrectionJob
 
     job = CorrectionJob(
-        epub=PKG / "tests" / "samples" / "book_paohuo.epub",
+        epub=PF.EPUB,
         workdir=RUN_DIR, rules_before=PKG / "data" / "rules" / "before.json",
         rules_after=PKG / "data" / "rules" / "after.json",
         engine_path=(PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src" /
                      "bin" / "replace_by_go-linux-amd64"),
-        pipeline_root=PKG / "pipeline", title="炮火弧线")
+        pipeline_root=PKG / "pipeline", title="示例书稿")
     report = json.loads((BOOKMAP_DIR / "bookmap_report.json").read_text(encoding="utf-8"))
     return job._book_words_preview(report)
 
@@ -184,7 +187,7 @@ def stage_s1(state: dict, facts: dict) -> None:
 
     tmp = Path(tempfile.mkdtemp(prefix="t33_s1_"))
     mod = make_module(tmp)
-    mod.set_book_words(words, "炮火弧线")
+    mod.set_book_words(words, "示例书稿")
     t0 = time.monotonic()
     mod.open_book_words()
     app().processEvents()
@@ -206,7 +209,7 @@ def stage_s2(state: dict, facts: dict) -> None:
     words = ui_words(facts)
     tmp = Path(tempfile.mkdtemp(prefix="t33_s2_"))
     mod = make_module(tmp)
-    mod.set_book_words(words, "炮火弧线")
+    mod.set_book_words(words, "示例书稿")
     mod.open_book_words()
     app().processEvents()
     pick = [0, 1, 2]
@@ -248,7 +251,7 @@ def stage_s3(state: dict, facts: dict) -> None:
     n = facts["n_unique"]
     tmp = Path(tempfile.mkdtemp(prefix="t33_s3_"))
     mod = make_module(tmp)
-    mod.set_book_words(words, "炮火弧线")
+    mod.set_book_words(words, "示例书稿")
     mod.open_book_words()
     app().processEvents()
     for cb in mod._book_checks:
@@ -264,7 +267,7 @@ def stage_s3(state: dict, facts: dict) -> None:
           f"added={added}，词库自定义 {custom_n} 条，N={n}，耗时 {first_s}s",
           dict(added=added, custom=custom_n, n=n, seconds=first_s))
 
-    mod.set_book_words(words, "炮火弧线")
+    mod.set_book_words(words, "示例书稿")
     mod.open_book_words()
     app().processEvents()
     for cb in mod._book_checks:
@@ -287,13 +290,13 @@ def stage_s4(state: dict, facts: dict) -> None:
     app()
     tmp = Path(tempfile.mkdtemp(prefix="t33_s4_"))
     mod = make_module(tmp)
-    base = dict(word="炮火弧线·测试词", value="炮火弧线·正写", type="专有名词", count=1)
-    first = mod.store.add_book_words([base], "炮火弧线")
-    same = mod.store.add_book_words([dict(base)], "炮火弧线")
+    base = dict(word="示例书稿·测试词", value="示例书稿·正写", type="专有名词", count=1)
+    first = mod.store.add_book_words([base], "示例书稿")
+    same = mod.store.add_book_words([dict(base)], "示例书稿")
     conf = mod.store.add_book_words(
-        [dict(word="炮火弧线·测试词", value="另一套写法", type="专有名词", count=1)],
-        "炮火弧线")
-    rows = mod.store.query("炮火弧线·测试词", scope="custom")[1]
+        [dict(word="示例书稿·测试词", value="另一套写法", type="专有名词", count=1)],
+        "示例书稿")
+    rows = mod.store.query("示例书稿·测试词", scope="custom")[1]
     value_now = rows[0]["value"] if rows else ""
     check(state, "S4a 同词同值 → 跳过，不重复写入",
           first["added"] == 1 and same["added"] == 0

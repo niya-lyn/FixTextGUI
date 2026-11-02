@@ -42,6 +42,9 @@ sys.path.insert(0, str(PKG))
 sys.path.insert(0, str(PKG / "pipeline"))
 sys.path.insert(0, str(PKG / "pipeline" / "vendor"))
 sys.path.insert(0, str(PKG / "fixtext_ui"))
+sys.path.insert(0, str(PKG / "tests"))
+
+import _public_fixture as PF  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 
 #: 用户自己的书放在「用户区之外」的独立目录，用它验证原文件不被改
 RUN_ROOT = PKG.parent / "t44_runs"
@@ -85,7 +88,7 @@ def diff(a: dict[str, str], b: dict[str, str]) -> dict[str, list[str]]:
 def prepare_book() -> Path:
     """把语料放到「用户自己的文件夹」里——这个目录全程只读，任何新增都算越界。"""
     USER_BOOK_DIR.mkdir(parents=True, exist_ok=True)
-    src = PKG / "tests" / "samples" / "book_paohuo.epub"
+    src = PF.EPUB
     if not src.exists():
         src = PKG.parent / "in" / "paohuo.epub"
     dst = USER_BOOK_DIR / "paohuo.epub"
@@ -123,7 +126,7 @@ def run_chain(book: Path, negative: bool) -> dict:
         epub=Path(res.original_copy_path), workdir=workdir,
         rules_before=RULES / "before.json", rules_after=RULES / "after.json",
         engine_path=ENGINE, pipeline_root=PKG / "pipeline",
-        title=res.title or "炮火弧线", author="",
+        title=res.title or "示例书稿", author="",
         source_epub=book,
         custom_vocab_path=ws / "vocab" / "custom_vocab.json",
         derived_rules_dir=ws / "vocab" / "derived_rules",
@@ -149,7 +152,7 @@ def run_chain(book: Path, negative: bool) -> dict:
         src = fx.resolve_source(rec=None, run=summary, pipeline_root=str(PKG / "pipeline"))
     t0 = time.monotonic()
     outcome = fx.export_book(src, str(out_dir), fmt="txt",
-                             title=(summary or {}).get("title") or "炮火弧线")
+                             title=(summary or {}).get("title") or "示例书稿")
     rec["export"] = {"ok": bool(outcome.ok), "fmt": outcome.fmt,
                      "seconds": round(time.monotonic() - t0, 2),
                      "files": [Path(f).name for f in outcome.files],

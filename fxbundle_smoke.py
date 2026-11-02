@@ -9,8 +9,8 @@
 
 1. `opens_on_first_run()` 必须为 True（**打包正确性的关键断言**：包内若夹带
    `workspace/settings.ini` 且带 `wizardSeen=1`，新用户永远看不到向导）；
-2. 导入一本 EPUB（优先环境变量 FIXTEXT_SMOKE_EPUB；否则源码树
-   tests/samples/book_paohuo.epub）：章数与正文字数都是真数；
+2. 导入一本 EPUB（优先环境变量 FIXTEXT_SMOKE_EPUB；否则源码树里那份
+   公版样本 tests/samples/book_public_domain.epub）：章数与正文字数都是真数；
 3. 一键校正：六阶段真跑，得到「已还原」的电子书；
 4. 导出：EPUB 落盘、命中数 > 0、字节数 > 0。
 
@@ -122,10 +122,9 @@ def main() -> int:
     candidates = []
     if env_epub:
         candidates.append(Path(env_epub))
-    # 源码 / 未冻结：用测试样本；冻结绿包需靠环境变量
-    candidates.append(root / "tests" / "samples" / "book_paohuo.epub")
+    # 源码 / 未冻结：用包内公版测试样本；冻结绿包需靠环境变量
+    candidates.append(root / "tests" / "samples" / "book_public_domain.epub")
     # 兼容旧布局（若有人仍自备 示例书/）
-    candidates.append(root / "示例书" / "book_paohuo.epub")
     candidates.extend(sorted((root / "示例书").glob("*.epub"))
                       if (root / "示例书").is_dir() else [])
     epub = next((p for p in candidates if p.is_file()), None)
@@ -133,7 +132,9 @@ def main() -> int:
         result["steps"]["import"] = {
             "ok": False,
             "error": "缺少冒烟用 EPUB：请设置 FIXTEXT_SMOKE_EPUB=路径，"
-                     "或在源码树保留 tests/samples/book_paohuo.epub",
+                     "或在源码树保留公版样本 "
+                     "tests/samples/book_public_domain.epub"
+                     "（可用 tools/build_fixture_epub.py 现场合成）",
         }
         result["passed"] = False
         print(json.dumps(result, ensure_ascii=False, indent=2))

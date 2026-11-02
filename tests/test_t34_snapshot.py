@@ -24,7 +24,7 @@ sys.path.insert(0, str(PKG / "fixtext_import"))
 import _fixture_run as fxr  # noqa: E402
 import fixtext_run_snapshot as snap  # noqa: E402
 
-EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
+from _public_fixture import EPUB  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 sys.path.insert(0, str(PKG / "pipeline"))
 from fixtext_pipeline.engine_selector import select_engine  # noqa: E402
 _BIN = PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src" / "bin"
@@ -43,7 +43,7 @@ def _sha(path) -> str:
 def runs_root(tmp_path):
     root = tmp_path / "runs"
     root.mkdir()
-    fxr.build_run(root, name="run-1", hits=5100, title="炮火弧线")
+    fxr.build_run(root, name="run-1", hits=5100, title="示例书稿")
     return root
 
 
@@ -169,7 +169,7 @@ def test_ui_restore_flow(runs_root, qapp):
 
     # 弹窗本身要按真实可用性列出选项（不可用置灰）
     pts = snap.list_points(runs_root / "run-1")
-    dlg = hm.SnapshotDialog(book="《炮火弧线》", when="2026-10-27 23:34",
+    dlg = hm.SnapshotDialog(book="公版样本", when="2026-10-27 23:34",
                             points=pts)
     radios = {r.text(): r for r in dlg.findChildren(QRadioButton)}
     assert len(radios) == 5
@@ -208,7 +208,14 @@ def test_ui_restore_flow(runs_root, qapp):
 @pytest.mark.skipif(not EPUB.exists() or not ENGINE.exists(),
                     reason="缺少真实样书或引擎")
 def test_restore_replace_then_resume_skips_done_stages(tmp_path):
-    """真跑一次六阶段校正 → 恢复到「替换完成」→ 续跑：前面三步跳过。"""
+    """真跑一次六阶段校正 → 恢复到「替换完成」→ 续跑：前面三步跳过。
+
+    成品指纹口径（M5-T5.2 收口）：旧断言写死 ``717fdfce``——那是 M5 分袋
+    重构**之前**的全量口径成品指纹。分袋重构后替换阶段只跑「默认袋」那一轮，
+    规则池缩小、成品字节必然变（这是正确行为），硬编码前缀既失效又会锁死
+    实现。按与 ``test_t210_reexport_sha`` 同款口径改为「与本次运行自己的
+    产物一致」：摘要自述指纹 == 本次运行产出的成品文件实际 sha。
+    """
     from fixtext_worker import CorrectionJob
 
     runs_root = tmp_path / "runs"
@@ -217,9 +224,14 @@ def test_restore_replace_then_resume_skips_done_stages(tmp_path):
                         rules_before=RULES / "before.json",
                         rules_after=RULES / "after.json",
                         engine_path=ENGINE, pipeline_root=PKG / "pipeline",
-                        title="炮火弧线")
+                        title="示例书稿")
     summary = job.run()
-    assert summary["restored_sha256"].startswith("717fdfce")
+    baseline = summary["restored_sha256"]
+    assert baseline and len(baseline) == 64, baseline
+    restored_epub = summary["artifacts"]["restored_epub"]
+    assert restored_epub and Path(restored_epub).is_file(), restored_epub
+    assert baseline == _sha(restored_epub), (
+        f"摘要指纹 {baseline} 与本次运行的成品 {restored_epub} 不一致")
 
     # 真实运行目录：五个时点全部可用
     pts = snap.list_points(run)
@@ -244,11 +256,17 @@ def test_restore_replace_then_resume_skips_done_stages(tmp_path):
     assert results["replace"]["status"] == "skipped"
     assert results["quote"]["status"] == "done"
     assert results["restore"]["status"] == "done"
-    # 续跑出来的成品与基线逐字节一致
+    # 续跑出来的成品与本次运行产出的成品逐字节一致（不与历史口径硬编码比对）
     work = Path(out["work_dir"])
     restored = [p for p in (work / "06_restore").glob("*.epub")]
     assert restored, "续跑应产出成品电子书"
-    assert _sha(restored[0]).startswith("717fdfce"), _sha(restored[0])
+    resumed_sha = _sha(restored[0])
+    resume_restore = out["report"]["stages"]["restore"]["report"]
+    assert resumed_sha == resume_restore["restored_sha256"], (
+        f"续跑产物 {resumed_sha} 与续跑报告自述不一致")
+    assert resumed_sha == baseline, (
+        f"续跑成品 {resumed_sha} 与首次运行成品 {baseline} 不一致——"
+        "续跑应只补齐后续阶段，不改已完成的替换结果")
 
 
 @pytest.mark.skipif(not EPUB.exists() or not ENGINE.exists(),
@@ -268,9 +286,12 @@ def test_resume_adopts_workspace_and_stays_exportable(tmp_path):
                         rules_before=RULES / "before.json",
                         rules_after=RULES / "after.json",
                         engine_path=ENGINE, pipeline_root=PKG / "pipeline",
-                        title="炮火弧线")
+                        title="示例书稿")
     summary = job.run()
-    assert summary["restored_sha256"].startswith("717fdfce")
+    baseline = summary["restored_sha256"]
+    assert baseline and len(baseline) == 64, baseline
+    assert baseline == _sha(summary["artifacts"]["restored_epub"]), (
+        "摘要指纹应与本次运行产出的成品一致")
 
     res = snap.restore_point(run, "replace", runs_root)
     assert res.ok, res.message

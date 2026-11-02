@@ -41,7 +41,9 @@ if (MEDIA / "paohuo.epub").exists():
     EPUB = MEDIA / "paohuo.epub"
     NAHAN = MEDIA / "nahan.txt"
 else:                                   # 包内自带样例（脱离外部语料也能自证）
-    EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
+    sys.path.insert(0, str(PKG / "tests"))
+    from _public_fixture import EPUB as _FIXTURE  # M5-OS.1：公版 fixture
+    EPUB = _FIXTURE
     NAHAN = PKG / "tests" / "samples" / "a_utf8_lf.txt"
 PIPELINE_ROOT = PKG / "pipeline"
 RULES_DIR = PKG / "data" / "rules"
@@ -121,7 +123,7 @@ def main() -> int:
 
     out_root = RUNS_ROOT / "out"
     evidence: dict = {"corpus": {
-        "book": "炮火弧线（EPUB，788 章 / 约 314 万字符）",
+        "book": "公版样本整本（EPUB）",
         "plain_text": "呐喊（纯文本，未校正）",
         "rules": "304,255 条规则 × 2 趟",
     }}
@@ -170,7 +172,7 @@ def main() -> int:
     # ---- S1 EPUB 导出（未改元信息）：sha 与基线一致 ----
     out1 = out_root / "epub_default"
     o1 = fx.export_book(src, out1, fmt="epub",
-                        title="炮火弧线", author="康斯坦丁伯爵",
+                        title="示例书稿", author="佚名",
                         baseline_sha256=baseline_sha)
     z1 = zip_checks(Path(o1.main_file))
     st1 = o1.structure
@@ -197,7 +199,7 @@ def main() -> int:
 
     # ---- S2 TXT 导出：合法 UTF-8、无内部标记 ----
     out2 = out_root / "txt"
-    o2 = fx.export_book(src, out2, fmt="txt", title="炮火弧线", author="康斯坦丁伯爵")
+    o2 = fx.export_book(src, out2, fmt="txt", title="示例书稿", author="佚名")
     body = Path(o2.main_file).read_text(encoding="utf-8")     # 解不开直接异常
     from epubtext.bundle import HEADER_RE, SPLIT_RE
     marker_lines = [ln for ln in body.split("\n")
@@ -216,7 +218,7 @@ def main() -> int:
     # ---- S3 元信息修正导出：OPF 真改、结构仍合法、sha 变化 ----
     out3 = out_root / "epub_patched"
     o3 = fx.export_book(src, out3, fmt="epub",
-                        title="炮火弧线", author="康斯坦丁伯爵（校订版署名）",
+                        title="示例书稿", author="佚名（校订版署名）",
                         baseline_sha256=baseline_sha)
     meta_before = read_opf_meta(Path(o1.main_file))
     meta_after = read_opf_meta(Path(o3.main_file))
@@ -224,7 +226,7 @@ def main() -> int:
     s3_pass = (
         o3.ok and z3["zip_integrity_ok"] and o3.structure["ok"]
         and meta_after["creator"] != meta_before["creator"]
-        and meta_after["creator"] == "康斯坦丁伯爵（校订版署名）"
+        and meta_after["creator"] == "佚名（校订版署名）"
         and o3.sha256 != baseline_sha
         and o3.structure.get("spine_order_equal")
     )
@@ -246,7 +248,7 @@ def main() -> int:
     ro_dir.chmod(0o555)
     code = None
     try:
-        fx.export_book(src, ro_dir, fmt="txt", title="炮火弧线", author="")
+        fx.export_book(src, ro_dir, fmt="txt", title="示例书稿", author="")
     except OSError as exc:
         resolved = error_center.report(exc, context="export")
         code = resolved.code
@@ -301,7 +303,7 @@ def main() -> int:
     rev_src = fx.resolve_source(rev_record, rev_summary, PIPELINE_ROOT)
     rev_out = out_root / "epub_reverse"
     rev_exp = fx.export_book(rev_src, rev_out, fmt="epub",
-                             title="炮火弧线", author="康斯坦丁伯爵",
+                             title="示例书稿", author="佚名",
                              baseline_sha256=baseline_sha)
     s7_pass = (
         rev_src.corrected and rev_exp.ok

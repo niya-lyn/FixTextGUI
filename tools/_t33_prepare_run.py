@@ -17,13 +17,13 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PKG = HERE.parent
-for p in (str(PKG), str(PKG / "fixtext_ui")):
+for p in (str(PKG), str(PKG / "fixtext_ui"), str(PKG / "tests")):
     if p not in sys.path:
         sys.path.insert(0, p)
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
+from _public_fixture import EPUB  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 PIPELINE_ROOT = PKG / "pipeline"
 RULES_DIR = PKG / "data" / "rules"
 RUNS_ROOT = PKG / "runs" / "t33_real"
@@ -46,7 +46,7 @@ def main() -> int:
         engine_path=(PIPELINE_ROOT / "vendor" / "fixtext" / "engine" /
                      "go_src" / "bin" / "replace_by_go-linux-amd64"),
         pipeline_root=PIPELINE_ROOT,
-        title="炮火弧线",
+        title="示例书稿",
     )
     t0 = time.monotonic()
     summary = job.run()

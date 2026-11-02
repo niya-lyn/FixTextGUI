@@ -1,0 +1,23 @@
+# 换行约定。
+# 注意：`tests/samples/` 下的编码样本**必须逐字节原样保存**——它们本身就是
+# 「CRLF / LF / 混用」的测试输入，一旦被规范化，test_encoding.py 与
+# test_import.py 验的就不再是原始字节，测试会失去意义。所以这些样本标 -text。
+*                      text=auto
+
+*.bat                  text eol=crlf
+*.cmd                  text eol=crlf
+*.sh                   text eol=lf
+
+tests/samples/*.txt    -text
+tests/samples/*.epub   binary
+tests/samples/*.json   -text
+
+# 词库与派生数据体量大、机器生成：折叠进 GitHub 的语言统计与 diff 计数，
+# 但照常纳入版本控制。
+*.json                 linguist-generated=true
+*.bin                  binary
+*.bin                  linguist-generated=true
+
+# 引擎二进制
+pipeline/vendor/**/bin/*   binary
+*.exe                  binary

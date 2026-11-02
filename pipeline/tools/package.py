@@ -4,7 +4,7 @@
 产出两个 zip：
 
 1. ``FixText_M1-T1.1_一键校正编排器_v1.zip`` —— 编排器源码 + vendor 引擎 + 工具 + 测试 + README
-2. ``FixText_M1-T1.1_炮火弧线全链路产物_v1.zip`` —— 《炮火弧线》全链路的各阶段产物、
+2. ``FixText_M1-T1.1_全链路产物_v1.zip`` —— 某本书全链路的各阶段产物、
    日志、状态与报告（不含输入原件，词库与原书另行在云盘）
 
 用法::
@@ -70,7 +70,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--product-dir", required=True)
     ap.add_argument("--run-dir", required=True)
-    ap.add_argument("--run-name", default="FixText_M1-T1.1_炮火弧线全链路产物_v1.zip")
+    ap.add_argument("--run-name", default="FixText_M1-T1.1_全链路产物_v1.zip")
     ap.add_argument("--out", default="dist")
     args = ap.parse_args()
 

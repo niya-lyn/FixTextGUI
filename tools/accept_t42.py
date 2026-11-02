@@ -2,7 +2,7 @@
 
 验收口径（任务卡 M4-T4.2）：
 
-  S1 全量等价   《炮火弧线》788 章（约 314 万字符）分别用 go / python
+  S1 全量等价   公版样本整本分别用 go / python
                 引擎跑完整六阶段：替换后正文与还原 EPUB sha256 逐字节一致。
   S2 基线集等价 T0.4 回归基线集 15 语料 × count=2：Python 引擎输出与
                 基线 expected/go 逐字节一致（304,256 条规则）。
@@ -38,9 +38,12 @@ RULES_DIR = PKG / "data" / "rules"
 EVID = PKG / "evidence"
 RUNS_ROOT = PKG.parent / "t42_runs"
 
-for p in (PKG, PKG / "fixtext_ui", PIPELINE_ROOT, PIPELINE_ROOT / "vendor", HERE):
+for p in (PKG, PKG / "fixtext_ui", PIPELINE_ROOT, PIPELINE_ROOT / "vendor",
+          PKG / "tests", HERE):
     if str(p) not in sys.path:
         sys.path.insert(0, str(p))
+
+import _public_fixture as PF  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 
 from accept_env import (  # noqa: E402
     env_dir, env_file, select_go_engine, tmp_root,
@@ -62,7 +65,7 @@ BASELINE = env_dir(
     PKG.parent.parent / "media" / "baseline",
     tmp_root("t42", "t04", "FixText_T0.4_回归基线集_v1", "baseline"),
 )
-SMALL_EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
+SMALL_EPUB = PF.EPUB
 
 #: 排期 §3.1 的 Go 基准（对照用，不是本卡的实测）
 GO_BASELINE_MBPS = 3.09
@@ -158,14 +161,14 @@ def _py_replace_same_input(go_run: Path, out_dir: Path) -> dict:
 
 
 def s1_full_equivalence(ev: dict) -> dict:
-    assert EPUB is not None, "找不到《炮火弧线》语料（FIXTEXT_T42_EPUB）"
+    assert EPUB is not None, "找不到公版样本语料（FIXTEXT_T42_EPUB）"
     root = fresh(RUNS_ROOT / "s1")
-    print("[S1] go 引擎全量 788 章跑起 …", flush=True)
+    print("[S1] go 引擎全量 整本跑起 …", flush=True)
     t0 = time.perf_counter()
     go = run_job(EPUB, root / "go", engine="go")
     go_wall = time.perf_counter() - t0
 
-    print("[S1] python 引擎全量 788 章跑起 …", flush=True)
+    print("[S1] python 引擎全量 整本跑起 …", flush=True)
     t0 = time.perf_counter()
     py = run_job(EPUB, root / "py", engine="python")
     py_wall = time.perf_counter() - t0
@@ -275,7 +278,7 @@ def _ui_ctx(runs_root: Path) -> dict:
         rules_after=str(RULES_DIR / "after.json"),
         engine_path=str(ENGINE),
         runs_root=str(runs_root),
-        title="炮火弧线",
+        title="示例书稿",
         author="远瞳",
         suffix=".epub",
         epub=str(EPUB),
@@ -540,7 +543,7 @@ def main() -> int:
         wanted = list(SCENARIOS)
     evid_path = EVID / "t42_evidence.json"
     ev: dict = {"corpus": {
-        "full": "炮火弧线（EPUB，788 章 / 约 314 万字符）",
+        "full": "公版样本整本（EPUB）",
         "baseline": "T0.4 回归基线集 15 语料（304,256 条规则 × 2 趟）",
     }}
     if wanted != list(SCENARIOS) and evid_path.exists():

@@ -27,7 +27,7 @@ import _fixture_run as fxr  # noqa: E402
 app = QApplication(sys.argv)
 
 # T2.10：检查页的问题清单只来自真实运行的引号报告，冒烟脚本先注入一份
-# 真实跑出来的 108 条事件（tests/samples/fixture_quote_report.json），
+# 真实跑出来的 引号事件（tests/samples/fixture_quote_report.json），
 # 不再依赖模块内的演示数据。
 _root = Path(tempfile.mkdtemp(prefix="smoke_check_"))
 _run = fxr.build_run(_root)

@@ -9,10 +9,12 @@ import pytest
 
 import fixtext_import as fi
 
+import _public_fixture as PF  # M5-OS.1：公版 fixture 唯一来源
+
 
 def test_epub_default_has_ledger(tmp_path, workdir, samples_dir):
-    src = tmp_path / "book.epub"
-    src.write_bytes((samples_dir / "book_paohuo.epub").read_bytes())
+    src = tmp_path / PF.EPUB.name
+    src.write_bytes(PF.EPUB.read_bytes())
     result = fi.import_book(src, workdir)
     assert result.epub_mode == "direct"
     assert result.ledger_path and Path(result.ledger_path).is_file()

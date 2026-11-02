@@ -22,7 +22,7 @@ for p in (ROOT, ROOT / "fixtext_ui"):
 import fixtext_export as fx
 
 
-def _mk_run(tmp_path: Path, book_stem: str = "paohuo") -> dict:
+def _mk_run(tmp_path: Path, book_stem: str = "sample_book") -> dict:
     """造一个最小运行目录：产物名是书名，与导入的 book.txt 完全不同名。"""
     run = tmp_path / "run"
     for sub in ("02_layout", "03_replace/before", "03_replace/after", "04_quote"):
@@ -52,8 +52,8 @@ def _record(tmp_path: Path) -> dict:
     imp_dir.mkdir(parents=True, exist_ok=True)
     txt = imp_dir / "book.txt"
     txt.write_text("未校正的原文", encoding="utf-8")
-    return {"title": "炮火弧线", "text_path": str(txt),
-            "original_copy_path": str(tmp_path / "paohuo.epub")}
+    return {"title": "示例书稿", "text_path": str(txt),
+            "original_copy_path": str(tmp_path / "sample_book.epub")}
 
 
 def test_resolve_uses_summary_artifacts(tmp_path):
@@ -61,23 +61,23 @@ def test_resolve_uses_summary_artifacts(tmp_path):
     run = _mk_run(tmp_path)
     src = fx.resolve_source(_record(tmp_path), run)
     assert src.corrected is True
-    assert Path(src.text_path).name == "paohuo.txt"
+    assert Path(src.text_path).name == "sample_book.txt"
     assert src.resolve_notes and src.resolve_notes[0] == "校正后正文：运行摘要"
     assert src.before_text and Path(src.before_text).read_text(encoding="utf-8") == "校正前的正文"
-    assert src.ledger_path and Path(src.ledger_path).name == "paohuo.bundle.json"
+    assert src.ledger_path and Path(src.ledger_path).name == "sample_book.bundle.json"
 
 
 def test_resolve_without_artifacts_falls_back_to_reports(tmp_path):
     """反向用例核心：摘要里没有权威路径，仍须靠阶段报告找到校正后正文。
 
     这条用例锁的正是 P0 的修法——记录里的 text_path 是 book.txt，
-    运行产物叫 paohuo.txt，名字不一致也必须定位成功。
+    运行产物叫 sample_book.txt，名字不一致也必须定位成功。
     """
     run = _mk_run(tmp_path)
     run.pop("artifacts")
     src = fx.resolve_source(_record(tmp_path), run)
     assert src.corrected is True
-    assert Path(src.text_path).name == "paohuo.txt"
+    assert Path(src.text_path).name == "sample_book.txt"
     assert src.resolve_notes[0] == "校正后正文：阶段报告"
 
 
@@ -89,7 +89,7 @@ def test_resolve_falls_back_to_directory_enumeration(tmp_path):
     (tmp_path / "run" / "04_quote" / "quote_summary.json").unlink()
     src = fx.resolve_source(_record(tmp_path), run)
     assert src.corrected is True
-    assert Path(src.text_path).name == "paohuo.txt"
+    assert Path(src.text_path).name == "sample_book.txt"
     assert "目录枚举" in src.resolve_notes[0]
 
 

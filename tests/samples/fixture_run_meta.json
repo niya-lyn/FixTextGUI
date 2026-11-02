@@ -1,0 +1,19 @@
+{
+  "card": "M5-OS.1",
+  "note": "由 tools/make_fixture_meta.py 在公版 fixture 上真实跑一次得到；测试从这里读期望值，不抄数字",
+  "fixture": "book_public_domain.epub",
+  "fixture_bytes": 645694,
+  "title": "聊齋志異（公有領域選篇）",
+  "chapters": 301,
+  "spine_items": 301,
+  "ncx_entries": 300,
+  "hits": 2013,
+  "quote_errors": 43,
+  "quote_events": 43,
+  "restored_sha256": "39dc0674866cd85d1ffa37cee5e77b33c39ed94fae006243e76cdc70d2592cfc",
+  "replaced_chars_in": 448297,
+  "replaced_chars_out": 448295,
+  "rules": 151193,
+  "elapsed_s": 4.02,
+  "generated_at": "2026-10-31 18:34:30"
+}

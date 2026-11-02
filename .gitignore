@@ -13,5 +13,26 @@ release/
 
 .build_env/
 
-# 忽略 JetBrains IDE 的配置文件夹
+# 打包与虚拟环境
+*.egg-info/
+.venv/
+venv/
+
+# 编辑器 / 系统杂项
 .idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.log
+*.tmp
+*.bak
+*.orig
+
+# 语料与样书约定：仓库只放**小体积自建 fixture**（由 tools/build_fixture_epub.py
+# 从公版书现场合成，单本几百 KB）。真实书籍全文、大体积切片语料一律不进版本库——
+# 既避免把有版权的正文带进公开仓库，也避免仓库被几十 MB 语料撑大。
+corpus/
+baseline/corpus/
+*.txt.bak

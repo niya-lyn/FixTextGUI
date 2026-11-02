@@ -29,8 +29,8 @@ app = QApplication(sys.argv)
 # 不再有模块内的演示数据。冒烟先造两个**真实结构**的运行目录，
 # 再让页面去扫——这样顺带验证了「重启后历史还在」这条路。
 _root = Path(tempfile.mkdtemp(prefix="smoke_hist_"))
-fxr.build_run(_root, name="run-1", hits=5100, title="炮火弧线")
-fxr.build_run(_root, name="run-2", hits=356, title="旧巷杂记")
+fxr.build_run(_root, name="run-1", hits=fxr.BASE_HITS, title=fxr.BASE_TITLE)
+fxr.build_run(_root, name="run-2", hits=max(1, fxr.BASE_HITS // 5), title="旧巷杂记")
 mod = HistoryModule()
 mod.set_runs_root(_root)
 mod.refresh()

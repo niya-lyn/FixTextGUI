@@ -14,6 +14,8 @@ import pytest
 import fixtext_import as fi
 from fixtext_import.textfile import sha256_file
 
+import _public_fixture as PF  # M5-OS.1：公版 fixture（含运行记录）唯一来源
+
 
 def test_txt_import_leaves_source_untouched(sample, workdir, tmp_path):
     """验收④：TXT 导入前后 sha256 三元组完全一致。"""
@@ -34,8 +36,8 @@ def test_txt_import_leaves_source_untouched(sample, workdir, tmp_path):
 
 def test_epub_import_leaves_source_untouched(tmp_path, workdir, samples_dir):
     """验收④：EPUB 导入同样不许改原文件；默认即可逆账本。"""
-    src = tmp_path / "paohuo.epub"
-    src.write_bytes((samples_dir / "book_paohuo.epub").read_bytes())
+    src = tmp_path / PF.EPUB.name
+    src.write_bytes(PF.EPUB.read_bytes())
     before = sha256_file(src)
 
     result = fi.import_book(src, workdir)
@@ -48,8 +50,8 @@ def test_epub_import_leaves_source_untouched(tmp_path, workdir, samples_dir):
 
 def test_epub_ignores_text_mode_option(tmp_path, workdir, samples_dir):
     """M5-EX.3：即使传入 epub_mode=text，仍走可逆并保留账本。"""
-    src = tmp_path / "paohuo.epub"
-    src.write_bytes((samples_dir / "book_paohuo.epub").read_bytes())
+    src = tmp_path / PF.EPUB.name
+    src.write_bytes(PF.EPUB.read_bytes())
     result = fi.import_book(src, workdir, fi.ImportOptions(epub_mode="text"))
     assert result.epub_mode == "direct"
     assert result.ledger_path and Path(result.ledger_path).exists()
@@ -86,6 +88,7 @@ def test_reimport_is_idempotent(sample, tmp_path, workdir):
     assert len(dirs) == 1, f"应只有一个书目录，实际 {[d.name for d in dirs]}"
 
 
+
 def test_reimport_keeps_corrected_book_txt(sample, tmp_path, workdir):
     """校正后的 book.txt 在重复导入（含记录损坏）时不得被覆盖。"""
     src = tmp_path / "keep.txt"
@@ -110,7 +113,7 @@ def test_reimport_keeps_corrected_book_txt(sample, tmp_path, workdir):
 
 def test_chapter_preview_shape(samples_dir):
     """验收③：章节预览给出的字段只有序号/标题/字数，没有内部结构。"""
-    preview = fi.chapter_preview(samples_dir / "book_paohuo.epub")
+    preview = fi.chapter_preview(PF.EPUB)
     assert len(preview.chapters) > 100
     ch = preview.chapters[0]
     assert set(vars(ch)) == {"index", "title", "chars", "named"}

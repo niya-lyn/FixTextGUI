@@ -85,19 +85,19 @@ def test_entry_type_classification():
 class _FakeWorker:
     """只借 worker 的整理方法，不启动任何真实校正。"""
 
-    def __init__(self, title: str = "炮火弧线"):
+    def __init__(self, title: str = "示例书稿"):
         self.title = title
-        self.epub = Path("paohuo.epub")
+        self.epub = Path("sample_book.epub")
 
 
 def test_worker_maps_real_entries():
     from fixtext_worker import CorrectionJob
 
-    w = _FakeWorker("炮火弧线")
-    w.title, w.epub = "炮火弧线", Path("paohuo.epub")
+    w = _FakeWorker("示例书稿")
+    w.title, w.epub = "示例书稿", Path("sample_book.epub")
     bookmap = {
         "entry_preview": {
-            "paohuo": [
+            "sample_book": [
                 {"before": "帝国双璧掏心置腹", "after": "帝国双璧推心置腹"},
                 {"before": "血染亚得里亚海", "after": "血染亚的里亚海"},
             ]
@@ -107,14 +107,14 @@ def test_worker_maps_real_entries():
     assert len(rows) == 2
     assert rows[0]["word"] == "帝国双璧掏心置腹"
     assert rows[0]["value"] == "帝国双璧推心置腹"
-    assert "炮火弧线" in rows[0]["note"]
+    assert "示例书稿" in rows[0]["note"]
 
 
 def test_worker_dedups_same_change_across_contexts():
     """同一处改动在相邻上下文里各抽一次 → 必须去重，别让横幅条数与实写条数不符。"""
     from fixtext_worker import CorrectionJob
 
-    w = _FakeWorker("炮火弧线")
+    w = _FakeWorker("示例书稿")
     dup = {"before": "帝国双璧掏心置腹（补", "after": "帝国双璧推心置腹（补"}
     other = {"before": "血染亚得里亚海", "after": "血染亚的里亚海"}
     rows = CorrectionJob._book_words_preview(
@@ -176,9 +176,9 @@ def test_oneclick_emits_real_words(monkeypatch):
     got = []
     mod.bookWordsReady.connect(lambda words, title: got.append((words, title)))
 
-    mod._summary = {"book_words": [dict(word="甲", value="乙", note="n")], "title": "炮火弧线"}
+    mod._summary = {"book_words": [dict(word="甲", value="乙", note="n")], "title": "示例书稿"}
     mod._open_book_words()
-    assert len(got) == 1 and got[0][0][0]["word"] == "甲" and got[0][1] == "炮火弧线"
+    assert len(got) == 1 and got[0][0][0]["word"] == "甲" and got[0][1] == "示例书稿"
 
     mod._summary = {"book_words": []}
     mod._open_book_words()
@@ -205,9 +205,9 @@ def test_banner_hidden_when_no_real_words(tmp_path):
     mod.set_book_words([])
     assert mod._banner_w.isVisible() is False
 
-    mod.set_book_words([dict(word="甲", value="乙", note="n")], "炮火弧线")
+    mod.set_book_words([dict(word="甲", value="乙", note="n")], "示例书稿")
     assert mod._banner_title.text() != ""
     assert "1" in mod._banner_title.text()
-    assert "炮火弧线" in mod._banner_title.text()
+    assert "示例书稿" in mod._banner_title.text()
     mod.close()
     app.processEvents()

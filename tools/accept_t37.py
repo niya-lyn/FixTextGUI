@@ -2,7 +2,7 @@
 
 全部判据取实测字节，不写"应该可以"：
 
-  S1 正向      真实 788 章《炮火弧线》＋在第一章插入 3 处「萧衍」的语料，
+  S1 正向      真实整本公版样本＋在第一章插入 3 处「萧衍」的语料，
                「我的词库」加一条「萧衍 → 萧彦」，跑**完整六阶段**校正
                （与界面同一条链路），导出纯文本，统计导出文件 sha256、
                「萧衍 / 萧彦」出现次数与命中数。
@@ -34,15 +34,17 @@ HERE = Path(__file__).resolve().parent
 PKG = HERE.parent
 EVID = PKG / "evidence"
 RUNS = PKG.parent / "t37_runs"
-BOOK = PKG / "tests" / "samples" / "book_paohuo.epub"
+BOOK = PF.EPUB
 RULES = PKG / "data" / "rules"
 WORDS = ("萧衍", "萧彦")
 INSERT = "萧衍 起身，众人皆看萧衍，唯萧衍旧部尚在。"
 
-for _p in (PKG, PKG / "fixtext_ui", PKG / "fixtext_import", PKG / "pipeline", HERE):
+for _p in (PKG, PKG / "fixtext_ui", PKG / "fixtext_import", PKG / "pipeline",
+           PKG / "tests", HERE):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
 from accept_env import env_dir, select_go_engine, tmp_root  # noqa: E402
+import _public_fixture as PF  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 
 BASELINE = env_dir("FIXTEXT_T37_BASELINE", tmp_root("m37_baseline")) or tmp_root("m37_baseline")
 _ENGINE = select_go_engine(PKG)
@@ -62,7 +64,7 @@ def sha256_file(path: Path) -> str:
 
 
 def build_corpus(dst: Path) -> tuple[Path, int]:
-    """把真实 788 章电子书复制一份，只在第 1 章正文里插入一处「萧衍」句。
+    """把真实整本电子书复制一份，只在第 1 章正文里插入一处「萧衍」句。
 
     其余字节原样复制——这不是"造一本书"，是给真实语料加一个自定义词要校的
     错词，好让"生效与否"在正文里可数。
@@ -156,7 +158,7 @@ def _export_txt_inner(pkg: Path, run_dir: Path, out_dir: Path) -> dict:
     import importlib
     fx = importlib.import_module("fixtext_export")
     src = fx.resolve_source_from_run(run_dir, None, pkg / "pipeline")
-    outcome = fx.export_book(src, out_dir, fmt="txt", title="炮火弧线")
+    outcome = fx.export_book(src, out_dir, fmt="txt", title="示例书稿")
     main = Path(outcome.main_file)
     text = main.read_text(encoding="utf-8")
     return dict(file=str(main), sha256=sha256_file(main),
@@ -180,7 +182,7 @@ def s1_positive() -> dict:
     work.mkdir(parents=True)
     epub, inserted = build_corpus(work / "paohuo_with_word.epub")
     vocab = custom_vocab(work / "custom_vocab.json")
-    summary = run_pipeline(PKG, epub, work / "run", vocab, work / "derived", "炮火弧线")
+    summary = run_pipeline(PKG, epub, work / "run", vocab, work / "derived", "示例书稿")
     rep = stage_report(work / "run")
     out = export_txt(PKG, work / "run", work / "out")
     before_text = Path(rep["before_path"]).read_text(encoding="utf-8")
@@ -222,7 +224,7 @@ def s2_negative() -> dict:
     if not epub.exists():
         epub, _ = build_corpus(work / "paohuo_with_word.epub")
     vocab = custom_vocab(work / "custom_vocab.json")
-    summary = run_pipeline(BASELINE, epub, work / "run", vocab, work / "derived", "炮火弧线")
+    summary = run_pipeline(BASELINE, epub, work / "run", vocab, work / "derived", "示例书稿")
     rep = stage_report(work / "run")
     out = export_txt(BASELINE, work / "run", work / "out")
     after_text = Path(rep["after_path"]).read_text(encoding="utf-8")
@@ -373,7 +375,7 @@ def main() -> int:
     t0 = time.time()
     rules_before = {n: sha256_file(RULES / n) for n in ("before.json", "after.json")}
 
-    print("[S1] 正向：真实 788 章 + 自定义词 萧衍→萧彦 ...", flush=True)
+    print("[S1] 正向：真实整本 + 自定义词 萧衍→萧彦 ...", flush=True)
     s1 = s1_positive()
     print("     exported sha256 =", s1["exported"]["sha256"])
     print("     counts:", s1["exported_counts"], "hits:", s1["hits"], flush=True)

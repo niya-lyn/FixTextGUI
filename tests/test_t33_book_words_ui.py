@@ -49,7 +49,7 @@ def test_preview_lists_every_row_with_four_columns(qapp, tmpdir_):
     """清单必须有「加入 / 词条 / 类型 / 替换值 / 出现次数」五列且行数 == 传入条数。"""
     mod = _module(tmpdir_)
     words = _words(120)
-    mod.set_book_words(words, "炮火弧线")
+    mod.set_book_words(words, "示例书稿")
     mod.open_book_words()
     qapp.processEvents()
 

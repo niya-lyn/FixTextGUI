@@ -52,7 +52,7 @@ import fixtext_run_snapshot as snap                           # noqa: E402
 import fixtext_export as fxexport                         # noqa: E402
 import history_module as hm                               # noqa: E402
 
-EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
+from _public_fixture import EPUB  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 ENGINE = (PKG / "pipeline" / "vendor" / "fixtext" / "engine" / "go_src"
           / "bin" / "replace_by_go-linux-amd64")
 RULES = PKG / "data" / "rules"
@@ -425,7 +425,7 @@ def main() -> int:
     win2.grab().save(str(SHOTS / "s6_restarted_points.png"))
 
     # ---------------- S7 二次确认文案（读真实弹窗的正文）----------------
-    probe = hm.SnapshotDialog(book="《炮火弧线》", when="2026-10-27 23:34",
+    probe = hm.SnapshotDialog(book="公版样本", when="2026-10-27 23:34",
                               points=pts)
     dlg_texts = [l.text() for l in probe.findChildren(QLabel)]
     first_note = " ".join(t for t in dlg_texts if len(t) > 20)[:400]

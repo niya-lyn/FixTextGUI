@@ -21,12 +21,20 @@ import _fixture_run as fxr  # noqa: E402
 import fixtext_history as histdata  # noqa: E402
 
 
+#: 两条记录的命中数：第一条取 fixture 真实运行记录，第二条按同一记录折算，
+#: 保证两条**不同**、且都不依赖任何写死的数字（M5-OS.1）。
+_HITS_A = fxr.BASE_HITS
+_HITS_B = max(1, fxr.BASE_HITS // 5)
+_TITLE_A = fxr.BASE_TITLE
+_TITLE_B = "旧巷杂记"
+
+
 @pytest.fixture()
 def runs_root(tmp_path):
     root = tmp_path / "runs"
     root.mkdir()
-    fxr.build_run(root, name="run-1", hits=5100, title="炮火弧线")
-    fxr.build_run(root, name="run-2", hits=356, title="旧巷杂记")
+    fxr.build_run(root, name="run-1", hits=_HITS_A, title=_TITLE_A)
+    fxr.build_run(root, name="run-2", hits=_HITS_B, title=_TITLE_B)
     return root
 
 
@@ -35,10 +43,10 @@ def test_scan_builds_records_from_disk(runs_root):
     recs = histdata.scan_runs(runs_root)
     assert len(recs) == 2
     books = sorted(r["book"] for r in recs)
-    assert books == ["《旧巷杂记》", "《炮火弧线》"]
+    assert books == [f"《{_TITLE_B}》", f"《{_TITLE_A}》"]
     r1 = histdata.find_by_run_dir(recs, str(runs_root / "run-1"))
     assert r1 is not None
-    assert r1["hits"] == 5100
+    assert r1["hits"] == _HITS_A
     assert r1["status"] == "ok"
     assert r1["sha256"] == fxr.BASE_SHA
     assert Path(r1["run_dir"]).is_dir()
@@ -59,7 +67,7 @@ def test_history_survives_restart(runs_root, qapp):
     second.refresh()
     assert second.row_count == 2, "重启后应重新扫出全部历史"
     assert [t["run_dir"] for t in second.tasks] == [t["run_dir"] for t in first.tasks]
-    assert {t["hits"] for t in second.tasks} == {5100, 356}
+    assert {t["hits"] for t in second.tasks} == {_HITS_A, _HITS_B}
 
 
 def test_empty_history_gives_human_hint(tmp_path, qapp):

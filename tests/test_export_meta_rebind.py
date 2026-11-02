@@ -49,14 +49,14 @@ def test_clear_context_clears_stale_title(export_mod, tmp_path):
 def test_switch_book_replaces_title(export_mod, tmp_path):
     """换书后书名必须换成新书，不能因输入框非空而留着旧名。"""
     export_mod.set_context(_book(tmp_path, "old", "我的玩家二周目", "甲"))
-    export_mod.set_context(_book(tmp_path, "new", "炮火弧线", "康斯坦丁伯爵"))
-    assert export_mod.title_edit.text() == "炮火弧线"
-    assert export_mod.author_edit.text() == "康斯坦丁伯爵"
+    export_mod.set_context(_book(tmp_path, "new", "示例书稿", "佚名"))
+    assert export_mod.title_edit.text() == "示例书稿"
+    assert export_mod.author_edit.text() == "佚名"
 
 
 def test_same_book_keeps_user_edit(export_mod, tmp_path):
     """同一本书上用户改过的书名不被 refresh 冲掉。"""
-    rec = _book(tmp_path, "one", "炮火弧线")
+    rec = _book(tmp_path, "one", "示例书稿")
     export_mod.set_context(rec)
     export_mod.title_edit.setText("我改的书名")
     export_mod.set_context(rec)  # 同路径再注入

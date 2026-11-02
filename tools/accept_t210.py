@@ -2,9 +2,9 @@
 
 全程真实链路，不做桩：
   S1 空状态：未校正时两页给人话引导，一条假数据都没有
-  S2 真实导入《炮火弧线》EPUB（三步向导全自动走完）
+  S2 真实导入公版样本EPUB（三步向导全自动走完）
   S3 一键校正：真实点击主按钮，完整跑完六阶段
-  S4 检查页：注入本次运行的引号报告 → 条目数与 error_count 一致（108）
+  S4 检查页：注入本次运行的引号报告 → 条目数与 error_count 一致
   S5 历史页：本次运行成为一条记录（书名 / 时间 / 命中数 / 状态）
   S6 重启进程：全新窗口只凭磁盘重扫 → 历史记录仍在
   S7 重新导出：走真实导出执行层，产出 EPUB 的 sha256 与基线逐字节一致
@@ -49,7 +49,7 @@ import fixtext_check as checkdata                          # noqa: E402
 import fixtext_history as histdata                         # noqa: E402
 import fixtext_export as fxexport                          # noqa: E402
 
-EPUB = PKG / "tests" / "samples" / "book_paohuo.epub"
+from _public_fixture import EPUB  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
 BASE_SHA = "717fdfcee76fe3ee74d9a8bff20afbc84e7150bcbf5ee1a5b033a01739641dc2"
 EVID = PKG / "evidence"
 SHOTS = EVID / "t210"
