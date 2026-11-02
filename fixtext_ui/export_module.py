@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 
 from fixtext_export import ExportOutcome, ExportSource, export_book, resolve_source
 from fixtext_paths import default_export_dir
-from fixtext_tokens import FONT_WEIGHT, c, fs, r
+from fixtext_tokens import FONT_WEIGHT, c, fs, r, sp
 from fixtext_widgets import (
     Card, ConfirmDialog, Pill, RadioCard, EmptyState, hline, page_head_shell,
     enable_chrome,

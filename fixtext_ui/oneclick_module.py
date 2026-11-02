@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
     QComboBox, QLineEdit, QDialog, QSizePolicy,
 )
 
-from fixtext_tokens import c, r, fs, FONT_MONO, FONT_WEIGHT
+from fixtext_tokens import c, r, fs, sp, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline, PrimaryButton,
     ConfirmDialog, page_head_shell, enable_chrome, BagChk, FlowLayout,

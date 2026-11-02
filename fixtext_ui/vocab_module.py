@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 import fixtext_settings as app_settings
-from fixtext_tokens import c, fs, r, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
+from fixtext_tokens import c, fs, r, sp, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
 from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal, page_head_shell, PrimaryButton
 
 from fixtext_vocab import (

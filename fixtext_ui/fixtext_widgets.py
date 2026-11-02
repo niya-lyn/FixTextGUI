@@ -98,6 +98,20 @@ def page_head_shell() -> tuple[QWidget, QWidget]:
     return shell, body
 
 
+def repolish(widget: QWidget) -> None:
+    """动态属性变更后让 QSS 属性选择器重新生效。
+
+    Qt 的 QSS 属性选择器（如 ``#ShelfBadge[current="true"]``）只在 polish 阶段
+    匹配一次；运行时改 ``setProperty`` 后必须 unpolish/polish 才会重绘。
+    """
+    style = widget.style()
+    if style is None:
+        return
+    style.unpolish(widget)
+    style.polish(widget)
+    widget.update()
+
+
 def no_badge(n) -> QLabel:
     lab = QLabel(str(n))
     lab.setAlignment(Qt.AlignmentFlag.AlignCenter)

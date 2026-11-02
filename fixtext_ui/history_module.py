@@ -36,7 +36,7 @@ from PySide6.QtWidgets import (
 
 import fixtext_history as histdata
 import fixtext_run_snapshot as snapshot
-from fixtext_tokens import c, fs, FONT_WEIGHT
+from fixtext_tokens import c, fs, sp, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Pill, hline, ConfirmDialog, Modal, EmptyState, page_head_shell, PrimaryButton,
 )
