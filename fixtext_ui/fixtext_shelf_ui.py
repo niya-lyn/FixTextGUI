@@ -31,6 +31,7 @@ from fixtext_tokens import (
     BOOKCHIP_H, BOOKCHIP_MAX_W, SHELF_ACTION_W, SHELF_BADGE_H, SHELF_ROW_H,
     SHELF_STATUS_W, c, px, sp,
 )
+from fixtext_widgets import repolish
 
 #: 书架状态位固定宽度（够放「已导出」，空着也占位）
 STATUS_SLOT_W = SHELF_STATUS_W
@@ -120,11 +121,6 @@ class ElidedLabel(QLabel):
                                    max(0, self.width())))
 
 
-def _pill_radius() -> int:
-    """胶囊圆角用半高像素：Qt 对 border-radius:999px 常画成方块。"""
-    return max(1, SHELF_BADGE_H // 2)
-
-
 class ShelfRow(QFrame):
     """书架里的一行：圆点 · 书名 · 状态位 · 操作位（对齐原型 .ws-row）。"""
 
@@ -162,8 +158,6 @@ class ShelfRow(QFrame):
         self.status.setFixedWidth(STATUS_SLOT_W)
         self.status.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.status.setStyleSheet(
-            "background:transparent;border:none;outline:none;")
         lay.addWidget(self.status, 0, Qt.AlignmentFlag.AlignVCenter)
 
         # 操作位：固定宽、透明无框；内部只放胶囊，勿再套可见容器
@@ -176,9 +170,6 @@ class ShelfRow(QFrame):
         sl.setContentsMargins(0, 0, 0, 0)
         sl.setSpacing(0)
         sl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        rr = _pill_radius()
-        from fixtext_tokens import FONT_WEIGHT
 
         if current:
             self.badge = QLabel("当前")
@@ -216,19 +207,9 @@ class ShelfRow(QFrame):
 
     def _paint(self) -> None:
         """按当前态 / 导出态着色（对齐原型 .ws-row / .bs-dot）。"""
-        from fixtext_tokens import FONT_WEIGHT, fs
-
         self.dot.set_exported(bool(self.book.exported_at))
-        self.name.setStyleSheet(
-            f"color:{c('primary.700') if self._current else c('neutral.800')};"
-            f"font-size:{fs('sm')};"
-            f"font-weight:"
-            f"{FONT_WEIGHT['bold'] if self._current else FONT_WEIGHT['medium']};"
-            f"background:transparent;border:none;")
-        self.status.setStyleSheet(
-            f"color:{c('success')};font-size:{fs('xs')};"
-            f"font-weight:{FONT_WEIGHT['semibold']};"
-            f"background:transparent;border:none;")
+        self.name.ensurePolished()
+        self.name._apply()
         tip = (
             f"《{self.book.title}》{self.book.suffix}\n"
             f"{self.book.fmt} · {shelf_data.human_size(self.book.size_bytes)} · "
@@ -360,60 +341,32 @@ class BookChip(QFrame):
         self._apply_state()
 
     def _apply_state(self) -> None:
-        from fixtext_tokens import FONT_WEIGHT, c, fs, r
-
         has_book = bool(self._title)
         self.setProperty("empty", "false" if has_book else "true")
+        muted = "false" if has_book else "true"
+        self.name.setProperty("muted", muted)
+        self.dot.setProperty("muted", muted)
+        for w in (self, self.name, self.dot, self.go_label):
+            repolish(w)
+        # 无书只弱化文字/圆点；胶囊底仍与有书同色
         self.name.set_full_text(self._title or "未选择书")
-        # 无书只弱化文字/圆点；胶囊底仍与有书同色（浅底上用 neutral.500 保证可读）
-        self.name.setStyleSheet(
-            f"color:{c('neutral.800') if has_book else c('neutral.500')};"
-            f"font-size:{fs('sm')};font-weight:{FONT_WEIGHT['semibold']};"
-            f"letter-spacing:0.2px;background:transparent")
-        if has_book:
-            self.dot.setStyleSheet(
-                f"background:qlineargradient(x1:0,y1:0,x2:1,y2:1,"
-                f"stop:0 {c('primary.400')},stop:1 {c('primary.600')});"
-                f"border-radius:{r('full')};"
-                f"border:3px solid {c('primary.100')}")
-        else:
-            self.dot.setStyleSheet(
-                f"background:{c('neutral.300')};border-radius:{r('full')};"
-                f"border:3px solid {c('neutral.100')}")
-        self.go_label.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:{fs('xs')};"
-            f"font-weight:{FONT_WEIGHT['semibold']};"
-            f"padding-left:{sp('2')};margin-left:{sp('1')};"
-            f"border-left:1px solid {c('neutral.200')};"
-            f"background:transparent")
         if has_book:
             tip = f"{self._title}\n点击前往「导入书籍」切换当前书"
         else:
             tip = "还没有导入的书\n点击前往「导入书籍」"
         self.setToolTip(tip)
         self.name.setToolTip(tip)
-        self.style().unpolish(self)
-        self.style().polish(self)
-
     def enterEvent(self, event):                     # noqa: N802 - Qt 覆写
-        from fixtext_tokens import FONT_WEIGHT, c
-        # Qt 对「父 :hover 改子」支持不稳，悬停时直接刷「切换」主色
-        self.go_label.setStyleSheet(
-            f"color:{c('primary.600')};font-size:{fs('xs')};"
-            f"font-weight:{FONT_WEIGHT['semibold']};"
-            f"padding-left:{sp('2')};margin-left:{sp('1')};"
-            f"border-left:1px solid {c('neutral.200')};"
-            f"background:transparent")
+        # 父 :hover 改子在 Qt 上不稳，用属性选择器刷「切换」主色
+        self.setProperty("hover", "true")
+        repolish(self)
+        repolish(self.go_label)
         super().enterEvent(event)
 
     def leaveEvent(self, event):                     # noqa: N802 - Qt 覆写
-        from fixtext_tokens import FONT_WEIGHT, c
-        self.go_label.setStyleSheet(
-            f"color:{c('neutral.500')};font-size:{fs('xs')};"
-            f"font-weight:{FONT_WEIGHT['semibold']};"
-            f"padding-left:{sp('2')};margin-left:{sp('1')};"
-            f"border-left:1px solid {c('neutral.200')};"
-            f"background:transparent")
+        self.setProperty("hover", "false")
+        repolish(self)
+        repolish(self.go_label)
         super().leaveEvent(event)
 
     # ---- 交互 ---------------------------------------------------------

@@ -186,8 +186,13 @@ def test_engine_switch_persists_and_syncs(smod):
     smod._on_engine("python")
     assert settings.engine() == "python"
     from fixtext_tokens import c as _c
-    assert f"background:{_c('primary.50')}" in smod.engine_cards["python"].styleSheet()
-    assert f"background:{_c('neutral.0')}" in smod.engine_cards["go"].styleSheet()
+    assert smod.engine_cards["python"].property("selected") == "true"
+    assert smod.engine_cards["go"].property("selected") == "false"
+    qss = (Path(__file__).resolve().parents[1] / "fixtext_ui" / "fixtext.qss").read_text(encoding="utf-8")
+    sel = qss.split('#RadioCard[selected="true"] {', 1)[1].split("}", 1)[0]
+    base = qss.split("#RadioCard {", 1)[1].split("}", 1)[0]
+    assert _c("primary.50") in sel
+    assert _c("neutral.0") in base
     # 等价重启：新进程形态读回 python
     assert AppSettings().value("engine", "go") == "python"
     smod._on_engine("go")

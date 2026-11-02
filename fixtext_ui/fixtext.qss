@@ -943,3 +943,426 @@ QWidget#CellFullText QLabel {
     background: #3F48A2;
 }
 
+#Toast QLabel {
+    color: #FFFFFF;
+    font-size: 13px;
+    background: transparent;
+}
+
+QWidget#CellFullText QLabel {
+    font-size: 13px;
+}
+
+QLabel[size="xs"] { font-size: 12px; }
+QLabel[size="sm"] { font-size: 13px; }
+QLabel[size="base"] { font-size: 14px; }
+QLabel[size="md"] { font-size: 16px; }
+QLabel[size="lg"] { font-size: 18px; }
+QLabel[size="xl"] { font-size: 20px; }
+QLabel[size="2xl"] { font-size: 24px; }
+QLabel[size="3xl"] { font-size: 30px; }
+QLabel[size="4xl"] { font-size: 36px; }
+QLabel[weight="regular"] { font-weight: 400; }
+QLabel[weight="medium"] { font-weight: 500; }
+QLabel[weight="semibold"] { font-weight: 600; }
+QLabel[weight="bold"] { font-weight: 700; }
+QLabel[tone="primary.50"] { color: #EEF0FB; }
+QLabel[tone="primary.100"] { color: #DDE1F6; }
+QLabel[tone="primary.200"] { color: #C0C6EE; }
+QLabel[tone="primary.300"] { color: #9AA3E2; }
+QLabel[tone="primary.400"] { color: #6F79D1; }
+QLabel[tone="primary.500"] { color: #4F59C0; }
+QLabel[tone="primary.600"] { color: #3F48A2; }
+QLabel[tone="primary.700"] { color: #333B83; }
+QLabel[tone="primary.800"] { color: #2B3169; }
+QLabel[tone="primary.900"] { color: #232852; }
+QLabel[tone="neutral.0"] { color: #FFFFFF; }
+QLabel[tone="neutral.50"] { color: #F7F8FA; }
+QLabel[tone="neutral.100"] { color: #EEF1F5; }
+QLabel[tone="neutral.200"] { color: #DDE2EA; }
+QLabel[tone="neutral.300"] { color: #C2CAD6; }
+QLabel[tone="neutral.400"] { color: #9AA4B4; }
+QLabel[tone="neutral.500"] { color: #6B7585; }
+QLabel[tone="neutral.600"] { color: #4A5363; }
+QLabel[tone="neutral.700"] { color: #333B48; }
+QLabel[tone="neutral.800"] { color: #222831; }
+QLabel[tone="neutral.900"] { color: #15191F; }
+QLabel[tone="success"] { color: #15803D; }
+QLabel[tone="success.bg"] { color: #E7F4EC; }
+QLabel[tone="success.border"] { color: #B6E0C5; }
+QLabel[tone="warning"] { color: #B45309; }
+QLabel[tone="warning.bg"] { color: #FBF1DF; }
+QLabel[tone="warning.border"] { color: #F0D6A8; }
+QLabel[tone="error"] { color: #C0392B; }
+QLabel[tone="error.bg"] { color: #FBEAE8; }
+QLabel[tone="error.border"] { color: #F1C4BD; }
+QLabel[tone="info"] { color: #3F48A2; }
+QLabel[tone="info.bg"] { color: #ECEEF9; }
+QLabel[tone="info.border"] { color: #C8CDEC; }
+QLabel[tone="focus"] { color: #4F59C0; }
+QLabel[tone="on.fill"] { color: #FFFFFF; }
+QLabel[tone="on.fill.soft"] { color: rgba(255,255,255,0.90); }
+QLabel[tone="on.fill.hint"] { color: rgba(255,255,255,0.85); }
+QLabel[tone="on.fill.stats"] { color: rgba(255,255,255,0.92); }
+QLabel[tone="on.fill.track"] { color: rgba(255,255,255,0.25); }
+QLabel[mono="true"] { font-family: "Cascadia Code","JetBrains Mono",Consolas,monospace; }
+
+QFrame#HLine { border: none; }
+QFrame#HLine[tone="primary.50"] { background: #EEF0FB; }
+QFrame#HLine[tone="primary.100"] { background: #DDE1F6; }
+QFrame#HLine[tone="primary.200"] { background: #C0C6EE; }
+QFrame#HLine[tone="primary.300"] { background: #9AA3E2; }
+QFrame#HLine[tone="primary.400"] { background: #6F79D1; }
+QFrame#HLine[tone="primary.500"] { background: #4F59C0; }
+QFrame#HLine[tone="primary.600"] { background: #3F48A2; }
+QFrame#HLine[tone="primary.700"] { background: #333B83; }
+QFrame#HLine[tone="primary.800"] { background: #2B3169; }
+QFrame#HLine[tone="primary.900"] { background: #232852; }
+QFrame#HLine[tone="neutral.0"] { background: #FFFFFF; }
+QFrame#HLine[tone="neutral.50"] { background: #F7F8FA; }
+QFrame#HLine[tone="neutral.100"] { background: #EEF1F5; }
+QFrame#HLine[tone="neutral.200"] { background: #DDE2EA; }
+QFrame#HLine[tone="neutral.300"] { background: #C2CAD6; }
+QFrame#HLine[tone="neutral.400"] { background: #9AA4B4; }
+QFrame#HLine[tone="neutral.500"] { background: #6B7585; }
+QFrame#HLine[tone="neutral.600"] { background: #4A5363; }
+QFrame#HLine[tone="neutral.700"] { background: #333B48; }
+QFrame#HLine[tone="neutral.800"] { background: #222831; }
+QFrame#HLine[tone="neutral.900"] { background: #15191F; }
+QFrame#HLine[tone="success"] { background: #15803D; }
+QFrame#HLine[tone="success.bg"] { background: #E7F4EC; }
+QFrame#HLine[tone="success.border"] { background: #B6E0C5; }
+QFrame#HLine[tone="warning"] { background: #B45309; }
+QFrame#HLine[tone="warning.bg"] { background: #FBF1DF; }
+QFrame#HLine[tone="warning.border"] { background: #F0D6A8; }
+QFrame#HLine[tone="error"] { background: #C0392B; }
+QFrame#HLine[tone="error.bg"] { background: #FBEAE8; }
+QFrame#HLine[tone="error.border"] { background: #F1C4BD; }
+QFrame#HLine[tone="info"] { background: #3F48A2; }
+QFrame#HLine[tone="info.bg"] { background: #ECEEF9; }
+QFrame#HLine[tone="info.border"] { background: #C8CDEC; }
+QFrame#HLine[tone="focus"] { background: #4F59C0; }
+QFrame#HLine[tone="on.fill"] { background: #FFFFFF; }
+QFrame#HLine[tone="on.fill.soft"] { background: rgba(255,255,255,0.90); }
+QFrame#HLine[tone="on.fill.hint"] { background: rgba(255,255,255,0.85); }
+QFrame#HLine[tone="on.fill.stats"] { background: rgba(255,255,255,0.92); }
+QFrame#HLine[tone="on.fill.track"] { background: rgba(255,255,255,0.25); }
+
+#NoBadge {
+    background: #EEF1F5;
+    color: #6B7585;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+#CardBasis {
+    color: #333B83;
+    background: #EEF0FB;
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QFrame#AutoChip {
+    background: #EEF1F5;
+    border: none;
+    border-radius: 10px;
+}
+#AutoChip QLabel {
+    background: transparent;
+    border: none;
+    color: #6B7585;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+QFrame#BagChk[locked="true"] QLabel#BagChkText {
+    color: #9AA4B4;
+    font-weight: 400;
+}
+
+#ModalIco {
+    border-radius: 8px;
+    font-size: 16px;
+}
+#ModalIco[tone="primary"] {
+    background: #DDE1F6;
+    color: #333B83;
+}
+#ModalIco[tone="warning"] {
+    background: #FBF1DF;
+    color: #B45309;
+}
+
+#MarkIco {
+    background: #DDE1F6;
+    color: #333B83;
+    border-radius: 12px;
+    font-size: 20px;
+}
+#DoneMark {
+    background: #15803D;
+    color: #FFFFFF;
+    border-radius: 12px;
+    font-size: 18px;
+}
+
+#Callout {
+    font-size: 13px;
+}
+#Callout[radius="lg"] { border-radius: 12px; }
+#Callout[radius="md"] { border-radius: 8px; }
+#Callout[pad="roomy"] { padding: 12px 16px; }
+#Callout[pad="tight"] { padding: 8px 12px; }
+#Callout[kind="info"] {
+    background: #ECEEF9;
+    border: 1px solid #C8CDEC;
+    color: #3F48A2;
+}
+#Callout[kind="warn"] {
+    background: #FBF1DF;
+    border: 1px solid #F0D6A8;
+    color: #B45309;
+}
+#Callout[kind="ok"] {
+    background: #E7F4EC;
+    border: 1px solid #B6E0C5;
+    color: #15803D;
+}
+#Callout[kind="neutral"] {
+    background: #EEF1F5;
+    border: 1px solid #DDE2EA;
+    color: #4A5363;
+}
+
+#StepDot {
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+#StepDot[state="done"] {
+    background: #15803D;
+    color: #FFFFFF;
+}
+#StepDot[state="current"] {
+    background: #4F59C0;
+    color: #FFFFFF;
+}
+#StepDot[state="wait"] {
+    background: #EEF1F5;
+    color: #6B7585;
+}
+
+QProgressBar#TaskBar {
+    background: #EEF1F5;
+    border: none;
+    border-radius: 999px;
+    height: 10px;
+}
+QProgressBar#TaskBar::chunk {
+    background: #4F59C0;
+    border-radius: 999px;
+}
+
+QProgressBar#OnbBar {
+    background: #DDE2EA;
+    border: none;
+    border-radius: 999px;
+}
+QProgressBar#OnbBar::chunk {
+    border-radius: 999px;
+    background: #DDE2EA;
+}
+QProgressBar#OnbBar[state="done"]::chunk {
+    background: #15803D;
+}
+QProgressBar#OnbBar[state="active"]::chunk {
+    background: #4F59C0;
+}
+QProgressBar#OnbBar[state="todo"]::chunk {
+    background: #DDE2EA;
+}
+
+QRadioButton#SnapPoint {
+    color: #15191F;
+    font-size: 13px;
+    font-weight: 600;
+}
+QRadioButton#SnapPoint:disabled {
+    color: #9AA4B4;
+}
+
+#ActiveHint {
+    color: #333B83;
+    font-size: 13px;
+    background: transparent;
+    margin-top: 4px;
+}
+
+#PassBanner {
+    color: #15803D;
+    font-weight: 700;
+    font-size: 16px;
+    background: #E7F4EC;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+QTextEdit#CheckEditor {
+    background: #F7F8FA;
+    border: 1px solid #DDE2EA;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: "Cascadia Code","JetBrains Mono",Consolas,monospace;
+    font-size: 13px;
+    color: #222831;
+}
+QTextEdit#CheckEditor:focus {
+    border: 1px solid #4F59C0;
+}
+
+#CheckToast {
+    background: #222831;
+    color: #FFFFFF;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+}
+
+#ChkReady, #ChkRun { background: transparent; }
+QScrollArea#ProbScroll { border: none; background: transparent; }
+QWidget#ProbScrollInner { background: transparent; }
+
+QScrollArea#BookWordScroll {
+    border: 1px solid #DDE2EA;
+    border-radius: 12px;
+    background: #FFFFFF;
+}
+QScrollArea#BookWordScroll > QWidget {
+    background: #FFFFFF;
+}
+
+#SnapDot {
+    background: #DDE2EA;
+    border-radius: 999px;
+    border: none;
+}
+#SnapDot[current="true"] {
+    background: #15803D;
+    border: 3px solid #E7F4EC;
+}
+
+#MetaChip {
+    background: #EEF1F5;
+    color: #333B48;
+    border-radius: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+#DictIco {
+    border-radius: 8px;
+    font-size: 12px;
+}
+#DictIco[tone="custom"] { background: #E7F4EC; }
+#DictIco[tone="info"] { background: #ECEEF9; }
+#DictLock {
+    color: #6B7585;
+    font-size: 12px;
+}
+#DictLock[ghost="true"] { color: transparent; }
+
+#DropZone {
+    background: #FFFFFF;
+    border: 2px dashed #C2CAD6;
+    border-radius: 12px;
+}
+#DropZone[hot="true"] {
+    background: #EEF0FB;
+    border: 2px dashed #4F59C0;
+}
+#DropZone QLabel { border: none; background: transparent; }
+
+#ImportDetail {
+    color: #4A5363;
+    background: #F7F8FA;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: "Cascadia Code","JetBrains Mono",Consolas,monospace;
+    font-size: 12px;
+}
+
+#NoticeBar {
+    border-radius: 8px;
+    padding: 12px 12px;
+    font-size: 13px;
+}
+#NoticeBar[kind="warn"] {
+    background: #FBF1DF;
+    color: #B45309;
+    border: 1px solid #DDE2EA;
+}
+#NoticeBar[kind="info"] {
+    background: #EEF0FB;
+    color: #333B83;
+    border: 1px solid #C0C6EE;
+}
+#NoticeBar[kind="ok"] {
+    background: #E7F4EC;
+    color: #15803D;
+    border: 1px solid #E7F4EC;
+}
+
+#ShelfName {
+    color: #222831;
+    font-size: 13px;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+}
+#ShelfRow[current="true"] #ShelfName {
+    color: #333B83;
+    font-weight: 700;
+}
+#ShelfStatus {
+    color: #15803D;
+    font-size: 12px;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+    outline: none;
+}
+
+#BookChip #BcName {
+    color: #222831;
+    font-size: 13px;
+    font-weight: 600;
+    background: transparent;
+}
+#BookChip #BcName[muted="true"] {
+    color: #6B7585;
+}
+#BookChip #BcGo {
+    color: #6B7585;
+    font-size: 12px;
+    font-weight: 600;
+    padding-left: 8px;
+    margin-left: 4px;
+    border-left: 1px solid #DDE2EA;
+    background: transparent;
+}
+#BookChip:hover #BcGo, #BookChip[hover="true"] #BcGo {
+    color: #3F48A2;
+}
+#BookChip #BcDot {
+    border-radius: 999px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #6F79D1, stop:1 #3F48A2);
+    border: 3px solid #DDE1F6;
+}
+#BookChip #BcDot[muted="true"] {
+    background: #C2CAD6;
+    border: 3px solid #EEF1F5;
+}
+

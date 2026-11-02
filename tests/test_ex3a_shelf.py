@@ -149,8 +149,13 @@ def test_shelf_rows_content_and_fixed_slots(qapp, ws_two):
     assert other_row.name.full_text() == "《第一部书》epub"
     assert "EPUB ·" in other_row.toolTip() and "10月20日" in other_row.toolTip()
     from fixtext_tokens import c
-    assert c("success") in cur_row.badge.styleSheet()
-    assert "border-radius" in other_row.action_btn.styleSheet()
+    qss = (Path(__file__).resolve().parents[1] / "fixtext_ui" / "fixtext.qss").read_text(encoding="utf-8")
+    badge_rule = qss.split("QLabel#ShelfBadge {", 1)[1].split("}", 1)[0]
+    btn_rule = qss.split("#BtnSetCurrent {", 1)[1].split("}", 1)[0]
+    assert cur_row.badge.objectName() == "ShelfBadge"
+    assert other_row.action_btn.objectName() == "BtnSetCurrent"
+    assert c("success") in badge_rule
+    assert "border-radius" in btn_rule
 
     # 只有真实导出记录才显示「已导出」，否则空
     assert cur_row.status.text() == "" and other_row.status.text() == ""

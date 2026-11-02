@@ -43,9 +43,12 @@ def test_book_chip_empty_same_glass(qapp):
 
     chip = SU.BookChip()
     chip.set_book(None)
-    ss = chip.styleSheet()
-    assert "rgba(255,255,255,.10)" not in ss.replace(" ", "")
-    assert "qlineargradient" in ss
+    ss = chip.styleSheet().replace(" ", "")
+    assert "rgba(255,255,255,.10)" not in ss
+    qss = (UI / "fixtext.qss").read_text(encoding="utf-8")
+    rule = qss.split("#BookChip {", 1)[1].split("}", 1)[0]
+    assert "qlineargradient" in rule
+    assert chip.property("empty") == "true"
     assert chip.name.text() == "未选择书"
 
 
@@ -54,7 +57,9 @@ def test_empty_state_step7_visual(qapp):
     from fixtext_tokens import c
 
     es = EmptyState("⚡", "还没有可校正的书", "描述")
-    ss = es.styleSheet()
-    assert c("neutral.200") in ss
-    assert "dashed" in ss
-    assert c("neutral.300") not in ss
+    assert es.objectName() == "EmptyState"
+    assert es.styleSheet() == ""
+    qss = (UI / "fixtext.qss").read_text(encoding="utf-8")
+    rule = qss.split("QFrame#EmptyState {", 1)[1].split("}", 1)[0]
+    assert "dashed" in rule
+    assert c("neutral.300") in rule
