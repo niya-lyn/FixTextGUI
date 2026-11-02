@@ -13,3 +13,5 @@ release/
 
 .build_env/
 
+# 忽略 JetBrains IDE 的配置文件夹
+.idea/
