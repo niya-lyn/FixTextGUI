@@ -1216,7 +1216,7 @@ class VocabModule(QWidget):
     def open_add(self):
         if self.dict_ != "custom":
             self.select_dict("custom")
-        modal = Modal(icon="＋", title="新增词条", parent=self)
+        modal = Modal(icon="plus", title="新增词条", parent=self)
         modal.add_note(
             "写入「我的词库」（自定义分级）；加入前自动查重；操作可撤销（同五条安全底线）。", "info")
         word = QLineEdit()
@@ -1656,7 +1656,7 @@ class VocabModule(QWidget):
                         with_undo=added > 0)
             return
         # 有跳过 / 冲突 → 用弹窗把明细一条条列出来
-        m = Modal(icon="ℹ️", title="加入结果（含未加入的词条）", parent=self,
+        m = Modal(icon="info", title="加入结果（含未加入的词条）", parent=self,
                   min_width=720)
         m.add_note(
             f"本次提交 {int(res.get('requested') or 0)} 条："
