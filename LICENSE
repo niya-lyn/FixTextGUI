@@ -1,0 +1,82 @@
+MIT License
+
+Copyright (c) 2026 FixText contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+================================================================================
+选择说明（非许可证正文，发布前请按需删改）
+================================================================================
+
+## 为什么建议 MIT
+
+1. **与词库上游一致。** 出厂词库 `data/rules/`（304,255 条 before/after 规则）
+   由上游 PHP 项目 edennow/fix-text 的 map 词库迁移而来。该上游项目的
+   `src/composer.json` 声明 `"license": "MIT"`，`src/LICENSE` 为
+   "MIT License / Copyright (c) 2025 edennow"。本仓库沿用 MIT，许可兼容链条最干净，
+   不需要为「词库数据」这一体积最大的部分另做授权设计。
+
+2. **依赖侧无冲突。** 运行时依赖只有 PySide6（LGPLv3 / 商业双许可）、lxml（BSD-3）、
+   pyahocorasick（BSD-3）。这三者都能被 MIT 项目分发——PySide6 走 LGPL 的动态链接
+   方式，本仓库未修改 Qt 源码，动态链接 + 保留许可声明即可满足。Go 替换引擎为
+   自研（源码在库内，只依赖 Go 标准库），无外部许可负担。
+
+3. **对使用场景最友好。** 这是一个会以「绿色版 zip」形式被二次搬运的桌面工具，
+   Apache-2.0 的专利授权与变更声明义务、GPL 的传染性都会给分发方增加实际负担；
+   MIT 只要求保留版权与许可声明，最贴合「解压即用、可整体搬走」的分发形态。
+
+4. **简洁、可被企业接受。** MIT 是中文开源社区里最容易被法务快速通过的协议之一，
+   不会因「专利 retaliation 条款」「网络使用即分发」这类条款引入额外审查。
+
+## 若评估后需要改协议，什么情况该换
+
+- **需要专利授权保护**（担心贡献者专利被用于对抗本项目）→ 换 **Apache-2.0**，
+  它在 MIT 基础上加了明示专利许可与 retaliation 条款；代价是必须随分发附
+  `NOTICE` 与修改声明。
+- **需要保证衍生版本同样开源**（不希望有人拿去做闭源商用版）→ 换 **GPL-3.0**。
+  代价是：绿色版 zip 一旦分发就触发完整对应源码的提供义务，与当前「打包成
+  zip 直接发」的分发方式耦合度高，会给发布方新增持续的合规工作量。
+- **词库单独授权**：若上游词库的 MIT 声明在实际场景中不足以支撑分发（例如上游
+  map 词库本身还有未声明的第三方来源），可考虑把 `data/rules/` 拆成独立的数据包，
+  单独标注其许可与来源，代码与数据分层发布。**这一点需要发布方与上游确认，
+  本仓库无法自行认定。**
+
+## 发布前要注意的两点（与 LICENSE 直接相关）
+
+1. **本仓库不含任何在售书籍的正文。** 测试样本全部来自 Project Gutenberg 公版书，
+   其中 `tests/samples/book_public_domain.epub` 由 `tools/build_fixture_epub.py`
+   现场合成；大体积语料与真实书籍一律不进版本库。
+2. **版权行可按需替换。** 上面写的是 `Copyright (c) 2026 FixText contributors`；
+   若要指名实际著作权人（个人姓名或组织名），改这一行即可。
+
+## 第三方与数据来源声明（建议随 LICENSE 一并保留）
+
+| 组件 | 来源 | 许可 |
+|---|---|---|
+| 出厂词库 `data/rules/` | 迁移自 edennow/fix-text 的 PHP map 词库 | MIT（上游声明） |
+| `vendor/epubtext`、`pipeline/vendor/*` | 本仓库自研 | 随本仓库 MIT |
+| Go 替换引擎 `replace_by_go.go` | 本仓库自研，仅用 Go 标准库 | 随本仓库 MIT |
+| 运行时依赖 PySide6 | Qt for Python | LGPLv3 / 商业双许可 |
+| 运行时依赖 lxml | lxml 项目 | BSD-3-Clause |
+| 运行时依赖 pyahocorasick | pyahocorasick 项目 | BSD-3-Clause |
+| 测试样本《吶喊》《聊齋志異》等 | Project Gutenberg | 公版（Public Domain） |
+
+分发绿色版 zip 时，需一并提供上述 LGPL / BSD 组件的许可文本与版权声明
+（PyInstaller 打出的 `_internal/` 内已含部分，发布前应开包核对）。
