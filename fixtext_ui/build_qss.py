@@ -693,9 +693,12 @@ def build() -> str:
     q.append("")
 
     # 空状态卡片（原 EmptyState 外框）+ 图标外环 / 内圆（原 ico_ring / ico 内联）
+    # 虚线 2px 与导入页 #DropZone 同规格：125%/150% 分数缩放下 1px 虚线竖边
+    # 会落分数设备像素被拆两列半强度而不可见，2px（=2.5 物理像素）必有整列
+    # 满强度；1px cosmetic pen 自绘方案因无 AA 圆角断茬被否，回归 QSS。
     q.append("QFrame#EmptyState {")
     q.append(f'    background: {c("neutral.50")};')
-    q.append(f'    border: 1px dashed {c("neutral.300")};')
+    q.append(f'    border: 2px dashed {c("neutral.300")};')
     q.append(f'    border-radius: {RADIUS["lg"]};')
     q.append("}")
     q.append("#EsIcoRing {")

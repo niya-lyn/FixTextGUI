@@ -593,7 +593,7 @@ QFrame#BagChk[on="true"] QLabel#BagChkText {
 
 QFrame#EmptyState {
     background: #F7F8FA;
-    border: 1px dashed #C2CAD6;
+    border: 2px dashed #C2CAD6;
     border-radius: 12px;
 }
 #EsIcoRing {
