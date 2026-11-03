@@ -118,6 +118,8 @@ class OneClickModule(QWidget):
     gotoExport = Signal()
     #: 「去检查页」→ 主窗口切到检查问题（M4-EX.6-R3 摘要分支）
     gotoCheck = Signal()
+    #: 「看看前后对比」→ 主窗口切到前后对比页（V1.1-E2），参数是运行目录
+    gotoCompare = Signal(str)
     #: 本书专有词条就绪（真实词条列表, 书名）→ 交给词库管理页，由用户确认后加入
     bookWordsReady = Signal(object, str)
 
@@ -1066,6 +1068,11 @@ class OneClickModule(QWidget):
         report.clicked.connect(self._goto_export_report)
         acts.addWidget(report)
 
+        cmp_btn = PrimaryButton("🔍 看看前后对比")
+        cmp_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        cmp_btn.clicked.connect(self._goto_compare)
+        acts.addWidget(cmp_btn)
+
         undo = QPushButton("↺ 恢复到校正前")
         undo.setObjectName("BtnOutline")
         undo.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1101,6 +1108,23 @@ class OneClickModule(QWidget):
         return acts
 
     # ------------------------------------------------------------ 专有词条弹窗
+
+    def _goto_compare(self):
+        """打开前后对比页（只读）：左边改前、右边改后，能跳到书上位置。"""
+        run_dir = self._run_dir_of(self._summary)
+        if not run_dir:
+            self._toast("这次校正没留下可比对的内容")
+            return
+        self.gotoCompare.emit(run_dir)
+
+    @staticmethod
+    def _run_dir_of(summary) -> str:
+        """从运行摘要里取运行目录（摘要给的是工作目录，取它上一层）。"""
+        workdir = str((summary or {}).get("workdir") or "")
+        if not workdir:
+            return ""
+        path = Path(workdir)
+        return str(path.parent) if path.name == "work" else workdir
 
     def _goto_export_report(self):
         """替换统计在导出时自动附上（排期 V1.1：报告不做界面呈现）。"""

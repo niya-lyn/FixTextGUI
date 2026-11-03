@@ -63,6 +63,7 @@ from __future__ import annotations
 import json
 import re
 import tempfile
+from bisect import bisect_right
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -437,8 +438,12 @@ class ChapterMap:
                 starts.append(lineno + 1)
 
         self._starts = starts
+        # 全文只切一次：``_chapter_body`` 每章若各自 ``text.split("\n")``，
+        # 大书上就是「章数 × 全文行数」的二次复杂度（20MB / 6000 章实测 81 秒）。
+        # 切片视图与原来等价，行内容不变，只是不再重复切分。
+        all_lines = lines
         for pos, marker in enumerate(markers):
-            body = self._chapter_body(text, pos, starts)
+            body = self._chapter_body(all_lines, pos, starts)
             label = marker.get("label", "") or (labels[pos] if pos < len(labels) else "")
             # 章节标题优先用章内的 chap-title（人读得懂），取不到才退回章标签
             title = self._chapter_title(body) or label
@@ -461,11 +466,17 @@ class ChapterMap:
             except ImportError:  # pragma: no cover
                 pass
 
-    def _chapter_body(self, text: str, pos: int, starts: list[int]) -> str:
+    def _chapter_body(self, lines: list[str] | str, pos: int, starts: list[int]) -> str:
+        """某一章的正文（按标记行号切片）。
+
+        ``lines`` 传**已切好的行列表**；传字符串时自行切分（保留旧调用方式，
+        但大书上会退化到原来的平方级开销，所以内部一律传列表）。
+        """
+        if isinstance(lines, str):
+            lines = lines.split("\n")
         begin = starts[pos] - 1
         end = (starts[pos + 1] - 2) if pos + 1 < len(starts) else None
-        lines = text.split("\n")[begin:end]
-        return "\n".join(lines)
+        return "\n".join(lines[begin:end])
 
     @staticmethod
     def _chapter_title(body: str) -> str:
@@ -475,16 +486,19 @@ class ChapterMap:
         return _TAG_RE.sub("", m.group("body")).strip()
 
     def chapter_of_line(self, line: int) -> int:
-        """行号 → 章节序号（找不到返回 ``-1``）。"""
+        """行号 → 章节序号（找不到返回 ``-1``）。
+
+        用二分而不是线性扫：大书上差异项上万条，逐条线性扫章节表就是
+        「差异项数 × 章节数」的乘法开销。语义与原来的线性扫完全一致——
+        线性扫返回的是「最后一个 start ≤ line 的那一章」，二分取的是同一个位置。
+        """
         if line <= 0 or not self._starts:
             return -1
-        idx = 0
-        for pos, start in enumerate(self._starts):
-            if start <= line:
-                idx = pos
-            else:
-                break
-        return idx
+        # bisect_right - 1 = 最后一个 start ≤ line 的下标
+        pos = bisect_right(self._starts, line) - 1
+        if pos < 0:
+            return 0
+        return pos
 
 
 # ---------------------------------------------------------------------------
@@ -511,48 +525,103 @@ class RuleIndex:
         self.after_rules = list(after_rules)
         self.passes = max(1, int(passes))
         self._by_head: dict[str, list[int]] = {}
+        # 二字索引：把「首字符相同」再细分到「首两字符相同」。
+        # 只按首字符倒排时，一行里每碰到一个高频字，就要把它下面所有多字规则
+        # 逐条 startswith 一遍——20MB 语料实测每 1000 条差异项要 19.54 秒，
+        # 其中 38.9M 次 startswith 全花在「首字相同但后面接不上」的规则上。
+        # 单字规则按字符单列（长度 1 时 startswith 恒真，不必再比），
+        # 多字规则按 (首字, 次字) 分桶：能匹配上的规则必然两字都相同，
+        # 所以只查一个桶不会漏，判定结果与原来逐条 startswith 完全一致。
+        self._single: dict[str, list[int]] = {}
+        self._bigram: dict[str, dict[str, list[int]]] = {}
         for i, word in enumerate(self.before_rules):
-            if word:
-                self._by_head.setdefault(word[0], []).append(i)
+            if not word:
+                continue
+            self._by_head.setdefault(word[0], []).append(i)
+            if len(word) == 1:
+                self._single.setdefault(word[0], []).append(i)
+            else:
+                self._bigram.setdefault(word[0], {}).setdefault(word[1], []).append(i)
 
     def __len__(self) -> int:
         return len(self.before_rules)
 
     # -- 索引 ----------------------------------------------------------- #
     def candidates(self, text: str) -> list[int]:
-        """这一行里出现过的所有规则下标（按首字符倒排后逐位置比对）。"""
+        """这一行里出现过的所有规则下标（按首字符倒排后逐位置比对）。
+
+        与旧实现（每个位置遍历「首字符相同」的全部规则逐条 startswith）
+        判定结果完全一致：多字规则要匹配上，首两字符必然与原文相同，
+        所以按 (首字, 次字) 分桶只会缩小候选，不会漏掉任何一条。
+        """
         found: set[int] = set()
         n = len(text)
+        rules = self.before_rules
+        single = self._single
+        bigram = self._bigram
         for pos in range(n):
-            for i in self._by_head.get(text[pos], ()):
-                word = self.before_rules[i]
-                if word and text.startswith(word, pos):
-                    found.add(i)
+            ch = text[pos]
+            hit = single.get(ch)
+            if hit:
+                found.update(hit)
+            if pos + 1 < n:
+                bucket = bigram.get(ch)
+                if not bucket:
+                    continue
+                for i in bucket.get(text[pos + 1], ()):
+                    if text.startswith(rules[i], pos):
+                        found.add(i)
         return sorted(found)
 
     # -- 重放 ----------------------------------------------------------- #
     def _replace_once(self, text: str, rule_ids: list[int]) -> str:
-        """单遍、不重叠、按给定顺序 first-wins——贴近 ``strings.NewReplacer``。"""
+        """单遍、不重叠、按给定顺序 first-wins——贴近 ``strings.NewReplacer``。
+
+        只在「首字符与当前位置相同」的规则里找：其余规则在这一位必然匹配不上，
+        跳过它们不改变 first-wins 的结果（同一组里相对顺序保持不变）。
+        """
         out: list[str] = []
         i = 0
         n = len(text)
-        order = list(rule_ids)
+        heads: dict[str, list[int]] = {}
+        for rid in rule_ids:
+            word = self.before_rules[rid]
+            if word:
+                heads.setdefault(word[0], []).append(rid)
         while i < n:
-            for rid in order:
+            ch = text[i]
+            for rid in heads.get(ch, ()):
                 word = self.before_rules[rid]
-                if word and text.startswith(word, i):
+                if text.startswith(word, i):
                     out.append(self.after_rules[rid])
                     i += len(word)
                     break
             else:
-                out.append(text[i])
+                out.append(ch)
                 i += 1
         return "".join(out)
 
     def replay(self, text: str, rule_ids: list[int]) -> str:
         current = text
+        if len(rule_ids) == 1:
+            # 单条规则时，逐字符扫描与 str.replace 的非重叠替换完全等价，
+            # 但后者在 C 层跑；归属判定每条差异项都要重放，这里省下的时间很可观。
+            rid = rule_ids[0]
+            word = self.before_rules[rid]
+            if not word:
+                return current
+            after = self.after_rules[rid]
+            for _ in range(self.passes):
+                nxt = current.replace(word, after)
+                if nxt == current:
+                    break
+                current = nxt
+            return current
         for _ in range(self.passes):
-            current = self._replace_once(current, rule_ids)
+            nxt = self._replace_once(current, rule_ids)
+            if nxt == current:
+                break
+            current = nxt
         return current
 
     def attribute(self, before_line: str, after_line: str) -> dict:
