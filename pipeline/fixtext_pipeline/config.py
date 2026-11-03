@@ -137,6 +137,10 @@ class PipelineConfig:
     custom_vocab_path: Path | None = None
     #: 派生规则落点（M3-T3.7）；None = 用产品用户区里的默认位置
     derived_rules_dir: Path | None = None
+    #: 词条禁用集文件（V1.1-T1.1）；None = 用产品用户区里的默认位置。
+    #: 指纹必须把它算进去：改了禁用状态但指纹不变的话，--resume 会把旧
+    #: after 当命中缓存复用（见 stages/replace.py 的 fingerprint）。
+    word_states_path: Path | None = None
     #: 协作式取消（界面注入）：返回 True 表示用户已点取消。
     #: 排版等长循环在章节边界调用；默认 None = 命令行编排器不检查。
     cancel_check: Callable[[], bool] | None = None
@@ -170,6 +174,9 @@ class PipelineConfig:
                                   if self.custom_vocab_path else _vb.default_custom_path())
         self.derived_rules_dir = (Path(self.derived_rules_dir).expanduser().resolve()
                                   if self.derived_rules_dir else _vb.default_derived_dir())
+        from . import word_states as _ws
+        self.word_states_path = (Path(self.word_states_path).expanduser().resolve()
+                                 if self.word_states_path else _ws.default_states_path())
         if self.quotation_rules_path is not None:
             self.quotation_rules_path = Path(self.quotation_rules_path).expanduser().resolve()
         if self.layout_profile not in LAYOUT_PROFILES:

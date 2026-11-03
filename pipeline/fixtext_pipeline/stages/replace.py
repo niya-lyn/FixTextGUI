@@ -10,7 +10,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from .. import bags, vocab_bridge
+from .. import bags, vocab_bridge, word_states
 from ..config import dump_json
 from ..state import sha256_file
 from .base import Stage, StageError
@@ -80,11 +80,22 @@ class ReplaceStage(Stage):
             custom_part = "custom=off"
         else:
             custom_part = "custom=n/a"
+        # V1.1-T1.1：词条禁用集进主轮指纹。改了启用 / 禁用状态 → 指纹变化 →
+        # 断点不复用旧正文（_should_skip 判「输入指纹已变」强制重跑）。
+        if self.round_id == "main":
+            try:
+                words_sha = word_states.effective_disabled_sha(self.cfg.word_states_path)
+            except Exception:
+                words_sha = "missing"
+            words_part = f"words={words_sha}"
+        else:
+            words_part = "words=n/a"
         return self.fingerprint_of(
             f"round={self.round_id}",
             f"input={inp_sha}",
             f"bags={','.join(self.cfg.selected_bags)}",
             custom_part,
+            words_part,
             f"prep={self.cfg.enable_preprocess}",
             f"strict={self.cfg.enable_strict}",
             f"zhuyin={self.cfg.zhuyin_mode}",
