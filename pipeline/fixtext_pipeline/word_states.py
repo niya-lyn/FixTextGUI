@@ -1,4 +1,4 @@
-"""词条启用 / 禁用：管线侧只读视图（V1.1-T1.1）。
+"""词条启用 / 禁用：管线侧只读视图（V1.1-T1.1 · T1.3 增补）。
 
 设计要点（排期 7.4 定稿）：
 
@@ -9,6 +9,9 @@
   不依赖行号或顺序——词库文件重排、恢复默认都不会让禁用状态错位。
 * 管线侧**只读**：``effective_disabled_sha`` 进替换阶段指纹（断点恢复判据），
   保证「改了禁用状态但指纹不变 → 复用旧正文」不可能发生。
+* **T1.3 起，禁用集真正作用于校正结果**：规则合成时（``vocab_bridge.compose``）
+  按内容键剔除禁用词条，出厂侧与自定义侧一视同仁；指纹除禁用集内容外
+  还纳入「实际下发的规则字节」（见 :mod:`vocab_bridge` 的 ``ruleset_sha``）。
 
 本模块与上层 :mod:`fixtext_ui.fixtext_word_states` 是两棵自包含子树各自实现的
 同一份契约（与 ``vocab_bridge`` / ``fixtext_vocab`` 的既有分层一致）：
@@ -24,10 +27,8 @@ from pathlib import Path
 from typing import Iterable
 
 from ._roots import pkg_root
+from .rule_keys import ENTRY_KEY_SEP, entry_key
 from .vocab_bridge import _ui_workspace
-
-#: 词条键分隔符：word 与 value 之间用 NUL，杜绝「词尾+词头」拼出歧义
-ENTRY_KEY_SEP = "\x00"
 
 #: 禁用集可写文件名（落在用户区 ``workspace/vocab/`` 下）
 STATES_FILE_NAME = "word_states.json"
@@ -37,11 +38,8 @@ BUILTIN_STATES_REL = Path("data") / "word_states" / "builtin_states.json"
 
 STATES_VERSION = 1
 
-
-def entry_key(word: str, value: str) -> str:
-    """词条内容键：``sha256(word + NUL + value)`` 的十六进制。"""
-    raw = (str(word) + ENTRY_KEY_SEP + str(value)).encode("utf-8")
-    return hashlib.sha256(raw).hexdigest()
+#: ``ENTRY_KEY_SEP`` / ``entry_key`` 从 :mod:`rule_keys` 直接再导出——
+#: 键的算法只有一份，UI 侧与管线侧的契约用例锁的是这两个名字。
 
 
 def builtin_states_path() -> Path:

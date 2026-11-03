@@ -785,6 +785,9 @@ class OneClickModule(QWidget):
                                if ctx.get("custom_vocab_path") else None),
             derived_rules_dir=(Path(str(ctx["derived_rules_dir"]))
                                if ctx.get("derived_rules_dir") else None),
+            # 词条禁用集（V1.1-T1.3）：显式给，禁用才能作用到本次装载层过滤
+            word_states_path=(Path(str(ctx["word_states_path"]))
+                              if ctx.get("word_states_path") else None),
             # M4-T4.2：本次运行的替换引擎（None = 读配置；降级确认后传 python）
             engine=engine_override,
             # M4-EX.6-R3：高级选项「自动修复引号问题」

@@ -1125,6 +1125,10 @@ class MainWindow(QMainWindow):
             suffix=Path(original).suffix.lower(),
             custom_vocab_path=str(vocab_dir / "custom_vocab.json"),
             derived_rules_dir=str(vocab_dir / "derived_rules"),
+            # 词条禁用集（V1.1-T1.3）：显式指向同一份用户区文件，禁用才能在
+            # 本次校正的装载层过滤里生效（默认值也是这个路径，显式写一次避免
+            # 两处推算规则走散）。
+            word_states_path=str(vocab_dir / "word_states.json"),
             # 工作副本：TXT / EPUB 校正都吃它
             plain_source=str(working),
         )
