@@ -83,3 +83,68 @@ def workdir(tmp_path):
     d = tmp_path / "ws"
     d.mkdir(parents=True, exist_ok=True)
     return d
+
+
+
+# ---------------------------------------------------------------------------
+# 进程级全局状态隔离（V1.1-F1：m5_ex1 分袋 smoke「批量跑挂」的根因修复）
+#
+# 引擎客户端把 subprocess 当**模块级属性**用：
+#   pipeline/vendor/fixtext/engine/client.py → `import subprocess` + `subprocess.run(...)`
+# 而 worker 每跑一次校正，就把这个属性换成「可取消代理」：
+#   fixtext_ui/fixtext_worker.py → `_engine_client.subprocess = _SubprocessProxy(self)`
+# 代理里绑的是那一次 job 的 cancel_requested——**被取消过的 job 永远是 True**，
+# 代理又不会被摘掉，于是留给后面所有用例：之后每一次 Go 引擎调用都会直接抛
+# 「已终止替换引擎」。这正是 m5_ex1 分袋 smoke「单跑过、批量跑挂」的机制。
+#
+# 这里用一条用例级 autouse fixture 给这类进程级全局量做「用例间复位」：
+# 谁污染谁复位，同类测试直接复用这条 fixture，不必各自写清场代码。
+# 复位只动**测试进程内的模块属性**，不碰任何产品逻辑。
+# ---------------------------------------------------------------------------
+
+#: 需要在用例之间复位的进程级全局量：(模块名, 属性名, 出厂值说明)
+#: 出厂值说明只是给人看的，真实复位逻辑在 _reset_process_globals() 里。
+PROCESS_GLOBAL_HOOKS = (
+    ("fixtext.engine.client", "subprocess", "出厂值 = 标准库 subprocess 模块"),
+    ("fixtext.engine.py_engine", "_cancel_check", "出厂值 = None"),
+)
+
+
+def _reset_process_globals() -> list[str]:
+    """把引擎相关的进程级全局量复位到出厂值，返回真正复位过的项。
+
+    只处理已经 import 进 ``sys.modules`` 的模块：引擎模块是靠
+    ``fixtext_pipeline.vendor_bootstrap`` 把 ``pipeline/vendor`` 塞进
+    ``sys.path`` 才导得进来的，测试收集阶段未必已经 import，
+    所以这里查 ``sys.modules`` 而不是直接 import（避免在 conftest 里
+    提前把 vendor 路径写进 sys.path，影响其它用例的导入顺序）。
+    """
+    import subprocess as _stdlib_subprocess
+
+    restored: list[str] = []
+
+    client = sys.modules.get("fixtext.engine.client")
+    if client is not None and getattr(client, "subprocess", None) is not _stdlib_subprocess:
+        client.subprocess = _stdlib_subprocess
+        restored.append("fixtext.engine.client.subprocess")
+
+    py_engine = sys.modules.get("fixtext.engine.py_engine")
+    if py_engine is not None:
+        setter = getattr(py_engine, "set_cancel_check", None)
+        if callable(setter) and getattr(py_engine, "_cancel_check", None) is not None:
+            setter(None)
+            restored.append("fixtext.engine.py_engine._cancel_check")
+
+    return restored
+
+
+@pytest.fixture(autouse=True)
+def _isolate_process_globals():
+    """每条用例前后各复位一次进程级全局量。
+
+    用例开始前复位：保证这条用例看到的是「出厂状态」，哪怕上一条用例崩了。
+    用例结束后复位：这条用例留下的污染不带给下一条。
+    """
+    _reset_process_globals()
+    yield
+    _reset_process_globals()

@@ -56,17 +56,22 @@ def _click(qapp, widget):
 
 
 def _row_checkboxes(mod):
-    """行内勾选框（排除表头的全选与「显示设计依据」）。
+    """行内勾选框（排除表头那一行的全选）。
 
     不能用 ``isVisible()``：用例里面板没 ``show()``，离屏下所有控件都报不可见。
     改用「没被显式隐藏」判定——被换页 / 清空时表体控件会 ``setParent(None)``，
-    此时 ``findChildren`` 也就找不到了，所以这里只排除那两个特定控件即可。
+    此时 ``findChildren`` 也就找不到了，所以这里只排除顶层那几个控件即可。
+
+    排除名单按「属性存在才算」取：原来还有一个「显示设计依据」的勾选框要排除，
+    但它已经在 M5-EX.2（BUG-2）里从界面上删掉了，直接取 ``mod.basis_cb``
+    会 AttributeError。改成「取不到就不排除」，界面上以后再增减顶层勾选框，
+    这条用例不用跟着改。
     """
     from PySide6.QtWidgets import QCheckBox
 
+    excluded = {id(getattr(mod, name, None)) for name in ("_chk_all", "basis_cb")}
     return [c for c in mod.findChildren(QCheckBox)
-            if c is not mod._chk_all and c is not mod.basis_cb
-            and not c.isHidden()]
+            if id(c) not in excluded and not c.isHidden()]
 
 
 def _button(mod_or_dlg, text: str):

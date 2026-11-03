@@ -1,0 +1,8 @@
+FAILED tests/test_ex4d_topbar_popup_anchor.py::test_more_menu_items_still_work
+FAILED tests/test_m5_ex4_1_layout.py::test_export_actions_before_target
+FAILED tests/test_m5_ex4_1_layout.py::test_import_no_empty_state_safety_after_shelf
+FAILED tests/test_t31_vocab_store.py::test_search_scoped_to_tier
+FAILED tests/test_t31_vocab_ui.py::test_module_shows_real_builtin_count
+FAILED tests/test_t31_vocab_ui.py::test_search_hit_count_matches_data_layer
+FAILED tests/test_t32_vocab_safety.py::test_custom_and_builtin_are_physically_separate
+FAILED tests/test_t37_vocab_bridge.py::test_custom_word_takes_effect_in_real_correction

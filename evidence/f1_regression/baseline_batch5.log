@@ -1,0 +1,17 @@
+.F.F.........................F.................................F........ [ 58%]
+....................................................                     [100%]
+=================================== FAILURES ===================================
+/home/gem/.aily/workdir/task_7703876680796687351/w/tests/test_t31_vocab_ui.py:75: assert 302957 == 304255
+/home/gem/.aily/workdir/task_7703876680796687351/w/tests/test_t31_vocab_ui.py:100: assert 18 == 9
+/opt/python3.12/lib/python3.12/pathlib.py:1013: IsADirectoryError: [Errno 21] Is a directory: '/home/gem/.aily/workdir/task_7703876680796687351/w/data/rules/bags'
+/home/gem/.aily/workdir/task_7703876680796687351/w/tests/test_t37_vocab_bridge.py:194: KeyError: 'applied_words'
+=========================== short test summary info ============================
+FAILED tests/test_t31_vocab_ui.py::test_module_shows_real_builtin_count - ass...
+FAILED tests/test_t31_vocab_ui.py::test_search_hit_count_matches_data_layer
+FAILED tests/test_t32_vocab_safety.py::test_custom_and_builtin_are_physically_separate
+FAILED tests/test_t37_vocab_bridge.py::test_custom_word_takes_effect_in_real_correction
+4 failed, 120 passed in 86.47s (0:01:26)
+
+real	1m28.271s
+user	0m39.377s
+sys	0m3.125s
