@@ -252,6 +252,7 @@ class CorrectionJob:
                  title: str = "", author: str = "", source_epub: Path | None = None,
                  custom_vocab_path: Path | None = None,
                  derived_rules_dir: Path | None = None,
+                 word_states_path: Path | None = None,
                  engine: str | None = None,
                  auto_fix_quotes: bool = False,
                  quotation_rules_path: Path | None = None,
@@ -283,6 +284,9 @@ class CorrectionJob:
         #: 测试 / 便携场景可指到临时子树，绝不碰交付包自带的用户区。
         self.custom_vocab_path = Path(custom_vocab_path) if custom_vocab_path else None
         self.derived_rules_dir = Path(derived_rules_dir) if derived_rules_dir else None
+        #: 词条禁用集文件（V1.1-T1.3）。None = 产品里 `workspace/vocab/word_states.json`；
+        #: 测试 / 隔离场景可指到临时文件，这样「禁用一条词」能真正作用到本次运行。
+        self.word_states_path = Path(word_states_path) if word_states_path else None
         #: 本次运行的替换引擎（M4-T4.2）。None = 启动时读配置键 ``engine``；
         #: 界面降级确认后显式传 ``python``（只本次生效，不写回设置）。
         self.engine = engine
@@ -439,6 +443,8 @@ class CorrectionJob:
             # 自定义词生效（M3-T3.7）：把「我的词库」交给替换阶段合成派生规则
             custom_vocab_path=self.custom_vocab_path,
             derived_rules_dir=self.derived_rules_dir,
+            # 词条禁用（V1.1-T1.3）：禁用集进装载层过滤 + 阶段指纹
+            word_states_path=self.word_states_path,
             # 排版章循环协作取消（P1-7）
             cancel_check=lambda: self.cancel_requested,
             # M4-EX.6-R3：词替换后可选自动修引号（与检查页共用规则文件）

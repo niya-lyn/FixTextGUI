@@ -107,8 +107,16 @@ def test_reexport_after_restart_matches_baseline(tmp_path):
     assert derived["base_rules"] == sum(counts[b] for b in expect_bags), (
         f"规则池 {derived['base_rules']} ≠ 默认袋之和 "
         f"{sum(counts[b] for b in expect_bags)}")
-    assert rep["rules"] == derived["base_rules"], (
-        f"引擎载入 {rep['rules']} ≠ 规则池 {derived['base_rules']}")
+    # V1.1-T1.3：出厂初始禁用集里有一条落在默认袋（孤儿词条），装载层过滤后
+    # 引擎收的是 base_kept 而不是 base_rules。这里守住「袋之和 - 被禁用的 =
+    # 引擎载入」这条恒等式，而不是把两个数写成相等。
+    assert derived["total_rules"] == (
+        derived["base_rules"] - derived["disabled_base_applied"]
+    ), (
+        f"下发条数 {derived['total_rules']} ≠ 规则池 {derived['base_rules']} "
+        f"减去被禁用 {derived['disabled_base_applied']}")
+    assert rep["rules"] == derived["total_rules"], (
+        f"引擎载入 {rep['rules']} ≠ 实际下发 {derived['total_rules']}")
 
     hits = summary["hits"]
     assert isinstance(hits, int) and hits > 0, f"命中数应为正整数：{hits!r}"

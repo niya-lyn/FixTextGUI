@@ -128,30 +128,35 @@ def write_round_rules(
     custom_path: Path | str | None = None,
     include_custom: bool = False,
     root: Path | None = None,
+    disabled_keys: Iterable[str] | None = None,
 ) -> dict[str, Any]:
-    """写出一轮替换用的 before/after；主轮可 include_custom。"""
+    """写出一轮替换用的 before/after；主轮可 include_custom。
+
+    ``disabled_keys`` 是**有效禁用集**（词条内容键）。这一层是规则真正下发到
+    引擎前的最后一站（``ReplaceStage._prepare_rules`` 的出口），所以过滤就
+    落在这里：**不论主轮 / 预处理 / 严格 / 注音，不论带不带自定义词**，
+    凡命中的词条都不进派生文件。``None`` 与空集都表示「没有禁用」，
+    此时输出与 T1.2 逐字节一致（内置行为不变）。
+    """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    off = frozenset(disabled_keys or ())
     before, after = concat_bags(bag_ids, root)
     if include_custom:
         entries, err = vocab_bridge.load_custom_entries(custom_path) if custom_path else ([], "")
-        composed = vocab_bridge.compose(before, after, entries)
+        composed = vocab_bridge.compose(before, after, entries, disabled_keys=off)
         before = composed["before"]
         after = composed["after"]
         stats = composed["stats"]
         custom_error = err
     else:
-        stats = dict(
-            base_rules=len(before),
-            custom_input=0,
-            custom_applied=0,
-            total_rules=len(before),
-            skipped_empty=[],
-            skipped_identity=[],
-            skipped_duplicate=[],
-            short_custom=[],
-            applied_words=[],
-        )
+        # 不带自定义词也要过滤出厂侧——禁用一条出厂词条同样必须生效。
+        composed = vocab_bridge.compose(
+            before, after, [], disabled_keys=off)
+        before = composed["before"]
+        after = composed["after"]
+        stats = composed["stats"]
+        stats.update(custom_input=0, custom_applied=0)
         custom_error = ""
 
     b_path = out / vocab_bridge.DERIVED_BEFORE
@@ -165,6 +170,10 @@ def write_round_rules(
         bag_ids=list(bag_ids),
         include_custom=bool(include_custom),
         custom_error=custom_error,
+        disabled_sha=vocab_bridge.disabled_sha(off),
+        before_sha256=vocab_bridge.sha256_bytes(raw_b),
+        after_sha256=vocab_bridge.sha256_bytes(raw_a),
+        ruleset_sha256=vocab_bridge.ruleset_sha(before, after),
         before_path=str(b_path),
         after_path=str(a_path),
         **stats,

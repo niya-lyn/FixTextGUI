@@ -41,6 +41,8 @@ import time
 from pathlib import Path
 from typing import Any, Iterable
 
+from .rule_keys import entry_key
+
 #: 派生规则文件名（与出厂同名，但落在用户区，不是同一棵树）
 DERIVED_BEFORE = "before.json"
 DERIVED_AFTER = "after.json"
@@ -136,8 +138,19 @@ def load_custom_entries(path: Path | str) -> tuple[list[dict], str]:
 # ---------------------------------------------------------------------------
 
 def compose(before: Iterable[str], after: Iterable[str],
-            entries: Iterable[dict]) -> dict:
+            entries: Iterable[dict],
+            disabled_keys: Iterable[str] | None = None) -> dict:
     """把通用词库与自定义词合成为一份派生规则（纯计算，不落盘）。
+
+    ``disabled_keys`` 是**有效禁用集**（词条内容键 ``sha256(word+NUL+value)``，
+    见 :mod:`rule_keys`）。传了它就按内容键把两侧命中的规则整条剔除——
+    **出厂侧与自定义侧一视同仁**：用户在词库里点了「禁用」，这条词条就既不
+    占住原词、也不产生替换，跟它来自出厂词库还是自己加的无关。
+
+    不传（``None``）等价于空集——旧调用方的行为逐字节不变。传空集合而语义
+    想表达「全部启用」也可以，两者结果相同。注意这跟「没接过滤」在
+    **统计字段**上是可区分的（``disabled_applied`` / ``disabled_custom``
+    会如实给出 0 与被检查的条数）。
 
     返回 ``before`` / ``after`` 两个等长数组与一份统计，统计里的每个"跳过"
     都带原因——不静默丢条。
@@ -150,10 +163,25 @@ def compose(before: Iterable[str], after: Iterable[str],
     if not base_before:
         raise DerivedRulesError("通用词库为空，无法生成替换规则")
 
+    off = frozenset(disabled_keys or ())
+
+    # ---- 1. 先过滤出厂侧：命中禁用键的规则整条不进派生文件 ----
+    kept_base_before: list[str] = []
+    kept_base_after: list[str] = []
+    disabled_base: list[dict] = []
+    for w, v in zip(base_before, base_after):
+        if off and entry_key(w, v) in off:
+            disabled_base.append(dict(word=w, value=v,
+                                      reason="该词条在词库里被禁用"))
+            continue
+        kept_base_before.append(w)
+        kept_base_after.append(v)
+
     picked: list[tuple[str, str, int]] = []
     skipped_empty: list[dict] = []
     skipped_identity: list[dict] = []
     skipped_duplicate: list[dict] = []
+    disabled_custom: list[dict] = []
     seen: dict[str, dict] = {}
 
     # 长词优先：同前缀时先给长词机会，避免被短自定义词整段吃掉
@@ -177,6 +205,12 @@ def compose(before: Iterable[str], after: Iterable[str],
             skipped_identity.append(dict(word=word, value=value, id=rid,
                                          reason="原词与替换值相同，不会产生任何修改"))
             continue
+        # 自定义侧同样受禁用集约束：界面上「我的词库」也能逐条禁用，
+        # 禁用了就不该再前置进规则（否则等于没禁）。
+        if off and entry_key(word, value) in off:
+            disabled_custom.append(dict(word=word, value=value, id=rid,
+                                        reason="该词条在词库里被禁用"))
+            continue
         if word in seen:
             kept = seen[word]
             skipped_duplicate.append(dict(
@@ -187,8 +221,8 @@ def compose(before: Iterable[str], after: Iterable[str],
         seen[word] = dict(word=word, value=value, id=rid)
         picked.append((word, value, rid if isinstance(rid, int) else 0))
 
-    new_before = [w for w, _v, _i in picked] + base_before
-    new_after = [v for _w, v, _i in picked] + base_after
+    new_before = [w for w, _v, _i in picked] + kept_base_before
+    new_after = [v for _w, v, _i in picked] + kept_base_after
 
     short_words = [w for w, _v, _i in picked if len(w) <= 1]
     return dict(
@@ -196,6 +230,11 @@ def compose(before: Iterable[str], after: Iterable[str],
         after=new_after,
         stats=dict(
             base_rules=len(base_before),
+            base_kept=len(kept_base_before),
+            disabled_keys_checked=len(off),
+            disabled_base_applied=len(disabled_base),
+            disabled_custom_applied=len(disabled_custom),
+            disabled_applied=len(disabled_base) + len(disabled_custom),
             custom_input=len([e for e in entries if isinstance(e, dict)]),
             custom_applied=len(picked),
             total_rules=len(new_before),
@@ -213,22 +252,58 @@ def compose(before: Iterable[str], after: Iterable[str],
 # ---------------------------------------------------------------------------
 
 def compose_key(base_before_raw: bytes, base_after_raw: bytes,
-                custom_raw: bytes) -> str:
-    """合成键：三份输入的 sha 揉在一起，输入一变键就变。"""
+                custom_raw: bytes, disabled_sha: str = "") -> str:
+    """合成键：三份输入的 sha 揉在一起，再把禁用集指纹揉进去。
+
+    禁用集一变键就变——否则「只改了启用/禁用」时缓存会误判命中，
+    派生文件不重写，禁用就白点了（T1.3 的核心回归点）。
+    """
     h = hashlib.sha256()
     for part in (base_before_raw, base_after_raw, custom_raw):
         h.update(hashlib.sha256(part).digest())
+    h.update(str(disabled_sha or "").encode("utf-8"))
+    return h.hexdigest()
+
+
+def canonical_disabled(disabled_keys: Iterable[str] | None) -> bytes:
+    """禁用集的规范字节（键排序 + 紧凑 JSON）。
+
+    刻意不 import ``word_states``（那会形成循环依赖），只按同一份格式复算；
+    ``tests/test_t13_disabled_filter.py`` 有对拍用例锁住两处一致。
+    """
+    obj = {"version": 1, "disabled": sorted(set(disabled_keys or ()))}
+    return json.dumps(obj, ensure_ascii=True, separators=(",", ":")).encode("utf-8") + b"\n"
+
+
+def disabled_sha(disabled_keys: Iterable[str] | None) -> str:
+    """禁用集指纹（空集也给出确定值，便于进合成键与阶段指纹）。"""
+    return hashlib.sha256(canonical_disabled(disabled_keys)).hexdigest()
+
+
+def ruleset_sha(before: Iterable[str], after: Iterable[str]) -> str:
+    """**实际下发规则集**的指纹：对即将交给引擎的两份数组取 sha。
+
+    阶段指纹里带它，让「指纹」与「真正进引擎的规则」绑死：只改禁用集而规则
+    没变（禁用了一条本就不下发的词）时规则指纹不变；反过来规则指纹变了，
+    就一定有一次真实的规则变化。
+    """
+    h = hashlib.sha256()
+    h.update(json.dumps(list(before), ensure_ascii=False).encode("utf-8"))
+    h.update(b"\x00")
+    h.update(json.dumps(list(after), ensure_ascii=False).encode("utf-8"))
     return h.hexdigest()
 
 
 def write_derived_rules(base_before: Path | str, base_after: Path | str,
                         custom_path: Path | str | None,
-                        out_dir: Path | str) -> dict:
+                        out_dir: Path | str,
+                        disabled_keys: Iterable[str] | None = None) -> dict:
     """生成派生规则文件（落在 ``out_dir``），返回一份可直接进报告的摘要。
 
     幂等：三份输入都没变时复用已有文件，不重写（派生目录不会被无意义的
-    写操作搅得时间戳乱跳）。返回的 ``before_path`` / ``after_path`` 就是
-    替换阶段应当使用的规则文件。
+    写操作搅得时间戳乱跳）。``disabled_keys`` 的有效禁用集**同时**进合成键
+    与规则合成——禁用了就要重写，不能被缓存挡住，否则禁用白点一次。
+    返回的 ``before_path`` / ``after_path`` 就是替换阶段应当使用的规则文件。
     """
     base_before = Path(base_before)
     base_after = Path(base_after)
@@ -244,7 +319,9 @@ def write_derived_rules(base_before: Path | str, base_after: Path | str,
     if custom_raw is None:
         custom_raw = b""          # 没有自定义词库 = 空输入，不是错误
 
-    key = compose_key(before_raw, after_raw, custom_raw)
+    off = frozenset(disabled_keys or ())
+    off_sha = disabled_sha(off)
+    key = compose_key(before_raw, after_raw, custom_raw, off_sha)
     meta_path = out / DERIVED_META
     d_before = out / DERIVED_BEFORE
     d_after = out / DERIVED_AFTER
@@ -252,6 +329,7 @@ def write_derived_rules(base_before: Path | str, base_after: Path | str,
     cached = _read_meta(meta_path)
     reusable = (
         cached.get("compose_key") == key
+        and cached.get("disabled_sha") == off_sha
         and d_before.is_file() and d_after.is_file()
         and cached.get("derived_before_sha256") == sha256_file(d_before)
         and cached.get("derived_after_sha256") == sha256_file(d_after)
@@ -267,7 +345,7 @@ def write_derived_rules(base_before: Path | str, base_after: Path | str,
     base_a = _load_string_array(base_after, "通用词库（替换后）")
     entries, custom_error = load_custom_entries(custom_path) if custom_path else ([], "")
 
-    composed = compose(base_b, base_a, entries)
+    composed = compose(base_b, base_a, entries, disabled_keys=off)
     new_before = composed["before"]
     new_after = composed["after"]
 
@@ -279,7 +357,7 @@ def write_derived_rules(base_before: Path | str, base_after: Path | str,
     meta = dict(
         product="FixText",
         kind="derived_rules",
-        version=1,
+        version=2,                     # v2：规则合成开始吃禁用集（T1.3）
         compose_key=key,
         generated_at=time.strftime("%Y-%m-%dT%H:%M:%S"),
         base_before=str(base_before),
@@ -289,6 +367,8 @@ def write_derived_rules(base_before: Path | str, base_after: Path | str,
         custom_source=str(custom_path) if custom_path else "",
         custom_sha256=sha256_bytes(custom_raw) if custom_raw else "",
         custom_error=custom_error,
+        disabled_sha=off_sha,
+        ruleset_sha256=ruleset_sha(new_before, new_after),
         derived_before=str(d_before),
         derived_after=str(d_after),
         derived_before_sha256=sha256_bytes(raw_before),

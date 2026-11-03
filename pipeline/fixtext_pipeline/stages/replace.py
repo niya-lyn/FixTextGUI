@@ -90,12 +90,17 @@ class ReplaceStage(Stage):
             words_part = f"words={words_sha}"
         else:
             words_part = "words=n/a"
+        # V1.1-T1.3：把「实际下发规则集」的指纹也揉进来。words= 只说明禁用集
+        # 是什么，说明不了引擎真少收了哪几条；规则集指纹才把指纹与行为绑死
+        # （预处理 / 严格 / 注音三轮同样受禁用影响，所以四轮都带）。
+        ruleset_part = f"ruleset={self.dispatched_ruleset_sha()}"
         return self.fingerprint_of(
             f"round={self.round_id}",
             f"input={inp_sha}",
             f"bags={','.join(self.cfg.selected_bags)}",
             custom_part,
             words_part,
+            ruleset_part,
             f"prep={self.cfg.enable_preprocess}",
             f"strict={self.cfg.enable_strict}",
             f"zhuyin={self.cfg.zhuyin_mode}",
@@ -103,19 +108,67 @@ class ReplaceStage(Stage):
             f"engine={self.cfg.engine}",
         )
 
+    def _effective_disabled(self) -> frozenset[str]:
+        """本轮要排除的词条禁用集（内容键）。
+
+        V1.1-T1.3：禁用必须在装载层真正生效——`write_round_rules` 会把这份
+        集合交给 `vocab_bridge.compose()` 过滤出厂侧与自定义侧，禁用词条不再
+        出现在下发给引擎的派生规则里。读盘失败按「空集」处理而不是中断校正：
+        禁用是可选增强，缺文件时行为回到 T1.2（全量下发）。
+        """
+        try:
+            return frozenset(
+                word_states.effective_disabled(self.cfg.word_states_path)
+            )
+        except Exception:
+            return frozenset()
+
+    def _dispatch_inputs(self) -> tuple[list[str], list[dict]]:
+        """本轮下发前的 (袋 id, 自定义词条)。与 `_prepare_rules` 保持同源。"""
+        if self.round_id in ("preprocess", "strict", "zhuyin"):
+            return [self.round_id], []
+        ids = bags.main_bag_ids(self.cfg.selected_bags)
+        include_custom = "custom" in self.cfg.selected_bags
+        entries: list[dict] = []
+        if include_custom and self.cfg.custom_vocab_path is not None:
+            entries, _err = vocab_bridge.load_custom_entries(
+                self.cfg.custom_vocab_path)
+        return ids, entries
+
+    def dispatched_ruleset_sha(self) -> str:
+        """**实际会下发**的规则集指纹（不出错就不该与落盘结果不一致）。
+
+        V1.1-T1.3 的指纹联动：`words=` 只证明「禁用集是什么」，不能证明
+        「引擎真的少收了哪几条」。把规则集指纹也揉进阶段指纹后，指纹与行为
+        绑死：只要下发的规则变了，指纹一定变，`--resume` 不会拿旧正文当命中。
+        """
+        try:
+            bag_ids, entries = self._dispatch_inputs()
+            base_before, base_after = bags.concat_bags(bag_ids)
+            composed = vocab_bridge.compose(
+                base_before, base_after, entries,
+                disabled_keys=self._effective_disabled())
+            return vocab_bridge.ruleset_sha(composed["before"], composed["after"])
+        except Exception:
+            return "missing"
+
     def _prepare_rules(self) -> dict[str, Any]:
         derived_root = Path(self.cfg.derived_rules_dir) / f"round_{self.round_id}"
+        off = self._effective_disabled()
         if self.round_id == "preprocess":
             return bags.write_round_rules(
-                ["preprocess"], derived_root, include_custom=False
+                ["preprocess"], derived_root, include_custom=False,
+                disabled_keys=off,
             )
         if self.round_id == "strict":
             return bags.write_round_rules(
-                ["strict"], derived_root, include_custom=False
+                ["strict"], derived_root, include_custom=False,
+                disabled_keys=off,
             )
         if self.round_id == "zhuyin":
             return bags.write_round_rules(
-                ["zhuyin"], derived_root, include_custom=False
+                ["zhuyin"], derived_root, include_custom=False,
+                disabled_keys=off,
             )
         # main
         ids = bags.main_bag_ids(self.cfg.selected_bags)
@@ -125,6 +178,7 @@ class ReplaceStage(Stage):
             derived_root,
             custom_path=self.cfg.custom_vocab_path if include_custom else None,
             include_custom=include_custom,
+            disabled_keys=off,
         )
 
     def _replace_count(self) -> int:
@@ -265,6 +319,11 @@ class ReplaceStage(Stage):
                 for k in (
                     "bag_ids", "base_rules", "custom_input", "custom_applied",
                     "total_rules", "custom_error", "include_custom",
+                    # V1.1-T1.3：禁用过滤的可核对字段——下发前的池子、被剔除
+                    # 的条数、以及实际下发规则集的指纹（证据只认这些数）。
+                    "base_kept", "disabled_keys_checked",
+                    "disabled_base_applied", "disabled_custom_applied",
+                    "disabled_applied", "disabled_sha", "ruleset_sha256",
                 )
             },
             "engine": engine_kind,
