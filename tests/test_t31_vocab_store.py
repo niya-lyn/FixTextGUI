@@ -74,18 +74,51 @@ def test_search_hits_real_builtin_data(builtin_store: VocabStore):
 
 
 def test_search_scoped_to_tier(builtin_store: VocabStore):
-    """分级检索按分级码过滤，三个分级之和等于内置总数。"""
+    """分级检索按分级码过滤：界面上挂着的各分级之和 = 内置可浏览总数。
+
+    V1.1-F3 修订（原断言按 "b1 + b2 + b3" 写死 304,255 / 299,114 / 893 / 4,248）：
+    ``b2``（标点规范）在 M5-QC.2 ``18a1a7c`` 被移除——标点已迁排版、DNA 里不再
+    挂这个分级（``TIER_NAMES`` / ``BAG_TO_TIER`` / ``TIER_TO_BYTE`` 三处表里
+    的 b2 条目一并删掉），词库展示也从「flat 五件套」改读按袋目录
+    （M5-EX.1 ``21cb712``）。于是「三个分级」这个前提本身不成立了。
+
+    新口径用**可达分级**（``BAG_TO_TIER`` 的取值集合，共 12 个）：
+    它们之和等于 ``builtin_total``；磁盘上 304,255 条里另有
+    ``punctuation`` / ``postfix`` / ``temp`` 三袋界面上不挂（1,296 + 1 + 1
+    = 1,298 条），差额就是这三袋。分级过滤与「各分级之和 = 全库」两条语义
+    照旧验，且不写死任何数字——全部从真实数据与 manifest 实算。
+    """
+    from fixtext_ui.fixtext_vocab import BAG_TO_TIER
+
+    rule_counts = {b["id"]: b["rule_count"] for b in
+                   builtin_store.builtin.meta["bags"]}
+    reachable = sorted(set(BAG_TO_TIER.values()))
     counts = builtin_store.counts()
-    assert counts["b1"] + counts["b2"] + counts["b3"] == 304255
-    assert counts["b1"] == 299114 and counts["b2"] == 893 and counts["b3"] == 4248
-    total_b2, _ = builtin_store.query("，", scope="b2", limit=5)
-    assert 0 <= total_b2 <= counts["b2"]
-    # 全库命中 = 各分级命中之和
+
+    # ① 可达分级之和 = 内置可浏览总数（不写死数字，两边独立算）
+    assert sum(counts[t] for t in reachable) == builtin_store.builtin_total
+
+    # ② 磁盘总数 = 可达之和 + 界面上不挂的袋之和（差额有明确出处）
+    hidden = sorted(set(rule_counts) - set(BAG_TO_TIER))
+    assert sum(rule_counts.values()) == (
+        builtin_store.builtin_total + sum(rule_counts[b] for b in hidden))
+    assert hidden == ["postfix", "punctuation", "temp"]
+
+    # ③ 每个可达分级的条数 = manifest 里对应袋的条数（分级过滤真的按袋生效）
+    for bag_id, tier in BAG_TO_TIER.items():
+        assert counts[tier] == rule_counts[bag_id], f"{bag_id} 袋条数对不上"
+
+    # ④ 任取一个分级：检索命中数受该分级条数约束，且不比全库多
+    sample_tier = "b1"
+    sample_total, _ = builtin_store.query("，", scope=sample_tier, limit=5)
+    assert 0 <= sample_total <= counts[sample_tier]
+
+    # ⑤ 全库命中 = 各可达分级命中之和（含大小写不敏感口径）
     q = "好象"
     all_total, _ = builtin_store.query(q, scope="builtin", limit=5)
-    parts = sum(builtin_store.builtin.search_count(q, dict_code=c)
-                for c in ("b1", "b2", "b3"))
-    assert all_total == parts
+    parts = sum(builtin_store.builtin.search_count(q, dict_code=t)
+                for t in reachable)
+    assert all_total == parts > 0
 
 
 # ---------------------------------------------------------------------------

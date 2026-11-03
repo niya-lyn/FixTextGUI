@@ -191,7 +191,19 @@ def test_custom_word_takes_effect_in_real_correction(corpus, vocab, tmp_path):
     assert after_text.count("萧衍") == 0, "自定义词没生效：原词仍在正文里"
     assert after_text.count("萧彦") == 6, "替换值没有写进正文"
     assert rep["derived_rules"]["custom_applied"] == 1
-    assert rep["derived_rules"]["applied_words"] == [
+    # V1.1-F3 修订：``applied_words`` 已不再写进 ``replace_report.json``。
+    # M5-EX.1 ``21cb712`` 把分袋多轮改成「每轮一个派生目录」
+    # （``derived_rules_dir/round_<id>/``），同时把报告里的派生字段收窄成
+    # ``bag_ids / base_rules / custom_input / custom_applied / total_rules /
+    # custom_error / include_custom`` 七项——逐条明细移到派生目录自己的
+    # ``round_meta.json``（``bags.write_round_rules`` 落盘的同一份 stats）。
+    # 所以核对明细要去派生目录读，不是报告里读；语义（哪一条自定义词生效）
+    # 一模一样，只是换了落点。分层证据：报告 = 本轮摘要，round_meta = 明细。
+    meta_main = (tmp_path / "derived" / "round_main" / "round_meta.json")
+    assert meta_main.is_file(), "主轮派生目录必须留下自己的元数据"
+    derived_meta = json.loads(meta_main.read_text(encoding="utf-8"))
+    assert derived_meta["custom_applied"] == 1
+    assert derived_meta["applied_words"] == [
         {"word": "萧衍", "value": "萧彦", "id": 1}]
     # 命中数按上游 diff 口径统计（同上下文合并计数），只校验有命中且词条对得上
     assert summary["hits"] >= 1

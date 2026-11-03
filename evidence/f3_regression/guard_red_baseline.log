@@ -1,0 +1,18 @@
+FF                                                                       [100%]
+=================================== FAILURES ===================================
+___________________ test_cancelled_job_hands_subprocess_back ___________________
+tests/test_f3_engine_globals.py:130: in test_cancelled_job_hands_subprocess_back
+    assert _restored(), (
+E   AssertionError: 取消后的 job 必须把 fixtext.engine.client.subprocess 还原回标准库模块，否则代理里那个已置位的取消标记会一直跟着整个进程
+E   assert False
+E    +  where False = _restored()
+___________________ test_completed_job_hands_subprocess_back ___________________
+tests/test_f3_engine_globals.py:147: in test_completed_job_hands_subprocess_back
+    assert _restored(), (
+E   AssertionError: 跑完的 job 也必须把 subprocess 还原回标准库模块——代理不摘掉，后续直调引擎就会读到那次 job 的取消标记
+E   assert False
+E    +  where False = _restored()
+=========================== short test summary info ============================
+FAILED tests/test_f3_engine_globals.py::test_cancelled_job_hands_subprocess_back
+FAILED tests/test_f3_engine_globals.py::test_completed_job_hands_subprocess_back
+2 failed in 5.01s

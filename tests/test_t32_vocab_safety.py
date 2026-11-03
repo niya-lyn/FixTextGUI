@@ -359,17 +359,35 @@ def test_restore_default_ui_two_step(mod):
 # ---------------------------------------------------------------------------
 
 def test_custom_and_builtin_are_physically_separate(store):
+    """自定义词库与内置词库物理分离：写自定义，内置目录一个字节都不许变。
+
+    V1.1-F3 修订：原实现把 ``builtin_dir.glob("*")`` 的**每一项**（含子目录）
+    直接喂给 ``_sha``。M5-EX.1 ``21cb712`` 起 ``data/rules`` 下多了按袋目录
+    ``bags/``（15 袋 + manifest），于是 ``glob`` 命中一个目录 →
+    ``IsADirectoryError``。这不是产品坏了，是取指纹的写法没跟上目录结构。
+
+    修订后改为：递归枚举**内置词库目录下的所有普通文件**（含 ``bags/`` 里
+    每一袋的 before/after/meta）逐个取 sha，覆盖面比原来更大——原来只扫
+    顶层，现在连分袋数据一起锁住。断言语义不变。
+    """
+    def _all_file_shas(root: Path) -> dict[str, str]:
+        return {
+            str(p.relative_to(root)): _sha(p)
+            for p in sorted(root.rglob("*")) if p.is_file()
+        }
+
     custom_dir = store.custom.path.parent
     builtin_dir = store.builtin.dir
     assert custom_dir != builtin_dir
     assert builtin_dir.is_dir()
-    # 自定义写入不碰内置任何文件
-    builtin_before = {n: _sha(builtin_dir / n) for n in sorted(
-        p.name for p in builtin_dir.glob("*"))}
+
+    builtin_before = _all_file_shas(builtin_dir)
+    assert builtin_before, "内置词库目录里应当有真实文件"
+    assert any(k.startswith("bags/") for k in builtin_before), (
+        "内置词库按袋存放，指纹必须覆盖到 bags/ 内部")
     store.add_entry(word="甲", value="甲替", typ="错词校正")
-    builtin_after = {n: _sha(builtin_dir / n) for n in sorted(
-        p.name for p in builtin_dir.glob("*"))}
-    assert builtin_before == builtin_after
+    builtin_after = _all_file_shas(builtin_dir)
+    assert builtin_before == builtin_after, "写自定义词库不该改动内置任何文件"
 
 
 def test_builtin_factory_files_never_rewritten(store):

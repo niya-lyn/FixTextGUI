@@ -1,0 +1,14 @@
+CANCELLED ok: 在阶段开始前取消
+Traceback (most recent call last):
+  File "/home/gem/.aily/workdir/task_7703932642571340824/work/probes/probe_harm_prepost.py", line 29, in <module>
+    resp=c.run(EngineRequest(rules=rs, count=2, input_mode=InputMode.MEMORY, input_data="萧衍 起身。\n", output_mode=OutputMode.MEMORY))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gem/.aily/workdir/task_7703932642571340824/work/base/FixTextGUI/pipeline/vendor/fixtext/engine/client.py", line 97, in run
+    return EngineResponse.success(self._run_or_raise(request))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/gem/.aily/workdir/task_7703932642571340824/work/base/FixTextGUI/pipeline/vendor/fixtext/engine/client.py", line 128, in _run_or_raise
+    proc = subprocess.run(
+           ^^^^^^^^^^^^^^^
+  File "/home/gem/.aily/workdir/task_7703932642571340824/work/base/FixTextGUI/fixtext_ui/fixtext_worker.py", line 219, in run
+    raise CorrectionCancelled("已终止替换引擎")
+fixtext_worker.CorrectionCancelled: 已终止替换引擎

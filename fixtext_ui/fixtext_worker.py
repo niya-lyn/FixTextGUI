@@ -469,8 +469,10 @@ class CorrectionJob:
             self._seed_merge_from_working(cfg)
 
         # 把引擎客户端的 subprocess 换成可取消代理（只影响本进程内的调用）
+        # 留一个句柄：finally 里要按「是不是我装的那个」来归还（见下）
         import fixtext.engine.client as _engine_client
-        _engine_client.subprocess = _SubprocessProxy(self)
+        _proxy = _SubprocessProxy(self)
+        _engine_client.subprocess = _proxy
 
         # Python 引擎在进程内跑（没有子进程可杀）：挂协作式取消钩子，
         # 跑完（含取消 / 失败）立刻注销，不影响后续别的调用方。
@@ -520,6 +522,13 @@ class CorrectionJob:
             if py_cancel_hook_installed:
                 from fixtext.engine import py_engine
                 py_engine.set_cancel_check(None)
+            # 归还可取消代理（V1.1-F3）：代理里绑的是**本次 job** 的
+            # cancel_requested，被取消过的 job 永远为 True。不摘掉的话，
+            # 同进程里后续任何一次直调引擎（不走 job 的路径）都会读到那
+            # 个标记、误报「已终止替换引擎」。只还自己装的那一个，别的
+            # 调用方换上去的代理不越权动。
+            if _engine_client.subprocess is _proxy:
+                _engine_client.subprocess = _subprocess_mod
 
         return self._build_summary(cfg)
 
