@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 from fixtext_snapshot import SnapshotStore
+from fixtext_word_states import STATES_FILE_NAME, WordStateStore
 
 # ---------------------------------------------------------------------------
 # 路径（仅本模块内部使用，界面层拿不到、也不展示）
@@ -152,6 +153,10 @@ ACT_BOOK = "book"
 ACT_RESTORE_DEFAULT = "restore_default"
 ACT_RESTORE_POINT = "restore_point"
 ACT_UNDO = "undo"
+ACT_ENABLE = "enable"
+ACT_DISABLE = "disable"
+ACT_CLEAR_DISABLED = "clear_disabled"
+ACT_RESET_STATES = "reset_states"
 
 #: 动作代号 → 人话（操作历史面板直接用这个，不把代号给用户看）
 ACT_NAMES = {
@@ -163,6 +168,10 @@ ACT_NAMES = {
     ACT_RESTORE_DEFAULT: "恢复默认",
     ACT_RESTORE_POINT: "恢复到时间点",
     ACT_UNDO: "撤销",
+    ACT_ENABLE: "启用词条",
+    ACT_DISABLE: "禁用词条",
+    ACT_CLEAR_DISABLED: "清空禁用",
+    ACT_RESET_STATES: "恢复默认状态",
     "note": "标记",
 }
 
@@ -820,6 +829,9 @@ class VocabStore:
             work_dir=Path(work_dir) if work_dir else (base_dir / WORK_RULES_DIR))
         snap = Path(snap_dir) if snap_dir else (base_dir / SNAP_DIR)
         self.snap = SnapshotStore(snap, **({"max_points": max_points} if max_points else {}))
+        # 词条启用 / 禁用（V1.1-T1.1）：禁用集文件与自定义词库同一棵用户区子树，
+        # 出厂迁入数据（data/word_states/）与内置词库一样全程只读。
+        self.states = WordStateStore(writable_path=base_dir / STATES_FILE_NAME)
 
     # ----- 一律量 -----
 
@@ -939,19 +951,23 @@ class VocabStore:
         raw = _read_bytes(self.custom.path)
         return _sha256_bytes(raw) if raw is not None else ""
 
-    def _begin(self, *, label: str, act: str, touches_builtin: bool = False) -> int:
+    def _begin(self, *, label: str, act: str, touches_builtin: bool = False,
+               touches_words: bool = False) -> int:
         return self.snap.begin(
             label=label, act=act, before_bytes=self.custom.raw_bytes(),
             builtin_before=self.builtin.read_work_bytes() if touches_builtin else None,
-            builtin_sha_before=self.builtin.combined_sha() if touches_builtin else "")
+            builtin_sha_before=self.builtin.combined_sha() if touches_builtin else "",
+            words_before=self.states.raw_bytes() if touches_words else None)
 
     def _commit(self, pid: int, *, act: str, summary: str, sha_before: str,
                 detail: dict | None = None,
                 builtin_sha_before: str = "", builtin_sha_after: str = "",
-                builtin_factory: bool = False) -> dict:
+                builtin_factory: bool = False,
+                touches_words: bool = False) -> dict:
         rec = self.snap.commit(pid, after_bytes=self.custom.raw_bytes(),
                                builtin_after_is_factory=builtin_factory,
-                               builtin_sha_after=builtin_sha_after)
+                               builtin_sha_after=builtin_sha_after,
+                               words_after=self.states.raw_bytes() if touches_words else None)
         self.snap.log_op(act=act, summary=summary, point_id=pid,
                          sha_before=rec.get("sha_before", sha_before),
                          sha_after=rec.get("sha_after", ""),
@@ -963,11 +979,13 @@ class VocabStore:
                     sha_after=rec.get("sha_after", ""))
 
     def _run(self, *, label: str, act: str, summary: str, write,
-             touches_builtin: bool = False, detail: dict | None = None) -> tuple[dict, dict]:
+             touches_builtin: bool = False, touches_words: bool = False,
+             detail: dict | None = None) -> tuple[dict, dict]:
         """一次写操作的标准流程；写失败就把还原点撤掉，不留半截记录。"""
         sha_before = self._disk_sha()
         b_sha_before = self.builtin.combined_sha() if touches_builtin else ""
-        pid = self._begin(label=label, act=act, touches_builtin=touches_builtin)
+        pid = self._begin(label=label, act=act, touches_builtin=touches_builtin,
+                          touches_words=touches_words)
         try:
             result = write()
         except Exception:
@@ -978,7 +996,8 @@ class VocabStore:
                             detail=detail, builtin_sha_before=b_sha_before,
                             builtin_sha_after=b_sha_after,
                             builtin_factory=(touches_builtin and
-                                             b_sha_after == self.builtin.factory_combined_sha()))
+                                             b_sha_after == self.builtin.factory_combined_sha()),
+                            touches_words=touches_words)
         return result, meta
 
     # ----- 五个写操作（界面必须先预览确认，这里只负责写）-----
@@ -1076,6 +1095,60 @@ class VocabStore:
             label=label, act=ACT_BOOK, summary=label, write=_write,
             detail=dict(book=book, requested=len(words)))
         return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
+
+    # ----- 词条启用 / 禁用（V1.1-T1.1 数据层；界面在第二卡接）-----
+
+    def set_entries_enabled(self, pairs: Iterable, *, enabled: bool) -> dict:
+        """批量启用 / 禁用词条（走撤销栈；``pairs`` 为 (word, value) 或字典列表）。
+
+        界面第二卡的消费入口：勾选 / 取消勾选词条后调这里。
+        返回 ``changed`` / ``unchanged`` / ``disabled_total`` / ``point_id``。
+        """
+        pairs = list(pairs)
+        act = ACT_ENABLE if enabled else ACT_DISABLE
+        n = len(pairs)
+        label = (f"启用 {n} 条词条" if enabled else f"禁用 {n} 条词条") if n != 1 else None
+        if n == 1:
+            p0 = pairs[0]
+            w = p0.get("word") if isinstance(p0, dict) else p0[0]
+            label = f"启用「{w}」" if enabled else f"禁用「{w}」"
+        result, meta = self._run(
+            label=label, act=act, summary=label, touches_words=True,
+            write=lambda: self.states.set_enabled(pairs, enabled=enabled),
+            detail=dict(count=n, enabled=enabled))
+        return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
+
+    def clear_disabled_entries(self) -> dict:
+        """「清空禁用」：禁用集置空——所有词条（含迁入 / 孤儿）全部启用。
+
+        与「恢复默认状态」是两个独立操作（排期 7.4 定稿），各自可撤销。
+        """
+        result, meta = self._run(
+            label="清空禁用", act=ACT_CLEAR_DISABLED, summary="清空禁用（全部词条启用）",
+            touches_words=True, write=self.states.clear_disabled,
+            detail=dict())
+        return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
+
+    def reset_word_states_default(self) -> dict:
+        """「恢复默认状态」：禁用集恢复初始集（迁入 + 孤儿词条默认禁用）。
+
+        注意与 :meth:`restore_default`（内置词库逐字节还原出厂）的区别：
+        那个只管词库文件，这个只管启用 / 禁用状态，互不牵连。
+        """
+        result, meta = self._run(
+            label="恢复默认状态", act=ACT_RESET_STATES,
+            summary="恢复默认状态（迁入与孤儿词条默认禁用）",
+            touches_words=True, write=self.states.reset_to_default,
+            detail=dict())
+        return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
+
+    def entry_enabled(self, word: str, value: str) -> bool:
+        """词条当前是否参与校正（数据层读接口，界面第二卡直接消费）。"""
+        return not self.states.is_disabled(word, value)
+
+    def word_states_summary(self) -> dict:
+        """启用 / 禁用状态的只读汇总（迁入数 / 禁用数 / 是否有用户区文件）。"""
+        return self.states.summary()
 
     # ----- 恢复默认词库（只重置内置，自定义原样保留）-----
 
@@ -1180,6 +1253,9 @@ class VocabStore:
                 self.builtin.write_work_bytes(blob)
             except VocabDataError:
                 builtin_ok = False
+        words = self.snap.words_before(pid)
+        if words is not None:
+            self.states.restore(words)
         self.snap.mark_undone(pid, True)
         now = self._disk_sha()
         self.snap.log_op(act=ACT_UNDO, summary=f"撤销「{p.get('label', '')}」",
@@ -1228,6 +1304,9 @@ class VocabStore:
                 self.builtin.write_work_bytes(blob)
             except VocabDataError:
                 pass
+        words = self.snap.words_before(pid)
+        if words is not None:
+            self.states.restore(words)
         newer = self.snap.mark_undone_newer_than(pid)
         self.snap.mark_undone(pid, True)
         now = self._disk_sha()
@@ -1256,6 +1335,9 @@ class VocabStore:
                 builtin_applied = True
             except VocabDataError:
                 pass
+        words = self.snap.words_after(pid)
+        if words is not None:
+            self.states.restore(words)
         newer = self.snap.mark_undone_newer_than(pid)
         self.snap.mark_undone(pid, False)
         now = self._disk_sha()
