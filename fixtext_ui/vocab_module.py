@@ -34,10 +34,12 @@ from PySide6.QtWidgets import (
 
 import fixtext_settings as app_settings
 from fixtext_tokens import c, fs, r, sp, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
-from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal, page_head_shell, PrimaryButton
+from fixtext_widgets import (
+    Card, Pill, Switch, hline, ConfirmDialog, Modal, page_head_shell, PrimaryButton,
+)
 
 from fixtext_vocab import (
-    ENTRY_TYPES, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
+    ENTRY_TYPES, TIER_IMPORTED, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
 )
 
 
@@ -49,7 +51,10 @@ from fixtext_vocab import (
 PAGE_SIZE = 40
 
 COL_CHECK_W = 34
-COL_ACT_W = 128
+COL_ACT_W = 112
+#: 启用 / 禁用状态列：一个胶囊开关（40 宽）+ 左右各 6 的呼吸位。
+#: 宽度写死是为了表头与行共用同一把尺子，滚动时列不漂。
+COL_STATE_W = 52
 
 
 # ---------------------------------------------------------------------------
@@ -333,6 +338,8 @@ class VocabModule(QWidget):
         self._book_words: list = []       # 真实专有词（空则不显示横幅）
         self._book_title = ""
         self._book_checks: list = []
+        #: 当前屏「词条 id → 启用开关」——单独存一份，供就地同步状态文案
+        self._switches: dict[int, Switch] = {}
 
         self.basis_labels = []
         self._toast_timer = QTimer(self)
@@ -398,8 +405,11 @@ class VocabModule(QWidget):
                                             lambda: self._snap_card.setVisible(
                                                 not self._snap_card.isVisible()))
         right.addWidget(self.hist_btn)
-        self.undo_btn = self._head_icon_btn("↩", "撤销上一步（Ctrl+Z）", self._undo)
-        right.addWidget(self.undo_btn)
+        # 页头撤销入口（与新增 / 删除同一条撤销栈）。
+        # 注意：``undo_btn`` 这个名字归提示条上的撤销按钮（既有用例依赖），
+        # 页头这个单独用 ``head_undo_btn``，两者不要混。
+        self.head_undo_btn = self._head_icon_btn("↩", "撤销上一步（Ctrl+Z）", self._undo)
+        right.addWidget(self.head_undo_btn)
 
         self._tier_btns = {}
         seg = QWidget()
@@ -534,6 +544,7 @@ class VocabModule(QWidget):
             "b3r": "📕", "extra": "📔", "ddd": "📖", "dei2de": "📑",
             "old_style": "📜", "txt_format": "📰",
             "preprocess": "📙", "strict": "📓", "zhuyin": "📒",
+            TIER_IMPORTED: "🗂",
         }.get(d, "📘")
         ico = QLabel(_ico)
         ico.setFixedSize(22, 22)
@@ -567,8 +578,14 @@ class VocabModule(QWidget):
             item.setProperty("active", "true" if on else "false")
             item.style().unpolish(item)
             item.style().polish(item)
-            item._meta.setText(
-                f"{_fmt_num(counts.get(key, 0))} 条 · {'可编辑' if key=='custom' else '只读'}")
+            # 迁入的注释词条不能改内容，但可以改「是否参与校正」，文案要说清
+            if key == "custom":
+                hint = "可编辑"
+            elif key == TIER_IMPORTED:
+                hint = "可启用"
+            else:
+                hint = "只读"
+            item._meta.setText(f"{_fmt_num(counts.get(key, 0))} 条 · {hint}")
 
     # ----- 右侧工作区 -----
 
@@ -577,6 +594,8 @@ class VocabModule(QWidget):
         col.setContentsMargins(0, 0, 0, 0)
         col.setSpacing(16)
         col.addWidget(self._toolbar(), 0)       # 不拉伸
+        self._states_bar_w = self._states_bar()
+        col.addWidget(self._states_bar_w, 0)
         col.addWidget(self._table_card(), 1)    # 吃剩余高度
         self._snap_card = self._snap_card()
         col.addWidget(self._snap_card, 0)
@@ -645,7 +664,64 @@ class VocabModule(QWidget):
         card.body_l.addWidget(self._hint)
         return card
 
-    # ----- 词条表格（底线③ 结构化表格 · 不露内部文件格式）-----
+    # ----- 启用 / 禁用总览条（V1.1-T1.2 界面层）-----
+
+    def _states_bar(self) -> QWidget:
+        """启用 / 禁用总览条：一眼看清多少条在参与校正，两个总开关都在这里。
+
+        两个动作语义不同（排期 7.4 定稿，不合并）：
+
+        * 「恢复默认状态」——把启用 / 禁用状态退回初始：迁入的注释词条重新变成
+          不启用（只动状态，词库内容一个字节都不动）；
+        * 「清空禁用」——把禁用集清空，所有词条（含迁入的注释词条）一起参与校正。
+
+        它们都是一次改很多条，所以各走一次「先预览、再确认」，各留一个还原点。
+        """
+        bar = QWidget()
+        bar.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
+        hl = QHBoxLayout(bar)
+        hl.setContentsMargins(0, 0, 0, 0)
+        hl.setSpacing(10)
+
+        self._states_label = _label("", size="xs", color="neutral.500")
+        self._states_label.setSizePolicy(QSizePolicy.Policy.Preferred,
+                                        QSizePolicy.Policy.Fixed)
+        self._states_label.setToolTip(
+            "「参与校正」= 校正时真的会用到的词条；禁用的词条仍留在词库，只是暂时不生效。")
+        hl.addWidget(self._states_label, 1)
+
+        self._reset_states_btn = QPushButton("↺ 恢复默认状态")
+        self._reset_states_btn.setObjectName("BtnGhost")
+        self._reset_states_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._reset_states_btn.setToolTip(
+            "把启用 / 禁用状态退回初始：迁入的注释词条重新变为不启用（词库内容不动，可撤销）")
+        self._reset_states_btn.clicked.connect(self.open_reset_states)
+        hl.addWidget(self._reset_states_btn)
+
+        self._clear_disabled_btn = QPushButton("清空禁用")
+        self._clear_disabled_btn.setObjectName("BtnOutline")
+        self._clear_disabled_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._clear_disabled_btn.setToolTip(
+            "让所有词条一起参与校正，包括默认不启用的迁入注释词条（可撤销）")
+        self._clear_disabled_btn.clicked.connect(self.open_clear_disabled)
+        hl.addWidget(self._clear_disabled_btn)
+        return bar
+
+    def _refresh_states_bar(self) -> None:
+        """按数据层汇总刷新总览文案（不自己算哈希，口径与数据层一致）。"""
+        try:
+            sm = self.store.word_states_summary()
+        except Exception:                       # pragma: no cover —— 数据层异常时别把页面打断
+            self._states_label.setText("启用 / 禁用状态暂不可用")
+            return
+        total = sum(int(v) for v in self.counts().values())
+        disabled = int(sm.get("disabled_total", 0))
+        enabled = max(0, total - disabled)
+        self._states_label.setText(
+            f"共 {_fmt_num(total)} 条词条 · {_fmt_num(enabled)} 条参与校正 · "
+            f"{_fmt_num(disabled)} 条禁用")
+        self._clear_disabled_btn.setEnabled(disabled > 0)
+
 
     def _table_card(self) -> Card:
         card = Card(basis="底线③ 结构化表格 · 不露内部文件格式")
@@ -696,10 +772,17 @@ class VocabModule(QWidget):
         self._chk_all.stateChanged.connect(self._toggle_all)
         hl.addWidget(self._chk_all, 0)
         hl.addSpacing(COL_CHECK_W - 34)
-        for text, stretch in (("原词", 3), ("替换为", 3), ("类型", 2), ("来源", 2), ("命中书籍", 3)):
+        for text, stretch in (("原词", 3), ("替换为", 3), ("类型", 2), ("来源", 2),
+                              ("命中书籍", 3)):
             lab = _label(text, size="xs", color="neutral.600", weight="semibold")
             lab.setAlignment(Qt.AlignmentFlag.AlignCenter)   # 同列居中对齐
             hl.addWidget(lab, stretch)
+        # 启用 / 禁用（V1.1-T1.2）：列宽与每行的开关列同宽，保证表头与行对齐
+        st = _label("校正", size="xs", color="neutral.600", weight="semibold")
+        st.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        st.setFixedWidth(COL_STATE_W)
+        st.setToolTip("是否参与校正：关掉后这条词条只是暂时不生效，仍留在词库里")
+        hl.addWidget(st, 0)
         act = _label("操作", size="xs", color="neutral.600", weight="semibold")
         act.setAlignment(Qt.AlignmentFlag.AlignCenter)      # 与每行操作列同宽且居中，保证表头与行对齐
         act.setFixedWidth(COL_ACT_W)   # 与每行的操作列（acts.setFixedWidth）同宽，保证表头与行对齐
@@ -726,9 +809,10 @@ class VocabModule(QWidget):
         hl.setSpacing(12)
 
         is_builtin = e.get("tier") == "builtin"
+        is_imported = e.get("tier") == TIER_IMPORTED
         chk = QCheckBox()
         chk.setChecked(e["id"] in self._selected)
-        chk.setEnabled(not is_builtin)          # 内置只读，不给勾选框假希望
+        chk.setEnabled(not is_builtin and not is_imported)   # 内置 / 迁入只读，不给勾选框假希望
         chk.stateChanged.connect(lambda s, i=e["id"]: self._toggle_row(i, s))
         hl.addWidget(chk, 0)
 
@@ -765,8 +849,14 @@ class VocabModule(QWidget):
         sl.setContentsMargins(0, 0, 0, 0)
         sl.setSpacing(0)
         sl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sl.addWidget(Pill("自定义" if not is_builtin else "内置",
-                          "ok" if not is_builtin else "info"))
+        if is_imported:
+            # 迁入的注释词条：来自出厂迁入数据、默认不启用，标成「迁入」而不是「内置」
+            badge = Pill("迁入", "warn")
+            badge.setToolTip("从旧版词库注释里迁入的词条，默认不参与校正，可按需启用")
+        else:
+            badge = Pill("自定义" if not is_builtin else "内置",
+                         "ok" if not is_builtin else "info")
+        sl.addWidget(badge)
         src_cell.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         hl.addWidget(src_cell, 2)
 
@@ -775,13 +865,16 @@ class VocabModule(QWidget):
                          size="xs", color="neutral.600")
         hl.addWidget(bk, 3)
 
+        # 启用 / 禁用开关（V1.1-T1.2）：单个词条启停的唯一入口
+        hl.addWidget(self._state_cell(e), 0)
+
         # 操作：按钮居中（与表头操作列同宽、同对齐）
         acts = QWidget()
         al = QHBoxLayout(acts)
         al.setContentsMargins(0, 0, 0, 0)
         al.setSpacing(8)
         al.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        if not is_builtin:
+        if not is_builtin and not is_imported:
             edit = _link_btn("编辑")
             edit.clicked.connect(lambda _c, i=e["id"]: self.open_edit(i))
             al.addWidget(edit)
@@ -789,10 +882,79 @@ class VocabModule(QWidget):
             dele.clicked.connect(lambda _c, i=e["id"]: self._confirm_delete([i]))
             al.addWidget(dele)
         else:
+            # 内置与迁入词条都不给编辑 / 删除：内容来自只读资料，只能改是否参与校正
             al.addWidget(_label("只读", size="xs", color="neutral.400"))
         hl.addWidget(acts, 0)
         acts.setFixedWidth(COL_ACT_W)
         return row
+
+    def _state_cell(self, e: dict) -> QWidget:
+        """单条词条的启用 / 禁用开关（V1.1-T1.2）。
+
+        开关只读数据层给的 ``enabled``，自己不判断；点点就即时生效、即时留还原点，
+        与新增 / 删除共用同一个撤销栈。迁入的注释词条同样有开关——它们默认不启用，
+        但用户想让某条生效时，这里就是入口。
+        """
+        cell = QWidget()
+        cell.setFixedWidth(COL_STATE_W)
+        hl = QHBoxLayout(cell)
+        hl.setContentsMargins(0, 0, 0, 0)
+        hl.setSpacing(0)
+        hl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        on = bool(e.get("enabled", True))
+        sw = Switch(on)
+        sw.setObjectName("EntryStateSwitch")
+        sw.setAccessibleName(f"{e['word']}：{'已启用' if on else '未启用'}")
+        sw.setToolTip("已启用，参与校正；点一下暂时停用" if on
+                      else "未启用，暂不参与校正；点一下让它生效")
+        sw.toggled.connect(lambda checked, r=e: self._on_state_switch(r, checked))
+        hl.addWidget(sw)
+        self._switches[int(e["id"])] = sw
+        return cell
+
+    def _on_state_switch(self, row: dict, checked: bool) -> None:
+        """行内开关的唯一落点：一条词条启 / 停，走撤销栈。
+
+        这里**不重建行**：开关的 ``toggled`` 还在发信号，把持有它的行整片拆掉
+        会让信号回来时落到已拆的控件上。改完只就地更新这一个开关的文案，
+        再刷新总览与操作历史；翻页 / 切分级 / 撤销时的整页重建另走 ``_render_entries``。
+        """
+        self._hide_status()
+        on = bool(checked)
+        try:
+            res = self.store.set_rows_enabled([row], enabled=on)
+        except VocabDataError as exc:
+            self._toast(f"没有改成功：{exc}")
+            self._sync_switch(row, None)     # 落盘失败：开关退回真实状态
+            return
+        self._sync_switch(row, on)
+        self._refresh_states_bar()
+        self._render_ops()
+        self._update_sel_state()
+        name = row.get("word", "")
+        if res.get("changed"):
+            self._toast(f"已{'启用' if on else '暂时停用'}「{name}」", with_undo=True)
+        else:
+            self._toast(f"「{name}」已经是{'启用' if on else '未启用'}状态")
+
+    def _sync_switch(self, row: dict, on: bool | None) -> None:
+        """把某行的开关文案对齐到真实状态（``on=None`` 表示回到数据里的当前值）。"""
+        sw = self._switches.get(int(row["id"]))
+        if sw is None:
+            return
+        if on is None:
+            on = bool(self.store.entry_enabled(row["word"], row.get("value", "")))
+        if sw.isChecked() != on:
+            sw.blockSignals(True)
+            sw.setChecked(on)
+            sw.blockSignals(False)
+        sw.setAccessibleName(f"{row.get('word', '')}：{'已启用' if on else '未启用'}")
+        sw.setToolTip("已启用，参与校正；点一下暂时停用" if on
+                      else "未启用，暂不参与校正；点一下让它生效")
+        # 行字典里的状态也同步：get_filtered() 给出去的是这一屏的行，
+        # 界面显示（开关）与它给出去的值不能各说各话。
+        row["enabled"] = bool(on)
+        row["state"] = "启用" if on else "禁用"
 
     def _pager(self) -> QWidget:
         row = QWidget()
@@ -889,6 +1051,7 @@ class VocabModule(QWidget):
         self._set_dict_active(self.dict_)
         self._render_snaps()
         self._render_ops()
+        self._refresh_states_bar()
         self._update_sel_state()
         self._render_hint()
 
@@ -910,6 +1073,7 @@ class VocabModule(QWidget):
     def _render_entries(self):
         # 表头 / 分页是卡片内固定部件，这里只重建可滚动的条目区
         self._clear_layout(self._scroll_layout)
+        self._switches = {}          # 行要重建了，旧开关句柄一律作废
 
         total, rows = self.store.query(self.search, scope=self._scope(),
                                        offset=self._page * PAGE_SIZE, limit=PAGE_SIZE)
@@ -923,22 +1087,27 @@ class VocabModule(QWidget):
             self._hit_total = total
             self._page_rows = rows
 
-        if not rows:
+        # 启用 / 禁用状态整屏取一次：数据层批量给出，界面不逐行自己算
+        self._page_rows = self.store.mark_states(rows) if rows else []
+
+        if not self._page_rows:
             # 空态紧凑贴顶，不把卡片撑大（解决「没数据时变得很大」）
             self._scroll_layout.addWidget(self._empty_state())
             self._scroll_layout.addStretch(1)
             self._pager_widget.setVisible(False)
+            self._refresh_states_bar()
             return
 
         self._pager_widget.setVisible(True)
-        for i, e in enumerate(rows):
+        for i, e in enumerate(self._page_rows):
             self._scroll_layout.addWidget(self._entry_row(e))
-            if i != len(rows) - 1:
+            if i != len(self._page_rows) - 1:
                 self._scroll_layout.addWidget(hline())
         # 末尾留弹性空白：行数不满一屏时把多余高度沉到底部，
         # 否则 QVBoxLayout 会把所有行等分拉伸（数据行被撑成半屏高，视觉上「列表长度不定」）
         self._scroll_layout.addStretch(1)
         self._update_pager()
+        self._refresh_states_bar()
 
     def _empty_state(self) -> QWidget:
         """空状态给人话，不摆假词条（底线：无数据就说无数据）。"""
@@ -1751,6 +1920,115 @@ class VocabModule(QWidget):
     def restore_default(self):
         """入口：先预览、再二次确认、最后执行（底线④ 批量先预览）。"""
         self.open_restore_default()
+
+    # ------------------------------------------------------------------ 启用 / 禁用总开关（V1.1-T1.2）
+
+    def _states_preview(self) -> dict:
+        """总开关的预览口径：现在禁用多少、迁入的注释词条多少条在禁用里。
+
+        只读，不写任何东西——预览阶段文件一个字节都不动。
+        """
+        sm = self.store.word_states_summary()
+        return dict(imported_total=int(sm.get("imported_total", 0)),
+                    disabled_total=int(sm.get("disabled_total", 0)),
+                    imported_disabled=int(sm.get("imported_disabled", 0)),
+                    total=sum(int(v) for v in self.counts().values()))
+
+    def open_reset_states(self):
+        """「恢复默认状态」第一步：先摊开会影响什么（只读预览），再让用户确认。"""
+        self._hide_status()
+        pv = self._states_preview()
+        self._reset_preview = pv
+        m = Modal(icon="↺", title="恢复默认状态", parent=self)
+        m.add_note("这一步只改「是否参与校正」，不动词库里任何一条内容。", "info")
+        m.add_widget(_label(
+            "把启用 / 禁用状态退回初始：迁入的注释词条重新变为不参与校正，"
+            "你自己启用的词条也会回到初始状态。词条本身一条不增不减，恢复后可撤销。",
+            size="sm", color="neutral.700", wrap=True))
+        rows = [
+            ("现在的状态",
+             f"共 {_fmt_num(pv['total'])} 条 · "
+             f"{_fmt_num(max(0, pv['total'] - pv['disabled_total']))} 条参与校正 · "
+             f"{_fmt_num(pv['disabled_total'])} 条禁用"),
+            ("恢复之后",
+             f"迁入的注释词条 {_fmt_num(pv['imported_total'])} 条重新不参与校正"),
+            ("我的自定义词条", "一条不增不减，内容不动"),
+            ("可以撤销", "可以，恢复后仍能撤回"),
+        ]
+        m.add_widget(_mini_table(["项目", "影响"], rows))
+        m.add_foot("取消", "ghost", m.reject)
+        m.add_foot("确认恢复", "primary", lambda: self.do_reset_states(mv=m))
+        m.show()
+        return pv
+
+    def do_reset_states(self, *, mv=None) -> dict:
+        """「恢复默认状态」第二步：执行（只写启用状态，词库内容不动）。"""
+        self._hide_status()
+        try:
+            res = self.store.reset_word_states_default()
+        except VocabDataError as exc:
+            self._toast(f"没有恢复：{exc}")
+            return dict(ok=False, reason=str(exc))
+        if mv is not None:
+            try:
+                mv.accept()
+            except RuntimeError:
+                pass
+        self._page = 0
+        self._render_all()
+        self._toast(f"已恢复默认状态：{_fmt_num(res.get('disabled_total', 0))} 条不参与校正",
+                    with_undo=True)
+        return dict(res, ok=True)
+
+    def reset_states(self):
+        """入口：先预览、再二次确认、最后执行。"""
+        self.open_reset_states()
+
+    def open_clear_disabled(self):
+        """「清空禁用」第一步：先把「会让多少条一起生效」摊开，再让用户确认。"""
+        self._hide_status()
+        pv = self._states_preview()
+        self._clear_preview = pv
+        m = Modal(icon="⚠", title="清空禁用", parent=self)
+        m.add_note("这一步会让默认不参与校正的词条一起生效，请先看清范围。", "warn")
+        m.add_widget(_label(
+            "清空后，所有词条都会参与下一次校正——包括默认不参与校正的迁入注释词条。"
+            "词条内容不动，清空后可撤销。",
+            size="sm", color="neutral.700", wrap=True))
+        rows = [
+            ("现在的状态", f"{_fmt_num(pv['disabled_total'])} 条禁用"),
+            ("清空之后", f"0 条禁用 · 共 {_fmt_num(pv['total'])} 条全部参与校正"),
+            ("其中迁入的注释词条",
+             f"{_fmt_num(pv['imported_total'])} 条（现在 {_fmt_num(pv['imported_disabled'])} 条禁用）"),
+            ("可以撤销", "可以，清空后仍能撤回"),
+        ]
+        m.add_widget(_mini_table(["项目", "影响"], rows))
+        m.add_foot("取消", "ghost", m.reject)
+        m.add_foot("确认清空", "danger", lambda: self.do_clear_disabled(mv=m))
+        m.show()
+        return pv
+
+    def do_clear_disabled(self, *, mv=None) -> dict:
+        """「清空禁用」第二步：执行（禁用集置空，全部词条参与校正）。"""
+        self._hide_status()
+        try:
+            res = self.store.clear_disabled_entries()
+        except VocabDataError as exc:
+            self._toast(f"没有清空：{exc}")
+            return dict(ok=False, reason=str(exc))
+        if mv is not None:
+            try:
+                mv.accept()
+            except RuntimeError:
+                pass
+        self._page = 0
+        self._render_all()
+        self._toast("已清空禁用：所有词条都会参与下次校正", with_undo=True)
+        return dict(res, ok=True)
+
+    def clear_disabled(self):
+        """入口：先预览、再二次确认、最后执行。"""
+        self.open_clear_disabled()
 
     # ------------------------------------------------------------------ 公共
 

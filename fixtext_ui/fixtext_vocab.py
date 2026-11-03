@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import Any, Iterable, Iterator
 
 from fixtext_snapshot import SnapshotStore
-from fixtext_word_states import STATES_FILE_NAME, WordStateStore
+from fixtext_word_states import STATES_FILE_NAME, WordStateStore, entry_key
 
 # ---------------------------------------------------------------------------
 # 路径（仅本模块内部使用，界面层拿不到、也不展示）
@@ -84,6 +84,7 @@ TIER_NAMES = {
     "preprocess": "预处理词库",
     "strict": "严格校正词库",
     "zhuyin": "生僻字注音词库",
+    "imported": "迁入的注释词条",
     # 磁盘有、界面不挂：punctuation（已迁排版）、postfix/temp（等后续功能）
 }
 #: 袋 id → 界面分级码（可达袋）
@@ -133,8 +134,16 @@ BUILTIN_TIER_CODE = {
 TIER_ORDER = [
     "custom", "b1", "cjk", "b3", "b3r",
     "extra", "ddd", "dei2de", "old_style", "txt_format",
-    "preprocess", "strict", "zhuyin",
+    "preprocess", "strict", "zhuyin", "imported",
 ]
+
+#: 迁入注释词条的虚拟分级（V1.1-T1.2 界面层）。
+#: 这些词条不在 ``data/rules/`` 里（它们来自出厂迁入数据，默认禁用、等用户
+#: 自行启用），所以**必须**单独占一个分级才可能在词库页被看见；
+#: 它是只读分级：不能编辑 / 删除，只能改启用状态。
+TIER_IMPORTED = "imported"
+#: 迁入词条的 id 偏移：与内置（``-(idx+1)``）天然不撞。
+IMPORTED_ID_BASE = 900000
 
 #: 词条类型（新增时可选；内置词条的类型取自分级名）
 ENTRY_TYPES = ["错词校正", "角色名", "专有名词", "其他"]
@@ -832,12 +841,17 @@ class VocabStore:
         # 词条启用 / 禁用（V1.1-T1.1）：禁用集文件与自定义词库同一棵用户区子树，
         # 出厂迁入数据（data/word_states/）与内置词库一样全程只读。
         self.states = WordStateStore(writable_path=base_dir / STATES_FILE_NAME)
+        # 迁入词条行缓存（V1.1-T1.2）：5841 行每次重建太浪费，且它们的
+        # 词 / 替换值来自出厂只读数据，构造一次即可复用。
+        self._imported_rows_cache: list[dict] | None = None
 
     # ----- 一律量 -----
 
     def counts(self) -> dict[str, int]:
         out = {"custom": len(self.custom)}
         out.update(self.builtin.tier_counts())
+        # 迁入注释词条（V1.1-T1.2）：不在 data/rules/ 里，单独计入自己的分级
+        out[TIER_IMPORTED] = len(self.imported_rows())
         return out
 
     @property
@@ -845,7 +859,63 @@ class VocabStore:
         return len(self.builtin)
 
     def warning(self) -> str:
-        return self.custom.error or self.builtin.error or self.snap.error
+        return self.custom.error or self.builtin.error or self.snap.error or self.states.error
+
+    # ----- 词条启用 / 禁用：呈现层接口（V1.1-T1.2）-----
+
+    def imported_rows(self) -> list[dict]:
+        """迁入注释词条的行清单（只读、默认禁用、可启用；不改出厂数据）。
+
+        这些词条**不在** ``data/rules/`` 里——它们由 T1.1 的数据层迁入，
+        默认不参与校正。给它们稳定的负 id（``-IMPORTED_ID_BASE - 序号``），
+        与内置（``-(idx+1)``）和自定义（正 id）三者互不相撞。
+        """
+        if self._imported_rows_cache is not None:
+            return [dict(r) for r in self._imported_rows_cache]
+        rows: list[dict] = []
+        for i, e in enumerate(self.states.imported_entries()):
+            rows.append(dict(
+                id=-(IMPORTED_ID_BASE + i + 1),
+                word=e["word"],
+                value=str(e.get("value") or ""),
+                type="注释词条",
+                pinyin="",
+                dict=TIER_IMPORTED,
+                tier=TIER_IMPORTED,
+                books=[],
+                src=str(e.get("src") or ""),
+            ))
+        self._imported_rows_cache = rows
+        return [dict(r) for r in rows]
+
+    def imported_row_by_id(self, rid: int) -> dict | None:
+        rid = int(rid)
+        idx = -rid - IMPORTED_ID_BASE - 1
+        cache = self._imported_rows_cache
+        if cache is None:
+            cache = self.imported_rows()
+        return dict(cache[idx]) if 0 <= idx < len(cache) else None
+
+    def mark_states(self, rows: list[dict]) -> list[dict]:
+        """给每行补上启用 / 禁用状态（``enabled`` 布尔 + ``state`` 人话）。
+
+        界面只读这两个字段，不自己算哈希：一眼看清「这条现在参不参与校正」。
+        """
+        eff = self.states.effective_disabled()
+        out: list[dict] = []
+        for r in rows:
+            r = dict(r)
+            on = entry_key(r["word"], r.get("value", "")) not in eff
+            r["enabled"] = on
+            r["state"] = "启用" if on else "禁用"
+            out.append(r)
+        return out
+
+    def states_for_rows(self, rows: list[dict]) -> dict[int, bool]:
+        """``row id → 是否启用``（供界面在重建行时批量取状态）。"""
+        eff = self.states.effective_disabled()
+        return {int(r["id"]): entry_key(r["word"], r.get("value", "")) not in eff
+                for r in rows}
 
     # ----- 检索 -----
 
@@ -855,11 +925,14 @@ class VocabStore:
         scope = scope or "all"
         if scope == "custom":
             return self.custom.search(query, limit=limit, offset=offset)
+        if scope == TIER_IMPORTED:
+            return self._imported_search(query, offset=offset, limit=limit)
         if scope in BAG_TO_TIER.values():
             return self.builtin.search(query, dict_code=scope, limit=limit, offset=offset)
         if scope == "builtin":
             return self.builtin.search(query, limit=limit, offset=offset)
-        # all：自定义在前（少量、可写），内置在后
+        # all：自定义在前（少量、可写），内置在后；迁入词条默认禁用、
+        # 且只读，不混进「全部」里搅乱命中数（用户用左侧分级单独查看）
         c_total, c_rows = self.custom.search(query)
         b_total = self.builtin.search_count(query)
         total = c_total + b_total
@@ -874,6 +947,26 @@ class VocabStore:
             rows.extend(b_rows)
         return total, rows
 
+    def _imported_search(self, query: str, *, offset: int = 0,
+                         limit: int | None = None) -> tuple[int, list[dict]]:
+        """迁入注释词条的检索（与内置 / 自定义同一套「双向包含」口径）。
+
+        「双向」= 原词或替换值里包含关键词，大小写不敏感——和用户在内置分级
+        搜索时的预期一致，不需要为迁入词条再学一种查法。
+        """
+        q = (query or "").strip()
+        ql = q.lower()
+        total = 0
+        rows: list[dict] = []
+        for r in self.imported_rows():
+            w, v = r["word"], r["value"]
+            if q and not (q in w or q in v or ql in w.lower() or ql in v.lower()):
+                continue
+            if total >= offset and (limit is None or len(rows) < limit):
+                rows.append(r)
+            total += 1
+        return total, rows
+
     def row_by_id(self, rid: int) -> dict | None:
         rid = int(rid)
         if rid > 0:
@@ -881,6 +974,9 @@ class VocabStore:
                 if e["id"] == rid:
                     return self.custom.row(e)
             return None
+        # 迁入注释词条占 -IMPORTED_ID_BASE 之后的号段（V1.1-T1.2）
+        if rid < -IMPORTED_ID_BASE:
+            return self.imported_row_by_id(rid)
         idx = -rid - 1
         if 0 <= idx < self.builtin_total:
             return self.builtin.row(idx)
@@ -1145,6 +1241,20 @@ class VocabStore:
     def entry_enabled(self, word: str, value: str) -> bool:
         """词条当前是否参与校正（数据层读接口，界面第二卡直接消费）。"""
         return not self.states.is_disabled(word, value)
+
+    def set_rows_enabled(self, rows: Iterable[dict], *, enabled: bool) -> dict:
+        """按行（dict 带 ``word`` / ``value``）批量改启用状态，走撤销栈。
+
+        界面「选中后启用 / 禁用」与行内单个开关共用这一个入口——两条路径
+        落的是同一份还原点、同一种操作历史文案，撤销行为完全一致。
+        """
+        pairs = [{"word": r["word"], "value": r.get("value", "")} for r in rows]
+        return self.set_entries_enabled(pairs, enabled=enabled)
+
+    def toggle_row_enabled(self, row: dict) -> dict:
+        """单条词条的开关：已启用 → 禁用，已禁用 → 启用。"""
+        on = self.entry_enabled(row["word"], row.get("value", ""))
+        return self.set_rows_enabled([row], enabled=not on)
 
     def word_states_summary(self) -> dict:
         """启用 / 禁用状态的只读汇总（迁入数 / 禁用数 / 是否有用户区文件）。"""
