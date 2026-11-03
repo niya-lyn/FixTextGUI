@@ -141,6 +141,15 @@ class PipelineConfig:
     #: 指纹必须把它算进去：改了禁用状态但指纹不变的话，--resume 会把旧
     #: after 当命中缓存复用（见 stages/replace.py 的 fingerprint）。
     word_states_path: Path | None = None
+    #: 按书词库（V1.1-C1）：一本书一份，存储位置由 :func:`book_vocab.book_vocab_path`
+    #: 唯一决定（``<用户区>/vocab/books/<书 id>/book_vocab.json``）。
+    #: ``book_vocab_path`` 显式给定时按给的（测试 / 便携）；只给 ``book_id`` 时按
+    #: 上面的默认位置推算；两者都没有 = 这本书没有按书层，装载层拿到空集，
+    #: 行为与 B3 收口时逐字节一致。
+    book_id: str = ""
+    book_vocab_path: Path | None = None
+    #: 书 id 推算失败的原因（非法 id 时不猜路径、也不中断校正，按全局默认跑）。
+    book_id_error: str = field(default="", init=False, repr=False)
     #: 协作式取消（界面注入）：返回 True 表示用户已点取消。
     #: 排版等长循环在章节边界调用；默认 None = 命令行编排器不检查。
     cancel_check: Callable[[], bool] | None = None
@@ -177,6 +186,21 @@ class PipelineConfig:
         from . import word_states as _ws
         self.word_states_path = (Path(self.word_states_path).expanduser().resolve()
                                  if self.word_states_path else _ws.default_states_path())
+        # 按书词库（V1.1-C1）：一本书一份。显式路径优先；只给书 id 时按唯一位置
+        # 推算；书 id 非法时**不猜**路径（拼路径等于把不可信输入写进文件系统），
+        # 记下原因后按「没有按书层」跑——缺按书配置不该让整本校正起不来。
+        from . import book_vocab as _bv
+        self.book_id = str(self.book_id or "").strip()
+        if self.book_vocab_path:
+            self.book_vocab_path = Path(self.book_vocab_path).expanduser().resolve()
+        elif self.book_id:
+            try:
+                self.book_vocab_path = _bv.book_vocab_path(self.book_id)
+            except _bv.BookVocabError as exc:
+                self.book_vocab_path = None
+                self.book_id_error = str(exc)
+        else:
+            self.book_vocab_path = None
         if self.quotation_rules_path is not None:
             self.quotation_rules_path = Path(self.quotation_rules_path).expanduser().resolve()
         if self.layout_profile not in LAYOUT_PROFILES:
@@ -262,6 +286,10 @@ class PipelineConfig:
             "engine": self.engine,
             "custom_vocab_path": str(self.custom_vocab_path),
             "derived_rules_dir": str(self.derived_rules_dir),
+            # V1.1-C1：按书层（书 id 与按书词库位置）。续跑时必须还原同一份，
+            # 否则同一本书换个按书配置再续跑会拼出一份不属于它的结果。
+            "book_id": str(self.book_id),
+            "book_vocab_path": (str(self.book_vocab_path) if self.book_vocab_path else None),
             "engine_timeout_s": self.engine_timeout_s,
             "layout_profile": self.layout_profile,
             "layout_overrides": self.layout_overrides,
@@ -293,6 +321,8 @@ class PipelineConfig:
             engine=str(raw.get("engine", "go")),
             custom_vocab_path=Path(raw["custom_vocab_path"]) if raw.get("custom_vocab_path") else None,
             derived_rules_dir=Path(raw["derived_rules_dir"]) if raw.get("derived_rules_dir") else None,
+            book_id=str(raw.get("book_id") or ""),
+            book_vocab_path=(Path(raw["book_vocab_path"]) if raw.get("book_vocab_path") else None),
             engine_timeout_s=float(raw.get("engine_timeout_s", 1800.0)),
             layout_profile=str(raw.get("layout_profile", "html-safe")),
             layout_overrides=dict(raw.get("layout_overrides", {})),

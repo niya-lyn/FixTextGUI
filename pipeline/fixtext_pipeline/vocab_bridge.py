@@ -42,6 +42,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .rule_keys import entry_key
+from .book_vocab import (OVERLAY_POLICY, OVERLAY_POLICY_NOTE, book_excluded_sha,
+                         resolve_excluded)
 
 #: 派生规则文件名（与出厂同名，但落在用户区，不是同一棵树）
 DERIVED_BEFORE = "before.json"
@@ -139,21 +141,29 @@ def load_custom_entries(path: Path | str) -> tuple[list[dict], str]:
 
 def compose(before: Iterable[str], after: Iterable[str],
             entries: Iterable[dict],
-            disabled_keys: Iterable[str] | None = None) -> dict:
+            disabled_keys: Iterable[str] | None = None,
+            *, book_excluded_keys: Iterable[str] | None = None,
+            book_id: str = "") -> dict:
     """把通用词库与自定义词合成为一份派生规则（纯计算，不落盘）。
 
-    ``disabled_keys`` 是**有效禁用集**（词条内容键 ``sha256(word+NUL+value)``，
-    见 :mod:`rule_keys`）。传了它就按内容键把两侧命中的规则整条剔除——
-    **出厂侧与自定义侧一视同仁**：用户在词库里点了「禁用」，这条词条就既不
-    占住原词、也不产生替换，跟它来自出厂词库还是自己加的无关。
+    ``disabled_keys`` 是**全局有效禁用集**（词条内容键
+    ``sha256(word+NUL+value)``，见 :mod:`rule_keys`）。传了它就按内容键把
+    两侧命中的规则整条剔除——**出厂侧与自定义侧一视同仁**：用户在词库里点了
+    「禁用」，这条词条就既不占住原词、也不产生替换，跟它来自出厂词库还是
+    自己加的无关。
 
-    不传（``None``）等价于空集——旧调用方的行为逐字节不变。传空集合而语义
-    想表达「全部启用」也可以，两者结果相同。注意这跟「没接过滤」在
-    **统计字段**上是可区分的（``disabled_applied`` / ``disabled_custom``
-    会如实给出 0 与被检查的条数）。
+    ``book_excluded_keys`` 是**按书排除集**（V1.1-C1，见 :mod:`book_vocab`），
+    同一道过滤、同一个循环里生效——按卡约定，装载层只许有这一处过滤入口，
+    另造第二条路径即违规。两层取**并集**，按书层**不得抵消**全局禁用：
+    同一条同时命中时按全局禁用记账（``source="global"``）并计入
+    ``overlap``。传 ``None`` / 空集时输出与不带按书层**逐字节一致**。
+
+    不传 ``disabled_keys`` / ``book_excluded_keys`` 等价于空集——旧调用方的
+    行为逐字节不变。注意这跟「没接过滤」在**统计字段**上是可区分的
+    （``disabled_applied`` / ``disabled_custom`` 会如实给出 0 与被检查的条数）。
 
     返回 ``before`` / ``after`` 两个等长数组与一份统计，统计里的每个"跳过"
-    都带原因——不静默丢条。
+    都带原因与来源——不静默丢条，也不把两种排除混成一个数字。
     """
     base_before = list(before)
     base_after = list(after)
@@ -164,15 +174,36 @@ def compose(before: Iterable[str], after: Iterable[str],
         raise DerivedRulesError("通用词库为空，无法生成替换规则")
 
     off = frozenset(disabled_keys or ())
+    book_off = frozenset(book_excluded_keys or ())
+    # 叠加判定只在这里算一次（:func:`book_vocab.resolve_excluded` 是唯一权威，
+    # 也是单测直接核对的那个函数）。并集是真正生效的排除集；两层各自命中多少
+    # 单独记账，便于证据逐条核对。
+    overlay = resolve_excluded(off, book_off)
+    union_off = overlay["effective"]
+    sources = overlay["sources"]
 
-    # ---- 1. 先过滤出厂侧：命中禁用键的规则整条不进派生文件 ----
+    # ---- 1. 先过滤出厂侧：命中排除键的规则整条不进派生文件 ----
     kept_base_before: list[str] = []
     kept_base_after: list[str] = []
-    disabled_base: list[dict] = []
+    disabled_base: list[dict] = []          # 全局禁用命中（含两层同时命中）
+    book_base: list[dict] = []              # 仅按书排除命中
+    overlap_base = 0
     for w, v in zip(base_before, base_after):
-        if off and entry_key(w, v) in off:
-            disabled_base.append(dict(word=w, value=v,
-                                      reason="该词条在词库里被禁用"))
+        key = entry_key(w, v)
+        if union_off and key in union_off:
+            if sources.get(key, "") in ("global", "both"):
+                both = sources.get(key) == "both"
+                overlap_base += 1 if both else 0
+                disabled_base.append(dict(
+                    word=w, value=v,
+                    reason=("该词条在词库里被禁用，且本书也排除了它" if both
+                            else "该词条在词库里被禁用"),
+                    source="global"))
+            else:
+                book_base.append(dict(
+                    word=w, value=v,
+                    reason="本书的按书词库排除了这条词条",
+                    source="book"))
             continue
         kept_base_before.append(w)
         kept_base_after.append(v)
@@ -182,6 +213,8 @@ def compose(before: Iterable[str], after: Iterable[str],
     skipped_identity: list[dict] = []
     skipped_duplicate: list[dict] = []
     disabled_custom: list[dict] = []
+    book_custom: list[dict] = []
+    overlap_custom = 0
     seen: dict[str, dict] = {}
 
     # 长词优先：同前缀时先给长词机会，避免被短自定义词整段吃掉
@@ -205,11 +238,23 @@ def compose(before: Iterable[str], after: Iterable[str],
             skipped_identity.append(dict(word=word, value=value, id=rid,
                                          reason="原词与替换值相同，不会产生任何修改"))
             continue
-        # 自定义侧同样受禁用集约束：界面上「我的词库」也能逐条禁用，
-        # 禁用了就不该再前置进规则（否则等于没禁）。
-        if off and entry_key(word, value) in off:
-            disabled_custom.append(dict(word=word, value=value, id=rid,
-                                        reason="该词条在词库里被禁用"))
+        # 自定义侧同样受排除集约束：界面上「我的词库」也能逐条禁用，
+        # 禁用了就不该再前置进规则（否则等于没禁）；按书层同理。
+        key = entry_key(word, value)
+        if union_off and key in union_off:
+            if sources.get(key, "") in ("global", "both"):
+                both = sources.get(key) == "both"
+                overlap_custom += 1 if both else 0
+                disabled_custom.append(dict(
+                    word=word, value=value, id=rid,
+                    reason=("该词条在词库里被禁用，且本书也排除了它" if both
+                            else "该词条在词库里被禁用"),
+                    source="global"))
+            else:
+                book_custom.append(dict(
+                    word=word, value=value, id=rid,
+                    reason="本书的按书词库排除了这条词条",
+                    source="book"))
             continue
         if word in seen:
             kept = seen[word]
@@ -234,7 +279,29 @@ def compose(before: Iterable[str], after: Iterable[str],
             disabled_keys_checked=len(off),
             disabled_base_applied=len(disabled_base),
             disabled_custom_applied=len(disabled_custom),
+            # ``disabled_applied`` 的语义**只有全局禁用**：两层同时命中时它算在
+            # 全局这一侧（按书层不得抵消、也不冒充全局）。按书层单独命中不计入，
+            # 单独记在下面三个 book_* 字段里——两种排除不混成一个数字。
             disabled_applied=len(disabled_base) + len(disabled_custom),
+            book_id=str(book_id or ""),
+            book_excluded_checked=len(book_off),
+            # 「按书排除真正生效的条数」= 本书列出的、且确实被剔除的条数，
+            # **含**与全局禁用叠加的那些（它们对这本书确实被排除了，只是原因
+            # 记在全局侧）。另一个口径 ``book_only_applied`` 只算按书层独占的，
+            # 两个数并列摆出来，谁都不会被误读成对方。
+            book_only_applied=len(book_base) + len(book_custom),
+            book_base_applied=len(book_base),
+            book_custom_applied=len(book_custom),
+            book_excluded_applied=(len(book_base) + len(book_custom)
+                                   + overlap_base + overlap_custom),
+            overlap_factory=overlap_base,
+            overlap_custom=overlap_custom,
+            overlap_applied=overlap_base + overlap_custom,
+            excluded_total_applied=(len(disabled_base) + len(disabled_custom)
+                                    + len(book_base) + len(book_custom)),
+            excluded_policy=(OVERLAY_POLICY if union_off else ""),
+            excluded_policy_note=(OVERLAY_POLICY_NOTE if union_off else ""),
+            book_excluded_sha=book_excluded_sha(book_off),
             custom_input=len([e for e in entries if isinstance(e, dict)]),
             custom_applied=len(picked),
             total_rules=len(new_before),
@@ -242,6 +309,7 @@ def compose(before: Iterable[str], after: Iterable[str],
             skipped_identity=skipped_identity,
             skipped_duplicate=skipped_duplicate,
             short_custom=short_words,
+            book_excluded=book_base + book_custom,
             applied_words=[dict(word=w, value=v, id=i) for w, v, i in picked],
         ),
     )
@@ -252,16 +320,20 @@ def compose(before: Iterable[str], after: Iterable[str],
 # ---------------------------------------------------------------------------
 
 def compose_key(base_before_raw: bytes, base_after_raw: bytes,
-                custom_raw: bytes, disabled_sha: str = "") -> str:
-    """合成键：三份输入的 sha 揉在一起，再把禁用集指纹揉进去。
+                custom_raw: bytes, disabled_sha: str = "",
+                book_sha: str = "") -> str:
+    """合成键：三份输入的 sha 揉在一起，再把两层排除集指纹揉进去。
 
     禁用集一变键就变——否则「只改了启用/禁用」时缓存会误判命中，
-    派生文件不重写，禁用就白点了（T1.3 的核心回归点）。
+    派生文件不重写，禁用就白点了（T1.3 的核心回归点）。V1.1-C1 同理：
+    按书排除集一变键也必须变，否则改了这本书的按书配置、跑到别处仍是旧规则。
+    空 ``book_sha`` 时键与 B3 收口时一致（未配置按书词库的书逐字节不变）。
     """
     h = hashlib.sha256()
     for part in (base_before_raw, base_after_raw, custom_raw):
         h.update(hashlib.sha256(part).digest())
     h.update(str(disabled_sha or "").encode("utf-8"))
+    h.update(str(book_sha or "").encode("utf-8"))
     return h.hexdigest()
 
 
@@ -297,12 +369,16 @@ def ruleset_sha(before: Iterable[str], after: Iterable[str]) -> str:
 def write_derived_rules(base_before: Path | str, base_after: Path | str,
                         custom_path: Path | str | None,
                         out_dir: Path | str,
-                        disabled_keys: Iterable[str] | None = None) -> dict:
+                        disabled_keys: Iterable[str] | None = None,
+                        *, book_excluded_keys: Iterable[str] | None = None,
+                        book_id: str = "") -> dict:
     """生成派生规则文件（落在 ``out_dir``），返回一份可直接进报告的摘要。
 
     幂等：三份输入都没变时复用已有文件，不重写（派生目录不会被无意义的
-    写操作搅得时间戳乱跳）。``disabled_keys`` 的有效禁用集**同时**进合成键
+    写操作搅得时间戳乱跳）。``disabled_keys`` 的全局禁用集**同时**进合成键
     与规则合成——禁用了就要重写，不能被缓存挡住，否则禁用白点一次。
+    V1.1-C1 的 ``book_excluded_keys`` 一样进合成键：按书配置改了必须重写。
+
     返回的 ``before_path`` / ``after_path`` 就是替换阶段应当使用的规则文件。
     """
     base_before = Path(base_before)
@@ -321,7 +397,9 @@ def write_derived_rules(base_before: Path | str, base_after: Path | str,
 
     off = frozenset(disabled_keys or ())
     off_sha = disabled_sha(off)
-    key = compose_key(before_raw, after_raw, custom_raw, off_sha)
+    book_off = frozenset(book_excluded_keys or ())
+    book_sha = book_excluded_sha(book_off)
+    key = compose_key(before_raw, after_raw, custom_raw, off_sha, book_sha)
     meta_path = out / DERIVED_META
     d_before = out / DERIVED_BEFORE
     d_after = out / DERIVED_AFTER
@@ -330,6 +408,8 @@ def write_derived_rules(base_before: Path | str, base_after: Path | str,
     reusable = (
         cached.get("compose_key") == key
         and cached.get("disabled_sha") == off_sha
+        and cached.get("book_excluded_sha") == book_sha
+        and cached.get("book_id") == str(book_id or "")
         and d_before.is_file() and d_after.is_file()
         and cached.get("derived_before_sha256") == sha256_file(d_before)
         and cached.get("derived_after_sha256") == sha256_file(d_after)
@@ -345,7 +425,8 @@ def write_derived_rules(base_before: Path | str, base_after: Path | str,
     base_a = _load_string_array(base_after, "通用词库（替换后）")
     entries, custom_error = load_custom_entries(custom_path) if custom_path else ([], "")
 
-    composed = compose(base_b, base_a, entries, disabled_keys=off)
+    composed = compose(base_b, base_a, entries, disabled_keys=off,
+                       book_excluded_keys=book_off, book_id=book_id)
     new_before = composed["before"]
     new_after = composed["after"]
 
@@ -368,6 +449,9 @@ def write_derived_rules(base_before: Path | str, base_after: Path | str,
         custom_sha256=sha256_bytes(custom_raw) if custom_raw else "",
         custom_error=custom_error,
         disabled_sha=off_sha,
+        # book_id / book_excluded_sha 由下面 ``**composed["stats"]`` 提供（
+        # 唯一来源，避免两处写同一个键、也不会两个值打架）。
+        book_excluded_input=list(sorted(book_off)),
         ruleset_sha256=ruleset_sha(new_before, new_after),
         derived_before=str(d_before),
         derived_after=str(d_after),

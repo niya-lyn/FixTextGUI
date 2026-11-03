@@ -10,7 +10,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from .. import bags, vocab_bridge, word_states
+from .. import bags, book_vocab, vocab_bridge, word_states
 from ..config import dump_json
 from ..state import sha256_file
 from .base import Stage, StageError
@@ -94,6 +94,13 @@ class ReplaceStage(Stage):
         # 是什么，说明不了引擎真少收了哪几条；规则集指纹才把指纹与行为绑死
         # （预处理 / 严格 / 注音三轮同样受禁用影响，所以四轮都带）。
         ruleset_part = f"ruleset={self.dispatched_ruleset_sha()}"
+        # V1.1-C1：按书排除集进主轮指纹。同一本书换了按书配置 → 指纹变化 →
+        # 断点不复用旧正文；不同书之间靠 book= 与规则集指纹各自分开，互不串扰。
+        if self.round_id == "main":
+            book_part = (f"book={book_vocab.book_excluded_sha(self._effective_book_excluded())}"
+                         f";id={self._book_id() or 'none'}")
+        else:
+            book_part = "book=n/a"
         return self.fingerprint_of(
             f"round={self.round_id}",
             f"input={inp_sha}",
@@ -101,6 +108,7 @@ class ReplaceStage(Stage):
             custom_part,
             words_part,
             ruleset_part,
+            book_part,
             f"prep={self.cfg.enable_preprocess}",
             f"strict={self.cfg.enable_strict}",
             f"zhuyin={self.cfg.zhuyin_mode}",
@@ -123,17 +131,60 @@ class ReplaceStage(Stage):
         except Exception:
             return frozenset()
 
+    def _book_id(self) -> str:
+        """本书 id（按书层的主键）；没有就返回空串。"""
+        return str(getattr(self.cfg, "book_id", "") or "")
+
+    def _book_vocab_path(self) -> Path | None:
+        """按书词库文件位置；没有按书层时 None。"""
+        raw = getattr(self.cfg, "book_vocab_path", None)
+        return Path(raw) if raw else None
+
+    def _effective_book_excluded(self) -> frozenset[str]:
+        """本书的按书排除集（内容键）。
+
+        V1.1-C1：与全局禁用**同一道过滤**（下一站是 ``bags.write_round_rules``
+        → ``vocab_bridge.compose``，装载层只有这一处入口）。文件缺失 / 坏掉时
+        按「空集」处理而不是中断校正：按书层是可选增强，缺了就该回到全局默认
+        （B3 收口时的行为），并在报告的 ``book_vocab_error`` 里如实说明。
+        """
+        try:
+            return frozenset(book_vocab.book_excluded_keys(self._book_vocab_path()))
+        except Exception:
+            return frozenset()
+
+    def _book_layer_report(self) -> dict[str, Any]:
+        """按书层的事实摘要（进 replace_report，证据只认这些字段）。"""
+        info = book_vocab.load_book_vocab(self._book_vocab_path())
+        return dict(
+            book_id=self._book_id(),
+            configured=bool(info.get("configured")),
+            excluded_checked=len(info.get("excluded_keys") or ()),
+            sha256=str(info.get("sha256") or ""),
+            error=str(info.get("error") or getattr(self.cfg, "book_id_error", "") or ""),
+            ignored=list(info.get("ignored") or []),
+        )
+
     def _dispatch_inputs(self) -> tuple[list[str], list[dict]]:
         """本轮下发前的 (袋 id, 自定义词条)。与 `_prepare_rules` 保持同源。"""
+        ids, entries, _off, _book_off = self._dispatch_inputs_book()
+        return ids, entries
+
+    def _dispatch_inputs_book(self) -> tuple[list[str], list[dict], frozenset[str], frozenset[str]]:
+        """下发输入的完整四元组：袋 id / 自定义词条 / 全局禁用 / 按书排除。
+
+        V1.1-C1：按书排除集**只从这里往装载层走**，不另造第二条过滤路径。
+        """
+        book_off = self._effective_book_excluded()
         if self.round_id in ("preprocess", "strict", "zhuyin"):
-            return [self.round_id], []
+            return [self.round_id], [], self._effective_disabled(), book_off
         ids = bags.main_bag_ids(self.cfg.selected_bags)
         include_custom = "custom" in self.cfg.selected_bags
         entries: list[dict] = []
         if include_custom and self.cfg.custom_vocab_path is not None:
             entries, _err = vocab_bridge.load_custom_entries(
                 self.cfg.custom_vocab_path)
-        return ids, entries
+        return ids, entries, self._effective_disabled(), book_off
 
     def dispatched_ruleset_sha(self) -> str:
         """**实际会下发**的规则集指纹（不出错就不该与落盘结果不一致）。
@@ -143,11 +194,13 @@ class ReplaceStage(Stage):
         绑死：只要下发的规则变了，指纹一定变，`--resume` 不会拿旧正文当命中。
         """
         try:
-            bag_ids, entries = self._dispatch_inputs()
+            bag_ids, entries, off, book_off = self._dispatch_inputs_book()
             base_before, base_after = bags.concat_bags(bag_ids)
             composed = vocab_bridge.compose(
                 base_before, base_after, entries,
-                disabled_keys=self._effective_disabled())
+                disabled_keys=off,
+                book_excluded_keys=book_off,
+                book_id=self._book_id())
             return vocab_bridge.ruleset_sha(composed["before"], composed["after"])
         except Exception:
             return "missing"
@@ -155,20 +208,25 @@ class ReplaceStage(Stage):
     def _prepare_rules(self) -> dict[str, Any]:
         derived_root = Path(self.cfg.derived_rules_dir) / f"round_{self.round_id}"
         off = self._effective_disabled()
+        book_off = self._effective_book_excluded()
+        book_id = self._book_id()
         if self.round_id == "preprocess":
             return bags.write_round_rules(
                 ["preprocess"], derived_root, include_custom=False,
                 disabled_keys=off,
+                book_excluded_keys=book_off, book_id=book_id,
             )
         if self.round_id == "strict":
             return bags.write_round_rules(
                 ["strict"], derived_root, include_custom=False,
                 disabled_keys=off,
+                book_excluded_keys=book_off, book_id=book_id,
             )
         if self.round_id == "zhuyin":
             return bags.write_round_rules(
                 ["zhuyin"], derived_root, include_custom=False,
                 disabled_keys=off,
+                book_excluded_keys=book_off, book_id=book_id,
             )
         # main
         ids = bags.main_bag_ids(self.cfg.selected_bags)
@@ -179,6 +237,7 @@ class ReplaceStage(Stage):
             custom_path=self.cfg.custom_vocab_path if include_custom else None,
             include_custom=include_custom,
             disabled_keys=off,
+            book_excluded_keys=book_off, book_id=book_id,
         )
 
     def _replace_count(self) -> int:
@@ -324,8 +383,19 @@ class ReplaceStage(Stage):
                     "base_kept", "disabled_keys_checked",
                     "disabled_base_applied", "disabled_custom_applied",
                     "disabled_applied", "disabled_sha", "ruleset_sha256",
+                    # V1.1-C1：按书层在同一道过滤里的可核对字段（两层各自命中、
+                    # 叠加条数、判定口径）。按书层没配置时这些字段全 0 / 空，
+                    # 与 B3 收口的报告逐字一致（新增键才是唯一差别）。
+                    "book_id", "book_excluded_checked",
+                    "book_base_applied", "book_custom_applied",
+                    "book_excluded_applied", "book_only_applied",
+                    "overlap_factory",
+                    "overlap_custom", "overlap_applied",
+                    "excluded_total_applied", "excluded_policy",
                 )
             },
+            # V1.1-C1：按书层来源事实（书 id / 是否配置 / 文件指纹 / 读取问题）。
+            "book_layer": self._book_layer_report(),
             "engine": engine_kind,
             "engine_path": str(engine_path) if engine_kind == "go" else result.engine_path,
             "engine_stdout": result.engine_stdout,
