@@ -108,6 +108,11 @@ class WordStateStore:
         self.path = Path(writable_path) if writable_path else CUSTOM_DIR / STATES_FILE_NAME
         self.error = ""
         self._builtin: dict | None = None
+        # 有效禁用集缓存（V1.1-T1.2 界面层）：词条表格每屏 40 行、每次一屏都要
+        # 判「这条是否禁用」，若每行重算一遍要哈希 5,841 条（每屏 ~23 万次 sha256）。
+        # 键用文件签名（mtime+size），写文件与还原时显式作废，语义与不缓存一致。
+        self._eff_cache: frozenset[str] | None = None
+        self._eff_sig: tuple | None = None
 
     # ------------------------------------------------------------------ 出厂侧
 
@@ -159,12 +164,28 @@ class WordStateStore:
             return None
         return set(disabled)
 
+    def _file_sig(self) -> tuple:
+        """用户区文件的签名（存在性 / mtime / size）；文件被外部改动时缓存自动失效。"""
+        try:
+            st = self.path.stat()
+        except OSError:
+            return ("missing",)
+        return ("file", st.st_mtime_ns, st.st_size)
+
     def effective_disabled(self) -> frozenset[str]:
         """有效禁用集：用户区文件优先，缺失 / 损坏回落初始集（保守）。"""
+        sig = self._file_sig()
+        if self._eff_cache is not None and self._eff_sig == sig:
+            return self._eff_cache
         keys = self._file_disabled()
-        if keys is None:
-            return self.initial_disabled_keys()
-        return frozenset(keys)
+        out = frozenset(self.initial_disabled_keys() if keys is None else keys)
+        self._eff_cache, self._eff_sig = out, sig
+        return out
+
+    def invalidate(self) -> None:
+        """作废缓存（写文件 / 还原 / 换路径后调用；不调用也会被文件签名兜住）。"""
+        self._eff_cache = None
+        self._eff_sig = None
 
     def is_disabled(self, word: str, value: str) -> bool:
         return entry_key(word, value) in self.effective_disabled()
@@ -180,6 +201,7 @@ class WordStateStore:
 
     def _write_keys(self, keys: Iterable[str]) -> None:
         _atomic_write(self.path, _canonical(keys))
+        self.invalidate()
 
     def set_enabled(self, pairs: Iterable, *, enabled: bool) -> dict:
         """批量启用 / 禁用词条。返回 ``changed`` / ``unchanged`` 计数与操作后禁用总数。"""
@@ -231,8 +253,10 @@ class WordStateStore:
                 self.path.unlink()
             except OSError:
                 pass
+            self.invalidate()
             return
         _atomic_write(self.path, raw)
+        self.invalidate()
 
     # ------------------------------------------------------------------ 汇总
 
