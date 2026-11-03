@@ -1,0 +1,11 @@
+........................................................................ [ 71%]
+......................F......                                            [100%]
+=================================== FAILURES ===================================
+/home/gem/.aily/workdir/task_7703876680796687351/w/tests/test_ex4d_topbar_popup_anchor.py:156: AssertionError: ☰ 菜单项变了：['新手向导（重新观看）', '重新生成样式表', '关于 FixTextGUI']
+=========================== short test summary info ============================
+FAILED tests/test_ex4d_topbar_popup_anchor.py::test_more_menu_items_still_work
+1 failed, 100 passed in 210.12s (0:03:30)
+
+real	3m31.952s
+user	2m58.317s
+sys	0m5.066s

@@ -1,0 +1,23 @@
+............................................................FFFFF....... [ 65%]
+.FF...................................                                   [100%]
+=================================== FAILURES ===================================
+/home/gem/.aily/workdir/task_7703876680796687351/w/fixtext_ui/fixtext_worker.py:219: fixtext_worker.CorrectionCancelled: 已终止替换引擎
+/home/gem/.aily/workdir/task_7703876680796687351/w/fixtext_ui/fixtext_worker.py:219: fixtext_worker.CorrectionCancelled: 已终止替换引擎
+/home/gem/.aily/workdir/task_7703876680796687351/w/fixtext_ui/fixtext_worker.py:219: fixtext_worker.CorrectionCancelled: 已终止替换引擎
+/home/gem/.aily/workdir/task_7703876680796687351/w/fixtext_ui/fixtext_worker.py:219: fixtext_worker.CorrectionCancelled: 已终止替换引擎
+/home/gem/.aily/workdir/task_7703876680796687351/w/fixtext_ui/fixtext_worker.py:219: fixtext_worker.CorrectionCancelled: 已终止替换引擎
+/home/gem/.aily/workdir/task_7703876680796687351/w/tests/test_m5_ex4_1_layout.py:27: AttributeError: 'ExportModule' object has no attribute '_lay_actions'. Did you mean: '_w_actions'?
+/home/gem/.aily/workdir/task_7703876680796687351/w/tests/test_m5_ex4_1_layout.py:43: assert False
+=========================== short test summary info ============================
+FAILED tests/test_m5_ex1_runtime.py::test_smoke_default_no_extra_rounds - fix...
+FAILED tests/test_m5_ex1_runtime.py::test_smoke_preprocess_only - fixtext_wor...
+FAILED tests/test_m5_ex1_runtime.py::test_smoke_strict_only - fixtext_worker....
+FAILED tests/test_m5_ex1_runtime.py::test_smoke_zhuyin_after_main_and_after_raw
+FAILED tests/test_m5_ex1_runtime.py::test_smoke_skip_layout - fixtext_worker....
+FAILED tests/test_m5_ex4_1_layout.py::test_export_actions_before_target - Att...
+FAILED tests/test_m5_ex4_1_layout.py::test_import_no_empty_state_safety_after_shelf
+7 failed, 103 passed in 8.99s
+
+real	0m10.629s
+user	0m1.893s
+sys	0m0.395s

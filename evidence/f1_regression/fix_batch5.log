@@ -1,0 +1,97 @@
+.F.F.........................F.................................F........ [ 58%]
+....................................................                     [100%]
+=================================== FAILURES ===================================
+_____________________ test_module_shows_real_builtin_count _____________________
+
+mod = <vocab_module.VocabModule(0x24d2acc0) at 0x7fb912153b00>
+
+    def test_module_shows_real_builtin_count(mod):
+>       assert mod.store.builtin_total == 304255
+E       assert 302957 == 304255
+E        +  where 302957 = <fixtext_ui.fixtext_vocab.VocabStore object at 0x7fb91272f290>.builtin_total
+E        +    where <fixtext_ui.fixtext_vocab.VocabStore object at 0x7fb91272f290> = <vocab_module.VocabModule(0x24d2acc0) at 0x7fb912153b00>.store
+
+tests/test_t31_vocab_ui.py:75: AssertionError
+___________________ test_search_hit_count_matches_data_layer ___________________
+
+mod = <vocab_module.VocabModule(0x25810b30) at 0x7fb9141cf380>
+
+    def test_search_hit_count_matches_data_layer(mod):
+        mod.search = "好象"
+        mod.dict_, mod.tier = "all", "b1"
+        mod._page = 0
+        mod._render_entries()
+        expect = mod.store.builtin.search_count("好象", dict_code="b1")
+>       assert mod._hit_total == expect
+E       assert 18 == 9
+E        +  where 18 = <vocab_module.VocabModule(0x25810b30) at 0x7fb9141cf380>._hit_total
+
+tests/test_t31_vocab_ui.py:100: AssertionError
+_______________ test_custom_and_builtin_are_physically_separate ________________
+
+store = <fixtext_ui.fixtext_vocab.VocabStore object at 0x7fb90744ce00>
+
+    def test_custom_and_builtin_are_physically_separate(store):
+        custom_dir = store.custom.path.parent
+        builtin_dir = store.builtin.dir
+        assert custom_dir != builtin_dir
+        assert builtin_dir.is_dir()
+        # 自定义写入不碰内置任何文件
+>       builtin_before = {n: _sha(builtin_dir / n) for n in sorted(
+            p.name for p in builtin_dir.glob("*"))}
+
+tests/test_t32_vocab_safety.py:367: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/test_t32_vocab_safety.py:34: in _sha
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+/opt/python3.12/lib/python3.12/pathlib.py:1019: in read_bytes
+    with self.open(mode='rb') as f:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/home/gem/.aily/workdir/task_7703876680796687351/w/data/rules/bags')
+mode = 'rb', buffering = -1, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+E       IsADirectoryError: [Errno 21] Is a directory: '/home/gem/.aily/workdir/task_7703876680796687351/w/data/rules/bags'
+
+/opt/python3.12/lib/python3.12/pathlib.py:1013: IsADirectoryError
+_______________ test_custom_word_takes_effect_in_real_correction _______________
+
+corpus = PosixPath('/tmp/pytest-of-gem/pytest-48/test_custom_word_takes_effect_0/probe.txt')
+vocab = PosixPath('/tmp/pytest-of-gem/pytest-48/test_custom_word_takes_effect_0/custom_vocab.json')
+tmp_path = PosixPath('/tmp/pytest-of-gem/pytest-48/test_custom_word_takes_effect_0')
+
+    @needs_engine
+    def test_custom_word_takes_effect_in_real_correction(corpus, vocab, tmp_path):
+        before_rules = _sha(RULES / "before.json")
+        after_rules = _sha(RULES / "after.json")
+    
+        summary = _run(tmp_path / "run", corpus, vocab, tmp_path / "derived")
+        rep = json.loads((tmp_path / "run" / "run" / "03_replace" / "replace_report.json")
+                         .read_text(encoding="utf-8"))
+        after_text = Path(rep["after_path"]).read_text(encoding="utf-8")
+        before_text = Path(rep["before_path"]).read_text(encoding="utf-8")
+    
+        assert before_text.count("萧衍") == 6
+        assert after_text.count("萧衍") == 0, "自定义词没生效：原词仍在正文里"
+        assert after_text.count("萧彦") == 6, "替换值没有写进正文"
+        assert rep["derived_rules"]["custom_applied"] == 1
+>       assert rep["derived_rules"]["applied_words"] == [
+            {"word": "萧衍", "value": "萧彦", "id": 1}]
+E       KeyError: 'applied_words'
+
+tests/test_t37_vocab_bridge.py:194: KeyError
+=========================== short test summary info ============================
+FAILED tests/test_t31_vocab_ui.py::test_module_shows_real_builtin_count - ass...
+FAILED tests/test_t31_vocab_ui.py::test_search_hit_count_matches_data_layer
+FAILED tests/test_t32_vocab_safety.py::test_custom_and_builtin_are_physically_separate
+FAILED tests/test_t37_vocab_bridge.py::test_custom_word_takes_effect_in_real_correction
+4 failed, 120 passed in 90.40s (0:01:30)

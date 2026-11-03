@@ -1,0 +1,12 @@
+...................................................F.F..............     [100%]
+=================================== FAILURES ===================================
+/home/gem/.aily/workdir/task_7703876680796687351/w/tests/test_t31_vocab_merge_click.py:68: AttributeError: 'VocabModule' object has no attribute 'basis_cb'
+/home/gem/.aily/workdir/task_7703876680796687351/w/tests/test_t31_vocab_store.py:79: KeyError: 'b2'
+=========================== short test summary info ============================
+FAILED tests/test_t31_vocab_merge_click.py::test_merge_full_user_click_path
+FAILED tests/test_t31_vocab_store.py::test_search_scoped_to_tier - KeyError: ...
+2 failed, 66 passed in 42.48s
+
+real	0m44.199s
+user	0m17.353s
+sys	0m1.886s

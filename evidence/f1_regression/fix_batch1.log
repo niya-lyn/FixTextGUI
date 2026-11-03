@@ -1,0 +1,52 @@
+........................................................................ [ 71%]
+......................F......                                            [100%]
+=================================== FAILURES ===================================
+_______________________ test_more_menu_items_still_work ________________________
+
+qapp = <PySide6.QtWidgets.QApplication(0x1ef10f30) at 0x7f5e41851ac0>
+window = <main_window.MainWindow(0x1f1ac860) at 0x7f5e14261980>
+
+    def test_more_menu_items_still_work(qapp, window):
+        """菜单内容是重点：四项动作与两条分隔线都不能在修锚点时被改没。"""
+        from PySide6.QtCore import Qt, QTimer
+        from PySide6.QtTest import QTest
+        from PySide6.QtWidgets import QMenu
+    
+        captured: list[list[str]] = []
+        texts: list[str] = []
+    
+        def sample():
+            try:
+                for w in qapp.topLevelWidgets():
+                    if isinstance(w, QMenu) and w.isVisible() and type(w).__name__ == "QMenu":
+                        acts = w.actions()
+                        texts.extend(a.text() for a in acts if not a.isSeparator())
+                        captured.append(["" for a in acts if a.isSeparator()])
+                        w.close()
+                        return
+            finally:
+                if not captured:
+                    captured.append(["<no menu>"])
+    
+        QTimer.singleShot(160, sample)
+        QTest.mouseClick(_top_acts(window)["更多"], Qt.MouseButton.LeftButton)
+        qapp.processEvents()
+    
+>       assert texts == [
+            "新手向导（重新观看）", "重新生成样式表",
+            "打开设计依据目录", "关于 FixTextGUI",
+        ], f"☰ 菜单项变了：{texts}"
+E       AssertionError: ☰ 菜单项变了：['新手向导（重新观看）', '重新生成样式表', '关于 FixTextGUI']
+E       assert ['新手向导（重新观看）'...于 FixTextGUI'] == ['新手向导（重新观看）'...于 FixTextGUI']
+E         
+E         At index 2 diff: '关于 FixTextGUI' != '打开设计依据目录'
+E         Right contains one more item: '关于 FixTextGUI'
+E         Use -v to get more diff
+
+tests/test_ex4d_topbar_popup_anchor.py:156: AssertionError
+----------------------------- Captured stderr call -----------------------------
+This plugin does not support raise()
+This plugin does not support grabbing the keyboard
+=========================== short test summary info ============================
+FAILED tests/test_ex4d_topbar_popup_anchor.py::test_more_menu_items_still_work
+1 failed, 100 passed in 214.33s (0:03:34)

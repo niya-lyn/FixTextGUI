@@ -1,0 +1,15 @@
+        此时 ``findChildren`` 也就找不到了，所以这里只排除那两个特定控件即可。
+        """
+        from PySide6.QtWidgets import QCheckBox
+    
+        return [c for c in mod.findChildren(QCheckBox)
+>               if c is not mod._chk_all and c is not mod.basis_cb
+                and not c.isHidden()]
+E       AttributeError: 'VocabModule' object has no attribute 'basis_cb'
+
+tests/test_t31_vocab_merge_click.py:68: AttributeError
+---------------------------- Captured stderr setup -----------------------------
+This plugin does not support propagateSizeHints()
+=========================== short test summary info ============================
+FAILED tests/test_t31_vocab_merge_click.py::test_merge_full_user_click_path
+1 failed in 2.98s
