@@ -1,0 +1,10 @@
+########## NEG-1：t32 指纹能否抓到内置文件被写 ##########
+断言是否会亮（应为 True）: True
+变化文件: ['bags/normal/before.json']
+已按字节还原，还原后全量指纹与改前一致 = True
+
+########## NEG-2 / NEG-3 ##########
+NEG-2 基准：可达分级之和 = 302957 builtin_total = 302957
+NEG-2 人为把 b1 减 1 后断言应为 False = True （左 302956 vs 右 302957 ）
+NEG-3 真实 round_meta: custom_applied = 1 applied_words = [{'word': '萧衍', 'value': '萧彦', 'id': 1}]
+NEG-3 把期望值改成 0（模拟自定义词没生效）断言应为 False = True

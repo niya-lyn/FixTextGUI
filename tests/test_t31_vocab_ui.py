@@ -72,9 +72,33 @@ def test_module_starts_with_empty_custom(mod):
 
 
 def test_module_shows_real_builtin_count(mod):
-    assert mod.store.builtin_total == 304255
+    """界面汇总的内置条数必须等于「各可达分级之和」，且来自真实数据。
+
+    V1.1-F3 修订：原断言 ``builtin_total == 304255`` 且 ``b1+b2+b3 == 304255``。
+    两处前提都过期了：
+      * ``b2``（标点规范）在 M5-QC.2 ``18a1a7c`` 被移除（标点已迁排版），
+        分级表里不再有 b2，取 ``counts["b2"]`` 直接 KeyError；
+      * 词库展示从 flat 五件套改读按袋目录（M5-EX.1 ``21cb712``），
+        ``builtin_total`` 现在是**界面可达**的 302,957 条；磁盘上的 304,255
+        里有 1,298 条属 ``punctuation`` / ``postfix`` / ``temp`` 三袋，
+        界面上不挂（见 ``BAG_TO_TIER`` 与 bags manifest）。
+
+    因此改为不写死数字的等价断言：可达分级之和 == builtin_total ==
+    manifest 可达袋之和；磁盘总数另算一笔并核准差额出处。
+    """
+    from fixtext_ui.fixtext_vocab import BAG_TO_TIER
+
     counts = mod.store.counts()
-    assert counts["b1"] + counts["b2"] + counts["b3"] == 304255
+    reachable = sorted(set(BAG_TO_TIER.values()))
+    rule_counts = {b["id"]: b["rule_count"] for b in mod.store.builtin.meta["bags"]}
+
+    assert sum(counts[t] for t in reachable) == mod.store.builtin_total
+    assert mod.store.builtin_total == sum(
+        rule_counts[b] for b in BAG_TO_TIER)
+    # 磁盘总数多出来的那部分，必须正好是界面上不挂的三袋
+    hidden = sorted(set(rule_counts) - set(BAG_TO_TIER))
+    assert sum(rule_counts.values()) == mod.store.builtin_total + sum(
+        rule_counts[b] for b in hidden)
 
 
 def test_empty_state_is_plain_language(mod):
@@ -92,14 +116,34 @@ def test_empty_state_is_plain_language(mod):
 # ---------------------------------------------------------------------------
 
 def test_search_hit_count_matches_data_layer(mod):
+    """界面命中数必须与数据层同口径：左边点哪个分级，右边就只数那个分级。
+
+    V1.1-F3 修订：原用例把界面置成 ``dict_="all"`` + ``tier="b1"``——
+    这是**界面上不存在**的状态组合。页头那组分档（全部/自定义/内置，
+    ``set_tier``）与左侧分级列表（``select_dict``）任何一条真实点击路径都
+    不会产生它：``set_tier("all")`` 不动 ``dict_``，``select_dict(d)`` 会把
+    ``tier`` 归到 ``custom`` / ``all``。而 ``_scope()`` 先看 ``dict_``——
+    ``dict_="all"`` 落进 ``if self.dict_ in TIER_NAMES``？不，``"all"``
+    不在里面，于是最终返回 ``"all"``（全库），界面显示 18，
+    而用例拿 ``search_count(dict_code="b1")`` 的 9 去比 —— 18 != 9。
+
+    改为按真实点击路径置状态：``select_dict("b1")``（等价于用户点左侧
+    「常规校正词库」），再核对命中数与数据层 b1 同口径。
+    """
+    from vocab_module import PAGE_SIZE   # 每页条数是界面常量，不在数据层
+
+    mod.select_dict("b1")
     mod.search = "好象"
-    mod.dict_, mod.tier = "all", "b1"
     mod._page = 0
     mod._render_entries()
+
     expect = mod.store.builtin.search_count("好象", dict_code="b1")
-    assert mod._hit_total == expect
     assert expect > 0
-    assert len(mod.get_filtered()) == min(expect, 40)
+    assert mod._hit_total == expect, (
+        f"界面显示 {mod._hit_total}，数据层 b1 口径是 {expect}"
+        "（界面必须与数据层同口径，不能一边全库一边单分级）"
+    )
+    assert len(mod.get_filtered()) == min(expect, PAGE_SIZE)
 
 
 # ---------------------------------------------------------------------------

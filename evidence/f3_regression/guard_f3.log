@@ -1,0 +1,9 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.11, pytest-8.3.5, pluggy-1.6.0 -- /usr/local/bin/python3.12
+rootdir: /home/gem/.aily/workdir/task_7703932642571340824/work/pkg/FixTextGUI
+collecting ... collected 2 items
+
+tests/test_f3_engine_globals.py::test_cancelled_job_hands_subprocess_back PASSED [ 50%]
+tests/test_f3_engine_globals.py::test_completed_job_hands_subprocess_back PASSED [100%]
+
+============================== 2 passed in 3.30s ===============================

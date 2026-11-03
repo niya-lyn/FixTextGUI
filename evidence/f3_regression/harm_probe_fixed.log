@@ -1,0 +1,3 @@
+CANCELLED ok: 在阶段开始前取消
+resp.ok = True
+client.subprocess = <module 'subprocess' from '/opt/python3.12/lib/python3.12/subprocess.py'>

@@ -1,0 +1,38 @@
+FFFFF                                                                    [100%]
+=================================== FAILURES ===================================
+__________________________ test_search_scoped_to_tier __________________________
+tests/test_t31_vocab_store.py:79: in test_search_scoped_to_tier
+    assert counts["b1"] + counts["b2"] + counts["b3"] == 304255
+E   KeyError: 'b2'
+_____________________ test_module_shows_real_builtin_count _____________________
+tests/test_t31_vocab_ui.py:75: in test_module_shows_real_builtin_count
+    assert mod.store.builtin_total == 304255
+E   assert 302957 == 304255
+E    +  where 302957 = <fixtext_ui.fixtext_vocab.VocabStore object at 0x7f46c4931ac0>.builtin_total
+E    +    where <fixtext_ui.fixtext_vocab.VocabStore object at 0x7f46c4931ac0> = <vocab_module.VocabModule(0x1b040480) at 0x7f46c7cff840>.store
+___________________ test_search_hit_count_matches_data_layer ___________________
+tests/test_t31_vocab_ui.py:100: in test_search_hit_count_matches_data_layer
+    assert mod._hit_total == expect
+E   assert 18 == 9
+E    +  where 18 = <vocab_module.VocabModule(0x1c3684a0) at 0x7f46c4e07780>._hit_total
+_______________ test_custom_and_builtin_are_physically_separate ________________
+tests/test_t32_vocab_safety.py:367: in test_custom_and_builtin_are_physically_separate
+    builtin_before = {n: _sha(builtin_dir / n) for n in sorted(
+tests/test_t32_vocab_safety.py:34: in _sha
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+/opt/python3.12/lib/python3.12/pathlib.py:1019: in read_bytes
+    with self.open(mode='rb') as f:
+/opt/python3.12/lib/python3.12/pathlib.py:1013: in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+E   IsADirectoryError: [Errno 21] Is a directory: '/home/gem/.aily/workdir/task_7703932642571340824/work/base/FixTextGUI/data/rules/bags'
+_______________ test_custom_word_takes_effect_in_real_correction _______________
+tests/test_t37_vocab_bridge.py:194: in test_custom_word_takes_effect_in_real_correction
+    assert rep["derived_rules"]["applied_words"] == [
+E   KeyError: 'applied_words'
+=========================== short test summary info ============================
+FAILED tests/test_t31_vocab_store.py::test_search_scoped_to_tier - KeyError: ...
+FAILED tests/test_t31_vocab_ui.py::test_module_shows_real_builtin_count - ass...
+FAILED tests/test_t31_vocab_ui.py::test_search_hit_count_matches_data_layer
+FAILED tests/test_t32_vocab_safety.py::test_custom_and_builtin_are_physically_separate
+FAILED tests/test_t37_vocab_bridge.py::test_custom_word_takes_effect_in_real_correction
+5 failed in 11.84s
