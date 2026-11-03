@@ -1,0 +1,20 @@
+=== batch 1 ===
+=========================== short test summary info ============================
+FAILED tests/test_ex4d_topbar_popup_anchor.py::test_more_menu_items_still_work
+1 failed, 100 passed in 209.73s (0:03:29)
+=== batch 2 ===
+........................................................................ [ 80%]
+.................                                                        [100%]
+89 passed in 12.80s
+=== batch 3 ===
+FAILED tests/test_m5_ex4_1_layout.py::test_export_actions_before_target - Att...
+FAILED tests/test_m5_ex4_1_layout.py::test_import_no_empty_state_safety_after_shelf
+2 failed, 108 passed in 12.50s
+=== batch 4 ===
+=========================== short test summary info ============================
+FAILED tests/test_t31_vocab_store.py::test_search_scoped_to_tier - KeyError: ...
+1 failed, 67 passed in 45.90s
+=== batch 5 ===
+FAILED tests/test_t32_vocab_safety.py::test_custom_and_builtin_are_physically_separate
+FAILED tests/test_t37_vocab_bridge.py::test_custom_word_takes_effect_in_real_correction
+4 failed, 120 passed in 95.60s (0:01:35)

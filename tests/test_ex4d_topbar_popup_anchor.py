@@ -153,9 +153,14 @@ def test_more_menu_items_still_work(qapp, window):
     QTest.mouseClick(_top_acts(window)["更多"], Qt.MouseButton.LeftButton)
     qapp.processEvents()
 
+    # V1.1-F2：「打开设计依据目录」这一项已被产品在 M5-EX.2（655f47b，BUG-2）
+    # 移除——「显示设计依据」整套入口连同菜单项、设置项一并删掉，只剩
+    # Card 的 basis 标签保留但恒隐藏；本测试随后没有跟着更新，仍在断言四
+    # 项。按产品现在的真实菜单（三项 + 两条分隔线）对齐，断言口径不变：
+    # 仍是「逐项列出菜单文案」且「分隔线数量固定」——三项少一项或多一项
+    # 都会照旧判失败，没有放宽。
     assert texts == [
-        "新手向导（重新观看）", "重新生成样式表",
-        "打开设计依据目录", "关于 FixTextGUI",
+        "新手向导（重新观看）", "重新生成样式表", "关于 FixTextGUI",
     ], f"☰ 菜单项变了：{texts}"
     assert len(captured[0]) == 2, f"☰ 菜单分隔线数量变了：{captured}"
 

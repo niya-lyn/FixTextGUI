@@ -1,0 +1,40 @@
+........................................................................ [ 65%]
+.FF...................................                                   [100%]
+=================================== FAILURES ===================================
+______________________ test_export_actions_before_target _______________________
+
+qt_app = <PySide6.QtWidgets.QApplication(0x259edb90) at 0x7fca2b54f0c0>
+
+    def test_export_actions_before_target(qt_app):
+        """SYNC-1：开始导出（actions）在结果之前，结果在目标卡之前。"""
+        from export_module import ExportModule
+    
+        mod = ExportModule()
+        cl = mod._content_w.layout()
+>       i_actions = _index_of(cl, mod._lay_actions)
+E       AttributeError: 'ExportModule' object has no attribute '_lay_actions'. Did you mean: '_w_actions'?
+
+tests/test_m5_ex4_1_layout.py:27: AttributeError
+________________ test_import_no_empty_state_safety_after_shelf _________________
+
+qt_app = <PySide6.QtWidgets.QApplication(0x259edb90) at 0x7fca2b54f0c0>
+tmp_path = PosixPath('/tmp/pytest-of-gem/pytest-65/test_import_no_empty_state_saf0')
+
+    def test_import_no_empty_state_safety_after_shelf(qt_app, tmp_path):
+        """SYNC-2/3：无独立 empty_state；safety 在书架之后。"""
+        from import_module import ImportModule
+    
+        mod = ImportModule(tmp_path / "ws")
+        assert not hasattr(mod, "empty_state")
+        assert hasattr(mod, "safety_card")
+>       assert mod.workspace_card.isVisible()
+E       assert False
+E        +  where False = <built-in method isVisible of Card object at 0x7fca27cd5ec0>()
+E        +    where <built-in method isVisible of Card object at 0x7fca27cd5ec0> = <fixtext_widgets.Card(0x26002ce0, name="Card") at 0x7fca27cd5ec0>.isVisible
+E        +      where <fixtext_widgets.Card(0x26002ce0, name="Card") at 0x7fca27cd5ec0> = <import_module.ImportModule(0x25fc1ea0) at 0x7fca27cd4700>.workspace_card
+
+tests/test_m5_ex4_1_layout.py:43: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_m5_ex4_1_layout.py::test_export_actions_before_target - Att...
+FAILED tests/test_m5_ex4_1_layout.py::test_import_no_empty_state_safety_after_shelf
+2 failed, 108 passed in 12.50s
