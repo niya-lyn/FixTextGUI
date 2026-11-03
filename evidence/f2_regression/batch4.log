@@ -1,0 +1,16 @@
+.....................................................F..............     [100%]
+=================================== FAILURES ===================================
+__________________________ test_search_scoped_to_tier __________________________
+
+builtin_store = <fixtext_ui.fixtext_vocab.VocabStore object at 0x7f6619deda00>
+
+    def test_search_scoped_to_tier(builtin_store: VocabStore):
+        """分级检索按分级码过滤，三个分级之和等于内置总数。"""
+        counts = builtin_store.counts()
+>       assert counts["b1"] + counts["b2"] + counts["b3"] == 304255
+E       KeyError: 'b2'
+
+tests/test_t31_vocab_store.py:79: KeyError
+=========================== short test summary info ============================
+FAILED tests/test_t31_vocab_store.py::test_search_scoped_to_tier - KeyError: ...
+1 failed, 67 passed in 45.12s

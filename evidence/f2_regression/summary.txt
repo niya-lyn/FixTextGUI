@@ -1,0 +1,20 @@
+=== batch 1 ===
+........................................................................ [ 71%]
+.............................                                            [100%]
+101 passed in 206.47s (0:03:26)
+=== batch 2 ===
+........................................................................ [ 80%]
+.................                                                        [100%]
+89 passed in 10.17s
+=== batch 3 ===
+........................................................................ [ 65%]
+......................................                                   [100%]
+110 passed in 10.29s
+=== batch 4 ===
+=========================== short test summary info ============================
+FAILED tests/test_t31_vocab_store.py::test_search_scoped_to_tier - KeyError: ...
+1 failed, 67 passed in 45.12s
+=== batch 5 ===
+FAILED tests/test_t32_vocab_safety.py::test_custom_and_builtin_are_physically_separate
+FAILED tests/test_t37_vocab_bridge.py::test_custom_word_takes_effect_in_real_correction
+4 failed, 120 passed in 97.08s (0:01:37)
