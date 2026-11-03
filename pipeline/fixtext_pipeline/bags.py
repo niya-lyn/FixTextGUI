@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-from . import vocab_bridge
+from . import book_vocab, vocab_bridge
 
 #: 主替换锁定袋（界面勾选但不可取消）
 LOCKED_MAIN_BAG = "normal"
@@ -129,22 +129,32 @@ def write_round_rules(
     include_custom: bool = False,
     root: Path | None = None,
     disabled_keys: Iterable[str] | None = None,
+    book_excluded_keys: Iterable[str] | None = None,
+    book_id: str = "",
 ) -> dict[str, Any]:
     """写出一轮替换用的 before/after；主轮可 include_custom。
 
-    ``disabled_keys`` 是**有效禁用集**（词条内容键）。这一层是规则真正下发到
-    引擎前的最后一站（``ReplaceStage._prepare_rules`` 的出口），所以过滤就
-    落在这里：**不论主轮 / 预处理 / 严格 / 注音，不论带不带自定义词**，
+    ``disabled_keys`` 是**全局有效禁用集**（词条内容键）。这一层是规则真正
+    下发到引擎前的最后一站（``ReplaceStage._prepare_rules`` 的出口），所以
+    过滤就落在这里：**不论主轮 / 预处理 / 严格 / 注音，不论带不带自定义词**，
     凡命中的词条都不进派生文件。``None`` 与空集都表示「没有禁用」，
     此时输出与 T1.2 逐字节一致（内置行为不变）。
+
+    ``book_excluded_keys`` 是**按书排除集**（V1.1-C1）：**同一道过滤**、
+    同一次 ``compose()`` 调用，不另造第二条路径。两层取并集、按书层不得
+    抵消全局禁用（判定口径见 :func:`vocab_bridge.compose` 与
+    :mod:`book_vocab`）。``None`` / 空集时输出与 B3 收口时**逐字节一致**。
     """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     off = frozenset(disabled_keys or ())
+    book_off = frozenset(book_excluded_keys or ())
     before, after = concat_bags(bag_ids, root)
     if include_custom:
         entries, err = vocab_bridge.load_custom_entries(custom_path) if custom_path else ([], "")
-        composed = vocab_bridge.compose(before, after, entries, disabled_keys=off)
+        composed = vocab_bridge.compose(
+            before, after, entries, disabled_keys=off,
+            book_excluded_keys=book_off, book_id=book_id)
         before = composed["before"]
         after = composed["after"]
         stats = composed["stats"]
@@ -152,7 +162,8 @@ def write_round_rules(
     else:
         # 不带自定义词也要过滤出厂侧——禁用一条出厂词条同样必须生效。
         composed = vocab_bridge.compose(
-            before, after, [], disabled_keys=off)
+            before, after, [], disabled_keys=off,
+            book_excluded_keys=book_off, book_id=book_id)
         before = composed["before"]
         after = composed["after"]
         stats = composed["stats"]
@@ -171,6 +182,8 @@ def write_round_rules(
         include_custom=bool(include_custom),
         custom_error=custom_error,
         disabled_sha=vocab_bridge.disabled_sha(off),
+        # book_id / book_excluded_sha 由下面 ``**stats`` 提供（唯一来源）。
+        book_excluded_keys_checked=len(book_off),
         before_sha256=vocab_bridge.sha256_bytes(raw_b),
         after_sha256=vocab_bridge.sha256_bytes(raw_a),
         ruleset_sha256=vocab_bridge.ruleset_sha(before, after),

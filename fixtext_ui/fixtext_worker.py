@@ -253,6 +253,8 @@ class CorrectionJob:
                  custom_vocab_path: Path | None = None,
                  derived_rules_dir: Path | None = None,
                  word_states_path: Path | None = None,
+                 book_id: str = "",
+                 book_vocab_path: Path | None = None,
                  engine: str | None = None,
                  auto_fix_quotes: bool = False,
                  quotation_rules_path: Path | None = None,
@@ -287,6 +289,10 @@ class CorrectionJob:
         #: 词条禁用集文件（V1.1-T1.3）。None = 产品里 `workspace/vocab/word_states.json`；
         #: 测试 / 隔离场景可指到临时文件，这样「禁用一条词」能真正作用到本次运行。
         self.word_states_path = Path(word_states_path) if word_states_path else None
+        #: 按书层（V1.1-C1）：本书 id 与按书词库位置。None / 空 = 这本书没有按书层，
+        #: 装载层拿到空排除集，行为与 B3 收口时完全一致（界面入口归 C2）。
+        self.book_id = str(book_id or "")
+        self.book_vocab_path = Path(book_vocab_path) if book_vocab_path else None
         #: 本次运行的替换引擎（M4-T4.2）。None = 启动时读配置键 ``engine``；
         #: 界面降级确认后显式传 ``python``（只本次生效，不写回设置）。
         self.engine = engine
@@ -445,6 +451,9 @@ class CorrectionJob:
             derived_rules_dir=self.derived_rules_dir,
             # 词条禁用（V1.1-T1.3）：禁用集进装载层过滤 + 阶段指纹
             word_states_path=self.word_states_path,
+            # 按书层（V1.1-C1）：按书排除集走同一处过滤入口（界面入口归 C2）
+            book_id=self.book_id,
+            book_vocab_path=self.book_vocab_path,
             # 排版章循环协作取消（P1-7）
             cancel_check=lambda: self.cancel_requested,
             # M4-EX.6-R3：词替换后可选自动修引号（与检查页共用规则文件）
