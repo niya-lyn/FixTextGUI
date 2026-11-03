@@ -78,6 +78,16 @@ def build() -> str:
     q.append("    padding: 0 12px;")
     q.append("}")
     q.append(f"#Brand:hover {{ color: {c('neutral.0')}; }}")
+    # 顶栏品牌「F」圆标（P3-2）：白底圆角，主色 F。用 #TopBar #BrandLogo 双 ID
+    # 压过上方 #TopBar QLabel 的透明规则，否则白底被透明覆盖。
+    q.append("#TopBar #BrandLogo {")
+    q.append("    background-color: #FFFFFF;")
+    q.append(f'    color: {c("primary.600")};')
+    q.append("    border: none;")
+    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append(f'    font-size: 16px;')
+    q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
+    q.append("}")
     # 顶栏图标按钮（☰ / ? / ⚙）：白色半透明底 34×34（原型 .icon-btn）
     q.append("#TopAct {")
     q.append(f'    color: {c("neutral.0")};')
@@ -346,8 +356,8 @@ def build() -> str:
     q.append(f'    background-color: {c("primary.50")};')
     q.append("}")
     q.append("#OvfIco {")
-    q.append(f'    background-color: {c("primary.50")};')
-    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append(f'    background-color: {c("primary.100")};')
+    q.append(f'    border-radius: {RADIUS["lg"]};')
     q.append(f'    font-size: {FONT_SIZE["md"]};')
     q.append("}")
     q.append("")

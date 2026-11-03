@@ -40,6 +40,14 @@ QLabel { background-color: transparent; }
     padding: 0 12px;
 }
 #Brand:hover { color: #FFFFFF; }
+#TopBar #BrandLogo {
+    background-color: #FFFFFF;
+    color: #3F48A2;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+}
 #TopAct {
     color: #FFFFFF;
     background: rgba(255,255,255,.14);
@@ -291,8 +299,8 @@ QLabel { background-color: transparent; }
     background-color: #EEF0FB;
 }
 #OvfIco {
-    background-color: #EEF0FB;
-    border-radius: 8px;
+    background-color: #DDE1F6;
+    border-radius: 12px;
     font-size: 16px;
 }
 

@@ -162,37 +162,32 @@ class OverviewCard(QFrame):
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(8)
+        layout.setSpacing(10)
 
-        top = QHBoxLayout()
-        top.setSpacing(10)
+        # 大图标块（对齐原型 .ov-ico：主色淡底圆角方块；沿用 emoji 字形）
         ico = QLabel(entry["icon"])
         ico.setObjectName("OvfIco")
         ico.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ico.setFixedSize(30, 30)
-        top.addWidget(ico)
+        ico.setFixedSize(46, 46)
+        layout.addWidget(ico)
 
         title = QLabel(entry["label"])
         title.setStyleSheet(
             f"color:{c('neutral.900')};font-size:{fs('lg')};"
             f"font-weight:{FONT_WEIGHT['bold']}"
         )
-        top.addWidget(title)
-        top.addStretch(1)
-
-        kind = "ok" if entry["status"] == "ready" else "warn"
-        top.addWidget(Pill(STATUS_TEXT[entry["status"]], kind))
-        layout.addLayout(top)
+        layout.addWidget(title)
 
         desc = QLabel(entry["short"])
         desc.setWordWrap(True)
-        desc.setMinimumHeight(40)
         desc.setStyleSheet(
             f"color:{c('neutral.600')};font-size:{fs('sm')}"
         )
         layout.addWidget(desc)
 
-        hint = QLabel("点开看看 →")
+        layout.addStretch(1)
+
+        hint = QLabel("进入 →")
         hint.setStyleSheet(
             f"color:{c('primary.600')};font-size:{fs('xs')};"
             f"font-weight:{FONT_WEIGHT['semibold']}"
@@ -238,24 +233,41 @@ class HomeOverview(QWidget):
         hl.addWidget(sub)
         layout.addWidget(head)
 
-        grid = QGridLayout()
-        grid.setSpacing(px(sp("4")))
-        for i, entry in enumerate(ENTRIES):
+        self._on_enter = on_enter
+        self._cards = []
+        for entry in ENTRIES:
             card = OverviewCard(entry)
-            card.setMinimumHeight(132)
+            card.setMinimumHeight(156)
             if on_enter:
                 card.entered.connect(on_enter)
-            grid.addWidget(card, i // 3, i % 3)
-        layout.addLayout(grid)
+            self._cards.append(card)
+
+        self._grid = QGridLayout()
+        self._grid.setSpacing(px(sp("4")))
+        layout.addLayout(self._grid)
+        self._relayout()
 
         foot = QLabel(
-            "现在能直接用的入口标着「可用」，其余标着「建设中」——"
-            "点进去会告诉你它做好之后能做什么，不会点了个寂寞。"
+            "点任意一张卡片就能进对应的模块；进去之后会用大白话告诉你现在能做什么、该点哪。"
         )
         foot.setWordWrap(True)
         foot.setStyleSheet(f"color:{c('neutral.500')};font-size:{fs('xs')}")
         layout.addWidget(foot)
         layout.addStretch(1)
+
+    def resizeEvent(self, event):
+        self._relayout()
+        super().resizeEvent(event)
+
+    def _relayout(self):
+        # 按可用宽度自适应 2/3 列（对齐原型 auto-fill 网格）
+        cols = 3 if self.width() >= 760 else 2
+        while self._grid.count():
+            self._grid.takeAt(0)
+        for i, card in enumerate(self._cards):
+            self._grid.addWidget(card, i // cols, i % cols)
+        for c_ in range(cols):
+            self._grid.setColumnStretch(c_, 1)
 
 
 # ---------------------------------------------------------------------------
@@ -485,8 +497,18 @@ class MainWindow(QMainWindow):
         top = QWidget()
         top.setObjectName("TopBar")
         tl = QHBoxLayout(top)
-        tl.setContentsMargins(12, 0, 12, 0)
+        tl.setContentsMargins(20, 0, 20, 0)
         tl.setSpacing(8)
+
+        self.brand_logo = QLabel("F")
+        self.brand_logo.setObjectName("BrandLogo")
+        self.brand_logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.brand_logo.setFixedSize(28, 28)
+        self.brand_logo.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.brand_logo.setToolTip("回到首页概览")
+        self.brand_logo.mousePressEvent = lambda _e: self.go(HOME_KEY)
+        tl.addWidget(self.brand_logo)
+        tl.addSpacing(8)
 
         self.brand = QPushButton(f"{APP_NAME}")
         self.brand.setObjectName("Brand")
@@ -707,6 +729,7 @@ class MainWindow(QMainWindow):
 
         root = Path(workspace) if workspace else PKG_ROOT / "workspace"
         module = ImportModule(root)
+        module.gotoPage.connect(self.go)  # 书架卡「去一键校正 / 先检查问题」跳转
         host = self._content_slot("import")
         host.layout().addWidget(module)
         host.layout().addStretch(1)
