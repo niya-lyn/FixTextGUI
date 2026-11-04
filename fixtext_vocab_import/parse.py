@@ -47,6 +47,11 @@ class ParsedSheet:
     delimiter_evidence: list[str] = field(default_factory=list)
     headers: list[str] | None = None
     header_skipped: bool = False
+    #: 原文第一行是原版导出时自动写的说明文字（**置空不删行**）。
+    #: D2 的不合格清单要据此向用户交代「行号没有前移」。
+    banner_removed: bool = False
+    #: 被跳过的物理空行数（不含被置空的说明行）。D2 要把它报给用户。
+    blank_skipped: int = 0
     column_count: int = 0
     data_rows: list[tuple[int, list[str]]] = field(default_factory=list)
     mapping: ColumnMapping = field(default_factory=lambda: ColumnMapping())
@@ -119,14 +124,27 @@ def _strip_orig_banner(text: str) -> tuple[str, bool]:
     return "\n".join(lines), True
 
 
-def _physical_lines(text: str) -> list[tuple[int, str]]:
-    """按物理行切分，保留**原始行号**（D2 的不合格清单要靠它定位）。"""
+def _physical_lines(text: str, *, skip_first_blank: bool = False) -> list[tuple[int, str]]:
+    """按物理行切分，保留**原始行号**（D2 的不合格清单要靠它定位）。
+
+    :param skip_first_blank: 第一行若已因「原版说明文字」被置空，不算「空行」
+                             ——那是被跳过的一整行说明，不是用户在表里留的空行。
+    """
     out: list[tuple[int, str]] = []
     for idx, line in enumerate(text.split("\n"), start=1):
         if line.strip() == "":
             continue                       # 空行不参与解析，但行号仍然按原文计
         out.append((idx, line.rstrip("\t ")))
     return out
+
+
+def _count_blank_lines(text: str, *, skip_first: bool = False) -> int:
+    """数一数有多少物理空行被跳过（要报给用户，不能静默丢）。"""
+    lines = text.split("\n")
+    blanks = sum(1 for ln in lines if ln.strip() == "")
+    if skip_first and lines and lines[0].strip() == "":
+        blanks -= 1
+    return max(0, blanks)
 
 
 def _looks_like_header(fields: list[str], following: Sequence[list[str]]) -> bool:
@@ -198,6 +216,7 @@ def _build_sheet(
     text, banner_removed = _strip_orig_banner(text)
 
     guess = dialect.guess_delimiter(text)
+    blank_skipped = _count_blank_lines(text, skip_first=banner_removed)
     lines = _physical_lines(text)
     if not lines:
         raise msg.empty_input()
@@ -245,6 +264,8 @@ def _build_sheet(
         delimiter_evidence=list(guess.evidence),
         headers=headers,
         header_skipped=header_skipped,
+        banner_removed=banner_removed,
+        blank_skipped=blank_skipped,
         column_count=column_count,
         data_rows=data_rows,
         mapping=mapping,

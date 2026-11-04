@@ -1,0 +1,28 @@
+
+[M1 批计划把不合格行也塞进批]
+  exit = 1  | 5 failed, 54 passed in 1.59s
+    FAILED tests/test_d2_batching_rejects.py::test_mixed_table_keeps_every_legal_row_in_the_plan
+    FAILED tests/test_d2_batching_rejects.py::test_mixed_table_keeps_every_illegal_row_out_of_the_plan
+    FAILED tests/test_d2_batching_rejects.py::test_negative_control_deleting_legal_rows_empties_the_plan
+    FAILED tests/test_d2_batching_rejects.py::test_crlf_file_keeps_line_numbers_after_newline_normalization
+    FAILED tests/test_d2_batching_rejects.py::test_end_to_end_on_a_large_mixed_table_every_reject_traces_back
+  已还原: fixtext_vocab_import/batching.py 内容一致 = True
+
+[M2 清单行号偏移 +1（不懂 banner 口径）]
+  exit = 1  | 8 failed, 51 passed in 1.72s
+    FAILED tests/test_d2_batching_rejects.py::test_mixed_table_keeps_every_illegal_row_out_of_the_plan
+    FAILED tests/test_d2_batching_rejects.py::test_counts_are_conserved_no_row_is_lost_or_double_counted
+    FAILED tests/test_d2_batching_rejects.py::test_every_reject_points_at_the_real_original_line
+    FAILED tests/test_d2_batching_rejects.py::test_crlf_file_keeps_line_numbers_after_newline_normalization
+    FAILED tests/test_d2_batching_rejects.py::test_raw_line_is_kept_verbatim_including_markers_and_spaces
+    FAILED tests/test_d2_batching_rejects.py::test_reject_text_names_the_line_in_human_words
+    … 共 8 项失败
+  已还原: fixtext_vocab_import/rejects.py 内容一致 = True
+
+[M3 判定里不再补全角空格（空格看着空却不判空）]
+  exit = 1  | 4 failed, 55 passed in 1.57s
+    FAILED tests/test_d2_batching_rejects.py::test_mixed_table_keeps_every_legal_row_in_the_plan
+    FAILED tests/test_d2_batching_rejects.py::test_mixed_table_keeps_every_illegal_row_out_of_the_plan
+    FAILED tests/test_d2_batching_rejects.py::test_grouped_counts_are_per_reason_in_fixed_order
+    FAILED tests/test_d2_batching_rejects.py::test_full_width_space_only_cell_is_rejected
+  已还原: fixtext_vocab_import/rejects.py 内容一致 = True
