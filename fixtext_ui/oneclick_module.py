@@ -457,7 +457,7 @@ class OneClickModule(QWidget):
         card.body_l.addLayout(self._opt_label("运行模式"))
         self.rd_full = RadioCard(
             "完整流程（默认）",
-            "点击恢复默认：排版开、预处理开、严格关、注音关",
+            "点击恢复推荐的完整流程：开启排版和预处理，关闭严格模式和生僻字注音",
             "full",
         )
         self.rd_full.chosen.connect(lambda _=None: self._reset_run_mode_defaults())

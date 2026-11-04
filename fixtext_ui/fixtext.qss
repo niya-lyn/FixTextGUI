@@ -884,13 +884,6 @@ QGroupBox::title {
     left: 12px;
 }
 
-QScrollArea#VocabTableScroll {
-    background: transparent;
-    border: none;
-}
-QScrollArea#VocabTableScroll > QWidget {
-    background: transparent;
-}
 QWidget#VocabScrollInner {
     background-color: #FFFFFF;
 }
@@ -904,6 +897,11 @@ QWidget#VocabRow QWidget {
 QWidget#VocabTableHeader {
     background-color: #EEF1F5;
     border-bottom: 1px solid #DDE2EA;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+QWidget#VocabTableHeader QWidget {
+    background: transparent;
 }
 
 /* 历史记录页任务列表 */

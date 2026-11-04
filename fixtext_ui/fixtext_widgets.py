@@ -448,6 +448,8 @@ class ChkMark(QFrame):
     胶囊风格不一致；这里用 QPainter 自绘，不依赖原生样式与图片资源。
     """
 
+    clicked = Signal(bool)   # 点击切换后发出新状态
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("ChkMark")
@@ -455,6 +457,7 @@ class ChkMark(QFrame):
         self._on = False
         self._locked = False
         self._enabled = True
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     def setChecked(self, on: bool) -> None:
         self._on = bool(on)
@@ -463,13 +466,25 @@ class ChkMark(QFrame):
     def isChecked(self) -> bool:
         return self._on
 
+    def toggle(self) -> None:
+        self.setChecked(not self._on)
+        self.clicked.emit(self._on)
+
     def setLocked(self, v: bool) -> None:
         self._locked = bool(v)
+        self.setCursor(Qt.CursorShape.ArrowCursor if self._locked else Qt.CursorShape.PointingHandCursor)
         self.update()
 
     def setEnabled(self, v: bool) -> None:
         self._enabled = bool(v)
+        super().setEnabled(v)
         self.update()
+
+    def mousePressEvent(self, event):
+        if not self._enabled or self._locked:
+            return
+        self.toggle()
+        event.accept()
 
     def paintEvent(self, _event):
         p = QPainter(self)

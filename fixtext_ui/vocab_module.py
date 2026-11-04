@@ -34,7 +34,8 @@ from PySide6.QtWidgets import (
 
 import fixtext_settings as app_settings
 from fixtext_tokens import c, fs, r, sp, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
-from fixtext_widgets import Card, Pill, hline, ConfirmDialog, Modal, page_head_shell, PrimaryButton
+from fixtext_widgets import (Card, Pill, hline, ConfirmDialog, Modal, page_head_shell,
+                             PrimaryButton, ChkMark, enable_chrome)
 
 from fixtext_vocab import (
     ENTRY_TYPES, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
@@ -45,8 +46,11 @@ from fixtext_vocab import (
 # 常量
 # ---------------------------------------------------------------------------
 
-#: 词库表格每页条数（内置词库 30 万条，翻页而不是截断）
-PAGE_SIZE = 40
+#: 词库表格每页条数（内置词库 30 万条，翻页而不是截断）。
+#: 固定 20 条是为了让条目区不再出现内部滚动条：滚动条显隐会改变视口宽度，
+#: 使「卡片内固定表头」与「滚动区内数据行」的列宽不一致、肉眼可见地跳动。
+#: 每页行数固定 + 无内部滚动条 -> 表头与数据行永远同宽同列，不可能错位。
+PAGE_SIZE = 20
 
 COL_CHECK_W = 34
 COL_ACT_W = 128
@@ -597,7 +601,7 @@ class VocabModule(QWidget):
         bar.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         bl = QHBoxLayout(bar)
         bl.setContentsMargins(0, 0, 0, 0)
-        bl.setSpacing(8)
+        bl.setSpacing(6)   # 6 而非 8：给整页横向留出余量，避免最小窗口下仍出横向滑条
 
         add = PrimaryButton("＋ 新增词条")
         add.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -607,7 +611,9 @@ class VocabModule(QWidget):
         self._search = QLineEdit()
         self._search.setObjectName("Search")
         self._search.setPlaceholderText("检索词或替换值…（双向）")
-        self._search.setMinimumWidth(200)
+        # 不做 setMinimumWidth：检索框以 stretch=1 自适应宽度，原本强制的 200px
+        # 会把它的最小宽度顶到 200，连带整条工具条最小宽涨到 ~826px，超过默认
+        # 内容区（约 1028px）使整页出现横向滚动条（真实缺陷）。现在交给布局分配。
         # 配色交给 fixtext.qss 的 #Search（原内联收归）
         self._search.textChanged.connect(self._on_search)
         bl.addWidget(self._search, 1)
@@ -636,13 +642,28 @@ class VocabModule(QWidget):
         expand.clicked.connect(self.open_expand)
         bl.addWidget(expand)
 
-        self._sel_count = _label("未选择", size="xs", color="neutral.500")
-        bl.addWidget(self._sel_count)
         card.body_l.addWidget(bar)
+
+        # 选中计数不放在工具条这一行：文案从「未选择」变成「已选 N 条（可删 M 条）」
+        # 时宽度暴涨，HBox 空间不够会反过来压缩左侧按钮和检索框（实测「查重/
+        # 合并/删除选中」整体左移 67px、检索框被压到 44px）。改放反馈行右端并
+        # 按最长文案钉死宽度：文案变化不再参与工具条宽度分配，按钮永远不动；
+        # 右对齐使计数右边缘恒定，视觉位置也不跳。
+        self._sel_count = _label("未选择", size="xs", color="neutral.500")
+        self._sel_count.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        fm = QFontMetrics(self._sel_count.font())
+        self._sel_count.setFixedWidth(
+            fm.horizontalAdvance("已选 9999 条（可删 9999 条）") + 8)
 
         self._hint = _label("", size="xs", color="neutral.500", wrap=True)
         self._hint.setVisible(False)
-        card.body_l.addWidget(self._hint)
+        feedback = QHBoxLayout()
+        feedback.setContentsMargins(0, 0, 0, 0)
+        feedback.setSpacing(8)
+        feedback.addWidget(self._hint, 1)
+        feedback.addWidget(self._sel_count, 0)
+        card.body_l.addLayout(feedback)
         return card
 
     # ----- 词条表格（底线③ 结构化表格 · 不露内部文件格式）-----
@@ -657,24 +678,17 @@ class VocabModule(QWidget):
         # 固定表头（不随条目滚动，解决「表头没固定」）；表头自带底部分隔线，不再叠 hline
         card.body_l.addWidget(self._entry_header())
 
-        # 可滚动的条目区：仅条目在内部滚动，表头 / 分页固定在卡片内
-        self._scroll = QScrollArea()
-        self._scroll.setObjectName("VocabTableScroll")
-        self._scroll.setWidgetResizable(True)
-        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # 条目区：不再内嵌滚动条。固定每页 PAGE_SIZE 条，翻页由底部翻页器负责。
+        # 这样列宽度恒定，表头永远与数据列对齐 —— 彻底消除「纵向滚动条出现/消失
+        # 时视口变窄、表头列与数据列错位跳动」的问题（之前用同步右留白补偿，真机仍抖）。
         self._scroll_inner = QWidget()
         self._scroll_inner.setObjectName("VocabScrollInner")   # 白底（衬出表头灰带）
+        # 保留 _scroll_* 命名仅为少改引用；它现在只是普通容器，不是滚动区。
+        self._scroll_inner.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._scroll_layout = QVBoxLayout(self._scroll_inner)
         self._scroll_layout.setContentsMargins(0, 0, 0, 0)
         self._scroll_layout.setSpacing(0)
-        self._scroll.setWidget(self._scroll_inner)
-        card.body_l.addWidget(self._scroll, 1)
-
-        # 滚动条出现会占用视口宽度，需把表头右留白同步，否则列会偏移
-        self._scroll.verticalScrollBar().rangeChanged.connect(
-            lambda *_: self._sync_hdr_margin())
-        QTimer.singleShot(0, self._sync_hdr_margin)
+        card.body_l.addWidget(self._scroll_inner, 1)
 
         card.body_l.addWidget(hline())
         self._pager_widget = self._pager()
@@ -684,18 +698,28 @@ class VocabModule(QWidget):
         return card
 
     def _entry_header(self) -> QWidget:
-        # 表头做成独立色带，跟数据行区分（背景 + 底部分隔线，见 build_qss #VocabTableHeader）
+        # 表头做成独立色带，跟数据行区分（背景 + 底部分隔线 + 上方圆角，
+        # 见 build_qss #VocabTableHeader）。圆角沿用项目卡片的既有机制：
+        # enable_chrome(WA_StyledBackground) + QSS border/border-radius，
+        # 不做任何自绘。
         row = QWidget()
         row.setObjectName("VocabTableHeader")
-        row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        enable_chrome(row)
         hl = QHBoxLayout(row)
         hl.setContentsMargins(0, 10, 0, 10)
         hl.setSpacing(12)
-        self._hdr_layout = hl   # 供 _sync_hdr_margin 同步右留白（对齐滚动条）
-        self._chk_all = QCheckBox()
-        self._chk_all.stateChanged.connect(self._toggle_all)
-        hl.addWidget(self._chk_all, 0)
-        hl.addSpacing(COL_CHECK_W - 34)
+
+        # 勾选列：容器居中，避免 ChkMark 紧贴左侧
+        chk_cell = QWidget()
+        cl = QHBoxLayout(chk_cell)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._chk_all = ChkMark()
+        self._chk_all.clicked.connect(self._toggle_all)
+        cl.addWidget(self._chk_all)
+        hl.addWidget(chk_cell, 0)
+        chk_cell.setFixedWidth(COL_CHECK_W)
+
         for text, stretch in (("原词", 3), ("替换为", 3), ("类型", 2), ("来源", 2), ("命中书籍", 3)):
             lab = _label(text, size="xs", color="neutral.600", weight="semibold")
             lab.setAlignment(Qt.AlignmentFlag.AlignCenter)   # 同列居中对齐
@@ -706,17 +730,6 @@ class VocabModule(QWidget):
         hl.addWidget(act, 0)
         return row
 
-    def _sync_hdr_margin(self):
-        """表头固定在卡片内、条目在滚动区内。
-
-        条目多到出现竖直滚动条时，滚动条会占用视口宽度，使行内容比表头窄一截，
-        列随之错位。这里把表头右侧留白同步成「行右留白(12) + 滚动条宽」，
-        让表头与行在有无滚动条时都精确对齐。
-        """
-        sb = self._scroll.verticalScrollBar()
-        sbw = sb.width() if sb.isVisible() else 0
-        self._hdr_layout.setContentsMargins(0, 10, 12 + sbw, 10)
-
     def _entry_row(self, e: dict) -> QWidget:
         row = QWidget()
         row.setObjectName("VocabRow")   # 数据行白底（与表头灰带区分）
@@ -726,14 +739,22 @@ class VocabModule(QWidget):
         hl.setSpacing(12)
 
         is_builtin = e.get("tier") == "builtin"
-        chk = QCheckBox()
+        # 勾选列：容器居中 + ChkMark 自绘（与表头全选同风格）
+        chk_cell = QWidget()
+        cl = QHBoxLayout(chk_cell)
+        cl.setContentsMargins(0, 0, 0, 0)
+        cl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        chk = ChkMark()
         chk.setChecked(e["id"] in self._selected)
-        chk.setEnabled(not is_builtin)          # 内置只读，不给勾选框假希望
-        chk.stateChanged.connect(lambda s, i=e["id"]: self._toggle_row(i, s))
-        hl.addWidget(chk, 0)
+        chk.setLocked(is_builtin)            # 内置条目锁定（灰显 + 不可切换）
+        chk.clicked.connect(lambda on, i=e["id"]: self._toggle_row(i, on))
+        cl.addWidget(chk)
+        hl.addWidget(chk_cell, 0)
+        chk_cell.setFixedWidth(COL_CHECK_W)
 
         # 原词 + 拼音：竖向堆叠；点击原词复制本格全文
         word_col = QVBoxLayout()
+        word_col.setContentsMargins(0, 0, 0, 0)   # 清掉默认边距，否则词列文字比表头右移约 9px
         word_col.setSpacing(1)
         wlab = _ElideLabel(e["word"], size="sm", weight="bold",
                            color="neutral.900", mono=True, copyable=True)
@@ -908,7 +929,7 @@ class VocabModule(QWidget):
         return max(1, (self._hit_total + PAGE_SIZE - 1) // PAGE_SIZE)
 
     def _render_entries(self):
-        # 表头 / 分页是卡片内固定部件，这里只重建可滚动的条目区
+        # 表头 / 分页是卡片内固定部件，这里只重建当前页的条目区（固定 PAGE_SIZE 行）
         self._clear_layout(self._scroll_layout)
 
         total, rows = self.store.query(self.search, scope=self._scope(),
@@ -1107,18 +1128,18 @@ class VocabModule(QWidget):
     def _by_id(self, i) -> dict | None:
         return self.store.row_by_id(int(i))
 
-    def _toggle_row(self, i: int, state: int):
-        if state:
+    def _toggle_row(self, i: int, on: bool):
+        if on:
             self._selected.add(i)
         else:
             self._selected.discard(i)
         self._update_sel_state()
 
-    def _toggle_all(self, state: int):
+    def _toggle_all(self, on: bool):
         for e in self._page_rows:
             if not self._is_custom(e["id"]):
                 continue
-            if state:
+            if on:
                 self._selected.add(e["id"])
             else:
                 self._selected.discard(e["id"])

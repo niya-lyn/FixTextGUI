@@ -1028,15 +1028,8 @@ def build() -> str:
     q.append("}")
     q.append("")
 
-    # 词库页条目滚动区（表头固定、仅条目滚动）：透明背景融入卡片
-    q.append("QScrollArea#VocabTableScroll {")
-    q.append(f'    background: transparent;')
-    q.append(f'    border: none;')
-    q.append("}")
-    q.append("QScrollArea#VocabTableScroll > QWidget {")
-    q.append(f'    background: transparent;')
-    q.append("}")
-    # 滚动内容与数据行白底：衬出灰色表头带；行内容器透明，避免盖住白底
+    # 词库页条目区：无内嵌滚动条（固定每页 20 条 + 翻页器），表头与行同宽同列。
+    # 条目区与数据行白底：衬出灰色表头带；行内容器透明，避免盖住白底
     q.append("QWidget#VocabScrollInner {")
     q.append(f'    background-color: {c("neutral.0")};')
     q.append("}")
@@ -1048,10 +1041,42 @@ def build() -> str:
     q.append("}")
     q.append("")
 
-    # 词库页表头色带：与数据行区分（轻灰底 + 底部分隔线）
+    # 词库页表头色带：与数据行区分（轻灰底 + 底部分隔线 + 上方圆角）。
+    # 圆角规格与历史记录页 #HistoryTableHeader 一致（RADIUS.md），灰带不再
+    # 是顶到边角的生硬直角，贴合卡片圆角语言。
     q.append("QWidget#VocabTableHeader {")
     q.append(f'    background-color: {c("neutral.100")};')
     q.append(f'    border-bottom: 1px solid {c("neutral.200")};')
+    q.append(f'    border-top-left-radius: {RADIUS["md"]};')
+    q.append(f'    border-top-right-radius: {RADIUS["md"]};')
+    q.append("}")
+    # 表头内子控件透明：全选框的 chk_cell 是普通 QWidget，会继承全局
+    # QWidget{background:#F7F8FA}，在灰带上画出一块亮色矩形「方块」；
+    # 数据行已有同名保护（#VocabRow QWidget），这里补齐表头。
+    q.append("QWidget#VocabTableHeader QWidget {")
+    q.append("    background: transparent;")
+    q.append("}")
+    q.append("")
+
+    # 历史记录页任务列表（此前只手工写进 fixtext.qss、生成器里漏了，
+    # 导致每次重新生成 qss 都会静默丢掉这一整段；补齐为唯一来源）
+    q.append("/* 历史记录页任务列表 */")
+    q.append("QWidget#HistoryTable {")
+    q.append("    background: transparent;")
+    q.append("}")
+    q.append("/* HistoryTable 内所有子控件透明（屏蔽全局 QWidget#F7F8FA 灰底，让 Card 白底透过来） */")
+    q.append("QWidget#HistoryTable QWidget {")
+    q.append("    background: transparent;")
+    q.append("}")
+    q.append("/* Header 灰带 — specificity 更高（2 ids），覆盖上面的 transparent */")
+    q.append("QWidget#HistoryTable QWidget#HistoryTableHeader {")
+    q.append(f'    background-color: {c("neutral.100")};')
+    q.append(f'    border-bottom: 1px solid {c("neutral.200")};')
+    q.append(f'    border-top-left-radius: {r("md")};')
+    q.append(f'    border-top-right-radius: {r("md")};')
+    q.append("}")
+    q.append("QWidget#HistoryFoot {")
+    q.append("    background: transparent;")
     q.append("}")
     q.append("")
 
