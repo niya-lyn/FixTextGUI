@@ -373,7 +373,7 @@ def explanation_text() -> str:
 
 def summary_text(outcome: ExportOutcome) -> str:
     """导出成功后的那句人话（只给文件名，不出任何目录路径）。"""
-    head = f"已导出 {outcome.count} 条词条：{outcome.path.name}"
+    head = f"已导出 {outcome.count} 条词条：{outcome.path.stem}"
     if outcome.disabled_count:
         head += f"（其中 {outcome.disabled_count} 条标着不参与校正）"
     return head + f"，放在「{EXPORT_DIR_NAME}」文件夹里。"
