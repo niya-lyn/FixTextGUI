@@ -11,3 +11,9 @@ lxml>=4.9
 # Python 替换引擎（M4-T4.2：--replace-engine python / Go 引擎不可用时的降级路径，
 # 全量 Aho-Corasick 匹配 + 贪心选路，与 Go 引擎逐字节等价）。实测版本 2.2.0。
 pyahocorasick>=2.1
+
+
+# 手动检索规则集（V1.1-E3/E4）：205 条规则里 45 条用到变宽 lookbehind，
+# 标准库 re 只能编译 160/205，因此 regex 是硬依赖（不是可选加速库）。
+# 实测版本 2026.5.9。
+regex>=2024.5.15

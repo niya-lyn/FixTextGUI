@@ -178,6 +178,10 @@ class _ScanWorker(QThread):
 
 class CheckModule(QWidget):
 
+    #: 「逐批手动处理」入口（V1.1-E4）：检查页把这本书交给内容区平级路由页，
+    #: 左轨六入口配额不变，与 V1.1-E2 的前后对比页同一套路由模式。
+    manualRequested = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.phase = PHASE_EMPTY
@@ -510,6 +514,13 @@ class CheckModule(QWidget):
             None, "按已启用规则修复全部",
             "用当前已开启的规则批量修复全部问题（可撤销）",
             control=self._btn("执行", "BtnOutline", self.batch_fix_all),
+            name_width=190))
+        card.body_l.addWidget(hline())
+        # V1.1-E4：逐批手动处理（按规则序号/范围选，一批一确认，批批可撤销）
+        card.body_l.addWidget(FieldRow(
+            None, "逐批手动处理规则替换",
+            "按规则序号或范围分批挑，每批先预览、确认后才写回，可单批撤销",
+            control=self._btn("打开", "BtnOutline", self.manualRequested.emit),
             name_width=190))
         return card
 
