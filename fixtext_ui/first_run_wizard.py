@@ -209,8 +209,8 @@ class FirstRunWizard(QDialog):
         self.panel_l = QVBoxLayout(self.panel)
         self.panel_l.setContentsMargins(20, 18, 20, 18)
         self.panel_l.setSpacing(10)
-        bl.addWidget(self.panel, 1)
-        root.addWidget(body, 1)
+        bl.addWidget(self.panel)
+        root.addWidget(body)
 
         root.addWidget(self._foot())
 
@@ -296,8 +296,8 @@ class FirstRunWizard(QDialog):
             self.progress.setFixedHeight(8)
             # 配色交给 fixtext.qss 的 #OnbProgress（原内联收归）
             self.panel_l.addWidget(self.progress)
-        self.panel_l.addStretch(1)
         self._render_actions()
+        self.adjustSize()
 
     def _copy(self) -> tuple[str, str, str]:
         if self.step == 0:

@@ -950,6 +950,7 @@ class OneClickModule(QWidget):
         stats_items = [
             (f"{_fmt_num(summary.get('chapters'))} 章", "全书章节"),
             (f"{_fmt_num(summary.get('replace_rules'))}", "校正词库规则（条）"),
+            (f"{_fmt_num(summary.get('hits'))}", "本次替换条数"),
             (f"{_fmt_num(summary.get('quote_errors'))}", "引号待修（处）"),
         ]
         book_n = summary.get('book_words_unique')
@@ -1123,13 +1124,39 @@ class OneClickModule(QWidget):
     # ------------------------------------------------------------------ 公共
 
     def _restore_before(self):
-        """恢复到校正前：删除本次运行的工作区副本（原书全程只读，从未改动）。"""
+        """恢复到校正前：还原工作区副本 + 删除本次 run 目录。
+
+        ``_sync_book_text_from_run`` 在校正完成时已把 after_text 写回 shelf
+        book.txt / ledger / import.json；所以这里必须先还原到 CorrectionJob 启动
+        时的备份（``00_pre_correction/``），再删 run 目录，否则下一次校正会从已经
+        被改过的副本出发 → hits 为 0（BUG 回归保护）。
+        """
         wd = (self._summary or {}).get("workdir")
         if wd:
+            pre_dir = Path(wd) / "00_pre_correction"
+            ctx = getattr(self, "run_context", None) or {}
+            plain_source = str(ctx.get("plain_source") or "")
+            if pre_dir.is_dir() and plain_source:
+                try:
+                    plain_path = Path(plain_source)
+                    book_dir = plain_path.parent
+                    bk = pre_dir / "book.txt"
+                    if bk.is_file() and plain_path.parent.is_dir():
+                        shutil.copy2(bk, plain_path)
+                    ledger_dst = book_dir / "book.bundle.json"
+                    bk_ledger = pre_dir / "ledger.bundle.json"
+                    if bk_ledger.is_file() and book_dir.is_dir():
+                        shutil.copy2(bk_ledger, ledger_dst)
+                    bk_import = pre_dir / "import.json"
+                    import_dst = book_dir / "import.json"
+                    if bk_import.is_file() and import_dst.parent.is_dir():
+                        shutil.copy2(bk_import, import_dst)
+                except Exception:  # best-effort，还原失败仍继续删 run 目录
+                    pass
             shutil.rmtree(Path(wd), ignore_errors=True)
         self._clear_result()
         self._summary = None
-        self._toast("已恢复到校正前：删除本次工作区副本，原书从未被改动")
+        self._toast("已恢复到校正前：工作区副本已还原，本次校正产物已清理")
 
     def _hint(self, text: str) -> QLabel:
         return _label(text, size="xs", color="neutral.500", wrap=True)

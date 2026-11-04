@@ -31,7 +31,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QDialog, QSizePolicy, QCheckBox, QRadioButton,
+    QDialog, QSizePolicy, QCheckBox, QRadioButton, QButtonGroup,
 )
 
 import fixtext_history as histdata
@@ -75,6 +75,11 @@ class SnapshotDialog(Modal):
                          min_width=640)
         self.chosen = ""
         self._radios: dict[str, QRadioButton] = {}
+        # 单选互斥：每个 radio 各自挂在不同的行容器里，Qt 的 autoExclusive
+        # 只在同一父控件内生效，跨行不会互斥（会出现“全部勾选”）。用
+        # QButtonGroup 显式归组，保证任一时刻只有一个时点被选中。
+        self._group = QButtonGroup(self)
+        self._group.setExclusive(True)
         usable = [p for p in points if p.get("available")]
         total = len(points)
 
@@ -112,6 +117,7 @@ class SnapshotDialog(Modal):
             f"font-size:{fs('sm')};font-weight:{FONT_WEIGHT['semibold']}}}")
         if available:
             radio.toggled.connect(self._on_toggle)
+            self._group.addButton(radio)
             self._radios[str(p.get("key"))] = radio
         hl.addWidget(radio, 0)
 
@@ -915,7 +921,7 @@ class HistoryModule(QWidget):
         sl.addWidget(self.status)
         sl.addWidget(self.undo_btn)
         self.status_box.setVisible(False)
-        root.addWidget(self.status_box, 0, Qt.AlignmentFlag.AlignLeft)
+        root.addWidget(self.status_box, 0, Qt.AlignmentFlag.AlignHCenter)
 
     def _toast(self, msg: str, with_undo: bool = False):
         self.status.setText(msg)
