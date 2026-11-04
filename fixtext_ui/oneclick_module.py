@@ -641,24 +641,44 @@ class OneClickModule(QWidget):
 
     @staticmethod
     def _source_epub(ctx: dict, workdir: Path) -> Path:
-        """管线 ``cfg.epub``：TXT 用包装电子书；EPUB 只用原件模板供导出还原。
+        """管线 ``cfg.epub``：TXT/EPUB 同一条管线。
 
-        校正正文一律来自工作区 ``book.txt``（EPUB 跳过 merge、直接播种；
-        TXT 经 ``plain_book`` 包装后走 merge）。不再把 EPUB 先还原成工作 EPUB。
+        有 ``template_epub``（EPUB=原件；TXT=书架上的 ``book.source.epub``）时
+        直接用它，正文靠 working_text+账本播种，跳过 merge——两端相同。
+
+        TXT 仅在首次（或旧书缺模板）时包装一次，并落盘 ``book.source.epub``，
+        供以后当还原模板；不再每次去标记重包。
         """
+        import shutil
+
         epub = ctx.get("epub")
         if epub:
             return Path(str(epub))
-        # EPUB：原件只作 restore 模板；正文由 working_text 播种
         template = ctx.get("template_epub")
-        if template and ctx.get("ledger_path"):
+        if template and Path(str(template)).is_file():
             return Path(str(template))
+
         from plain_book import plain_source_epub
-        return plain_source_epub(
-            ctx["plain_source"], workdir,
-            title=str(ctx.get("title") or ""),
-            author=str(ctx.get("author") or ""),
-        )
+        plain = Path(str(ctx["plain_source"]))
+        title = str(ctx.get("title") or "")
+        author = str(ctx.get("author") or "")
+        workdir.mkdir(parents=True, exist_ok=True)
+        src = plain
+        ledger = ctx.get("ledger_path")
+        # 旧书：已有账本但还没有 book.source.epub → 去标记后补种一次模板
+        if ledger and Path(str(ledger)).is_file() and plain.is_file():
+            from fixtext_export import clean_text
+            src = workdir / "_plain_for_template.txt"
+            src.write_text(
+                clean_text(plain.read_text(encoding="utf-8"), ledger),
+                encoding="utf-8", newline="\n")
+        wrapped = plain_source_epub(src, workdir, title=title, author=author)
+        shelf_tpl = plain.parent / "book.source.epub"
+        try:
+            shutil.copy2(wrapped, shelf_tpl)
+        except Exception:
+            pass
+        return wrapped
 
     def do_correction(self, *, confirm_cancel: bool = True):
         """真实执行：M1 编排器六阶段在后台线程跑，进度弹窗事件驱动。
@@ -758,7 +778,7 @@ class OneClickModule(QWidget):
         workdir = runs_root / f"run-{int(time.time() * 1000)}"
         book = ctx.get("title") or Path(str(ctx.get("epub") or "")).stem
 
-        # TXT：包装成单章 EPUB 进 merge；EPUB：cfg.epub=原件模板，正文用 book.txt 播种
+        # 同一条管线：有模板+账本则播种；TXT 仅首次包装并落盘 book.source.epub
         source_epub = self._source_epub(ctx, workdir)
 
         import fixtext_settings as _settings
@@ -796,7 +816,7 @@ class OneClickModule(QWidget):
             enable_strict=bool(opts["enable_strict"]),
             zhuyin_mode=str(opts["zhuyin_mode"]),
             selected_bags=tuple(opts["selected_bags"]),
-            # EPUB：工作区 TXT+账本直接进排版；TXT 书不传（走 merge）
+            # 有账本：播种工作区正文（TXT/EPUB 二次校正同路径，跳过重复 merge）
             working_text=plain if (plain and ledger) else None,
             working_ledger=ledger if (plain and ledger) else None,
         )
