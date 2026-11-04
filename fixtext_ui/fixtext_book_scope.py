@@ -67,6 +67,37 @@ def normalize_book_id(book_id: str) -> str:
     return str(pipeline_book_vocab().normalize_book_id(book_id))
 
 
+def pipeline_executed_rules():
+    """按 C1 的同一个包取「已执行规则记忆」数据层（V1.1-E5）。
+
+    与 :func:`pipeline_book_vocab` 一样懒加载；两个数据层同属
+    ``fixtext_pipeline``，因此书 id 校验与按书作用域目录**只有一个实现**。
+    """
+    root = _pkg_root() / "pipeline"
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+    from fixtext_pipeline import executed_rules as ex
+
+    return ex
+
+
+def executed_path(book_id: str, workspace: Path | str | None = None) -> Path | None:
+    """这本书「已执行规则记忆」文件的位置（与按书词库并列、同目录）。
+
+    位置一律由管线侧算（``executed_rules.executed_rules_path`` 再往下就是
+    C1 的 ``book_vocab.book_vocab_path``）：界面不拼路径、不算键。
+    书 id 不合规时返回 ``None``（不猜、不兜底）。
+    """
+    bid = str(book_id or "").strip()
+    if not bid:
+        return None
+    try:
+        ws = Path(workspace) if workspace is not None else workspace_root()
+        return Path(pipeline_executed_rules().executed_rules_path(bid, workspace=ws))
+    except Exception:
+        return None
+
+
 def load(path: Path | str | None) -> dict:
     """读按书词库（C1 的 ``load_book_vocab``：坏文件降级不阻断）。"""
     if not path:

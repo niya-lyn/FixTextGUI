@@ -229,6 +229,8 @@ class BatchSession:
         store_dir: str | Path | None = None,
         label: str = "",
         writer: Callable[[str], None] | None = None,
+        memory: Any = None,
+        book_id: str = "",
     ) -> None:
         self.ruleset = ruleset
         self.base_text = text
@@ -238,6 +240,14 @@ class BatchSession:
         self._writer = writer
         self._external_writer = writer is not None
 
+        # V1.1-E5：已执行规则记忆（可选）。给了它 + 书 id 之后：
+        # 挑选方法默认跳过「这本书上已经执行过」的规则；执行成功后把那几条
+        # 记进这本书的记忆，撤销成功后把它们撤掉。没给（E4 的既有用法）时
+        # 行为与 E4 完全一致——本卡不改 E4 的对外语义。
+        self.memory = memory
+        self.book_id = str(book_id or "")
+        self.memory_error = ""
+
         if store is not None:
             self.store = store
         else:
@@ -246,6 +256,9 @@ class BatchSession:
                     raise BatchError("没有书目录，不能建备份")
                 store_dir = Path(self.target_path).parent / BACKUP_DIRNAME
             self.store = SnapshotStore(store_dir)
+
+        #: 本次会话里被记忆排除的规则序号（挑选时默认不选它们，界面据它标原因）
+        self.excluded_indices: list[int] = []
 
         self.scan_result: ScanResult | None = None
         self.selected: list[int] = []
@@ -293,43 +306,164 @@ class BatchSession:
         assert self.scan_result is not None
         return [h.rule.index for h in self.scan_result.hits if h.count]
 
-    def select_indices(self, indices: Sequence[int]) -> list[int]:
-        """按规则原序号挑选（去重、按原表顺序排好，顺序是执行语义的一部分）。"""
+    def select_indices(self, indices: Sequence[int], *,
+                       skip_executed: bool = True) -> list[int]:
+        """按规则原序号挑选（去重、按原表顺序排好，顺序是执行语义的一部分）。
+
+        V1.1-E5：``skip_executed=True``（默认）时，本书记忆里「已执行过」的
+        规则不进入选择——这是「重跑同一本书不重复提示已执行规则」的落地点；
+        它们不静默消失，序号留在 :attr:`excluded_indices` 里供界面标原因。
+        要强制重跑某条已执行规则，显式传 ``skip_executed=False``。
+        """
         n = len(self.ruleset)
         picked = sorted({int(i) for i in indices if 0 <= int(i) < n})
+        if skip_executed:
+            drop = self._executed_indices(picked)
+            self.excluded_indices = list(drop)
+            picked = [i for i in picked if i not in set(drop)]
+        else:
+            self.excluded_indices = []
         self.selected = picked
         self._invalidate_plan()
         return list(picked)
 
-    def select_range(self, start: int, stop: int, *, nonzero_only: bool = False) -> list[int]:
+    def select_range(self, start: int, stop: int, *, nonzero_only: bool = False,
+                     skip_executed: bool = True) -> list[int]:
         """按序号区间挑选（含 ``stop``，闭区间；``stop`` 可以大于最大序号）。"""
         n = len(self.ruleset)
         lo = max(0, int(start))
         hi = min(n - 1, int(stop))
         if hi < lo:
             self.selected = []
+            self.excluded_indices = []
             self._invalidate_plan()
             return []
         idx = list(range(lo, hi + 1))
         if nonzero_only:
             alive = set(self.nonzero_indices())
             idx = [i for i in idx if i in alive]
-        self.selected = idx
-        self._invalidate_plan()
-        return list(idx)
+        return self.select_indices(idx, skip_executed=skip_executed)
 
-    def select_all_hits(self, *, limit: int | None = None) -> list[int]:
-        """选中全部有命中的规则（可选只取前 ``limit`` 条）。"""
+    def select_all_hits(self, *, limit: int | None = None,
+                        skip_executed: bool = True) -> list[int]:
+        """选中全部有命中的规则（可选只取前 ``limit`` 条）。
+
+        V1.1-E5 的「只选有命中的」按钮走这里：本书已执行过的规则默认不选，
+        但会出现在 :attr:`excluded_indices` 里，界面上有可见的排除原因。
+        """
         idx = self.nonzero_indices()
+        if skip_executed:
+            drop = self._executed_indices(idx)
+            self.excluded_indices = list(drop)
+            idx = [i for i in idx if i not in set(drop)]
+        else:
+            self.excluded_indices = []
         if limit is not None:
             idx = idx[: max(0, int(limit))]
+            if skip_executed:
+                self.excluded_indices = [i for i in self.excluded_indices if i not in set(idx)]
         self.selected = idx
         self._invalidate_plan()
         return list(idx)
 
     def clear_selection(self) -> None:
         self.selected = []
+        self.excluded_indices = []
         self._invalidate_plan()
+
+    # -- 已执行记忆（V1.1-E5）---------------------------------------------
+
+    @property
+    def memory_on(self) -> bool:
+        """记忆是否真的接上了（有记忆对象 + 合規书 id 才算接上）。"""
+        return bool(self.memory is not None and self.book_id)
+
+    def executed_marks(self) -> frozenset[str]:
+        """这本书上已执行过的规则标识集合（记忆没接上 → 空集）。"""
+        if not self.memory_on:
+            return frozenset()
+        try:
+            return frozenset(self.memory.marks(self.book_id))
+        except Exception as exc:                        # noqa: BLE001 - 记忆坏了不该拖垮页面
+            self.memory_error = f"{type(exc).__name__}: 读不到这本书的执行记录"
+            return frozenset()
+
+    def _executed_indices(self, indices: Sequence[int]) -> list[int]:
+        """这些序号里，哪些属于「本书已执行过」的规则（按原表顺序返回）。"""
+        marks = self.executed_marks()
+        if not marks:
+            return []
+        out: list[int] = []
+        for i in sorted({int(x) for x in indices}):
+            try:
+                rule = self.ruleset.get(i)
+            except Exception:                           # noqa: BLE001
+                continue
+            if str(rule.mark) in marks:
+                out.append(i)
+        return out
+
+    def executed_reason(self, rule_index: int) -> str:
+        """某条规则被自动排除的原因（人话）；不在排除集里返回空串。"""
+        if not self.memory_on:
+            return ""
+        try:
+            marks = self.memory.records(self.book_id)
+        except Exception:                                # noqa: BLE001
+            return ""
+        rule = self.ruleset.get(int(rule_index))
+        rec = marks.get(str(rule.mark))
+        if rec is None:
+            return ""
+        return str(self.memory.reason(rec))
+
+    def remember_batch(self, batch_id: int, *, point_id: int = 0,
+                       hits: int | None = None, label: str = "") -> dict:
+        """把某一批的规则记成「这本书上已执行过」（执行成功后调用）。
+
+        记忆失败**不回滚正文**：正文已经落盘且可撤回，记忆只是省去重复提示的
+        便利层；失败原因记进 :attr:`memory_error`，界面如实说出来。
+        """
+        if not self.memory_on:
+            return dict(changed=False, count=0, point_id=0, marks_added=0)
+        b = self.batch(int(batch_id))
+        rec = self._points.get(int(batch_id)) or {}
+        when = str(rec.get("at") or _now_text())
+        n_hits = int(rec.get("hits") if hits is None else hits)
+        items = [dict(mark=str(r.mark), batch=int(batch_id), hits=n_hits,
+                      point_id=int(point_id or rec.get("point_id") or 0), at=when)
+                 for r in b.rules]
+        try:
+            res = self.memory.remember(
+                self.book_id, items,
+                label=label or f"{self.label or '当前书'} · 记下 {b.label()} 已执行")
+        except Exception as exc:                        # noqa: BLE001
+            self.memory_error = f"{type(exc).__name__}: 这条执行记录没记住"
+            return dict(changed=False, count=0, point_id=0, marks_added=0,
+                        error=self.memory_error)
+        self.memory_error = ""
+        return dict(changed=bool(res.get("changed")), count=int(res.get("count") or 0),
+                    point_id=int(res.get("point_id") or 0),
+                    marks_added=len(res.get("added") or ()),
+                    marks_sha=str(res.get("marks_sha") or ""))
+
+    def forget_batch(self, batch_id: int, *, label: str = "") -> dict:
+        """撤掉某一批的「已执行」记忆（撤销那一批后调用，那一批重新回到候选）。"""
+        if not self.memory_on:
+            return dict(changed=False, count=0, removed=0)
+        b = self.batch(int(batch_id))
+        marks = [str(r.mark) for r in b.rules]
+        try:
+            res = self.memory.forget(
+                self.book_id, marks,
+                label=label or f"{self.label or '当前书'} · 撤销 {b.label()} 执行记录")
+        except Exception as exc:                        # noqa: BLE001
+            self.memory_error = f"{type(exc).__name__}: 这条执行记录没撤掉"
+            return dict(changed=False, count=0, removed=0, error=self.memory_error)
+        return dict(changed=bool(res.get("changed")), count=int(res.get("count") or 0),
+                    removed=len(res.get("removed") or ()),
+                    point_id=int(res.get("point_id") or 0))
+
 
     # -- 切批 -------------------------------------------------------------
 
@@ -550,6 +684,10 @@ class BatchSession:
             sha_after=rec.get("sha_after", ""),
             detail={"batch": b.batch_id, "rules": list(b.rule_indices), "hits": pv.hits},
         )
+        # V1.1-E5：正文已经落盘 → 把这一批的规则记成「本书已执行过」，
+        # 下次在**同一本书**上不再默认提示重跑（别的书不受影响）。
+        # 记忆写失败不回滚正文（正文可撤回、记忆只是便利层），原因进 memory_error。
+        mem = self.remember_batch(b.batch_id, point_id=pid, hits=pv.hits)
         return {
             "batch_id": b.batch_id,
             "point_id": pid,
@@ -557,6 +695,8 @@ class BatchSession:
             "sha_before": rec.get("sha_before", ""),
             "sha_after": rec.get("sha_after", ""),
             "text": self.text,
+            "memory": mem,
+            "memory_error": self.memory_error,
         }
 
     # -- 撤销 -------------------------------------------------------------
@@ -633,6 +773,9 @@ class BatchSession:
             sha_after=rec.get("sha_after", ""),
             detail={"batch": b.batch_id, "mismatch": mismatch},
         )
+        # V1.1-E5：这一批被撤掉 → 它在本书记忆里的「已执行」也一并撤掉，
+        # 这条规则重新回到候选（「撤销/清除记忆可用」这一条判据的落地点）。
+        mem = self.forget_batch(b.batch_id)
         return {
             "batch_id": b.batch_id,
             "point_id": pid,
@@ -641,6 +784,8 @@ class BatchSession:
             "mismatch": mismatch,
             "backup_exact": backup_exact,
             "text": self.text,
+            "memory": mem,
+            "memory_error": self.memory_error,
         }
 
     def last_executed(self) -> int | None:

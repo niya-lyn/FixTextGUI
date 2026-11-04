@@ -1,0 +1,94 @@
+{
+  "chapter_a_execute": {
+    "book_id": "书A",
+    "body_sha_before": "d6b1ea2921fde9b8a926bbab72e507d1b1391cffb9417bd3c3002958cbad9b8e",
+    "body_sha_after": "349bb9b75cfd2b2f33cbdcd5059bb7fab24c215585a4340fa6dcf71b928c162d",
+    "probe_count_before": 1,
+    "probe_count_after": 0,
+    "hits": 1,
+    "memory": {
+      "changed": true,
+      "count": 1,
+      "point_id": 1,
+      "marks_added": 1,
+      "marks_sha": "c50dc8b77d0593b6407dbeb87279c81210dbdc05d4d13ccfe84371337d75ccc7"
+    },
+    "memory_error": "",
+    "executed_file": "ws/vocab/books/书A/executed_rules.json",
+    "executed_file_sha": "357fcef5027169a64b1fe1ad1584c3f06a3c2104e638dc43f648d1c6a9ca1434",
+    "marks": [
+      "{盍->阖}"
+    ],
+    "store_ops": [
+      "rule_memory_mark"
+    ],
+    "backup_points": 1
+  },
+  "chapter_b_cross_process": {
+    "probe_index": 0,
+    "probe_mark": "{盍->阖}",
+    "A": {
+      "book_id": "书A",
+      "marks": [
+        "{盍->阖}"
+      ],
+      "nonzero_count": 17,
+      "probe_has_hits": false,
+      "auto_picked_count": 17,
+      "auto_excluded": [],
+      "manual_picked": [],
+      "manual_excluded": [
+        0
+      ],
+      "reason": "这本书上已经执行过这条规则，第 1 批，当时改了 1 处；默认不再重复提示，需要再跑可以手动勾选",
+      "body_sha": "349bb9b75cfd2b2f33cbdcd5059bb7fab24c215585a4340fa6dcf71b928c162d",
+      "body_probe_count": 0
+    },
+    "B": {
+      "book_id": "书B",
+      "marks": [],
+      "nonzero_count": 18,
+      "probe_has_hits": true,
+      "auto_picked_count": 18,
+      "auto_excluded": [],
+      "manual_picked": [
+        0
+      ],
+      "manual_excluded": [],
+      "reason": "",
+      "body_sha": "d6b1ea2921fde9b8a926bbab72e507d1b1391cffb9417bd3c3002958cbad9b8e",
+      "body_probe_count": 1
+    }
+  },
+  "chapter_c_fingerprint": {
+    "empty_sha": "3113020509b6847bfc9409b08141c25dcf5a695e5515f93b42478c48e41e34c4",
+    "fp_empty": "sha256:d288d403e2f3350b19fe6f38470195ecee57b8260e499dfbf0997d23672491cb",
+    "book_part_empty": "book=e7d5e167236313853a7b633257ced40674055b3b35a0bbd1b1d4ca5f2184dec2;id=书C;done=3113020509b6847bfc9409b08141c25dcf5a695e5515f93b42478c48e41e34c4",
+    "fp_written": "sha256:6bb845c7589c309c7e7477fb19eb2a0074da30dff45054712c7fd4eae4c25273",
+    "book_part_written": "book=e7d5e167236313853a7b633257ced40674055b3b35a0bbd1b1d4ca5f2184dec2;id=书C;done=c50dc8b77d0593b6407dbeb87279c81210dbdc05d4d13ccfe84371337d75ccc7",
+    "fp_restored": "sha256:d288d403e2f3350b19fe6f38470195ecee57b8260e499dfbf0997d23672491cb",
+    "book_part_restored": "book=e7d5e167236313853a7b633257ced40674055b3b35a0bbd1b1d4ca5f2184dec2;id=书C;done=3113020509b6847bfc9409b08141c25dcf5a695e5515f93b42478c48e41e34c4",
+    "changed_on_write": true,
+    "restored_verbatim": true
+  },
+  "chapter_d_book_vocab_untouched": {
+    "book_vocab_byte_identical": true,
+    "book_vocab_sha_before": "c6ba2ea8129cf93793e5550905e00918c354a93753ba3888e6f7324e08a8fa82",
+    "book_vocab_sha_after": "c6ba2ea8129cf93793e5550905e00918c354a93753ba3888e6f7324e08a8fa82",
+    "fields_equal": {
+      "effective": true,
+      "sources": true,
+      "overlap": true,
+      "global_only": true,
+      "book_only": true,
+      "global_count": true,
+      "book_count": true
+    },
+    "overlap": 1,
+    "global_count": 2,
+    "book_count": 1,
+    "probe_key_in_effective": false,
+    "probe_key_in_sources": false,
+    "probe_mark_in_effective": false
+  }
+}
