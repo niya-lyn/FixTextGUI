@@ -98,7 +98,8 @@ class ReplaceStage(Stage):
         # 断点不复用旧正文；不同书之间靠 book= 与规则集指纹各自分开，互不串扰。
         if self.round_id == "main":
             book_part = (f"book={book_vocab.book_excluded_sha(self._effective_book_excluded())}"
-                         f";id={self._book_id() or 'none'}")
+                         f";id={self._book_id() or 'none'}"
+                         f";done={self._executed_rules_sha()}")
         else:
             book_part = "book=n/a"
         return self.fingerprint_of(
@@ -139,6 +140,25 @@ class ReplaceStage(Stage):
         """按书词库文件位置；没有按书层时 None。"""
         raw = getattr(self.cfg, "book_vocab_path", None)
         return Path(raw) if raw else None
+
+    def _executed_rules_sha(self) -> str:
+        """本书「已执行规则」记忆的 mark 指纹（V1.1-E5，进主轮指纹）。
+
+        为什么必须进指纹：记忆状态变了但指纹不变，``--resume`` 会把上一次
+        的 after 当成命中缓存复用（T1.1 踩过的坑）。这里只算 mark 集合的
+        指纹（不含时间戳），所以「写入一条 → 指纹变化、清回空 → 指纹复原」
+        能被逐字核对。
+
+        注意：这只是**缓存键**的一部分——记忆**不参与**装载过滤，
+        ``vocab_bridge.compose()`` / ``bags.write_round_rules()`` 的口径
+        一个字节都没改（排期 §11.2 唯一入口未被触碰）。
+        """
+        try:
+            from .. import executed_rules as _ex       # noqa: PLC0415 - 同包内同级模块
+
+            return _ex.executed_sha_of_book(self._book_vocab_path())
+        except Exception:
+            return "missing"
 
     def _effective_book_excluded(self) -> frozenset[str]:
         """本书的按书排除集（内容键）。

@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
 )
 
 import fixtext_batch_confirm as bc
+import fixtext_rule_memory as rmem
 from fixtext_manual_search import ORDER_FILE, ORDER_LABELS, RuleSet, load_rules
 from fixtext_tokens import c, fs, sp, r, FONT_WEIGHT
 from fixtext_widgets import Card, EmptyState, hline, page_head_shell, px, ConfirmDialog
@@ -86,7 +87,13 @@ def _table() -> QTableView:
 # ---------------------------------------------------------------------------
 
 class RulePickModel(QAbstractTableModel):
-    """规则清单：序号 / 规则 / 命中数 / 说明。勾选即「选中要处理」。"""
+    """规则清单：序号 / 规则 / 命中数 / 说明。勾选即「选中要处理」。
+
+    V1.1-E5：``说明`` 列在「把 X 改成 Y」之后**追加**一段人话原因——这本书上
+    已经执行过这条规则时写清「第几批、当时改了 N 处、默认不再重复提示」。
+    原因取自执行记忆的记录，这条规则仍然留在清单里、仍然可以手动勾选重跑
+    （排除只是「默认不选」，不是「不可选」、更不是静默消失）。
+    """
 
     COLS = ("序号", "规则", "命中", "说明")
     COL_INDEX, COL_MARK, COL_HITS, COL_NOTE = range(4)
@@ -96,6 +103,8 @@ class RulePickModel(QAbstractTableModel):
         self._rules: list[Any] = []
         self._hits: dict[int, int] = {}
         self._picked: set[int] = set()
+        #: 本书已执行记录：``{规则标识: 记录字典}``（空 = 这本书还没执行过）
+        self._executed: dict[str, dict] = {}
 
     # -- 数据装载 ---------------------------------------------------------
 
@@ -112,6 +121,20 @@ class RulePickModel(QAbstractTableModel):
                 self.index(0, self.COL_HITS),
                 self.index(len(self._rules) - 1, self.COL_HITS),
             )
+
+    def set_executed(self, records: dict[str, dict] | None) -> None:
+        """挂上「这本书已经执行过哪些规则」（键是规则标识）。"""
+        self._executed = {str(k): dict(v or {}) for k, v in (records or {}).items()}
+        if self._rules:
+            self.dataChanged.emit(
+                self.index(0, self.COL_NOTE),
+                self.index(len(self._rules) - 1, self.COL_NOTE),
+            )
+
+    def executed_reason_of(self, rule) -> str:
+        """某条规则在这本书上的「已执行」原因（没有 → 空串）。"""
+        rec = self._executed.get(str(getattr(rule, "mark", "") or ""))
+        return rmem.RuleMemory.reason(rec) if rec else ""
 
     def set_picked(self, indices) -> None:
         self._picked = set(int(i) for i in indices)
@@ -183,10 +206,20 @@ class RulePickModel(QAbstractTableModel):
                 return str(rule.mark)
             if col == 2:
                 return str(self._hits.get(rule.index, 0))
-            return self._note(rule)
+            return self._note_with_reason(rule)
         if role == Qt.ItemDataRole.TextAlignmentRole and col in (0, 2):
             return int(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         return None
+
+    def _note_with_reason(self, rule) -> str:
+        """说明列最终文案：规则本身的说明 + （执行过时）本书上的已执行原因。
+
+        为什么用「；」接而不是另开一列：清单列宽有限，第 5 列会被挤压；
+        追加在同一段里也保证「这一条为什么默认不选」永远不会被折叠/省略掉。
+        """
+        base = self._note(rule)
+        why = self.executed_reason_of(rule)
+        return f"{base}；{why}" if why else base
 
     def setData(self, index: QModelIndex, value, role=Qt.ItemDataRole.EditRole) -> bool:
         if role != Qt.ItemDataRole.CheckStateRole or index.column() != 0:
@@ -269,6 +302,60 @@ class BatchModel(QAbstractTableModel):
 
 
 # ---------------------------------------------------------------------------
+# 「这本书上执行过的规则」清单模型（V1.1-E5）
+# ---------------------------------------------------------------------------
+
+class MemoryModel(QAbstractTableModel):
+    """已执行规则清单：规则 / 记录。
+
+    只读展示（勾选发生在动作按钮上，用行选中表示「要清掉哪几条」），
+    界面据此「清掉选中 / 清空本书 / 撤回上一次记忆变更」。
+    """
+
+    COLS = ("规则", "记录")
+    COL_MARK, COL_DETAIL = range(2)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._rows: list[dict] = []
+
+    def set_rows(self, rows: list[dict]) -> None:
+        self.beginResetModel()
+        self._rows = list(rows or [])
+        self.endResetModel()
+
+    def rows(self) -> list[dict]:
+        return list(self._rows)
+
+    def row_of_mark(self, mark: str) -> int:
+        for i, row in enumerate(self._rows):
+            if row.get("mark") == str(mark):
+                return i
+        return -1
+
+    def rowCount(self, parent=QModelIndex()) -> int:
+        return 0 if parent.isValid() else len(self._rows)
+
+    def columnCount(self, parent=QModelIndex()) -> int:
+        return 0 if parent.isValid() else len(self.COLS)
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
+            return self.COLS[section]
+        return None
+
+    def data(self, index: QModelIndex, role=Qt.ItemDataRole.DisplayRole):
+        if not index.isValid() or not (0 <= index.row() < len(self._rows)):
+            return None
+        row = self._rows[index.row()]
+        if role in (Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole):
+            if index.column() == self.COL_MARK:
+                return str(row.get("mark") or "")
+            return str(row.get("reason") or "")
+        return None
+
+
+# ---------------------------------------------------------------------------
 # 页面
 # ---------------------------------------------------------------------------
 
@@ -290,6 +377,13 @@ class ManualModule(QWidget):
         self._confirm_hook = None       # 测试可替换的确认函数
         self._last_message = ""
 
+        # V1.1-E5：这本书的「已执行规则」记忆。store 在挂书时与 BatchSession
+        # **共用同一个实例**（同一份 batch_backups/index.json），不各持一份——
+        # 两个 SnapshotStore 实例会互相覆盖 index.json（上轮踩过的缺陷）。
+        self.memory: rmem.RuleMemory | None = None
+        #: 当前书的书 id（记忆作用域的主键；不合规 → 空串 = 不记忆）
+        self.book_id = ""
+
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(px(sp("4")))
@@ -301,6 +395,7 @@ class ManualModule(QWidget):
         bl.setSpacing(px(sp("4")))
         bl.addWidget(self._scope_card())
         bl.addWidget(self._rules_card())
+        bl.addWidget(self._memory_card())
         bl.addWidget(self._plan_card())
         bl.addWidget(self._batches_card())
         bl.addWidget(self._backups_card())
@@ -402,6 +497,66 @@ class ManualModule(QWidget):
         self.rule_view.setColumnWidth(RulePickModel.COL_HITS, 60)
         self.rule_view.model().dataChanged.connect(lambda *_: self._sync_scope_note())
         card.body_l.addWidget(self.rule_view)
+        return card
+
+    def _memory_card(self) -> Card:
+        """「这本书上执行过的规则」卡片（V1.1-E5）。
+
+        三个入口全部走既有 SnapshotStore（与 E4 每批备份同一个仓库、同一份
+        index.json）：清掉选中 / 清空本书 / 撤回上一次记忆变更。动作名分别是
+        ``rule_memory_clear`` / ``rule_memory_restore`` / ``rule_memory_mark``，
+        在「历史与快照」里与每批替换的备份并列可见、可核对。
+        """
+        card = Card("这本书上执行过的规则",
+                    "记过的不再默认重复提示；想重跑就清掉它",
+                    collapsible=True, open_=True)
+        card.body_l.setSpacing(6)
+
+        self.memory_note = _muted("这本书还没执行过任何规则。")
+        self.memory_note.setWordWrap(True)
+        card.body_l.addWidget(self.memory_note)
+
+        self.memory_model = MemoryModel(self)
+        self.memory_view = _table()
+        self.memory_view.setModel(self.memory_model)
+        self.memory_view.setMinimumHeight(150)
+        self.memory_view.horizontalHeader().setSectionResizeMode(
+            MemoryModel.COL_MARK, QHeaderView.ResizeMode.ResizeToContents)
+        self.memory_view.horizontalHeader().setSectionResizeMode(
+            MemoryModel.COL_DETAIL, QHeaderView.ResizeMode.Stretch)
+        self.memory_view.setSelectionBehavior(
+            QTableView.SelectionBehavior.SelectRows)
+        self.memory_view.setSelectionMode(
+            QTableView.SelectionMode.ExtendedSelection)
+        card.body_l.addWidget(self.memory_view)
+
+        card.body_l.addSpacing(10)
+        acts = QHBoxLayout()
+        acts.setSpacing(px(sp("2")))
+        self.memory_clear_pick_btn = QPushButton("清掉选中")
+        self.memory_clear_pick_btn.setObjectName("BtnOutline")
+        self.memory_clear_pick_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.memory_clear_pick_btn.clicked.connect(self.clear_memory_picked)
+        acts.addWidget(self.memory_clear_pick_btn)
+
+        self.memory_clear_all_btn = QPushButton("清空本书")
+        self.memory_clear_all_btn.setObjectName("BtnOutline")
+        self.memory_clear_all_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.memory_clear_all_btn.clicked.connect(self.clear_memory_all)
+        acts.addWidget(self.memory_clear_all_btn)
+
+        self.memory_undo_btn = QPushButton("↺ 撤回上一次记忆变更")
+        self.memory_undo_btn.setObjectName("BtnGhost")
+        self.memory_undo_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.memory_undo_btn.clicked.connect(self.undo_memory)
+        acts.addWidget(self.memory_undo_btn)
+        acts.addStretch(1)
+        card.body_l.addLayout(acts)
+
+        card.body_l.addSpacing(8)
+        self.memory_status = _muted("")
+        self.memory_status.setWordWrap(True)
+        card.body_l.addWidget(self.memory_status)
         return card
 
     def _plan_card(self) -> Card:
@@ -530,26 +685,188 @@ class ManualModule(QWidget):
     # -- 书 -----------------------------------------------------------------
 
     def set_book(self, text_path: str, book_name: str = "") -> None:
-        """挂当前书；换书会丢掉上一本的会话（不跨书串扰）。"""
+        """挂当前书；换书会丢掉上一本的会话与记忆（不跨书串扰）。"""
         self._text_path = str(text_path or "")
         self._book_name = book_name or (
             Path(self._text_path).parent.name if self._text_path else "")
         self._text = ""
         self.session = None
+        self.memory = None
+        self.book_id = ""
         if self._text_path:
             try:
                 self._text = Path(self._text_path).read_text(encoding="utf-8")
             except Exception as exc:                    # noqa: BLE001
                 self._text = ""
                 self.toast(f"读不到这本书的正文：{type(exc).__name__}")
+        if self._text:
+            self._bind_memory()
         self.rule_model.set_hits({})
+        self.rule_model.set_executed({})
         self.batch_model.set_batches([])
         self._refresh_backups()
+        self._refresh_memory()
         self.book_label.setText(
             f"当前书：{self._book_name}" if self._book_name else "还没有选书")
         self._set_book_ready(bool(self._text))
         if self._text:
             self.scan_book(silent=True)
+
+    # -- 已执行记忆（V1.1-E5）----------------------------------------------
+
+    def _memory_store_dir(self) -> Path | None:
+        """记忆 / 每批备份共用的还原点仓库目录（书目录下的 ``batch_backups``）。"""
+        if not self._text_path:
+            return None
+        return Path(self._text_path).resolve().parent / bc.BACKUP_DIRNAME
+
+    def _bind_memory(self) -> None:
+        """把这本书的执行记忆挂上：书 id + 还原点仓库。
+
+        书 id 取书目录名（与书架、词库页同一个口径）；不合规时 ``book_id``
+        留空并如实说一句人话——不离谱地记到别的地方去。
+        """
+        store_dir = self._memory_store_dir()
+        self.book_id = rmem.book_id_of_text_path(self._text_path)
+        if not self.book_id or store_dir is None:
+            self.memory = None
+            self.memory_status.setText(
+                "这本书所在目录名不适合作为记忆的作用域，先不记执行记录"
+                "（其它功能不受影响）。")
+            return
+        self.memory = rmem.RuleMemory(store_dir=store_dir)
+        self.rule_model.set_executed(self.memory.records(self.book_id))
+
+    def _share_store_with_memory(self) -> None:
+        """让会话与本页记忆**共用同一个还原点仓库实例**。
+
+        两个 SnapshotStore 实例各持一份内存状态、写同一份 ``index.json``，
+        后写的会把先写的那份点记录整体覆盖掉（上轮就是这么丢还原点的）。
+        所以只要两者都在，就强制共用一个实例——并把「真的共用」写成断言，
+        将来谁再拆开会在测试里立刻炸出来。
+        """
+        if self.session is not None and self.memory is not None:
+            self.session.store = self.memory.store
+            self.memory.store = self.session.store
+            assert self.memory.store is self.session.store, (
+                "执行记忆与逐批会话必须共用同一个还原点仓库")
+
+    def _refresh_memory(self) -> None:
+        """把这本书的执行记忆刷到卡片上（清单 + 说明 + 可撤回按钮）。"""
+        if self.memory is None or not self.book_id:
+            self.memory_model.set_rows([])
+            self.rule_model.set_executed({})
+            self.memory_note.setText("这本书还没执行过任何规则。")
+            self.memory_undo_btn.setEnabled(False)
+            self.memory_clear_pick_btn.setEnabled(False)
+            self.memory_clear_all_btn.setEnabled(False)
+            return
+        rows = self.memory.rows(self.book_id)
+        self.memory_model.set_rows(rows)
+        self.rule_model.set_executed(self.memory.records(self.book_id))
+        if rows:
+            self.memory_note.setText(
+                f"这本书上已经执行过 {len(rows)} 条规则；它们默认不重复提示，"
+                "需要重跑就在上面清单里勾选，或者在这里清掉记录。")
+        else:
+            self.memory_note.setText("这本书还没执行过任何规则。")
+        self.memory_clear_all_btn.setEnabled(bool(rows))
+        self.memory_clear_pick_btn.setEnabled(bool(rows))
+        self.memory_undo_btn.setEnabled(bool(self.memory.can_undo()))
+
+    def _selected_memory_marks(self) -> list[str]:
+        rows = self.memory_view.selectionModel().selectedRows()
+        marks: list[str] = []
+        for m in rows:
+            row = self.memory_model.rows()[m.row()]
+            if row.get("mark"):
+                marks.append(str(row["mark"]))
+        return marks
+
+    def clear_memory_picked(self) -> None:
+        """清掉选中：把选中的几条从本书记忆里撤掉（它们重新回到候选）。"""
+        if self.memory is None or not self.book_id:
+            self.toast("这本书还不能记执行记录")
+            return
+        marks = self._selected_memory_marks()
+        if not marks:
+            self.toast("先在上面清单里选中要清掉的规则")
+            return
+        if not self._confirm(
+                f"清掉这 {len(marks)} 条记录？",
+                "清掉之后这几条规则会重新回到候选，下次扫描就可能再提示你跑一遍；"
+                "这本书的正文不会因此改动，清掉这一步本身也可以撤回。"):
+            self.toast("已取消，记录没动")
+            return
+        try:
+            res = self.memory.forget(self.book_id, marks,
+                                     label=f"清掉 {len(marks)} 条执行记录")
+        except Exception as exc:                        # noqa: BLE001
+            self.toast(f"清掉没成功：{type(exc).__name__}")
+            return
+        self._after_memory_change(res, f"已清掉 {len(marks)} 条记录")
+
+    def clear_memory_all(self) -> None:
+        """清空本书：整本记忆清空（全部都回到候选）。"""
+        if self.memory is None or not self.book_id:
+            self.toast("这本书还不能记执行记录")
+            return
+        n = len(self.memory.marks(self.book_id))
+        if not n:
+            self.toast("这本书还没有执行记录，不用清")
+            return
+        if not self._confirm(
+                f"清空这本书的 {n} 条执行记录？",
+                "清空后这本书的所有规则都会重新回到候选，下次扫描会照旧全部提示；"
+                "正文不会因此改动，清空这一步也可以撤回。"):
+            self.toast("已取消，记录没动")
+            return
+        try:
+            res = self.memory.clear(self.book_id)
+        except Exception as exc:                        # noqa: BLE001
+            self.toast(f"清空没成功：{type(exc).__name__}")
+            return
+        self._after_memory_change(res, f"已清空这本书的 {n} 条记录")
+
+    def undo_memory(self) -> None:
+        """撤回上一次记忆变更（写回该还原点的「操作前」字节）。"""
+        if self.memory is None:
+            self.toast("这本书还不能记执行记录")
+            return
+        if not self.memory.can_undo():
+            self.toast("没有可以撤回的记忆变更")
+            return
+        if not self._confirm(
+                "撤回上一次记忆变更？",
+                "把这本书的执行记录恢复成上一次变更之前的样子；"
+                "已经写回正文的替换不受影响（要撤替换请用「撤销这一批」）。",
+                confirm_text="确认撤回"):
+            self.toast("已取消撤回，记录没动")
+            return
+        try:
+            res = self.memory.undo_last()
+        except Exception as exc:                        # noqa: BLE001
+            self.toast(f"撤回没成功：{type(exc).__name__}")
+            return
+        if not res:
+            self.toast("没有可以撤回的记忆变更")
+            return
+        self.memory_status.setText(
+            f"已撤回「{res.get('label') or '上一次记忆变更'}」，"
+            f"这本书现在记着 {len(self.memory.marks(self.book_id))} 条规则。")
+        self._after_memory_change(res, "已撤回上一次记忆变更")
+
+    def _after_memory_change(self, res: dict | None, done_text: str) -> None:
+        """记忆变更之后：清单、原因、会话里的排除集全部跟着重算。"""
+        self._refresh_memory()
+        if self.session is not None:
+            # 记忆变了 → 会话里的「已执行」判断也变了；重新扫描一遍让
+            # 清单里的原因列与「默认不选」的规则集合与磁盘一致（只读）。
+            self.scan_book(silent=True)
+        else:
+            self._sync_scope_note()
+        self.memory_status.setText(done_text)
+        self.toast(done_text)
 
     def _set_book_ready(self, ready: bool) -> None:
         self.empty_state.setVisible(not ready)
@@ -568,7 +885,11 @@ class ManualModule(QWidget):
             self.ruleset, self._text,
             target_path=self._text_path,
             label=self._book_name or "当前书",
+            memory=self.memory,
+            book_id=self.book_id,
         )
+        # 记忆与会话共用同一个还原点仓库（同一份 index.json）
+        self._share_store_with_memory()
         res = self.session.scan()
         hits = {h.rule.index: h.count for h in res.hits}
         self.rule_model.set_hits(hits)
@@ -577,8 +898,10 @@ class ManualModule(QWidget):
         self.plan_note.setText("还没生成分批。选好规则后点「生成分批」。")
         self._refresh_backups()
         if not silent:
+            n_exec = len(self.memory.marks(self.book_id)) if self.memory else 0
+            extra = f"，其中 {n_exec} 条这本书上已经执行过" if n_exec else ""
             self.toast(f"扫描完成：{len(self.ruleset)} 条规则里 "
-                       f"{len(res.nonzero)} 条有命中，共 {res.total} 处")
+                       f"{len(res.nonzero)} 条有命中，共 {res.total} 处{extra}")
         self._sync_scope_note()
 
     def pick_range(self) -> None:
@@ -613,8 +936,13 @@ class ManualModule(QWidget):
         picked = self.rule_model.picked()
         self.session.selected = picked
         total = sum(self.session.hits_of(i) for i in picked)
-        self.scope_note.setText(
-            f"已选 {len(picked)} 条规则，这些规则在本书上共 {total} 处命中。")
+        note = f"已选 {len(picked)} 条规则，这些规则在本书上共 {total} 处命中。"
+        # V1.1-E5：被记忆排除的规则不静默消失——这里明说「几条默认没选、原因在哪」。
+        skipped = list(getattr(self.session, "excluded_indices", []) or [])
+        if skipped:
+            note += (f"另有 {len(skipped)} 条这本书上已经执行过，默认没有选中"
+                     "（原因写在清单的说明列；要重跑就手动勾上）。")
+        self.scope_note.setText(note)
 
     # -- 分批 ---------------------------------------------------------------
 
@@ -712,6 +1040,12 @@ class ManualModule(QWidget):
         self._last_preview = None
         self.batch_model.refresh()
         self._refresh_backups()
+        # 这一批的规则已经记进本书记忆 → 卡片与清单的「说明」列跟着更新
+        self._refresh_memory()
+        if self.session is not None and self.session.memory_error:
+            self.toast(f"第 {bid} 批已写回，但这批的执行记录没记住"
+                       f"（{self.session.memory_error}）")
+            return
         self.preview_note.setText(
             f"第 {bid} 批已写回：{rec['hits']} 处。需要反悔就点「撤销这一批」。")
         self.toast(f"第 {bid} 批已写回 {rec['hits']} 处（备份已留）")
@@ -766,6 +1100,8 @@ class ManualModule(QWidget):
             return
         self.batch_model.refresh()
         self._refresh_backups()
+        # 撤销这一批 → 它的执行记录同步撤掉，那几条规则重新回到候选
+        self._refresh_memory()
         extra = "（已与该批备份逐字节核对一致）" if rec.get("backup_exact") and not rec.get("mismatch") else ""
         if rec.get("mismatch"):
             extra = f"（注意：{rec['mismatch']}）"
