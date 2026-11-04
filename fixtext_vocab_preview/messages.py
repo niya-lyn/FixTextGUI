@@ -189,3 +189,137 @@ def confirm_done(write: int) -> str:
 def impact_vs_rehearsal_title() -> str:
     return "影响预览与预演实测对照"
 
+
+# ---------------------------------------------------------------------------
+# V1.1-D5 · 批量导入的人话文案（与 D1/D3/D4 同一套零技术词口径）
+#
+# 本卡要说的三件事：这一批写进去了几条 / 写失败时为什么、词库有没有退回去 /
+# 怎么整批撤销。全部人话，不出现任何文件位置、代号或技术细节。
+# ---------------------------------------------------------------------------
+
+def import_label(write: int) -> str:
+    """还原点 / 操作历史里的摘要（用户在历史面板上看到的就是这一行）。"""
+    return f"导入 {write} 条词条"
+
+
+def import_done(write: int, add: int, update: int, disabled: int, skipped: int) -> str:
+    """写成功后的一句话：写了几条、四类各多少。"""
+    return (f"已写入 {write} 条：新增 {add} 条、更新 {update} 条、"
+            f"禁用 {disabled} 条、跳过 {skipped} 条。")
+
+
+def import_done_note() -> str:
+    """写成功后紧跟着的说明（三个交付物各一句，用户不必猜）。"""
+    return ("写入前自动留了快照（「历史与快照」里能看到，随时可以回到导入前）；"
+            "这次整批只算一步，「撤销」一下就能整批退回去。")
+
+
+def import_undo_hint() -> str:
+    return "想退回去：点上方「撤销」，或按 Ctrl+Z，整批一起回到导入前。"
+
+
+def import_toast(write: int) -> str:
+    """页内提示（带「撤销」按钮的那条）。"""
+    return f"已导入 {write} 条词条，词库已更新"
+
+
+# ---------------------------------------------------------------------------
+# 失败
+# --------------------------------------------------------------------------
+
+def fail_permission() -> str:
+    return "没有权限写词库文件（可能被设为只读），这次没有写入任何词条。"
+
+
+def fail_no_space() -> str:
+    return "磁盘空间不够，词库文件没能写完；已自动退回导入前的样子。"
+
+
+def fail_readonly() -> str:
+    return "词库文件所在的位置是只读的，这次没有写入任何词条。"
+
+
+def fail_io() -> str:
+    return "词库文件写入时出错，已自动退回导入前的样子。"
+
+
+def fail_unknown() -> str:
+    return "写入过程中出了意外，已自动退回导入前的样子。"
+
+
+def failed(reason: str) -> str:
+    """失败提示的完整句：原因 + 明确的后果（没有半批）。"""
+    return f"{reason} 这一批一条都没留下，词库与导入前完全一样。"
+
+
+def failed_manual(reason: str) -> str:
+    """回退也失败时的说法：不许说成成功，明确告诉用户还能怎么办。"""
+    return (f"{reason} 而且没能在一步之内退回去。别担心，导入前的那份内容还留着——"
+            f"点上方「撤销」就能退回到导入前。")
+
+
+def import_failed_log(label: str, reason: str) -> str:
+    """操作历史里记的那一条（已自动退回）。"""
+    return f"{label}未完成（{reason}），已退回导入前"
+
+
+def import_failed_manual_log(label: str) -> str:
+    return f"{label}未完成且需手动退回（点「撤销」）"
+
+
+def batch_row_incomplete(n: int) -> str:
+    return f"写入清单第 {n} 条的原词或替换值是空的，这一批没有写入。"
+
+
+def batch_update_target_missing(word: str) -> str:
+    return f"要改值的「{word}」在词库里已经找不到了（可能刚被删掉），这一批没有写入。"
+
+
+def batch_empty() -> str:
+    return "这次没有需要写入的条目，词库没有变化。"
+
+
+# ---------------------------------------------------------------------------
+# 写完核对（这些句子只在核对没过时出现，同样是给人看的）
+# --------------------------------------------------------------------------
+
+def verify_file_missing() -> str:
+    return "写完核对时找不到词库文件，已退回导入前。"
+
+
+def verify_incomplete_write() -> str:
+    return "写完核对时发现文件内容和这次要写的不一致（可能没写完），已退回导入前。"
+
+
+def verify_unreadable() -> str:
+    return "写完核对时发现词库文件读不出来了，已退回导入前。"
+
+
+def verify_count_mismatch(got: int, want: int) -> str:
+    return f"写完核对时条目数是 {got} 条、应该 {want} 条，已退回导入前。"
+
+
+def verify_content_mismatch(word: str) -> str:
+    return f"写完核对时「{word}」的内容与要写的不一致，已退回导入前。"
+
+
+def verify_disabled_missing(word: str) -> str:
+    return f"写完核对时「{word}」没有被置为未启用，已退回导入前。"
+
+
+def verify_generic() -> str:
+    return "写完核对没通过，已退回导入前。"
+
+
+# ---------------------------------------------------------------------------
+# 撤销
+# ---------------------------------------------------------------------------
+
+def undo_batch_done(label: str, identical: bool) -> str:
+    if identical:
+        return f"已整批撤销「{label}」，词库逐字节回到导入前"
+    return f"已整批撤销「{label}」，但没能与导入前核对一致，建议用「历史与快照」再恢复一次"
+
+
+def undo_batch_not_found() -> str:
+    return "这一批已经退不回去了（可能已经被撤销或恢复过），可以直接用「历史与快照」恢复"

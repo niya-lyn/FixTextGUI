@@ -1895,10 +1895,31 @@ class VocabModule(QWidget):
         #: 弹窗与模型都留一份引用：验收要读三组条数与核对结果，也避免被提前回收
         self._preview_modal = dlg
         self._preview_model = model
+        # 确认执行真写进去之后，由词库页负责刷新并提示「撤销」——弹窗不反向找页面
+        dlg.write_done_cb = self._on_import_written
         # 用 show() 不用 exec()：exec() 会自起事件循环，无头验收脚本里没有
         # 人来点关闭就会一直卡住（查重清单那边也是 show()）。
         dlg.show()
         return model
+
+    # ---------------------------------------------------------------- 批量导入（V1.1-D5）
+
+    def _on_import_written(self, result: dict | None, error) -> None:
+        """预览弹窗把这一批写进词库之后：刷新页面 + 给一条带「撤销」的提示。
+
+        整批只占**一个**还原点，所以这里的「撤销」就是既有的 :meth:`_undo`
+        （Ctrl+Z、历史面板的「恢复到此刻」也是同一条栈）——不另造整批撤销入口。
+        失败时词库已经被退回导入前，这里只把页面拉回真实状态、不弹二次提示
+        （人话原因已由弹窗自己的提示条说过，重复说一遍反而像出了新问题）。
+        """
+        from fixtext_vocab_preview import messages as msg
+
+        self._selected = {i for i in self._selected if self._by_id(i)}
+        self._render_all()
+        if not result:
+            return
+        n = int(result.get("write", 0) or 0)
+        self._toast(msg.import_toast(n), with_undo=True)
 
     def open_dup(self) -> list:
         """查重清单（M3-T3.7 收口：只读清单，不再给"假按钮"）。

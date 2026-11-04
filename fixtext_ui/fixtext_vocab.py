@@ -168,6 +168,10 @@ ACT_CLEAR_DISABLED = "clear_disabled"
 ACT_RESET_STATES = "reset_states"
 ACT_BOOK_EXCLUDE = "book_exclude"
 ACT_BOOK_INCLUDE = "book_include"
+#: V1.1-D5：整批导入。整批只占一个还原点，所以撤销栈里它也只算一步。
+ACT_IMPORT_BATCH = "import_batch"
+#: 一次没写成的批量导入（已自动退回 / 或需用户手动退回），只进操作历史、不留还原点。
+ACT_IMPORT_FAILED = "import_failed"
 
 #: 动作代号 → 人话（操作历史面板直接用这个，不把代号给用户看）
 ACT_NAMES = {
@@ -185,6 +189,8 @@ ACT_NAMES = {
     ACT_RESET_STATES: "恢复默认状态",
     ACT_BOOK_EXCLUDE: "本书停用",
     ACT_BOOK_INCLUDE: "本书恢复",
+    ACT_IMPORT_BATCH: "批量导入",
+    ACT_IMPORT_FAILED: "导入未完成",
     "note": "标记",
 }
 
@@ -859,10 +865,23 @@ class CustomVocab:
         return dict(removed=len(drop), left=len(kept), target=keeper["word"])
 
     def _commit(self, entries: list[dict]) -> None:
-        raw = self._encode(entries)
+        self.replace_all(entries)               # 单条写与整批写共用同一份落盘实现
+
+    def replace_all(self, entries: list[dict]) -> bytes:
+        """整批替换：把 ``entries`` 一次编码、一次原子替换落盘，返回写出去的字节。
+
+        与逐条 ``add()`` 的区别是**落盘次数**：逐条写 N 次，中途失败就留下半批；
+        这里只写一次，磁盘上要么是旧文件、要么是完整的新文件（本卡「不落半批」的
+        第一道闸；第二道是调用方写完再读盘核对）。
+
+        与 ``_commit`` 不是两条实现：``_commit`` 现在就走这里，编码 / 原子写 /
+        内存同步只有这一份，两处不会漂移。
+        """
+        raw = self._encode([self._normalize(e) for e in entries])
         _atomic_write(self.path, raw)
         self._entries = [self._normalize(e) for e in entries]
         self._raw = raw
+        return raw
 
     # ----- 撤销：原始字节整份回写 -----
 
@@ -1290,6 +1309,31 @@ class VocabStore:
             label=label, act=ACT_BOOK, summary=label, write=_write,
             detail=dict(book=book, requested=len(words)))
         return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
+
+    # ----- V1.1-D5：整批导入（事务写入 + 整批撤销）-----
+
+    def import_batch(self, rows, *, label: str = "", source_name: str = "",
+                     verify: bool = True) -> dict:
+        """把一整批词条写进自定义词库（一个还原点、一次落盘、写完自证）。
+
+        ``rows`` 就是预览页 ``write_list()`` 的输出（D4 的输入契约）。
+        写失败抛 :class:`fixtext_vocab_preview.transaction.BatchWriteError`，
+        且词库已退回导入前（或还原点留着可撤销），不会落半批。
+
+        留痕全部复用既有那条路：还原点进 ``SnapshotStore``（历史面板可见）、
+        操作历史用 ``ACT_IMPORT_BATCH``、撤销走 ``undo()`` / ``undo_to()``——
+        本卡不另造撤销体系。
+        """
+        from fixtext_vocab_preview.transaction import write_batch
+
+        return write_batch(self, rows, label=label, source_name=source_name,
+                           verify=verify)
+
+    def undo_import(self, point_id: int) -> dict | None:
+        """整批撤销：一次把这一批导入退回导入前（复用既有撤销栈的两条原语）。"""
+        from fixtext_vocab_preview.transaction import undo_batch
+
+        return undo_batch(self, int(point_id))
 
     # ----- 词条启用 / 禁用（V1.1-T1.1 数据层；界面在第二卡接）-----
 

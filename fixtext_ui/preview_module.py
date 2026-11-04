@@ -217,6 +217,15 @@ def msg_note_pending() -> str:
     return msg.action_note_pending()
 
 
+def _source_name(model) -> str:
+    """这次导入来自哪张表（只进操作历史详情，不显示给用户）。
+
+    ``PreviewModel`` 自己没有这个字段，它在被拆分出来的拒收清单上
+    （``model.rejects.source_name``）；取不到就当没写，不因此让写入失败。
+    """
+    return str(getattr(getattr(model, "rejects", None), "source_name", "") or "")
+
+
 class PreviewDialog(Modal):
     """导入预览弹窗：三组 + 取消 + 全部恢复 + 预演核对。"""
 
@@ -230,6 +239,14 @@ class PreviewDialog(Modal):
         self._confirmed = False             # 是否已点过「确认执行」
         self._confirmed_plan: dict = {}     # 被确认的那份影响预览数字
         self._write_list: list = []         # 交给 D5 的写入清单
+        # V1.1-D5：真写入的结果与状态（界面测试与验收直接读这两处）
+        self._write_result: dict = {}
+        self._write_ok = False
+        self._write_error = None
+        self._last_write_ok = False
+        self.written = False                # 这一批是否已经写进词库（防重复写）
+        #: 写完之后的回调（词库页挂：刷新页面、提示带「撤销」）——弹窗不反向找页面
+        self.write_done_cb = None
         self._build_body()   # 不能叫 _build：Modal 基类占了这个名字
 
     # ----- 构建 -----
@@ -351,6 +368,12 @@ class PreviewDialog(Modal):
             msg.action_restored(0).replace("已撤销 0 条处置，", "↺ 全部撤销")
             if (n_cancel or n_done) else "↺ 全部恢复")
         self.rehearse_btn.setEnabled(self.model.total() > 0)
+        if self.written:
+            # 这一批已经写进去了：确认按钮钉死，避免重复写第二遍（整批要写两次
+            # 就变成两批，撤销栈里也会被记成两步）
+            self.confirm_btn.setEnabled(False)
+            self.restore_btn.setEnabled(False)
+            return counts
         # 有冲突没处置时按钮仍可点（点了会给出人话解释），不让用户对着灰按钮猜原因
         self.confirm_btn.setEnabled(self.model.write_plan()["write"] > 0 or bool(pending))
         return counts
@@ -410,7 +433,65 @@ class PreviewDialog(Modal):
         self._confirmed_plan = dict(plan)
         self._write_list = self.model.write_list()
         self._confirmed = True
-        self.tip(msg.confirm_done(plan["write"]))
+        # D5：确认之后就是真写入——整批一次落盘、一个还原点、写完自证。
+        self._write_result = self.write_now(_source_name(self.model))
+        if not self._write_ok:
+            return                       # 失败提示已在 write_now 里给过（人话 + 已退回）
+
+        r = self._write_result or {}
+        self.tip(msg.import_done(r.get("write", plan.get("write", 0)),
+                                r.get("add", 0), r.get("update", 0),
+                                r.get("disabled", 0), r.get("skipped", 0))
+                 + " " + msg.import_done_note())
+
+    # ----- V1.1-D5：真写入 + 整批撤销 -----
+
+    def write_now(self, source_name: str = "") -> dict:
+        """把刚确认的写入清单整批落库；失败时页内给出人话原因并保持词库不变。
+
+        **不用 QMessageBox**：无头验收里 ``exec()`` 会卡住事件循环，D2 起这条页
+        就用页内提示条说话，这里沿用。
+        """
+        from fixtext_vocab_preview import messages as msg
+        from fixtext_vocab_preview.transaction import BatchWriteError
+
+        self._write_ok = False
+        self._write_result = {}
+        try:
+            result = self.model.store.import_batch(
+                self._write_list, source_name=source_name)
+        except BatchWriteError as exc:
+            self._write_error = exc
+            self.tip(exc.reason)          # exc.reason 已是人话（含"已退回导入前"）
+            self._after_write(ok=False)
+            return {}
+        except Exception as exc:          # noqa: BLE001 兜底也要给人话，不吐异常类名
+            from fixtext_vocab_preview.transaction import human_reason
+
+            self._write_error = exc
+            self.tip(msg.failed(human_reason(exc)))
+            self._after_write(ok=False)
+            return {}
+
+        self._write_result = result
+        self._write_ok = True
+        self._write_error = None
+        self.written = True
+        # 已经写进去了：这一页的使命结束。不清空清单、也不重算分组（重算会让刚写
+        # 进去的条全变成「冲突」，看着像出了新问题），只把确认按钮钉死，避免重复写。
+        self.refresh()
+        self._after_write(ok=True)
+        return result
+
+    def _after_write(self, *, ok: bool) -> None:
+        """写完之后：确认按钮要不要置灰 / 提示要不要带「撤销」。
+
+        回调由词库页挂进来（:meth:`on_write_finished`）——弹窗不自己去找页面，
+        这样数据层与界面的依赖还是单向的。
+        """
+        self._last_write_ok = bool(ok)
+        if self.write_done_cb is not None:
+            self.write_done_cb(self._write_result if ok else None, self._write_error)
 
     def run_rehearsal(self) -> object:
         """预演核对：临时副本上真写一次，与预览数字并列展示。"""
