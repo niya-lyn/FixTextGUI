@@ -29,6 +29,17 @@
 验收判据点名要防的那类偏差。所以本层按**行序**递进查重：先出现的算新增，
 后出现的算与「本次将要写入的前一条」冲突（`within_batch` 为 True）。
 这个递进用的仍是既有查重实现的判定，只是把"将要写入的条目"也当成已被命中的一方。
+
+## V1.1-D4 在这里加了什么
+
+冲突组里的每一条现在可以带一个**处置**（`action`）：改值 / 跳过 / 设为禁用。
+处置不是界面上贴的标签，而是**进 `_build` 的输入**——改过的值参与查重、跳过的
+条目不占「前面已经有一条」的位置、设为禁用的条目算「会写进库」。因此处置后
+整张表**自动重判**，用的还是上面那同一套判定，没有第二份比对逻辑。
+
+为什么不把处置记在界面层：预览数字与真导入的数字必须同源。处置若只存在按钮状态里，
+`counts()` 给的是处置前的数，写入清单给的是处置后的数——「预览说 N、写入变 N+k」
+正是这么长出来的。
 """
 
 from __future__ import annotations
@@ -56,9 +67,42 @@ GROUP_CONFLICT = msg.GROUP_CONFLICT
 GROUP_REJECT = msg.GROUP_REJECT
 GROUP_NAMES = msg.GROUP_NAMES
 
+#: 冲突的三条处置（V1.1-D4）。常量放在模型这一层：处置是模型的输入，
+#: 不是界面按钮的私有状态（见模块头「D4 在这里加了什么」）。
+ACTION_EDIT = "edit"          # 改值：换一个正确写法，再按同一套查重重判
+ACTION_SKIP = "skip"          # 跳过：这一条这次不写入
+ACTION_DISABLE = "disable"    # 设为禁用：照常写进词库，但按禁用状态写
+
+#: 处置的人话名字（界面按钮与状态文案共用一份，不各写一遍）
+ACTION_NAMES: dict[str, str] = {
+    ACTION_EDIT: "改值",
+    ACTION_SKIP: "跳过",
+    ACTION_DISABLE: "设为禁用",
+}
+
+#: 处置后的去向（V1.1-D4）。写入清单与影响预览只认这五个值：
+#: 新增 / 更新 / 设为禁用 三类算「会写进词库」；跳过 与 未处置的冲突 不算。
+EFFECT_ADD = "add"              # 库里没有 → 新增一条
+EFFECT_UPDATE = "update"        # 同词异值 → 改掉库里那条的值（改值处置的直接结果）
+EFFECT_DISABLED = "disabled"    # 照常写进词库，但按禁用状态写
+EFFECT_SKIPPED = "skipped"      # 这次不写（跳过处置 / 逐条取消）
+EFFECT_PENDING = "pending"      # 冲突还没处置：不算写入，等用户决定
+EFFECT_REJECTED = "rejected"    # 格式不合格，写不进去
+
+#: 去向的人话名字（影响预览的四个数字就用这四个）
+EFFECT_NAMES: dict[str, str] = {
+    EFFECT_ADD: "新增",
+    EFFECT_UPDATE: "更新",
+    EFFECT_DISABLED: "禁用",
+    EFFECT_SKIPPED: "跳过",
+}
+
 #: 「同一次导入里前面已经出现」的命中用这个 id。真实自定义词条的 id 从 1 起
 #: （`CustomVocab.add` 取 `max(default=0)+1`），所以 0 不可能与真条目相撞。
 _PENDING_ID = 0
+
+#: 会真的写进词库的三种去向（影响预览里「将写入 N 条」就数这三种）
+_WRITING_EFFECTS: tuple[str, ...] = (EFFECT_ADD, EFFECT_UPDATE, EFFECT_DISABLED)
 
 
 @dataclass
@@ -81,6 +125,39 @@ class PreviewItem:
     reject_advice: str = ""
     reject_note: str = ""
     cancelled: bool = False            # 用户取消过（取消后不进任何一组）
+    #: 处置（V1.1-D4）：空串 = 还没处置；否则是 ACTION_EDIT / ACTION_SKIP / ACTION_DISABLE
+    action: str = ""
+    #: 改值处置输入的新值（只有 ACTION_EDIT 会有内容）
+    edited_value: str = ""
+    #: 处置**之后**这条的去向（由 `_build` 重判后写定，界面与写入清单都读它）：
+    #: add / update / disabled / skipped / pending / rejected
+    effect: str = ""
+    #: 更新处置要改的那条自定义词条 id（只有 effect == "update" 会有值）
+    update_target: int = 0
+    #: 处置状态的一句话（界面状态列直接用，不自己拼）
+    action_note: str = ""
+
+    # ----- 处置相关的派生值 -----
+
+    @property
+    def effective_value(self) -> str:
+        """这一条**现在**会写进词库的替换值（改过值就是新值）。"""
+        if self.action == ACTION_EDIT and self.edited_value.strip():
+            return self.edited_value.strip()
+        return self.value
+
+    @property
+    def edited(self) -> bool:
+        return self.action == ACTION_EDIT
+
+    @property
+    def will_write(self) -> bool:
+        """这条是否在写入清单里（新增 / 更新 / 设为禁用都算写入）。"""
+        return self.effect in (EFFECT_ADD, EFFECT_UPDATE, EFFECT_DISABLED)
+
+    @property
+    def action_name(self) -> str:
+        return ACTION_NAMES.get(self.action, "")
 
     # ----- 展示用 -----
 
@@ -141,8 +218,85 @@ class PreviewModel:
         self.raw_text = raw_text or ""
         self._items: list[PreviewItem] = []
         self._cancelled: set[int] = set()      # 按原始行号记取消
+        #: 行号 → (处置, 改值的新值)。**处置的唯一定义处**：它进 `_build`，
+        #: 不是界面按钮的附带状态（见模块头「D4 在这里加了什么」）。
+        self._actions: dict[int, tuple[str, str]] = {}
         self.internal_duplicates = 0           # 同表内撞车的条数（自检用）
         self._build()
+
+    # ----- 处置判定（每条的去向）-----
+
+    def _decide(self, item: PreviewItem) -> None:
+        """按「处置 + 查重结论」给这一条写定去向（`effect`）与一句状态文案。
+
+        判定只在这里发生一次，`counts()` / `write_plan()` / 真实写入口读的都是
+        这里写下的 `effect`——三处不可能给出不同的数。
+        """
+        from fixtext_vocab import KIND_SAME_BOTH, KIND_SAME_WORD
+
+        same_both = [c for c in item.conflicts if c.get("kind") == KIND_SAME_BOTH]
+        same_word = [c for c in item.conflicts if c.get("kind") == KIND_SAME_WORD]
+        other_conflict = bool(item.conflicts) and not same_both and not same_word
+
+        if item.action == ACTION_SKIP:
+            # 跳过：仍然留在冲突组里（状态可见、可撤销），但不进写入清单。
+            # 组别不动是为了守住 D3 的守恒断言：除了「取消」，没有条目会凭空消失。
+            item.effect = EFFECT_SKIPPED
+            item.action_note = msg.action_note_skip()
+            return
+
+        if item.action == ACTION_DISABLE:
+            # 设为禁用：这条照样写进词库，但按禁用状态写。撞的车如果是库里的
+            # 同词同值条目，禁用的就是库里那一条（不重复写一条一样的）；
+            # 否则新增一条并置为禁用。两种情形都落到同一份禁用状态存储。
+            item.effect = EFFECT_DISABLED
+            item.update_target = self._disable_target(same_both, same_word)
+            item.action_note = msg.action_note_disable(item.word, item.effective_value)
+            return
+
+        if item.action == ACTION_EDIT:
+            if same_both:
+                # 改值后与库里那条一模一样：写进去没有意义，按跳过记账
+                item.effect = EFFECT_SKIPPED
+                item.group = GROUP_CONFLICT
+                item.action_note = msg.action_note_edit_still_exists(
+                    item.word, item.effective_value)
+            elif same_word:
+                # 同词异值 → 改掉库里那条的值，这才是「更新」的字面意思
+                item.effect = EFFECT_UPDATE
+                item.update_target = int(same_word[0].get("id") or 0)
+                item.action_note = msg.action_note_update(
+                    item.word, item.value, item.effective_value)
+            elif other_conflict:
+                # 还剩「同值异词」这种撞车：改值没解决，继续等用户处置
+                item.effect = EFFECT_PENDING
+                item.group = GROUP_CONFLICT
+                item.action_note = msg.action_note_edit_still_conflict(
+                    item.effective_value)
+            else:
+                item.effect = EFFECT_ADD
+                item.group = GROUP_NEW
+                item.action_note = msg.action_note_edit_rejudged(
+                    item.value, item.effective_value)
+            return
+
+        # 还没处置
+        if item.conflicts:
+            item.effect = EFFECT_PENDING
+            item.action_note = msg.action_note_pending()
+        else:
+            item.effect = EFFECT_ADD
+            item.action_note = ""
+
+    @staticmethod
+    def _disable_target(same_both: list[dict], same_word: list[dict]) -> int:
+        """「设为禁用」要落在库里哪一条：优先同词同值，其次同词异值。"""
+        for group in (same_both, same_word):
+            for c in group:
+                cid = int(c.get("id") or 0)
+                if cid and cid != _PENDING_ID:
+                    return cid
+        return 0
 
     # ----- 构建 -----
 
@@ -156,7 +310,13 @@ class PreviewModel:
         return by_word, by_value
 
     def _build(self) -> None:
-        """把 D2 的分区结果按行序做成三组；引擎判定逐条递进（见模块头注释）。"""
+        """把 D2 的分区结果按行序做成各组；引擎判定逐条递进（见模块头注释）。
+
+        **处置是输入**：这一遍读 `self._actions`（改值的新值 / 跳过 / 设为禁用），
+        把改过的值送进同一套查重、让跳过的那条不占「前面已经有一条」的位置，
+        再给每条写定去向（`effect`）。分组与影响预览都从 `effect` 出来，
+        所以处置之后整张表自动重判，不存在第二份数字。
+        """
         from fixtext_vocab import conflict_list   # 既有查重的唯一判定实现
 
         by_word, by_value = self._base_indexes()
@@ -173,37 +333,47 @@ class PreviewModel:
 
         for line_no in order:
             rej = reject_by_line.get(line_no)
+            act, edited = self._actions.get(line_no, ("", ""))
             if line_no in self._cancelled:
                 # 取消掉的行**不参与查重递进**：它既不进任何一组，也不再占着
                 # 「前面已经有一条」的位置。否则取消前一条、后一条仍被判成冲突，
                 # 而真导入时那条会被写进去——预览数字就与实际结果对不上了。
-                items.append(self._cancelled_item(line_no, rej))
+                item = self._cancelled_item(line_no, rej)
+                item.action, item.edited_value = act, edited
+                item.effect = EFFECT_SKIPPED
+                item.action_note = msg.cancel_note()
+                items.append(item)
                 continue
             if rej is not None:
-                items.append(self._from_reject(rej))
+                item = self._from_reject(rej)
+                item.effect = EFFECT_REJECTED
+                items.append(item)
                 continue
 
             row = good_by_line[line_no]
-            word, value = row.word, row.value
-            hits_w = list(by_word.get(word, [])) + list(pending_word.get(word, []))
+            value = edited if (act == ACTION_EDIT and edited.strip()) else row.value
+            hits_w = list(by_word.get(row.word, [])) + list(pending_word.get(row.word, []))
             hits_v = list(by_value.get(value, [])) + list(pending_value.get(value, []))
-            conflicts = conflict_list(self.store.builtin, word, value, hits_w, hits_v)
+            conflicts = conflict_list(self.store.builtin, row.word, value, hits_w, hits_v)
 
             within = any(c.get("id") == _PENDING_ID for c in conflicts)
             item = PreviewItem(
                 line_no=line_no, group=GROUP_CONFLICT if conflicts else GROUP_NEW,
-                word=word, value=value, typ=row.typ, pinyin=row.pinyin,
+                word=row.word, value=row.value, typ=row.typ, pinyin=row.pinyin,
                 raw_line=self._raw_of(line_no),
                 conflicts=list(conflicts), within_batch=within,
+                action=act, edited_value=edited,
             )
-            if conflicts:
+            self._decide(item)
+            if item.effect == EFFECT_PENDING and conflicts:
                 if within:
                     internal_dups += 1
-            else:
-                # 将要写入的条目也当成"已在库中"，后面的同词同行才会被判成冲突
-                pend = dict(id=_PENDING_ID, word=word, value=value)
-                pending_word.setdefault(word, []).append(pend)
-                pending_value.setdefault(value, []).append(pend)
+            if item.effect in _WRITING_EFFECTS:
+                # 会写进库的条目（新增 / 更新 / 禁用）都当成"已在库中"，
+                # 后面的同词同行才会被判成冲突。跳过与未处置的不占这个位置。
+                pend = dict(id=_PENDING_ID, word=item.word, value=item.effective_value)
+                pending_word.setdefault(item.word, []).append(pend)
+                pending_value.setdefault(item.effective_value, []).append(pend)
             items.append(item)
 
         self._items = items
@@ -261,6 +431,80 @@ class PreviewModel:
         self._cancelled.clear()
         self._build()
         return n
+
+    # ----- 冲突项处置（V1.1-D4）：改值 / 跳过 / 设为禁用 -----
+
+    def set_action(self, line_no: int, action: str, value: str = "") -> PreviewItem | None:
+        """给某条一个处置。**处置写进模型、随后整表重判**（不是只改按钮外观）。
+
+        :param line_no: 原始行号（与 D1/D2 同口径）
+        :param action: ``ACTION_EDIT`` / ``ACTION_SKIP`` / ``ACTION_DISABLE``；
+                       传空串等于撤销处置
+        :param value: 改值的新值（只有 ``ACTION_EDIT`` 用）
+        :return: 重判之后这一条的新状态；行号不存在时返回 ``None``
+
+        反复处置同一条是允许的（改值 → 再改成跳过 → 再撤销），每次都以最后一次为准：
+        处置只记在 ``_actions`` 里，重判是无状态的纯计算。
+        """
+        line_no = int(line_no)
+        if self.find(line_no) is None:
+            return None
+        action = (action or "").strip()
+        if not action:
+            self._actions.pop(line_no, None)
+        elif action == ACTION_EDIT:
+            new_value = str(value or "").strip()
+            if not new_value:
+                raise ValueError("改值要给出新的替换值")
+            self._actions[line_no] = (ACTION_EDIT, new_value)
+        elif action in (ACTION_SKIP, ACTION_DISABLE):
+            self._actions[line_no] = (action, "")
+        else:
+            raise ValueError(f"未知的处置：{action}")
+        # 处置过的条目不能再是「已取消」：两种状态混在一起会让账算不清
+        if action:
+            self._cancelled.discard(line_no)
+        self._build()
+        return self.find(line_no)
+
+    def edit_value(self, line_no: int, new_value: str) -> PreviewItem | None:
+        """改值处置（``set_action`` 的便捷写法，界面「改值」按钮直接用它）。"""
+        return self.set_action(line_no, ACTION_EDIT, new_value)
+
+    def skip(self, line_no: int) -> PreviewItem | None:
+        """跳过处置：这一条这次不写入（但它仍留在冲突组里，状态可见、可撤销）。"""
+        return self.set_action(line_no, ACTION_SKIP)
+
+    def disable(self, line_no: int) -> PreviewItem | None:
+        """设为禁用处置：这条照样写进词库，但按禁用状态写（与 B 组禁用同一份存储）。"""
+        return self.set_action(line_no, ACTION_DISABLE)
+
+    def clear_action(self, line_no: int) -> PreviewItem | None:
+        """撤销单条的处置，回到「还没处置」的原样。"""
+        return self.set_action(line_no, "")
+
+    def restore_all_actions(self) -> int:
+        """撤销全部处置（连同逐条取消一起回到刚打开预览时的样子）。"""
+        n = len(self._actions) + len(self._cancelled)
+        self._actions.clear()
+        self._cancelled.clear()
+        self._build()
+        return n
+
+    def action_of(self, line_no: int) -> str:
+        return self._actions.get(int(line_no), ("", ""))[0]
+
+    @property
+    def dispositions(self) -> dict[int, str]:
+        """行号 → 处置代号（界面状态列与验收记录都读这一份）。"""
+        return {n: a for n, (a, _v) in self._actions.items()}
+
+    def disposed_items(self, action: str | None = None) -> list[PreviewItem]:
+        """已处置的条目（``action`` 为空时返回全部处置过的）。"""
+        out = [it for it in self._items if it.action]
+        if action:
+            out = [it for it in out if it.action == action]
+        return out
 
     def find(self, line_no: int) -> PreviewItem | None:
         for it in self._items:
@@ -340,6 +584,81 @@ class PreviewModel:
 
     def batch_count(self) -> int:
         return self.plan().batch_count
+
+    # ----- 影响预览与写入清单（V1.1-D4 交付物②的数据面）-----
+
+    def write_plan(self) -> dict:
+        """「将写入 N 条：新增 X / 更新 Y / 禁用 Z / 跳过 S」的**唯一**来源。
+
+        四个数字按每条的去向（`effect`）数出来，不是按组别数：
+        组别讲的是「为什么落在这一组」，去向讲的是「这次会拿它做什么」。
+        二次确认弹窗与预演对账读的都是这一个函数，所以两次给出同一个数。
+
+        ``new`` 是「词库条目会**净增**几条」——与 ``add`` 不一定相等：
+        设为禁用的那一条若撞的是库里已有的同词同值条目，禁用的是那一条本身
+        （不新建），所以不计入 ``new``。预演对账用 ``new`` 与副本的条目差集比，
+        两个口径必须一致，否则「新增」这一列永远差一条。
+        """
+        counts = {k: 0 for k in EFFECT_NAMES}
+        pending = 0
+        new_entries = 0
+        for it in self._items:
+            if it.line_no in self._cancelled:
+                counts[EFFECT_SKIPPED] += 1        # 逐条取消 = 这次不写
+                continue
+            if it.effect in counts:
+                counts[it.effect] += 1
+                if it.effect == EFFECT_ADD:
+                    new_entries += 1
+                elif it.effect == EFFECT_DISABLED and not int(it.update_target or 0):
+                    new_entries += 1
+            elif it.effect == EFFECT_PENDING:
+                pending += 1
+        write_n = counts[EFFECT_ADD] + counts[EFFECT_UPDATE] + counts[EFFECT_DISABLED]
+        return dict(
+            write=write_n,
+            add=counts[EFFECT_ADD],
+            update=counts[EFFECT_UPDATE],
+            disabled=counts[EFFECT_DISABLED],
+            skipped=counts[EFFECT_SKIPPED],
+            pending=pending,
+            new=new_entries,
+            total=len([it for it in self._items if it.line_no not in self._cancelled]),
+        )
+
+    def impact_text(self) -> str:
+        """影响预览的一句话（二次确认正文直接用它，不自己拼数字）。"""
+        p = self.write_plan()
+        return msg.impact(p["write"], p["add"], p["update"], p["disabled"], p["skipped"])
+
+    def pending_items(self) -> list[PreviewItem]:
+        """还没处置的冲突（二次确认要拦着它：这种条目写不写都说不清）。"""
+        return [it for it in self._items
+                if it.line_no not in self._cancelled and it.effect == EFFECT_PENDING]
+
+    def write_list(self) -> list[dict]:
+        """写入清单（D5 的输入）：每条带词 / 值 / 类型 / 注音 / 去向 / 是否禁用。
+
+        **跳过的不在里面**——「不进写入清单」的落点就是这个列表。
+        设为禁用的在里面，且 ``disabled`` 为 True（这就是「带禁用标记」的落点）。
+        更新也走 `update_target` 记下要改的那条 id，D5 据此改用 `update_entry`。
+        """
+        out: list[dict] = []
+        for it in self._items:
+            if it.line_no in self._cancelled or not it.will_write:
+                continue
+            out.append(dict(
+                line_no=it.line_no,
+                word=it.word,
+                value=it.effective_value,
+                typ=it.typ or "错词校正",
+                pinyin=it.pinyin or "",
+                effect=it.effect,
+                action=it.action,
+                disabled=(it.effect == EFFECT_DISABLED),
+                update_target=int(it.update_target or 0),
+            ))
+        return out
 
     # ----- 文案 -----
 
