@@ -467,7 +467,7 @@ class OneClickModule(QWidget):
         # 排版默认开；关闭 = 跳过排版流程
         self.sw_layout = Switch(True)
         self.sw_layout.toggled.connect(lambda _=False: self._sync_full_flow_selected())
-        card.body_l.addLayout(self._opt_label("排版"))
+        card.body_l.addLayout(self._opt_label("优化排版"))
         card.body_l.addLayout(self._switch_row(
             "关闭则跳过排版，直接用词库校正", self.sw_layout))
 
@@ -511,11 +511,10 @@ class OneClickModule(QWidget):
         card.body_l.addWidget(bags_wrap)
         card.body_l.addSpacing(10)
         card.body_l.addWidget(self._hint(
-            "「常规校正」「CJK 恢复」锁定（CJK 用于扩展区编码修复，强制跑）。"
-            "「繁简转换」「的地得」「旧式通假」「我的词库」默认开，可关。"
-            "「繁简转换激进」含和谐字等，易误改，默认关。"
-            "排版 / 预处理 / 严格 / 注音见上方「运行模式」。"
-            "txtFormat 较多误改，建议常规校正后再单独勾选比对。"))
+            "「常规校正」「CJK 恢复」锁定（CJK 用于扩展区编码修复，强制跑）。\n"
+            "「繁简转换」「的地得」「旧式通假」「我的词库」默认开启，推荐使用。\n"
+            "「繁简转换激进」含和谐字等，易误改，默认关闭。\n"
+            "「txtFormat」较多误改，建议常规校正后再单独勾选比对。"))
         card.body_l.addWidget(self._basis("§2.2 · 主按钮不询问词库组合"))
         card.body_l.addSpacing(16)
         card.body_l.addWidget(hline())
@@ -527,7 +526,7 @@ class OneClickModule(QWidget):
         self.sw_auto_fix_quote = Switch(_settings.auto_fix_quote())
         self.sw_auto_fix_quote.toggled.connect(self._on_auto_fix_quote_toggled)
         card.body_l.addLayout(self._switch_row(
-            "按检查页规则自动修可确定项；关则留待检查页处理",
+            "按检查页规则自动修可确定项；默认关闭，留待检查页手动处理",
             self.sw_auto_fix_quote))
         return card
 

@@ -1384,7 +1384,7 @@ class MainWindow(QMainWindow):
             self.settings_module._sync_from_settings()
             self.settings_module._apply_log_backend()
             self.settings_module._say(
-                "已初始化为刚装好时的状态。已清理：" + "；".join(done),
+                "已初始化为刚装好时的状态。已清理：\n" + "；\n".join(done),
                 "ok",
             )
         self.go("import")

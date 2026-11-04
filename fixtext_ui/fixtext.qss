@@ -906,6 +906,25 @@ QWidget#VocabTableHeader {
     border-bottom: 1px solid #DDE2EA;
 }
 
+/* 历史记录页任务列表 */
+QWidget#HistoryTable {
+    background: transparent;
+}
+/* HistoryTable 内所有子控件透明（屏蔽全局 QWidget#F7F8FA 灰底，让 Card 白底透过来） */
+QWidget#HistoryTable QWidget {
+    background: transparent;
+}
+/* Header 灰带 — specificity 更高（2 ids），覆盖上面的 transparent */
+QWidget#HistoryTable QWidget#HistoryTableHeader {
+    background-color: #EEF1F5;
+    border-bottom: 1px solid #DDE2EA;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+QWidget#HistoryFoot {
+    background: transparent;
+}
+
 QWidget#CellFullText {
     background-color: #FFFFFF;
     border: 1px solid #DDE2EA;
