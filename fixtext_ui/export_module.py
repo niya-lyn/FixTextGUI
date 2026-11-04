@@ -30,10 +30,10 @@ from PySide6.QtWidgets import (
 
 from fixtext_export import ExportOutcome, ExportSource, export_book, resolve_source
 from fixtext_paths import default_export_dir
-from fixtext_tokens import FONT_WEIGHT, c, fs, r, sp
+from fixtext_tokens import FONT_WEIGHT, c, fs
 from fixtext_widgets import (
     Card, ConfirmDialog, Pill, RadioCard, EmptyState, hline, page_head_shell,
-    enable_chrome,
+    enable_chrome, repolish,
 )
 
 try:
@@ -399,15 +399,16 @@ class ExportModule(QWidget):
                 state = "尚未校正"
             self.book_meta_label.setText(f"{kind} · {state}")
             self.book_pill.setText("可导出" if has_book else "等待导入")
-            self.book_pill.setStyleSheet(
-                f"color:{c('success')};background:{c('success.bg')};"
-                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-                f"font-size:{fs('xs')};font-weight:700")
+            # 语义色 / 胶囊圆角交给 fixtext.qss 的 #Pill[kind="ok"]（原内联收归）
+            self.book_pill.setProperty("kind", "ok")
+            repolish(self.book_pill)
         else:
             self.book_name_label.setText("尚未导入书籍")
             self.book_meta_label.setText(
                 "先在「导入」页选择一本书，再回到这里导出")
             self.book_pill.setText("等待导入")
+            self.book_pill.setProperty("kind", "neutral")
+            repolish(self.book_pill)
 
         # 目标：只有电子书来源才能还原
         can_epub = bool(has_book and src.can_restore_epub)

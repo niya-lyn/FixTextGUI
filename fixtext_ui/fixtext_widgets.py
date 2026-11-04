@@ -112,6 +112,18 @@ def repolish(widget: QWidget) -> None:
     widget.update()
 
 
+def plain_box(widget: QWidget) -> QWidget:
+    """把纯布局容器标记成 ``#LayoutBox``，由 QSS 抹掉继承来的页面灰底。
+
+    全局 ``QWidget{background-color:#F7F8FA}`` 是页面底色，但匿名布局容器
+    （按钮行 / 分页行 / 表格行 / 弹窗列表）也会跟着画，于是在白卡片内部
+    出现一条条**直角灰块**。原型 ``.card`` 内是白底、``.mini-table td`` 无
+    背景，所以正确做法是让这些容器透明，而不是给通栏灰块补圆角。
+    """
+    widget.setObjectName("LayoutBox")
+    return widget
+
+
 def no_badge(n) -> QLabel:
     lab = QLabel(str(n))
     lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -246,11 +258,9 @@ class Card(QFrame):
             bl.setContentsMargins(0, 0, 0, 0)
             bl.setSpacing(0)
             self.basis_label = QLabel(text)
-            self.basis_label.setStyleSheet(
-                f"color:{c('primary.700')};background:{c('primary.50')};"
-                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-                f"font-size:{fs('xs')};font-weight:700"
-            )
+            self.basis_label.setObjectName("CardBasis")
+            # QLabel 画 QSS 背景需 WA_StyledBackground；胶囊样式由 #CardBasis 提供
+            enable_chrome(self.basis_label)
             self.basis_label.setSizePolicy(
                 QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed
             )
@@ -285,6 +295,7 @@ class FieldRow(QWidget):
                  control: QWidget | None = None, chip: str | None = None,
                  name_width: int = 150, parent=None):
         super().__init__(parent)
+        plain_box(self)
         hl = QHBoxLayout(self)
         hl.setContentsMargins(0, 11, 0, 11)
         hl.setSpacing(12)
@@ -894,13 +905,11 @@ class ProgressDialog(QDialog):
         bl.addWidget(self.list_w)
 
         self.bar = QProgressBar()
+        self.bar.setObjectName("TaskBar")
         self.bar.setRange(0, 100)
         self.bar.setValue(0)
-        self.bar.setStyleSheet(
-            f"QProgressBar{{background:{c('neutral.100')};border-radius:{r('full')};"
-            f"height:10px;text-align:none}}"
-            f"QProgressBar::chunk{{background:{c('primary.500')};"
-            f"border-radius:{r('full')}}}")
+        self.bar.setTextVisible(False)
+        # 进度条 / chunk 圆角统一由 QSS 的 QProgressBar#TaskBar 提供
         bl.addWidget(self.bar)
 
         meta = QHBoxLayout()
@@ -933,12 +942,16 @@ class ProgressDialog(QDialog):
         hl.setContentsMargins(0, 10, 0, 10)
         hl.setSpacing(12)
         dot = QLabel()
+        dot.setObjectName("StepDot")
+        enable_chrome(dot)
+        dot.setProperty("state", "wait")
         dot.setFixedSize(22, 22)
         dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
         n = QLabel(name)
-        n.setStyleSheet(f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.600')}")
+        n.setObjectName("StepName")
+        n.setProperty("state", "wait")
         d = QLabel(desc)
-        d.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+        d.setObjectName("StepDesc")
         hl.addWidget(dot)
         hl.addWidget(n, 0)
         hl.addWidget(d, 1)
@@ -947,28 +960,15 @@ class ProgressDialog(QDialog):
         return w
 
     def _paint(self):
+        """步骤态写成 QSS 动态属性，配色 / 圆角由 #StepDot、#StepName 承接。"""
         for idx, row in enumerate(self.step_rows):
-            if idx < self._i:
-                row._dot.setText("✓")
-                row._dot.setStyleSheet(
-                    f"background:{c('success')};color:{c('on.fill')};"
-                    f"border-radius:{r('full')};font-size:{fs('xs')};font-weight:700")
-                row._name.setStyleSheet(
-                    f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.600')}")
-            elif idx == self._i:
-                row._dot.setText(str(idx + 1))
-                row._dot.setStyleSheet(
-                    f"background:{c('primary.500')};color:{c('on.fill')};"
-                    f"border-radius:{r('full')};font-size:{fs('xs')};font-weight:700")
-                row._name.setStyleSheet(
-                    f"font-weight:700;font-size:{fs('sm')};color:{c('primary.700')}")
-            else:
-                row._dot.setText(str(idx + 1))
-                row._dot.setStyleSheet(
-                    f"background:{c('neutral.100')};color:{c('neutral.500')};"
-                    f"border-radius:{r('full')};font-size:{fs('xs')};font-weight:700")
-                row._name.setStyleSheet(
-                    f"font-weight:600;font-size:{fs('sm')};color:{c('neutral.500')}")
+            state = ("done" if idx < self._i
+                     else "current" if idx == self._i else "wait")
+            row._dot.setText("✓" if state == "done" else str(idx + 1))
+            row._dot.setProperty("state", state)
+            row._name.setProperty("state", state)
+            repolish(row._dot)
+            repolish(row._name)
 
     # ---------------------------------------------------------------- timer 模式
 
@@ -1322,7 +1322,7 @@ class Modal(QDialog):
         hl.addWidget(close)
         root.addWidget(head)
 
-        self.body = QWidget()
+        self.body = plain_box(QWidget())
         self.body_l = QVBoxLayout(self.body)
         self.body_l.setContentsMargins(18, 16, 18, 16)
         self.body_l.setSpacing(12)

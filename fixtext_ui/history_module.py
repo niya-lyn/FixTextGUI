@@ -39,6 +39,7 @@ import fixtext_run_snapshot as snapshot
 from fixtext_tokens import c, fs, sp, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Pill, hline, ConfirmDialog, Modal, EmptyState, page_head_shell, PrimaryButton,
+    plain_box,
 )
 
 
@@ -569,7 +570,7 @@ class HistoryModule(QWidget):
             f"background:transparent;margin-top:{sp('1')}")
         card.body_l.addWidget(self._active_hint)
 
-        acts = QWidget()
+        acts = plain_box(QWidget())
         al = QHBoxLayout(acts)
         al.setContentsMargins(0, 8, 0, 0)
         al.setSpacing(8)

@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 from fixtext_tokens import c, r, fs, sp, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline, PrimaryButton,
-    ConfirmDialog, page_head_shell, enable_chrome, BagChk, FlowLayout,
+    ConfirmDialog, page_head_shell, enable_chrome, repolish, plain_box, BagChk, FlowLayout,
 )
 from fixtext_worker import CorrectionJob, CorrectionWorker
 
@@ -264,6 +264,8 @@ class OneClickModule(QWidget):
             self._summary = None
             self._outcome = None
             self._clear_result()
+            self.book_pill.setProperty("kind", "neutral")
+            repolish(self.book_pill)
             self._apply_book_presence()
             return
         # 展示体积：EPUB 用原件副本；校正吃的是 plain_source（工作正文）
@@ -277,10 +279,9 @@ class OneClickModule(QWidget):
         self.book_meta_label.setText(
             f"{size_mb:.1f} MB · 基于工作区正文校正，原件只读可随时回退")
         self.book_pill.setText("已就绪")
-        self.book_pill.setStyleSheet(
-            f"color:{c('success')};background:{c('success.bg')};"
-            f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-            f"font-size:{fs('xs')};font-weight:700")
+        # 语义色 / 胶囊圆角交给 fixtext.qss 的 #Pill[kind="ok"]（原内联收归）
+        self.book_pill.setProperty("kind", "ok")
+        repolish(self.book_pill)
         self._apply_book_presence()
 
     # ------------------------------------------------------------ 主按钮 hero
@@ -376,7 +377,7 @@ class OneClickModule(QWidget):
             return box
 
         # switch_input
-        holder = QWidget()
+        holder = plain_box(QWidget())
         hl = QHBoxLayout(holder)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(8)
@@ -589,12 +590,8 @@ class OneClickModule(QWidget):
         hl.setSpacing(8)
         hl.addWidget(_label(text, size="base", weight="bold"))
         if badge:
-            p = Pill(badge, "warn")
-            p.setStyleSheet(
-                f"color:{c('warning')};background:{c('warning.bg')};"
-                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-                f"font-size:{fs('xs')};font-weight:700")
-            hl.addWidget(p)
+            # 语义色 / 胶囊圆角交给 fixtext.qss 的 #Pill[kind="warn"]
+            hl.addWidget(Pill(badge, "warn"))
         hl.addStretch(1)
         return hl
 

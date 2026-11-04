@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
 import fixtext_settings as app_settings
 from fixtext_tokens import c, fs, r, sp, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
 from fixtext_widgets import (Card, Pill, hline, ConfirmDialog, Modal, page_head_shell,
-                             PrimaryButton, ChkMark, enable_chrome)
+                             PrimaryButton, ChkMark, enable_chrome, plain_box)
 
 from fixtext_vocab import (
     ENTRY_TYPES, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
@@ -282,7 +282,7 @@ def _mini_table(headers: list, rows: list, *, mono_cols: set | None = None) -> Q
     vl.setContentsMargins(12, 10, 12, 10)
     vl.setSpacing(0)
 
-    head = QWidget()
+    head = plain_box(QWidget())
     hl = QHBoxLayout(head)
     hl.setContentsMargins(0, 0, 0, 6)
     hl.setSpacing(10)
@@ -296,7 +296,7 @@ def _mini_table(headers: list, rows: list, *, mono_cols: set | None = None) -> Q
         return box
 
     for i, row in enumerate(rows):
-        rw = QWidget()
+        rw = plain_box(QWidget())
         rl = QHBoxLayout(rw)
         rl.setContentsMargins(0, 7, 0, 7)
         rl.setSpacing(10)
@@ -597,7 +597,7 @@ class VocabModule(QWidget):
         # M5-EX.4.2 / BUG-1d：工具条高度不随空列表撑大
         card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
 
-        bar = QWidget()
+        bar = plain_box(QWidget())
         bar.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         bl = QHBoxLayout(bar)
         bl.setContentsMargins(0, 0, 0, 0)
@@ -816,7 +816,7 @@ class VocabModule(QWidget):
         return row
 
     def _pager(self) -> QWidget:
-        row = QWidget()
+        row = plain_box(QWidget())
         hl = QHBoxLayout(row)
         hl.setContentsMargins(0, 12, 0, 2)
         hl.setSpacing(10)
@@ -1039,11 +1039,10 @@ class VocabModule(QWidget):
             hl.setContentsMargins(2, 10, 2, 10)
             hl.setSpacing(10)
             dot = QLabel()
+            dot.setObjectName("SnapDot")
+            enable_chrome(dot)
+            dot.setProperty("current", "true" if cur else "false")
             dot.setFixedSize(9, 9)
-            dot.setStyleSheet(
-                f"background:{c('success') if cur else c('neutral.200')};"
-                + (f"border:3px solid {c('success.bg')};" if cur else "")
-                + "border-radius:{r('full')}")
             hl.addWidget(dot)
             hl.addWidget(_label(rec["label"], size="sm", weight="semibold",
                                 color="neutral.800"), 0)
@@ -1365,7 +1364,7 @@ class VocabModule(QWidget):
             "要处理请关掉它，用工具条上的「合并」或「删除选中」——那两处会先给"
             "预览清单、二次确认后才写，做完还能撤销。", "info")
 
-        holder = QWidget()
+        holder = plain_box(QWidget())
         hv = QVBoxLayout(holder)
         hv.setContentsMargins(0, 0, 0, 0)
         hv.setSpacing(8)
@@ -1566,7 +1565,7 @@ class VocabModule(QWidget):
         rows = QVBoxLayout()
         rows.setContentsMargins(0, 0, 0, 0)
         rows.setSpacing(0)
-        head = QWidget()
+        head = plain_box(QWidget())
         hl = QHBoxLayout(head)
         hl.setContentsMargins(2, 0, 2, 4)
         hl.setSpacing(10)
@@ -1577,7 +1576,7 @@ class VocabModule(QWidget):
         rows.addWidget(head)
         rows.addWidget(hline())
         for i, w in enumerate(self._book_words):
-            rw = QWidget()
+            rw = plain_box(QWidget())
             rl = QHBoxLayout(rw)
             rl.setContentsMargins(2, 5, 2, 5)
             rl.setSpacing(10)

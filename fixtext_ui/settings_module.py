@@ -34,7 +34,8 @@ from PySide6.QtWidgets import (
 
 import fixtext_settings as settings
 from fixtext_tokens import c, sp, r, fs, FONT_WEIGHT, FONT_MONO
-from fixtext_widgets import Card, FieldRow, Switch, RadioCard, ConfirmDialog, page_head_shell
+from fixtext_widgets import (Card, FieldRow, Switch, RadioCard, ConfirmDialog,
+                             page_head_shell, plain_box)
 
 try:
     import fixtext_error_center as error_center
@@ -141,7 +142,7 @@ class SettingsModule(QWidget):
         self.cards.append(card)
 
         self.vocab_path = _pathbox()
-        self.vocab_path_btns = QWidget()
+        self.vocab_path_btns = plain_box(QWidget())
         vbl = QHBoxLayout(self.vocab_path_btns)
         vbl.setContentsMargins(0, 0, 0, 0)
         vbl.setSpacing(8)
@@ -166,7 +167,7 @@ class SettingsModule(QWidget):
 
     def _with_path(self, row: FieldRow, pathbox: QFrame) -> QWidget:
         """一行 = 字段行（上） + 路径展示框（下），中间留一点呼吸。"""
-        box = QWidget()
+        box = plain_box(QWidget())
         bl = QVBoxLayout(box)
         bl.setContentsMargins(0, 0, 0, 0)
         bl.setSpacing(8)
@@ -181,7 +182,7 @@ class SettingsModule(QWidget):
         self.cards.append(card)
 
         self.log_path = _pathbox()
-        self.log_path_btns = QWidget()
+        self.log_path_btns = plain_box(QWidget())
         lbl = QHBoxLayout(self.log_path_btns)
         lbl.setContentsMargins(0, 0, 0, 0)
         lbl.setSpacing(8)
@@ -235,7 +236,7 @@ class SettingsModule(QWidget):
         card.body_l.addSpacing(8)
 
         self.engine_cards: dict[str, RadioCard] = {}
-        grid = QWidget()
+        grid = plain_box(QWidget())
         gl = QHBoxLayout(grid)
         gl.setContentsMargins(0, 0, 0, 0)
         gl.setSpacing(12)
