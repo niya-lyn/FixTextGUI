@@ -621,7 +621,9 @@ class HistoryModule(QWidget):
         if not source.text_path:
             source = fx.resolve_source(ctx.get("import_record"), summary, pipeline_root)
         return self._export_with(source, ctx, run_dir,
-                                 baseline=str((summary or {}).get("restored_sha256") or ""))
+                                 baseline=str((summary or {}).get("restored_sha256") or ""),
+                                 book=str((summary or {}).get("title")
+                                          or (summary or {}).get("book") or ""))
 
     def _do_export_workspace(self, ctx: dict) -> object:
         """从「当前工作区」（某个恢复点的现场）导出成品。"""
@@ -631,15 +633,26 @@ class HistoryModule(QWidget):
         source = snapshot.build_export_source(cur, ctx.get("pipeline_root"))
         summary = snapshot.load_run_summary(str(cur.get("run_dir") or ""))
         return self._export_with(source, ctx, str(cur.get("snapshot_dir") or ""),
-                                 baseline=str((summary or {}).get("restored_sha256") or ""))
+                                 baseline=str((summary or {}).get("restored_sha256") or ""),
+                                 book=str(cur.get("title") or cur.get("book") or ""))
 
     @staticmethod
-    def _export_with(source, ctx: dict, anchor: str, *, baseline: str = ""):
+    def _export_with(source, ctx: dict, anchor: str, *, baseline: str = "",
+                     book: str = ""):
+        """历史页导出的唯一落点计算（V1.1-EX.1-R1 口径）。
+
+        目录固定为 ``<导出根>/历史记录/<书名>_<YYYYMMDD_HHMMSS>``：书名与时间戳
+        下划线拼成**同一个单层目录名**，每次导出新目录、不覆盖已有导出。
+        ``ctx['out_dir']`` 若给了就当作导出根（自检 / 验收脚本注入用），
+        没给就退回包根 ``导出/``——不再落到运行目录旁边的 ``exported/``。
+        """
         import fixtext_export as fx
+        import fixtext_paths as paths
 
         fmt = "epub" if source.can_restore_epub else "txt"
-        base = Path(ctx.get("out_dir") or (Path(anchor) / "exported"))
-        out_dir = base / f"export_{time.strftime('%Y%m%d_%H%M%S')}"
+        root = ctx.get("out_dir") or ""
+        title = book or str(getattr(source, "title", "") or "")
+        out_dir = paths.reserve_history_export_dir(title, export_root=root or None)
         return fx.export_book(source, out_dir, fmt=fmt,
                               baseline_sha256=baseline or ctx.get("baseline_sha256") or "")
 

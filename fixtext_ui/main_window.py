@@ -1062,16 +1062,20 @@ class MainWindow(QMainWindow):
         })
 
     def export_out_dir(self) -> Path:
-        """导出目录：跟导出页同一口径（导入文件夹旁边的「导出结果」）。
+        """导出根目录：包根下的 ``导出/``，与导出页同一个默认值。
 
-        没有导入记录时退回工作区下的同名文件夹——真实可写目录，
-        不写进任何界面文案，也不在界面里显示绝对路径。
+        历史页拿它当「历史记录」的父目录（``导出/历史记录/<书名>_<时间戳>/``），
+        导出页则平铺写 ``导出/书名.txt`` 与两份统计文件。全书一份根，
+        V1.1-EX.1-R1 之前这里指向「导入文件夹旁边的导出结果」，口径已统一。
+        路径不进任何界面文案，界面里不显示绝对路径。
         """
-        original = str((self._import_record or {}).get("original_copy_path") or "")
-        if original:
-            return Path(original).resolve().parent / "导出结果"
-        base = self.workspace or (PKG_ROOT / "workspace")
-        return Path(base) / "导出结果"
+        try:
+            from fixtext_paths import default_export_dir
+
+            return default_export_dir()
+        except Exception:                            # pragma: no cover - 包根丢失时退化
+            base = self.workspace or (PKG_ROOT / "workspace")
+            return Path(base) / "导出"
 
     def _sync_history(self, run: dict | None) -> None:
         """校正完成 → 把本次记录写进运行摘要并让历史页重扫（重启也在）。"""

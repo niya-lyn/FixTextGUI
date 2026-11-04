@@ -83,7 +83,8 @@ AUTO_RULES: list[tuple[str, str, str]] = [
      r"runs_root|workdir|stage_dir|WorkPaths|cfg\.(paths|workdir)|self\.workdir|"
      r"logs\(\)|report\(\)|run_dir"),
     ("export_dir",
-     "导出目录：用户在导出页显式选择的 out_dir（默认「书旁边的导出结果」）",
+     "导出目录：用户在导出页显式选择的 out_dir（默认包根「导出/」；"
+     "历史页重新导出落「导出/历史记录/书名_时间戳/」）",
      r"out_dir|stats_text_path|stats_csv_path|output_dir"),
 ]
 
@@ -370,7 +371,7 @@ OVERRIDES: dict[str, tuple[str, str, str]] = {
     # ---- 导出（用户显式目录） ----
     "fixtext_ui/fixtext_export.py:500": (
         "export_dir",
-        "用户选定的导出目录 / 默认「书旁的导出结果」",
+        "用户选定的导出目录 / 默认包根「导出/」（历史导出在「导出/历史记录/」）",
         "重打包 EPUB 的原子落盘（tmp → 目标）；目录来自 out_dir"),
     "fixtext_ui/fixtext_export.py:569": (
         "export_dir",
