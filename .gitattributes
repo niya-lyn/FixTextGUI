@@ -11,6 +11,9 @@
 tests/samples/*.txt    -text
 tests/samples/*.epub   binary
 tests/samples/*.json   -text
+# V1.1-D1：词库导入样本（原版 PHP Csv::mapToCsvFile 导出，CRLF/BOM/GBK 混杂，
+# 必须逐字节原样保存，否则格式归一测试验的不再是原始字节）
+tests/samples/vocab_import/**  -text
 
 # 词库与派生数据体量大、机器生成：折叠进 GitHub 的语言统计与 diff 计数，
 # 但照常纳入版本控制。
