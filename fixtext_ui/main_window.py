@@ -46,7 +46,8 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import (
-    APP_TITLE, APP_NAME, COMPARE_KEY, ENTRIES, ENTRY_BY_KEY, HOME_KEY, RAIL_WIDTH,
+    APP_TITLE, APP_NAME, COMPARE_KEY, ENTRIES, ENTRY_BY_KEY, HOME_KEY, MANUAL_KEY,
+    RAIL_WIDTH,
     READY_KEYS, SETTINGS_KEY, STATUS_TEXT, WINDOW_H, WINDOW_MIN_H,
     WINDOW_MIN_W, WINDOW_W, CONTENT_MAX_W,
     c, sp, r, fs, px, FONT_WEIGHT,
@@ -62,6 +63,7 @@ from fixtext_shelf_ui import BookChip
 from first_run_wizard import FirstRunWizard, mark_seen, opens_on_first_run
 from check_module import CheckModule
 from fixtext_compare import CompareModule
+from manual_module import ManualModule
 from export_module import ExportModule
 from history_module import HistoryModule
 from settings_module import SettingsModule
@@ -399,6 +401,8 @@ class MainWindow(QMainWindow):
         self.history_module = None
         self.export_module = None
         self.settings_module = None
+        #: 逐批手动处理页（V1.1-E4）：与对比页同为内容区平级路由页
+        self.manual_module = None
         self._content_inners: list = []
         #: 当前书（导入记录）：M4-EX.3a 起由用户在书架上的选择驱动，
         #: 不再等于「最近导入的那本」；启动时按设置恢复，没有设置才用最近导入。
@@ -651,6 +655,12 @@ class MainWindow(QMainWindow):
         self.pages[COMPARE_KEY] = self._wrap(self.compare_module)
         self.stack.addWidget(self.pages[COMPARE_KEY])
 
+        # 逐批手动处理页（V1.1-E4）：同样挂平级路由，由检查页「批量操作」卡进入
+        self.manual_module = ManualModule()
+        self.manual_module.gotoImport.connect(lambda: self.go("import"))
+        self.pages[MANUAL_KEY] = self._wrap(self.manual_module)
+        self.stack.addWidget(self.pages[MANUAL_KEY])
+
         # 设置页（M4-EX.2a）：不在左轨六入口里，由顶栏 ⚙ 进入的平级路由页
         self.settings_module = SettingsModule()
         self.settings_module.vocab_dir_changed.connect(self.reload_vocab_store)
@@ -663,6 +673,9 @@ class MainWindow(QMainWindow):
         # 加入天然可撤销、天然查重，不另起一套写盘路径。
         if self.check_module is not None and self.vocab_module is not None:
             self.check_module.set_vocab_store(self.vocab_module.store)
+        # 检查页「逐批手动处理」→ 内容区平级路由页（V1.1-E4，左轨配额不变）
+        if self.check_module is not None:
+            self.check_module.manualRequested.connect(self._open_manual)
         return self.stack
 
     @staticmethod
@@ -1012,6 +1025,11 @@ class MainWindow(QMainWindow):
             self.vocab_module.set_book_scope(book_id, title)
         self._load_history()
         self._sync_check(latest)
+        # 逐批手动处理页（V1.1-E4）：只有用户正停在这一页时才重挂——
+        # 启动 / 换书不必为一个没打开的页面白扫一遍大书。
+        if self.manual_module is not None and self.current_key == MANUAL_KEY:
+            title = str((self._import_record or {}).get("title") or "")
+            self.manual_module.set_book(self._current_text_path, title)
         self._sync_export(latest)
         self._refresh_export_ctx(latest)
 
@@ -1176,6 +1194,8 @@ class MainWindow(QMainWindow):
             self.where.setText("⚙  设置")
         elif key == COMPARE_KEY:
             self.where.setText("🔍  前后对比")
+        elif key == MANUAL_KEY:
+            self.where.setText("🧾  逐批手动处理")
         else:
             self.where.setText(
                 f"{ENTRY_BY_KEY[key]['icon']}  {ENTRY_BY_KEY[key]['label']}"
@@ -1211,6 +1231,8 @@ class MainWindow(QMainWindow):
             return self.export_module
         if key == COMPARE_KEY and self.compare_module is not None:
             return self.compare_module
+        if key == MANUAL_KEY and self.manual_module is not None:
+            return self.manual_module
         if key == SETTINGS_KEY and self.settings_module is not None:
             return self.settings_module
         return self._content_slot(key)
@@ -1223,6 +1245,20 @@ class MainWindow(QMainWindow):
             return
         self.compare_module.open_run(run_dir)
         self.go(COMPARE_KEY)
+
+    def _open_manual(self):
+        """打开逐批手动处理页：把当前书挂上去再切页（V1.1-E4）。
+
+        换书由 ``_sync_check`` 之外的这条路径保证——检查页入口点一次，
+        这一页就一定是「当前这本书」，不会残留上一本的会话。
+        """
+        if self.manual_module is None:
+            return
+        path = str(getattr(self, "_current_text_path", "") or "")
+        rec = self._import_record or {}
+        title = str(rec.get("title") or (Path(path).parent.name if path else ""))
+        self.manual_module.set_book(path, title)
+        self.go(MANUAL_KEY)
 
     def _act_settings(self):
         """设置：跳到设置路由页（M4-EX.2a 起不再弹对话框）。"""
