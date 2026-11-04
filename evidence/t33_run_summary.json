@@ -1,0 +1,12 @@
+{
+  "elapsed_s": 9.09,
+  "workdir": "/home/gem/.aily/workdir/task_7703953506834582534/pkg/FixTextGUI_MRG2/runs/t33_real/work",
+  "book_words": 573,
+  "book_words_declared_total": 579,
+  "book_words_unique": 573,
+  "bookmap_entries": 579,
+  "chapters": 301,
+  "quote_errors": 43,
+  "domains": null,
+  "restored_sha256": "a274e908c1363234769b502d9b6f014c3634246968cd914dfdb0bbd9019d3b49"
+}

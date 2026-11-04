@@ -46,7 +46,7 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import (
-    APP_TITLE, APP_NAME, ENTRIES, ENTRY_BY_KEY, HOME_KEY, RAIL_WIDTH,
+    APP_TITLE, APP_NAME, COMPARE_KEY, ENTRIES, ENTRY_BY_KEY, HOME_KEY, RAIL_WIDTH,
     READY_KEYS, SETTINGS_KEY, STATUS_TEXT, WINDOW_H, WINDOW_MIN_H,
     WINDOW_MIN_W, WINDOW_W, CONTENT_MAX_W,
     c, sp, r, fs, px, FONT_WEIGHT,
@@ -61,6 +61,7 @@ from fixtext_shelf import set_current_book_id
 from fixtext_shelf_ui import BookChip
 from first_run_wizard import FirstRunWizard, mark_seen, opens_on_first_run
 from check_module import CheckModule
+from fixtext_compare import CompareModule
 from export_module import ExportModule
 from history_module import HistoryModule
 from settings_module import SettingsModule
@@ -645,6 +646,11 @@ class MainWindow(QMainWindow):
             wrapped = self._wrap(page)
             self.pages[key] = wrapped
             self.stack.addWidget(wrapped)
+        # 前后对比页（V1.1-E2）：内容区的平级路由页，左轨六入口配额不变
+        self.compare_module = CompareModule()
+        self.pages[COMPARE_KEY] = self._wrap(self.compare_module)
+        self.stack.addWidget(self.pages[COMPARE_KEY])
+
         # 设置页（M4-EX.2a）：不在左轨六入口里，由顶栏 ⚙ 进入的平级路由页
         self.settings_module = SettingsModule()
         self.settings_module.vocab_dir_changed.connect(self.reload_vocab_store)
@@ -732,6 +738,8 @@ class MainWindow(QMainWindow):
         module.correctionDone.connect(self._on_correction_done)
         module.gotoExport.connect(lambda: self.go("export"))
         module.gotoCheck.connect(self._go_check)
+        # 「看看前后对比」→ 切到前后对比页并加载这次运行（V1.1-E2）
+        module.gotoCompare.connect(self._open_compare)
         # 本书专有词条（真实抽出）→ 词库管理页确认后加入
         module.bookWordsReady.connect(self._on_book_words_ready)
         self._wire_empty_state(module)
@@ -1166,6 +1174,8 @@ class MainWindow(QMainWindow):
             self.where.setText("首页概览")
         elif key == SETTINGS_KEY:
             self.where.setText("⚙  设置")
+        elif key == COMPARE_KEY:
+            self.where.setText("🔍  前后对比")
         else:
             self.where.setText(
                 f"{ENTRY_BY_KEY[key]['icon']}  {ENTRY_BY_KEY[key]['label']}"
@@ -1199,11 +1209,20 @@ class MainWindow(QMainWindow):
             return self.history_module
         if key == "export" and self.export_module is not None:
             return self.export_module
+        if key == COMPARE_KEY and self.compare_module is not None:
+            return self.compare_module
         if key == SETTINGS_KEY and self.settings_module is not None:
             return self.settings_module
         return self._content_slot(key)
 
     # ------------------------------------------------------------------ 顶栏动作
+
+    def _open_compare(self, run_dir: str):
+        """打开前后对比页（只读），并加载指定的那次运行。"""
+        if self.compare_module is None:
+            return
+        self.compare_module.open_run(run_dir)
+        self.go(COMPARE_KEY)
 
     def _act_settings(self):
         """设置：跳到设置路由页（M4-EX.2a 起不再弹对话框）。"""

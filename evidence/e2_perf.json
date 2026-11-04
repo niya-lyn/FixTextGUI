@@ -1,0 +1,25 @@
+{
+  "python": "3.12.11",
+  "real_301": {
+    "items": 542,
+    "chapters": 301,
+    "hits": 566,
+    "build_diff_s": 1.181,
+    "ui_apply_s": 0.002,
+    "book_bytes": 1024757
+  },
+  "big_20mb": {
+    "book_mb": 19.82,
+    "chapters_synth": 6026,
+    "lines": 247066,
+    "items": 12052,
+    "hits": 12052,
+    "build_s": 2.195,
+    "ui_max_gap_ms": 36.8,
+    "ui_ticks": 104,
+    "wall_s": 2.2,
+    "ui_apply_s": 0.002,
+    "first_row_s": 0.001,
+    "gen_s": 0.07
+  }
+}
