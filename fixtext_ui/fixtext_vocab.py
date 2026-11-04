@@ -193,6 +193,42 @@ class VocabDataError(RuntimeError):
     """真实词库不可用时的内部异常（界面层转成人话提示，不直接抛给用户）。"""
 
 
+def conflict_list(builtin, word: str, value: str,
+                  custom_word_hits: list[dict],
+                  custom_value_hits: list[dict]) -> list[dict]:
+    """冲突判定的唯一实现（模块级，单条与批量两条入口都调它）。
+
+    判定口径逐字沿用既有 `conflicts_for_add`：
+    * 自定义里**同词**：值相同 → 同词同值，否则同词异值；
+    * 自定义里**同值但不同词** → 同值异词；
+    * 内置里**同词**（`exact_word`）同上规则；
+    * 内置里**同值但不同词**（`exact_value`）→ 同值异词。
+
+    三重形态常量 `KIND_SAME_BOTH` / `KIND_SAME_WORD` / `KIND_SAME_VALUE`
+    就在本模块顶部定义，界面的分组标签直接用它们，不另造说法。
+    """
+    out: list[dict] = []
+    for e in custom_word_hits:
+        kind = KIND_SAME_BOTH if e["value"] == value else KIND_SAME_WORD
+        out.append(dict(kind=kind, word=e["word"], value=e["value"],
+                        where=TIER_NAMES["custom"], id=e["id"]))
+    for e in custom_value_hits:
+        if e["word"] == word:
+            continue
+        out.append(dict(kind=KIND_SAME_VALUE, word=e["word"], value=e["value"],
+                        where=TIER_NAMES["custom"], id=e["id"]))
+    for r in builtin.exact_word(word):
+        kind = KIND_SAME_BOTH if r["value"] == value else KIND_SAME_WORD
+        out.append(dict(kind=kind, word=r["word"], value=r["value"],
+                        where=TIER_NAMES[r["dict"]], id=r["id"]))
+    for r in builtin.exact_value(value):
+        if r["word"] == word:
+            continue
+        out.append(dict(kind=KIND_SAME_VALUE, word=r["word"], value=r["value"],
+                        where=TIER_NAMES[r["dict"]], id=r["id"]))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # 小工具
 # ---------------------------------------------------------------------------
@@ -268,6 +304,14 @@ class BuiltinVocab:
         self._available = False
         self._source = self.dir
         self.error = ""
+        # V1.1-D3：精确查重的惰性索引（词 → 下标列表）。30 万条词库上逐条线性
+        # 扫一遍约 6.6ms，预览上千行就是十几秒；建一次索引 179ms、之后一次查
+        # 0.13µs。**索引只换查法、不换判定**——`exact_word` / `exact_value`
+        # 仍是「原词逐字相等」并按下标升序、最多 limit 条，同名多条的行为不变
+        # （等价性由 tests/test_d3_preview_groups.py 用全量对拍钉住）。
+        # 惰性建：不查重就不付这份 179ms；载入 / 还原后置空，下次重建。
+        self._word_index: dict[str, list[int]] | None = None
+        self._value_index: dict[str, list[int]] | None = None
         self._load()
 
     # ----- 载入 -----
@@ -344,6 +388,9 @@ class BuiltinVocab:
     def _load(self) -> None:
         self._available = False
         self.error = ""
+        # 索引跟着数组走：任何一次（重新）载入都作废旧的索引
+        self._word_index = None
+        self._value_index = None
         # M5-EX.1：优先按袋目录展示（常规/标点/繁简 + 预处理/严格/注音）
         bags_dir = self._bags_dir()
         if bags_dir is not None and self._load_from_bags(bags_dir):
@@ -605,26 +652,49 @@ class BuiltinVocab:
 
     # ----- 精确查重（新增前的冲突检测）-----
 
+    def _index_of(self, kind: str) -> dict[str, list[int]]:
+        """惰性构建并返回「文字 → 下标列表」索引（`kind` 取 `word` / `value`）。
+
+        一次遍历建全表（30 万条约 179ms），之后每次查是字典命中原词，
+        直接把精确查重从「每次线性扫全库」降到常数级。
+        下标天然按升序追加，所以取前 `limit` 个与线性扫描「遇到就收、
+        收满即停」的顺序**完全一致**——这是判定等价的关键，不是巧合。
+        """
+        if kind == "word":
+            if self._word_index is None:
+                idx: dict[str, list[int]] = {}
+                for i, w in enumerate(self._before or []):
+                    idx.setdefault(w, []).append(i)
+                self._word_index = idx
+            return self._word_index
+        if self._value_index is None:
+            idx2: dict[str, list[int]] = {}
+            for i, v in enumerate(self._after or []):
+                idx2.setdefault(v, []).append(i)
+            self._value_index = idx2
+        return self._value_index
+
+    @staticmethod
+    def _first_hits(index: dict[str, list[int]], key: str, limit: int) -> list[int]:
+        """按线性扫描同一口径取「前 limit 个下标」。
+
+        刻意与旧的线性实现逐字对齐（含边界）：旧写法是「先收一条、再看够不够
+        limit」，所以 `limit <= 0` 时命中一条即停，返回 **1** 条而不是 0 条。
+        这里照抄这个边界，不趁机「顺手修正」——查重结果关系到用户词库写不写，
+        口径不许在执行层悄悄变化。
+        """
+        take = int(limit) if int(limit) >= 1 else 1
+        return list(index.get(key, ())[:take])
+
     def exact_word(self, word: str, limit: int = 5) -> list[dict]:
         """内置词库里与原词完全相同的条目。"""
-        before = self._before or []
-        hits: list[dict] = []
-        for i in range(len(before)):
-            if before[i] == word:
-                hits.append(self.row(i))
-                if len(hits) >= limit:
-                    break
-        return hits
+        hits = self._first_hits(self._index_of("word"), word, limit)
+        return [self.row(i) for i in hits]
 
     def exact_value(self, value: str, limit: int = 5) -> list[dict]:
-        after = self._after or []
-        hits: list[dict] = []
-        for i in range(len(after)):
-            if after[i] == value:
-                hits.append(self.row(i))
-                if len(hits) >= limit:
-                    break
-        return hits
+        """内置词库里与替换值完全相同的条目。"""
+        hits = self._first_hits(self._index_of("value"), value, limit)
+        return [self.row(i) for i in hits]
 
 # ---------------------------------------------------------------------------
 # 自定义词库（可写，独立文件）
@@ -997,26 +1067,44 @@ class VocabStore:
 
     def conflicts_for_add(self, word: str, value: str) -> list[dict]:
         """新增前的冲突清单：同词同值 / 同词异值 / 同值异词，内置与自定义都查。"""
-        word, value = word.strip(), value.strip()
-        out: list[dict] = []
-        for e in self.custom.by_word(word):
-            kind = KIND_SAME_BOTH if e["value"] == value else KIND_SAME_WORD
-            out.append(dict(kind=kind, word=e["word"], value=e["value"],
-                            where=TIER_NAMES["custom"], id=e["id"]))
-        for e in self.custom.by_value(value):
-            if e["word"] == word:
-                continue
-            out.append(dict(kind=KIND_SAME_VALUE, word=e["word"], value=e["value"],
-                            where=TIER_NAMES["custom"], id=e["id"]))
-        for r in self.builtin.exact_word(word):
-            kind = KIND_SAME_BOTH if r["value"] == value else KIND_SAME_WORD
-            out.append(dict(kind=kind, word=r["word"], value=r["value"],
-                            where=TIER_NAMES[r["dict"]], id=r["id"]))
-        for r in self.builtin.exact_value(value):
-            if r["word"] == word:
-                continue
-            out.append(dict(kind=KIND_SAME_VALUE, word=r["word"], value=r["value"],
-                            where=TIER_NAMES[r["dict"]], id=r["id"]))
+        return self._conflicts_from_hits(
+            str(word or "").strip(), str(value or "").strip(),
+            self.custom.by_word(str(word or "").strip()),
+            self.custom.by_value(str(value or "").strip()),
+        )
+
+    def _conflicts_from_hits(self, word: str, value: str,
+                             custom_word_hits: list[dict],
+                             custom_value_hits: list[dict]) -> list[dict]:
+        """冲突判定的**唯一实现**：给「已命中的自定义条目」出冲突清单。
+
+        `conflicts_for_add`（查一条）与 `conflicts_for_add_many`（预览查一批）
+        都调这里，所以两条路径不可能给出不同的结论——批量版只把「查库」动作
+        批量化（自定义词库建一次索引、内置走 `exact_word` 的索引），判定本身
+        一字未改。V1.1-D3 的冲突分组因此是**既有查重引擎**的结论，不是另写一套。
+        """
+        return conflict_list(self.builtin, word, value,
+                             custom_word_hits, custom_value_hits)
+
+    def conflicts_for_add_many(self, pairs: Iterable[tuple[str, str]]) -> list[list[dict]]:
+        """批量查重：与 `conflicts_for_add` 逐条同口径，返回每条一份冲突清单。
+
+        预览要对成百上千条候选一次查重，逐条调 `conflicts_for_add` 会在自定义
+        词库上反复全表扫（30 万条内置词库已改成索引查，自定义仍是线性）。
+        这里只把「自定义词库的两个索引」建一次，判定交给
+        :meth:`_conflicts_from_hits` —— 同一份实现，不存在第二套比对逻辑。
+        """
+        by_word: dict[str, list[dict]] = {}
+        by_value: dict[str, list[dict]] = {}
+        for e in self.custom.entries():
+            by_word.setdefault(e["word"], []).append(e)
+            by_value.setdefault(e["value"], []).append(e)
+        out: list[list[dict]] = []
+        for word, value in pairs:
+            w, v = str(word or "").strip(), str(value or "").strip()
+            out.append(self._conflicts_from_hits(w, v,
+                                                 by_word.get(w, []),
+                                                 by_value.get(v, [])))
         return out
 
     def dup_groups(self) -> list[dict]:

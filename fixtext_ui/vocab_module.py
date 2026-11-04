@@ -647,6 +647,17 @@ class VocabModule(QWidget):
         dup.clicked.connect(self.open_dup)
         bl.addWidget(dup)
 
+        # V1.1-D3：导入预览（三组 + 逐条取消）。**只读**：这里不写库，
+        # 所以入口放在查重旁边而不是替换「新增」——两者语义不同。
+        self._preview_btn = QPushButton("📥 导入预览")
+        self._preview_btn.setObjectName("BtnOutline")
+        self._preview_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._preview_btn.setToolTip(
+            "先看一张词条表会带来什么：多少条新增、多少条与现有词条冲突、"
+            "多少条格式不成立。只看不动手，不会改动词库。")
+        self._preview_btn.clicked.connect(self.open_import_preview)
+        bl.addWidget(self._preview_btn)
+
         self._merge_btn = QPushButton("合并")
         self._merge_btn.setObjectName("BtnOutline")
         self._merge_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1802,6 +1813,27 @@ class VocabModule(QWidget):
         self._toast("已保存修改", with_undo=True)
 
     # ------------------------------------------------------------------ 查重
+
+    def open_import_preview(self, *, path: str | None = None,
+                            text: str | None = None):
+        """导入预览：把一张词条表按「新增 / 冲突 / 格式不合格」三组摆出来（只读）。
+
+        与「查重」的区别：查重看的是**库里已有**的重复；这一页看的是
+        **一张待导入的表**会带来什么。冲突判定不另写一套——直接走
+        `fixtext_vocab.conflict_list`，与新增前的查重是同一份实现。
+        """
+        import preview_module
+
+        dlg, model = preview_module.open_preview(self, self.store, path=path, text=text)
+        if dlg is None:
+            return None
+        #: 弹窗与模型都留一份引用：验收要读三组条数与核对结果，也避免被提前回收
+        self._preview_modal = dlg
+        self._preview_model = model
+        # 用 show() 不用 exec()：exec() 会自起事件循环，无头验收脚本里没有
+        # 人来点关闭就会一直卡住（查重清单那边也是 show()）。
+        dlg.show()
+        return model
 
     def open_dup(self) -> list:
         """查重清单（M3-T3.7 收口：只读清单，不再给"假按钮"）。
