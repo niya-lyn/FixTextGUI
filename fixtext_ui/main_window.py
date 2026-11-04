@@ -995,6 +995,13 @@ class MainWindow(QMainWindow):
             ctx = (self.build_run_context(self._current_text_path)
                    if self._current_text_path else None)
             self.oneclick_module.set_run_context(ctx)
+        # 词库页的「本书停用」面板跟着当前书走（V1.1-C2）：换书即换清单，
+        # 上一本书的停用条目不允许留在页面上。
+        if self.vocab_module is not None:
+            book_id = (Path(self._current_text_path).resolve().parent.name
+                       if self._current_text_path else "")
+            title = str((self._import_record or {}).get("title") or "")
+            self.vocab_module.set_book_scope(book_id, title)
         self._load_history()
         self._sync_check(latest)
         self._sync_export(latest)
@@ -1129,6 +1136,9 @@ class MainWindow(QMainWindow):
             # 本次校正的装载层过滤里生效（默认值也是这个路径，显式写一次避免
             # 两处推算规则走散）。
             word_states_path=str(vocab_dir / "word_states.json"),
+            # 按书词库（V1.1-C2）：当前书的 id（= 书架目录名）。管线侧按它
+            # 推算这本书自己的停用清单位置，与词库页写的是同一份文件。
+            book_id=book_dir.name,
             # 工作副本：TXT / EPUB 校正都吃它
             plain_source=str(working),
         )

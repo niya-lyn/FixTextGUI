@@ -186,12 +186,15 @@ class SnapshotStore:
     def begin(self, *, label: str, act: str, before_bytes: bytes,
               builtin_before: dict[str, bytes] | None = None,
               builtin_sha_before: str = "",
-              words_before: bytes | None = None) -> int:
+              words_before: bytes | None = None,
+              book_before: bytes | None = None,
+              book_id: str = "") -> int:
         """写操作前调用：把「操作前」的状态留成还原点，返回还原点 id。
 
         ``words_before``（V1.1-T1.1）：词条启用 / 禁用集文件的原始字节。
-        ``None`` = 这次操作不动禁用集（不落 words 载荷，撤销时也不碰）；
-        ``b""`` = 操作前禁用集文件还不存在（撤销 = 删掉文件）。
+        ``book_before``（V1.1-C2）：本书按书词库文件的原始字节。
+        两者语义相同：``None`` = 这次操作不动它（不落载荷，撤销时也不碰）；
+        ``b""`` = 操作前文件还不存在（撤销 = 删掉文件）。
         """
         self._state["seq"] = int(self._state.get("seq") or 0) + 1
         pid = self._state["seq"]
@@ -225,6 +228,14 @@ class SnapshotStore:
                 "sha256": self._write_payload(f"p{pid:05d}-words.bin", words_before),
                 "payload": f"p{pid:05d}-words.bin",
             }
+        if book_before is not None:
+            point["book_before"] = {
+                "sha256": self._write_payload(f"p{pid:05d}-book.bin", book_before),
+                "payload": f"p{pid:05d}-book.bin",
+            }
+            # 记下这份按书文件属于哪本书：撤销可能发生在用户切到别的书之后，
+            # 还原必须写回当初那本书的文件，而不是「当前书」。
+            point["book_id"] = str(book_id or "")
         self._state["points"].append(point)
         self._prune()
         self._flush()
@@ -233,7 +244,8 @@ class SnapshotStore:
     def commit(self, point_id: int, *, after_bytes: bytes,
                builtin_after_is_factory: bool = False,
                builtin_sha_after: str = "",
-               words_after: bytes | None = None) -> dict:
+               words_after: bytes | None = None,
+               book_after: bytes | None = None) -> dict:
         """写操作成功后调用：把「操作后」的状态记进同一个还原点。
 
         返回 ``{sha_before, sha_after}``——两个 sha 分别对应「撤回后」和
@@ -253,6 +265,11 @@ class SnapshotStore:
                 "sha256": self._write_payload(f"p{point_id:05d}-words-after.bin", words_after),
                 "payload": f"p{point_id:05d}-words-after.bin",
             }
+        if book_after is not None:
+            p["book_after"] = {
+                "sha256": self._write_payload(f"p{point_id:05d}-book-after.bin", book_after),
+                "payload": f"p{point_id:05d}-book-after.bin",
+            }
         self._flush()
         return dict(sha_before=p.get("sha_before", ""), sha_after=p["sha_after"])
 
@@ -266,7 +283,9 @@ class SnapshotStore:
         for name in (p.get("before_payload"), p.get("after_payload"),
                      (p.get("builtin_before") or {}).get("payload"),
                      (p.get("words_before") or {}).get("payload"),
-                     (p.get("words_after") or {}).get("payload")):
+                     (p.get("words_after") or {}).get("payload"),
+                     (p.get("book_before") or {}).get("payload"),
+                     (p.get("book_after") or {}).get("payload")):
             if not name:
                 continue
             try:
@@ -321,6 +340,18 @@ class SnapshotStore:
         """该还原点的禁用集「操作后」字节；没动过禁用集的操作返回 ``None``。"""
         p = self._point(point_id)
         blob = (p or {}).get("words_after") or {}
+        return self._read_verified(blob.get("payload"), blob.get("sha256") or "")
+
+    def book_before(self, point_id: int) -> bytes | None:
+        """该还原点的按书词库「操作前」字节；没动过按书层返回 ``None``。"""
+        p = self._point(point_id)
+        blob = (p or {}).get("book_before") or {}
+        return self._read_verified(blob.get("payload"), blob.get("sha256") or "")
+
+    def book_after(self, point_id: int) -> bytes | None:
+        """该还原点的按书词库「操作后」字节；没动过按书层返回 ``None``。"""
+        p = self._point(point_id)
+        blob = (p or {}).get("book_after") or {}
         return self._read_verified(blob.get("payload"), blob.get("sha256") or "")
 
     def mark_undone(self, point_id: int, undone: bool = True) -> None:
@@ -382,6 +413,8 @@ class SnapshotStore:
                 builtin_sha_before=p.get("builtin_sha_before", ""),
                 builtin_sha_after=p.get("builtin_sha_after", ""),
                 touches_words=bool(p.get("words_before") or p.get("words_after")),
+                touches_book=bool(p.get("book_before") or p.get("book_after")),
+                book_id=str(p.get("book_id") or ""),
             ))
         rows.sort(key=lambda r: r["id"], reverse=True)
         if limit is not None:
@@ -441,7 +474,11 @@ class SnapshotStore:
         self._state["points"] = pts[len(pts) - self.max_points:]
         for p in drop:
             for name in (p.get("before_payload"), p.get("after_payload"),
-                         (p.get("builtin_before") or {}).get("payload")):
+                         (p.get("builtin_before") or {}).get("payload"),
+                         (p.get("words_before") or {}).get("payload"),
+                         (p.get("words_after") or {}).get("payload"),
+                         (p.get("book_before") or {}).get("payload"),
+                         (p.get("book_after") or {}).get("payload")):
                 if not name:
                     continue
                 try:

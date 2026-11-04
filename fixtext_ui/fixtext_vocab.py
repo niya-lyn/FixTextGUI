@@ -166,6 +166,8 @@ ACT_ENABLE = "enable"
 ACT_DISABLE = "disable"
 ACT_CLEAR_DISABLED = "clear_disabled"
 ACT_RESET_STATES = "reset_states"
+ACT_BOOK_EXCLUDE = "book_exclude"
+ACT_BOOK_INCLUDE = "book_include"
 
 #: 动作代号 → 人话（操作历史面板直接用这个，不把代号给用户看）
 ACT_NAMES = {
@@ -181,6 +183,8 @@ ACT_NAMES = {
     ACT_DISABLE: "禁用词条",
     ACT_CLEAR_DISABLED: "清空禁用",
     ACT_RESET_STATES: "恢复默认状态",
+    ACT_BOOK_EXCLUDE: "本书停用",
+    ACT_BOOK_INCLUDE: "本书恢复",
     "note": "标记",
 }
 
@@ -844,6 +848,13 @@ class VocabStore:
         # 迁入词条行缓存（V1.1-T1.2）：5841 行每次重建太浪费，且它们的
         # 词 / 替换值来自出厂只读数据，构造一次即可复用。
         self._imported_rows_cache: list[dict] | None = None
+        # 按书词库（V1.1-C2）：当前书的 id。默认空 = 没有选中的书，
+        # 界面走空状态；按书文件的位置见 :meth:`_book_path_for`。
+        self._book_id = ""
+        # 用户区里「词库这一层」的根（自定义 / 禁用集 / 按书清单都长在它下面）。
+        # 默认 = 包内用户区的 vocab 目录；显式传自定义位置（测试 / 便携）时
+        # 跟着那棵树走，绝不串到交付包自带的用户区。
+        self.base_dir = base_dir
 
     # ----- 一律量 -----
 
@@ -1260,6 +1271,128 @@ class VocabStore:
         """启用 / 禁用状态的只读汇总（迁入数 / 禁用数 / 是否有用户区文件）。"""
         return self.states.summary()
 
+    # ----- 按书词库（V1.1-C2；读写一律转调 C1 数据层，不另造第二套）-----
+
+    def set_book(self, book_id: str) -> None:
+        """记住「当前书」：按书排除都落在这本书自己的清单里。
+
+        书 id 不合规（C1 的安全字符集之外）直接抛 :class:`VocabDataError`，
+        由界面转成人话——绝不静默落到别的地方。
+        """
+        bid = str(book_id or "").strip()
+        if not bid:
+            self._book_id = ""
+            return
+        try:
+            import fixtext_book_scope as _bscope
+
+            bid = _bscope.normalize_book_id(bid)
+        except Exception as exc:
+            raise VocabDataError(f"这本书不能建按书清单（{type(exc).__name__}）") from exc
+        self._book_id = bid
+
+    def book_id(self) -> str:
+        return self._book_id
+
+    def _book_path_for(self, book_id: str = "") -> Path | None:
+        """按书文件位置：``<词库根>/books/<书 id>/book_vocab.json``。
+
+        默认（包内用户区）时它与管线侧 C1 推算的是同一个位置；显式指定
+        自定义位置（测试 / 便携）时跟着那棵树走。空书 id 返回 ``None``。
+        """
+        bid = str(book_id or self._book_id or "").strip()
+        if not bid or "/" in bid or "\\" in bid or bid in (".", ".."):
+            return None
+        return self.base_dir / "books" / bid / "book_vocab.json"
+
+    def book_scope_info(self) -> dict:
+        """读当前书的按书清单（C1 的 ``load_book_vocab``：坏文件降级不阻断）。"""
+        import fixtext_book_scope as _bscope
+
+        return _bscope.load(self._book_path_for())
+
+    def book_scope_rows(self) -> list[dict]:
+        """当前书排除清单的行（word / value / reason / key），供界面渲染。"""
+        info = self.book_scope_info()
+        rows: list[dict] = []
+        for e in info.get("excluded") or []:
+            rows.append(dict(word=str(e.get("word") or ""),
+                             value=str(e.get("value") or ""),
+                             reason=str(e.get("reason") or "")))
+        return rows
+
+    def _run_book(self, *, label: str, act: str, summary: str, write, detail: dict | None = None):
+        """按书写操作的标准流程：与全局词库共用同一条还原点 / 操作历史。"""
+        import fixtext_book_scope as _bscope
+
+        p = self._book_path_for()
+        if p is None:
+            raise VocabDataError("还没有选中的书")
+        before = _bscope.raw_bytes(p)
+        pid = self.snap.begin(label=label, act=act, before_bytes=self.custom.raw_bytes(),
+                              book_before=before, book_id=self._book_id)
+        try:
+            result = write()
+        except Exception:
+            self.snap.abort(pid)
+            raise
+        self.snap.commit(pid, after_bytes=self.custom.raw_bytes(),
+                         book_after=_bscope.raw_bytes(p))
+        self.snap.log_op(act=act, summary=summary, point_id=pid, detail=detail)
+        return result, dict(point_id=pid)
+
+    def set_book_excluded(self, word: str, value: str, *, excluded: bool,
+                          reason: str = "") -> dict:
+        """把一条词条加入 / 移出**当前书**的排除清单（走撤销栈）。
+
+        ``excluded=True``：这本书不再校正这条词条（其余书不受影响）；
+        ``excluded=False``：恢复参与，回到全局默认行为。
+        幂等：状态没变时不写文件、不留还原点。
+        """
+        import fixtext_book_scope as _bscope
+
+        word = str(word or "").strip()
+        value = str(value or "").strip()
+        if not word:
+            raise VocabDataError("请填写原词")
+        if not self._book_id:
+            raise VocabDataError("还没有选中的书")
+        p = self._book_path_for()
+        info = _bscope.load(p)
+        key = _bscope.key_of(word, value)
+        already = key in info["excluded_keys"]
+        if already == bool(excluded):
+            return dict(changed=False, point_id=0, excluded=already,
+                        count=len(info.get("excluded") or []), book_id=self._book_id)
+        pairs = _bscope.excluded_pairs(info)
+        label = f"本书{'停用' if excluded else '恢复'}「{word}」"
+
+        def _write() -> dict:
+            if excluded:
+                new_pairs = list(pairs) + [(word, value)]
+            else:
+                new_pairs = [(w, v) for (w, v) in pairs
+                             if _bscope.key_of(w, v) != key]
+            return _bscope.write_excluded(p, self._book_id, new_pairs, reason=reason)
+
+        result, meta = self._run_book(
+            label=label, act=(ACT_BOOK_EXCLUDE if excluded else ACT_BOOK_INCLUDE),
+            summary=label, write=_write,
+            detail=dict(word=word, value=value, excluded=bool(excluded),
+                        book_id=self._book_id))
+        return dict(changed=True, point_id=meta["point_id"], excluded=bool(excluded),
+                    count=int(result.get("count") or 0), book_id=self._book_id,
+                    sha_after=result.get("sha256") or "")
+
+    def _restore_book_bytes(self, book_id: str, raw: bytes) -> None:
+        """把某本书的按书文件写回 ``raw``（空字节 = 当初不存在 → 删掉）。"""
+        import fixtext_book_scope as _bscope
+
+        p = self._book_path_for(book_id)
+        if p is None:
+            return
+        _bscope.restore_bytes(p, raw)
+
     # ----- 恢复默认词库（只重置内置，自定义原样保留）-----
 
     def preview_restore_default(self) -> dict:
@@ -1366,6 +1499,11 @@ class VocabStore:
         words = self.snap.words_before(pid)
         if words is not None:
             self.states.restore(words)
+        book = self.snap.book_before(pid)
+        if book is not None:
+            # 按书清单的还原点自己记着属于哪本书——撤销发生在切书之后
+            # 也写回当初那本书，绝不污染当前书。
+            self._restore_book_bytes(str(p.get("book_id") or ""), book)
         self.snap.mark_undone(pid, True)
         now = self._disk_sha()
         self.snap.log_op(act=ACT_UNDO, summary=f"撤销「{p.get('label', '')}」",
@@ -1417,6 +1555,9 @@ class VocabStore:
         words = self.snap.words_before(pid)
         if words is not None:
             self.states.restore(words)
+        book = self.snap.book_before(pid)
+        if book is not None:
+            self._restore_book_bytes(str(row.get("book_id") or ""), book)
         newer = self.snap.mark_undone_newer_than(pid)
         self.snap.mark_undone(pid, True)
         now = self._disk_sha()
@@ -1448,6 +1589,9 @@ class VocabStore:
         words = self.snap.words_after(pid)
         if words is not None:
             self.states.restore(words)
+        book = self.snap.book_after(pid)
+        if book is not None:
+            self._restore_book_bytes(str(p.get("book_id") or ""), book)
         newer = self.snap.mark_undone_newer_than(pid)
         self.snap.mark_undone(pid, False)
         now = self._disk_sha()

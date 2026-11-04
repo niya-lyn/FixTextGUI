@@ -788,6 +788,11 @@ class OneClickModule(QWidget):
             # 词条禁用集（V1.1-T1.3）：显式给，禁用才能作用到本次装载层过滤
             word_states_path=(Path(str(ctx["word_states_path"]))
                               if ctx.get("word_states_path") else None),
+            # 按书停用清单（V1.1-C2）：当前书 id 透传，装载层按它取这本书
+            # 自己的清单；位置与词库页写的同一份，显式给避免两处推算走散。
+            book_id=str(ctx.get("book_id") or ""),
+            book_vocab_path=(Path(str(ctx["book_vocab_path"]))
+                             if ctx.get("book_vocab_path") else None),
             # M4-T4.2：本次运行的替换引擎（None = 读配置；降级确认后传 python）
             engine=engine_override,
             # M4-EX.6-R3：高级选项「自动修复引号问题」

@@ -340,6 +340,13 @@ class VocabModule(QWidget):
         self._book_checks: list = []
         #: 当前屏「词条 id → 启用开关」——单独存一份，供就地同步状态文案
         self._switches: dict[int, Switch] = {}
+        #: 按书停用清单（V1.1-C2）：当前书 id / 书名，空串 = 还没有选中的书
+        self._book_scope_id = ""
+        self._book_scope_title = ""
+        #: 当前屏「(原词, 替换值) → 本书开关」，与 _switches 同一用法
+        self._book_switches: dict[tuple, Switch] = {}
+        #: 待确认的本书停用词条（预览 → 确认两段之间暂存）
+        self._pending_book_stop: dict | None = None
 
         self.basis_labels = []
         self._toast_timer = QTimer(self)
@@ -596,6 +603,9 @@ class VocabModule(QWidget):
         col.addWidget(self._toolbar(), 0)       # 不拉伸
         self._states_bar_w = self._states_bar()
         col.addWidget(self._states_bar_w, 0)
+        # 按书停用清单（V1.1-C2）：只有选中了当前书才出现，其余情况整卡隐藏
+        self._book_card_w = self._book_scope_card()
+        col.addWidget(self._book_card_w, 0)
         col.addWidget(self._table_card(), 1)    # 吃剩余高度
         self._snap_card = self._snap_card()
         col.addWidget(self._snap_card, 0)
@@ -722,6 +732,307 @@ class VocabModule(QWidget):
             f"{_fmt_num(disabled)} 条禁用")
         self._clear_disabled_btn.setEnabled(disabled > 0)
 
+    # ----- 按书停用清单（V1.1-C2）：查看 / 新增 / 移出 / 行内启停 -----
+
+    def set_book_scope(self, book_id: str, title: str = ""):
+        """当前书切换入口：把按书清单面板挂到这本书。
+
+        书 id 来自导入侧（书架目录名）；不合规的 id 不猜位置，面板回到
+        「没有选中的书」的隐藏状态，绝不落到别的地方。
+        """
+        bid = str(book_id or "").strip()
+        self._book_scope_title = str(title or "").strip()
+        try:
+            self.store.set_book(bid)
+            self._book_scope_id = bid
+        except Exception:
+            # 不合规的书 id：清掉当前书，整卡隐藏（不给假清单）
+            try:
+                self.store.set_book("")
+            except Exception:
+                pass
+            self._book_scope_id = ""
+        self._render_book_scope()
+
+    def _book_scope_card(self) -> Card:
+        """「本书停用」卡片：只在选中了当前书时出现。
+
+        行内开关复用 B2 的启停范式：点一下立即生效、立即留还原点、失败
+        就地退回真实状态；新增走「先预览、再确认」。全部动作可撤销。
+        """
+        card = Card(basis="只影响当前书 · 可撤销")
+        self.basis_labels.append(card.basis)
+        card.body_l.setSpacing(6)
+        card.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+
+        head = QWidget()
+        hl = QHBoxLayout(head)
+        hl.setContentsMargins(0, 0, 0, 0)
+        hl.setSpacing(10)
+        self._book_scope_head = _label("", size="sm", weight="bold",
+                                       color="neutral.800")
+        self._book_scope_head.setToolTip(
+            "这里列出的词条只在当前这本书不参与校正；其他书不受影响，"
+            "词条也不会从词库里删除。")
+        hl.addWidget(self._book_scope_head, 1)
+        add = QPushButton("＋ 新增停用")
+        add.setObjectName("BtnOutline")
+        add.setCursor(Qt.CursorShape.PointingHandCursor)
+        add.setToolTip("让某个词条只在当前这本书不参与校正（先预览，再确认）")
+        add.clicked.connect(self.open_book_stop_add)
+        hl.addWidget(add, 0)
+        card.body_l.addWidget(head)
+
+        self._book_scope_note = _label(
+            "停用只对当前这本书生效；全局已禁用的词条在这里也无法恢复。",
+            size="xs", color="neutral.500", wrap=True)
+        card.body_l.addWidget(self._book_scope_note)
+
+        # 清单行区：_render_book_scope 只重建这一块
+        self._book_scope_body = QVBoxLayout()
+        self._book_scope_body.setContentsMargins(0, 0, 0, 0)
+        self._book_scope_body.setSpacing(0)
+        rows_box = QWidget()
+        rows_box.setLayout(self._book_scope_body)
+        card.body_l.addWidget(rows_box)
+
+        card.setVisible(False)          # 默认没有选中的书，整卡隐藏
+        return card
+
+    def _book_rows_safe(self) -> list[dict]:
+        """读当前书的停用行；数据层异常时按空清单处理，别把页面打断。"""
+        try:
+            fn = getattr(self.store, "book_scope_rows", None)
+            return [dict(r) for r in (fn() if fn else [])]
+        except Exception:
+            return []
+
+    def _book_info_safe(self) -> dict:
+        try:
+            fn = getattr(self.store, "book_scope_info", None)
+            return dict(fn() if fn else {}) or {}
+        except Exception:
+            return {}
+
+    def _render_book_scope(self) -> None:
+        """按当前书的停用清单重排卡片（查看入口；撤销 / 切书后都会走到这里）。"""
+        card = getattr(self, "_book_card_w", None)
+        if card is None:
+            return
+        if not self._book_scope_id:
+            card.setVisible(False)
+            return
+        rows = self._book_rows_safe()
+        head = f"《{self._book_scope_title}》" if self._book_scope_title else "当前书"
+        self._book_scope_head.setText(
+            f"{head} · 本书停用 {_fmt_num(len(rows))} 条")
+
+        # 行要重建了，旧开关句柄一律作废
+        while self._book_scope_body.count():
+            item = self._book_scope_body.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.setParent(None)
+        self._book_switches = {}
+
+        if not rows:
+            lab = _label(
+                "本书没有停用的词条。点右上「＋ 新增停用」"
+                "可以让某个词条只在本书不参与校正。",
+                size="xs", color="neutral.500", wrap=True)
+            lab.setContentsMargins(0, 6, 0, 6)
+            self._book_scope_body.addWidget(lab)
+        else:
+            for i, r in enumerate(rows):
+                self._book_scope_body.addWidget(self._book_stop_row(r))
+                if i != len(rows) - 1:
+                    self._book_scope_body.addWidget(hline())
+        card.setVisible(True)
+
+    def _book_stop_row(self, r: dict) -> QWidget:
+        """停用清单的一行：原词 → 替换值 + 本书开关 + 移出。
+
+        开关「开」= 本书恢复参与校正；「关」= 本书停用。清单里的行都是
+        停用状态，点开就把它移出清单——开关是移出的行内入口，语义与
+        「移出」按钮一致，都走同一条撤销栈。
+        """
+        word = str(r.get("word") or "")
+        value = str(r.get("value") or "")
+        pair = (word, value)
+        row = QWidget()
+        row.setObjectName("VocabRow")
+        hl = QHBoxLayout(row)
+        hl.setContentsMargins(0, 10, 0, 10)
+        hl.setSpacing(12)
+
+        wlab = _ElideLabel(word, size="sm", weight="bold",
+                           color="neutral.900", mono=True, copyable=True)
+        wlab.copyClicked.connect(self._on_cell_copied)
+        hl.addWidget(wlab, 3)
+        hl.addWidget(_label("→", size="sm", color="neutral.400"))
+        vlab = _ElideLabel(value, size="sm", color="primary.700", mono=True,
+                           copyable=True)
+        vlab.copyClicked.connect(self._on_cell_copied)
+        hl.addWidget(vlab, 3)
+        badge = Pill("本书停用", "warn")
+        badge.setToolTip("这条词条只在本书不参与校正；其他书照常生效")
+        hl.addWidget(badge, 2)
+
+        sw = Switch(False)
+        sw.setObjectName("BookStateSwitch")
+        sw.setAccessibleName(f"{word}：本书已停用")
+        sw.setToolTip("点一下让它在本书恢复参与校正；其他书不受影响（可撤销）")
+        sw.toggled.connect(lambda checked, p=pair: self._on_book_stop_switch(p, checked))
+        hl.addWidget(sw, 0)
+        self._book_switches[pair] = sw
+
+        rm = _link_btn("移出")
+        rm.clicked.connect(lambda _c, p=pair: self._remove_book_stop(p))
+        hl.addWidget(rm, 0)
+        return row
+
+    def _sync_book_switch(self, pair: tuple, on: bool | None) -> None:
+        """把某个本书开关对齐到真实状态（``on=None`` = 回到数据里的当前值）。"""
+        sw = self._book_switches.get(pair)
+        if sw is None:
+            return
+        if on is None:
+            info = self._book_info_safe()
+            keys = set(info.get("excluded_keys") or [])
+            from fixtext_book_scope import key_of
+            on = key_of(pair[0], pair[1]) not in keys
+        if sw.isChecked() != on:
+            sw.blockSignals(True)
+            sw.setChecked(on)
+            sw.blockSignals(False)
+        sw.setAccessibleName(
+            f"{pair[0]}：本书{'参与校正' if on else '已停用'}")
+        sw.setToolTip("点一下让它在本书恢复参与校正；其他书不受影响（可撤销）"
+                      if not on else "本书参与校正；点一下暂时停用（可撤销）")
+
+    def _on_book_stop_switch(self, pair: tuple, checked: bool) -> None:
+        """本书开关的唯一落点：恢复参与 / 重新停用，走同一条撤销栈。
+
+        与 B2 行内开关同理**不立即重建行**——开关的 ``toggled`` 还在发信号，
+        这里只就地同步这一个开关，清单的整块重排延迟到信号返回之后。
+        """
+        self._hide_status()
+        word, value = pair
+        try:
+            res = self.store.set_book_excluded(word, value, excluded=not checked)
+        except VocabDataError as exc:
+            self._toast(f"没有改成功：{exc}")
+            self._sync_book_switch(pair, None)
+            return
+        if not res.get("changed"):
+            self._sync_book_switch(pair, None)
+            self._toast(f"「{word}」在本书已经是{'参与校正' if checked else '停用'}状态")
+            return
+        self._render_ops()
+        self._toast(f"已在本书{'恢复' if checked else '停用'}「{word}」", with_undo=True)
+        # 开关信号还在栈上，清单重排推迟到事件循环空闲时执行
+        QTimer.singleShot(0, self._render_book_scope)
+
+    def _remove_book_stop(self, pair: tuple) -> None:
+        """「移出」按钮：把词条移出本书停用清单（= 恢复参与，可撤销）。"""
+        self._hide_status()
+        word, value = pair
+        try:
+            res = self.store.set_book_excluded(word, value, excluded=False)
+        except VocabDataError as exc:
+            self._toast(f"没有移出：{exc}")
+            return
+        if not res.get("changed"):
+            self._toast(f"「{word}」不在本书的停用清单里")
+            return
+        self._render_book_scope()
+        self._render_ops()
+        self._toast(f"已让「{word}」在本书恢复参与校正", with_undo=True)
+
+    def open_book_stop_add(self):
+        """新增停用：先预览、再确认（底线④：写动作先预览）。"""
+        if not self._book_scope_id:
+            self._toast("还没有选中的书，先把一本书导入并设为当前书")
+            return
+        m = Modal(icon="🚫", title="本书停用词条", parent=self)
+        m.add_note(
+            "停用只对当前这本书生效：其他书不受影响，词条也不会从词库里删除。"
+            "操作可撤销。", "info")
+        word = QLineEdit()
+        word.setPlaceholderText("例如：告之")
+        val = QLineEdit()
+        val.setPlaceholderText("例如：告知")
+        m.add_widget(self._field("原词（词 / 角色名）", word))
+        m.add_widget(self._field("替换为", val))
+        m.add_foot("取消", "ghost", m.reject)
+        m.add_foot("预览并确认", "primary",
+                   lambda: self.preview_book_stop(m, word.text(), val.text()))
+        m.show()
+
+    def preview_book_stop(self, parent_modal, word: str, value: str):
+        """停用前的预览：核对词条真实存在 + 讲清影响范围，确认前一个字节都不写。"""
+        word = (word or "").strip()
+        value = (value or "").strip()
+        if not word:
+            self._toast("请填写原词")
+            return
+        if not value:
+            self._toast("请填写替换为")
+            return
+        if word == value:
+            self._toast("原词与替换值相同，无需停用")
+            return
+        # 词库里必须真有这条词条，停用才有意义（不写无效条目）
+        _, rows = self.store.query(word, scope="all", offset=0, limit=200)
+        hit = next((e for e in rows
+                    if e.get("word") == word and e.get("value") == value), None)
+        if hit is None:
+            self._toast(f"词库里没有找到「{word} → {value}」这条词条，请先核对原词与替换值")
+            return
+        info = self._book_info_safe()
+        from fixtext_book_scope import key_of
+        if key_of(word, value) in set(info.get("excluded_keys") or []):
+            self._toast(f"「{word}」在本书已经是停用状态")
+            return
+
+        self._pending_book_stop = dict(word=word, value=value)
+        m = Modal(icon="✍", title="停用本书词条（二次确认）", parent=self)
+        m.add_note("底线④：批量 / 写动作先预览再执行；停用可撤销。", "warn")
+        m.add_widget(_mini_table(
+            ["原词", "替换为", "类型", "所在"],
+            [(word, value, hit.get("type") or "—", hit.get("tier") or "—")],
+            mono_cols={0, 1}))
+        head = f"《{self._book_scope_title}》" if self._book_scope_title else "当前书"
+        m.add_widget(_label(
+            f"本次将在{head}停用这 1 条词条：本书不再校正它，其他书不受影响，"
+            "词条仍保留在词库里。", size="xs", color="neutral.500", wrap=True))
+        try:
+            if not self.store.entry_enabled(word, value):
+                m.add_note("这条词条已被全局禁用：它在所有书都不参与校正，"
+                           "本书停用不会带来额外变化。", "info")
+        except Exception:
+            pass
+        m.add_foot("返回修改", "ghost", parent_modal.show)
+        m.add_foot("确认停用", "primary", lambda: self.confirm_book_stop(m))
+        m.show()
+
+    def confirm_book_stop(self, modal: Modal):
+        f = getattr(self, "_pending_book_stop", None)
+        if not f:
+            self._toast("没有待停用的词条")
+            return
+        try:
+            self.store.set_book_excluded(f["word"], f["value"], excluded=True,
+                                         reason="界面·本书停用")
+        except VocabDataError as exc:
+            self._toast(f"没有停用：{exc}")
+            return
+        self._pending_book_stop = None
+        modal.accept()
+        self._render_book_scope()
+        self._render_ops()
+        head = f"《{self._book_scope_title}》" if self._book_scope_title else "本书"
+        self._toast(f"已在{head}停用「{f['word']}」", with_undo=True)
 
     def _table_card(self) -> Card:
         card = Card(basis="底线③ 结构化表格 · 不露内部文件格式")
@@ -1054,6 +1365,8 @@ class VocabModule(QWidget):
         self._refresh_states_bar()
         self._update_sel_state()
         self._render_hint()
+        # 按书停用清单跟着整体刷新：撤销 / 恢复时间点都会改到本书的清单
+        self._render_book_scope()
 
     def _render_hint(self):
         warn = self.store.warning() if hasattr(self.store, "warning") else ""
