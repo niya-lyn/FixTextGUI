@@ -107,3 +107,85 @@ def conflict_kinds(kinds: dict[str, int]) -> str:
         return "没有冲突。"
     parts = "、".join(f"{k} {v} 条" for k, v in kinds.items())
     return f"冲突按形态看：{parts}。"
+
+
+# ---------------------------------------------------------------------------
+# V1.1-D4 · 冲突处置与影响预览
+# ---------------------------------------------------------------------------
+
+def action_note_pending() -> str:
+    return "还没处置：先选一个处理方式，它才会进写入清单。"
+
+
+def action_note_skip() -> str:
+    return "已设为跳过：这一条这次不写入，库里不会多也不会少。"
+
+
+def action_note_disable(word: str, value: str) -> str:
+    return (f"已设为禁用：「{word} → {value}」会写进词库，但按未启用状态写，"
+            f"和词库页里把一条词条关掉是同一件事。")
+
+
+def action_note_update(word: str, old_value: str, new_value: str) -> str:
+    return (f"已改值：库里「{word}」的写法从 {old_value} 改成 {new_value}，"
+            f"这一次算更新，不算新增。")
+
+
+def action_note_edit_still_exists(word: str, value: str) -> str:
+    return (f"已改值，但「{word} → {value}」库里已经一模一样有一条，"
+            f"再写一遍没有意义，所以按跳过算。")
+
+
+def action_note_edit_still_conflict(value: str) -> str:
+    return (f"改成 {value} 之后仍然和库里别的词条撞车，还差一步处置："
+            f"再改一次值，或者改为跳过。")
+
+
+def action_note_edit_rejudged(old_value: str, new_value: str) -> str:
+    return f"已改值：写法从 {old_value} 改成 {new_value}，重判后不再撞车，按新增算。"
+
+
+def cancel_note() -> str:
+    return "已取消：这一条不参与这次导入。"
+
+
+def action_hint() -> str:
+    return ("冲突条目可以逐个处置：改值（换一个正确写法再重判）、跳过（这次不写）、"
+            "设为禁用（照常写进词库但按未启用状态写）。处置随时可以撤销。")
+
+
+def action_restored(n: int) -> str:
+    return f"已撤销 {n} 条处置，回到刚打开预览时的样子。"
+
+
+def impact(write: int, add: int, update: int, disabled: int, skipped: int) -> str:
+    """影响预览的一句话：写多少条、四类各多少。"""
+    return (f"将写入 {write} 条：新增 {add} 条、更新 {update} 条、"
+            f"禁用 {disabled} 条、跳过 {skipped} 条。")
+
+
+def impact_note() -> str:
+    return ("下面这几个数字与预览里逐条能数出来的一致，也与预演实测一致——"
+            "它就是这次真会写进词库的量。确认之后才轮到写入这一步。")
+
+
+def impact_blocked(pending: int) -> str:
+    return (f"还有 {pending} 条冲突没处置。先把它们各自选一个处理方式"
+            f"（改值 / 跳过 / 设为禁用），再执行写入——否则这几条写不写没人说得清。")
+
+
+def confirm_title() -> str:
+    return "确认执行这次导入"
+
+
+def confirm_note() -> str:
+    return "这一步只是确认，词库现在一个字节都没动；确认之后按上面这个数字开始写入。"
+
+
+def confirm_done(write: int) -> str:
+    return f"已确认，准备写入 {write} 条（真正的写库在下一步做）。"
+
+
+def impact_vs_rehearsal_title() -> str:
+    return "影响预览与预演实测对照"
+
