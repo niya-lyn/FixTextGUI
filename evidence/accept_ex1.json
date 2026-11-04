@@ -1,0 +1,281 @@
+{
+  "s1_export_page": {
+    "import_": {
+      "seconds": 1.65,
+      "title": "聊齋志異（公有領域選篇）",
+      "chapters": 301,
+      "text_chars": 426195
+    },
+    "correction": {
+      "outcome": "ok",
+      "seconds": 13.39,
+      "hits": 2013
+    },
+    "export": {
+      "ok": true,
+      "seconds": 2.22,
+      "out_dir": "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出",
+      "main_file": "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出/聊齋志異（公有領域選篇）.epub",
+      "files": [
+        "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出/聊齋志異（公有領域選篇）.epub",
+        "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出/聊齋志異（公有領域選篇）替换统计.txt",
+        "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出/聊齋志異（公有領域選篇）替换统计.csv"
+      ],
+      "toast": "已导出 EPUB：聊齋志異（公有領域選篇）.epub"
+    },
+    "out_dir_equals_pkg_export": true,
+    "files_flat": true,
+    "target_dir": "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出",
+    "book_title": "聊齋志異（公有領域選篇）"
+  },
+  "s2_history_twice": {
+    "first": {
+      "seconds": 2.27,
+      "success": true,
+      "said": "已导出 聊齋志異（公有領域選篇）.epub（校验值 39dc0674…，与当时一致）",
+      "book": "《聊齋志異（公有領域選篇）》"
+    },
+    "second": {
+      "seconds": 2.18,
+      "success": true,
+      "said": "已导出 聊齋志異（公有領域選篇）.epub（校验值 39dc0674…，与当时一致）",
+      "book": "《聊齋志異（公有領域選篇）》"
+    },
+    "new_dirs": [
+      "聊齋志異（公有領域選篇）_20261104_181314",
+      "聊齋志異（公有領域選篇）_20261104_181317"
+    ],
+    "contents": [
+      {
+        "dir_name": "聊齋志異（公有領域選篇）_20261104_181314",
+        "parent": "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出/历史记录",
+        "parent_is_history": true,
+        "depth": 2,
+        "book_part": "聊齋志異（公有領域選篇）",
+        "stamp_part": "20261104_181314",
+        "stamp_ok": true,
+        "illegal_chars": [],
+        "files": [
+          "聊齋志異（公有領域選篇）.epub",
+          "聊齋志異（公有領域選篇）替换统计.csv",
+          "聊齋志異（公有領域選篇）替换统计.txt"
+        ],
+        "file_count": 3
+      },
+      {
+        "dir_name": "聊齋志異（公有領域選篇）_20261104_181317",
+        "parent": "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出/历史记录",
+        "parent_is_history": true,
+        "depth": 2,
+        "book_part": "聊齋志異（公有領域選篇）",
+        "stamp_part": "20261104_181317",
+        "stamp_ok": true,
+        "illegal_chars": [],
+        "files": [
+          "聊齋志異（公有領域選篇）.epub",
+          "聊齋志異（公有領域選篇）替换统计.csv",
+          "聊齋志異（公有領域選篇）替换统计.txt"
+        ],
+        "file_count": 3
+      }
+    ],
+    "naming_rule_ok": true,
+    "both_dirs_kept_files": true,
+    "book_part_expected": "聊齋志異（公有領域選篇）"
+  },
+  "s3_other_book": {
+    "import_": {
+      "seconds": 1.18,
+      "title": "a_utf8_lf",
+      "chapters": 1,
+      "text_chars": 95641
+    },
+    "correction": {
+      "outcome": "ok",
+      "seconds": 5.95,
+      "hits": 2552
+    },
+    "export": {
+      "seconds": 1.18,
+      "success": true,
+      "said": "已导出 a_utf8_lf.epub（校验值 bc769eee…，与当时一致）",
+      "book": "《a_utf8_lf》"
+    },
+    "new_dirs": [
+      "a_utf8_lf_20261104_181327"
+    ],
+    "book_part": [
+      "a_utf8_lf"
+    ],
+    "differs_from_first_book": true
+  },
+  "s4_name_cleaning": {
+    "cases": [
+      {
+        "raw": "炮火弧线",
+        "expected": "炮火弧线",
+        "actual": "炮火弧线",
+        "why": "正常书名",
+        "pass_": true
+      },
+      {
+        "raw": "《炮火弧线》",
+        "expected": "炮火弧线",
+        "actual": "炮火弧线",
+        "why": "书名号只是包装",
+        "pass_": true
+      },
+      {
+        "raw": "a/b\\c:d*e?f\"g<h>i|j",
+        "expected": "abcdefghij",
+        "actual": "abcdefghij",
+        "why": "九类非法字符全剔除",
+        "pass_": true
+      },
+      {
+        "raw": "  前后空格  ",
+        "expected": "前后空格",
+        "actual": "前后空格",
+        "why": "首尾空格",
+        "pass_": true
+      },
+      {
+        "raw": "...书名...",
+        "expected": "书名",
+        "actual": "书名",
+        "why": "首尾点号",
+        "pass_": true
+      },
+      {
+        "raw": "..  ..",
+        "expected": "未命名",
+        "actual": "未命名",
+        "why": "只剩点号空白 → 兜底",
+        "pass_": true
+      },
+      {
+        "raw": "",
+        "expected": "未命名",
+        "actual": "未命名",
+        "why": "空串 → 兜底",
+        "pass_": true
+      },
+      {
+        "raw": "???",
+        "expected": "未命名",
+        "actual": "未命名",
+        "why": "全非法字符 → 兜底",
+        "pass_": true
+      },
+      {
+        "raw": "a\nb\tc",
+        "expected": "abc",
+        "actual": "abc",
+        "why": "控制字符剔除",
+        "pass_": true
+      },
+      {
+        "raw": "a.b.c",
+        "expected": "a.b.c",
+        "actual": "a.b.c",
+        "why": "中间的点合法保留",
+        "pass_": true
+      }
+    ],
+    "all_pass": true,
+    "real_dir_example": "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出/历史记录/abc_20261104_173025"
+  },
+  "s5_no_leak": {
+    "texts": 814,
+    "hits": 0,
+    "samples": []
+  },
+  "final_tree": {
+    "root": "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出",
+    "entries": [
+      {
+        "path": "历史记录",
+        "is_dir": true,
+        "depth": 1
+      },
+      {
+        "path": "历史记录/a_utf8_lf_20261104_181327",
+        "is_dir": true,
+        "depth": 2
+      },
+      {
+        "path": "历史记录/a_utf8_lf_20261104_181327/a_utf8_lf.epub",
+        "is_dir": false,
+        "depth": 3
+      },
+      {
+        "path": "历史记录/a_utf8_lf_20261104_181327/a_utf8_lf替换统计.csv",
+        "is_dir": false,
+        "depth": 3
+      },
+      {
+        "path": "历史记录/a_utf8_lf_20261104_181327/a_utf8_lf替换统计.txt",
+        "is_dir": false,
+        "depth": 3
+      },
+      {
+        "path": "历史记录/聊齋志異（公有領域選篇）_20261104_181314",
+        "is_dir": true,
+        "depth": 2
+      },
+      {
+        "path": "历史记录/聊齋志異（公有領域選篇）_20261104_181314/聊齋志異（公有領域選篇）.epub",
+        "is_dir": false,
+        "depth": 3
+      },
+      {
+        "path": "历史记录/聊齋志異（公有領域選篇）_20261104_181314/聊齋志異（公有領域選篇）替换统计.csv",
+        "is_dir": false,
+        "depth": 3
+      },
+      {
+        "path": "历史记录/聊齋志異（公有領域選篇）_20261104_181314/聊齋志異（公有領域選篇）替换统计.txt",
+        "is_dir": false,
+        "depth": 3
+      },
+      {
+        "path": "历史记录/聊齋志異（公有領域選篇）_20261104_181317",
+        "is_dir": true,
+        "depth": 2
+      },
+      {
+        "path": "历史记录/聊齋志異（公有領域選篇）_20261104_181317/聊齋志異（公有領域選篇）.epub",
+        "is_dir": false,
+        "depth": 3
+      },
+      {
+        "path": "历史记录/聊齋志異（公有領域選篇）_20261104_181317/聊齋志異（公有領域選篇）替换统计.csv",
+        "is_dir": false,
+        "depth": 3
+      },
+      {
+        "path": "历史记录/聊齋志異（公有領域選篇）_20261104_181317/聊齋志異（公有領域選篇）替换统计.txt",
+        "is_dir": false,
+        "depth": 3
+      },
+      {
+        "path": "聊齋志異（公有領域選篇）.epub",
+        "is_dir": false,
+        "depth": 1
+      },
+      {
+        "path": "聊齋志異（公有領域選篇）替换统计.csv",
+        "is_dir": false,
+        "depth": 1
+      },
+      {
+        "path": "聊齋志異（公有領域選篇）替换统计.txt",
+        "is_dir": false,
+        "depth": 1
+      }
+    ]
+  },
+  "ok": true,
+  "export_root": "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出",
+  "history_root": "/home/gem/.aily/workdir/task_7704248002541620470/work/base/导出/历史记录"
+}
