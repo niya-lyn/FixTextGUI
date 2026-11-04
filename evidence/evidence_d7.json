@@ -1,0 +1,39 @@
+{
+  "exported_count": 7,
+  "exported_disabled": 2,
+  "file_name": "我的词库备份_20261104_120000.csv",
+  "sha256": "f91a78bba3068c4ab2b7b48138db179d22db226634182e4774d08801c404c6b3",
+  "preview_counts": {
+    "新增": 7,
+    "冲突": 0,
+    "格式不合格": 0
+  },
+  "batch_count": 1,
+  "restored_count": 7,
+  "content_equal": true,
+  "all_tier_custom": true,
+  "disabled_before": {
+    "萧衍": true,
+    "他说,你好": true,
+    "张'三": false,
+    "李\"四": true,
+    "第一行\n第二行": false,
+    "空注音": true,
+    "含空格": true
+  },
+  "disabled_after": {
+    "萧衍": true,
+    "他说,你好": true,
+    "张'三": false,
+    "李\"四": true,
+    "第一行\n第二行": false,
+    "空注音": true,
+    "含空格": true
+  },
+  "disabled_equal": true,
+  "disabled_applied": 2,
+  "book_rows": 1,
+  "factory_rules_sha_before": "c59d5c69b09bf515cbab186f3c7e661c522105c9a896ed2ae79ce3d26635df94",
+  "factory_rules_sha_after": "c59d5c69b09bf515cbab186f3c7e661c522105c9a896ed2ae79ce3d26635df94",
+  "factory_unchanged": true
+}
