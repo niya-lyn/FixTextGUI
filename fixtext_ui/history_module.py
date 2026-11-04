@@ -23,6 +23,7 @@ FixText V1 · 历史记录模块（Qt 移植 + 真实数据 + 快照恢复）
 
 from __future__ import annotations
 
+import shutil
 import threading
 import time
 from pathlib import Path
@@ -68,12 +69,18 @@ class SnapshotDialog(Modal):
     机器判定（磁盘上有没有产物），不可用的选项**置灰**并写明原因。
     这个弹窗同时就是那次二次确认：确认按钮只在选了可用时点后启用，
     弹窗正文写明影响范围与可撤销。
+
+    默认恢复只切换「当前工作区」指针（导出/续跑都会用这份快照），**不碰当前书
+    工作副本**。额外的「写回当前书」勾选框是破坏性动作，会覆盖工作副本，但
+    原书和历史记录都不受影响，且可以在提示条上撤销。
     """
 
-    def __init__(self, *, book: str, when: str, points: list[dict], parent=None):
+    def __init__(self, *, book: str, when: str, points: list[dict],
+                 shelf_name: str = "", parent=None):
         super().__init__(icon="↺", title="恢复到哪个时点？", parent=parent,
                          min_width=640)
         self.chosen = ""
+        self.write_to_shelf = False
         self._radios: dict[str, QRadioButton] = {}
         # 单选互斥：每个 radio 各自挂在不同的行容器里，Qt 的 autoExclusive
         # 只在同一父控件内生效，跨行不会互斥（会出现“全部勾选”）。用
@@ -85,13 +92,25 @@ class SnapshotDialog(Modal):
 
         self.add_note(
             f"{book}（{when}）在这次处理里留下了 {len(usable)} 个可恢复的时点。"
-            f"恢复会把当前工作区切到选中的那一刻；之后没保存的改动会被覆盖，"
-            f"历史记录与原书都不受影响，恢复本身可以在提示条上撤销。",
+            f"恢复会把「历史记录页当前工作区」切到选中的那一刻：之后在这里"
+            f"重新导出或从该点继续，都会用这份快照的产物。"
+            f"**当前书的工作副本不会改动**；原书也不受影响，恢复本身可以"
+            f"在提示条上撤销。",
             "info")
 
         for p in points:
             self.add_widget(self._point_row(p))
             self.add_spacing(2)
+
+        self.add_spacing(6)
+        self._write_cb = QCheckBox(
+            f"同时把该点正文写回当前书"
+            + (f"（{shelf_name}）" if shelf_name else ""))
+        self._write_cb.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._write_cb.setToolTip(
+            "勾选后，工作区 shelf 里的 book.txt / 账本会被该时点的副本覆盖。"
+            "这是破坏性动作，但原书和历史记录不受影响，可在提示条上撤销。")
+        self.add_widget(self._write_cb)
 
         self.add_foot("取消", "ghost", self.reject)
         self.ok_btn = self.add_foot("确认恢复", "primary", self._take)
@@ -143,6 +162,7 @@ class SnapshotDialog(Modal):
         if not pick:
             return
         self.chosen = pick[0]
+        self.write_to_shelf = self._write_cb.isChecked()
         self.accept()
 
 
@@ -521,16 +541,46 @@ class HistoryModule(QWidget):
         if not points:
             self._toast("这次运行没有留下可恢复的时点")
             return
+        # shelf 展示名：从 export_ctx 里取 book_dir 的 basename
+        book_dir = Path(str((self._export_ctx or {}).get("book_dir") or ""))
+        shelf_name = book_dir.name if book_dir.is_dir() else ""
         dlg = SnapshotDialog(book=str(t.get("book") or ""),
                              when=str(t.get("time") or ""),
-                             points=points, parent=self)
+                             points=points,
+                             shelf_name=shelf_name,
+                             parent=self)
         if dlg.exec() != QDialog.DialogCode.Accepted or not dlg.chosen:
             return
-        self._apply_restore(idx, dlg.chosen, points)
+        # 勾选了「写回当前书」→ 二次确认（破坏性动作）
+        if dlg.write_to_shelf:
+            pt = snapshot.POINT_BY_KEY.get(dlg.chosen, {})
+            dlg2 = ConfirmDialog(
+                icon="⚠",
+                title="同时写回当前书工作副本？",
+                note=(f"将把「{t.get('book') or '这本书'}」在「"
+                      f"{pt.get('name') or dlg.chosen}」时点的正文与账本，"
+                      f"直接覆盖到工作区 shelf 里。\n\n"
+                      f"影响范围：book.txt / book.bundle.json / import.json。\n"
+                      f"原书和历史记录不受影响，可以在提示条上撤销。"),
+                note_kind="warn",
+                confirm_text="确认写回当前书",
+                confirm_kind="danger",
+                parent=self,
+            )
+            if dlg2.exec() != QDialog.DialogCode.Accepted:
+                return
+        self._apply_restore(idx, dlg.chosen, points,
+                            write_to_shelf=dlg.write_to_shelf)
 
     def _apply_restore(self, idx: int, point_key: str,
-                       points: list[dict] | None = None):
-        """真恢复：把该书当前状态切到该时点产物（逐字节复制 + sha 当场比对）。"""
+                       points: list[dict] | None = None,
+                       *, write_to_shelf: bool = False):
+        """真恢复：把该书当前状态切到该时点产物（逐字节复制 + sha 当场比对）。
+
+        ``write_to_shelf=True`` 时，会先把 shelf 的三件套（book.txt / 账本 /
+        import.json）备份到 shelf 目录下的临时备份文件夹，然后用恢复的时点
+        副本覆盖之。撤销恢复时会用这个备份还原 shelf。
+        """
         if not (0 <= idx < len(self.tasks)):
             return None
         if self._runs_root is None:
@@ -545,19 +595,74 @@ class HistoryModule(QWidget):
             self._toast(res.message or "恢复没成功")
             self.restoreFinished.emit((run_dir, point_key, False))
             return res
+
+        # 可选：写回 shelf 工作副本（破坏性，先备份）
+        shelf_bak_dir = ""
+        if write_to_shelf:
+            shelf_bak_dir = self._write_shelf_from_restore(res)
+
         self._undo_stack.append(dict(type="restore", index=idx,
                                      prev_active=prev_active,
                                      snapshot=res.snapshot_dir,
                                      prev_snapshot=res.prev_snapshot,
-                                     point=point_key))
+                                     point=point_key,
+                                     shelf_bak_dir=shelf_bak_dir))
         self._sync_current()
         self._render_tasks()
         self._refresh_active()
         pt = snapshot.POINT_BY_KEY.get(point_key, {})
-        self._toast(f"已恢复到「{res.point_name or pt.get('name')}」时点，"
-                    f"可从这里导出或继续", with_undo=True)
+        suffix = "，工作副本也已同步" if shelf_bak_dir else ""
+        self._toast(f"已恢复到「{res.point_name or pt.get('name')}」时点"
+                    f"{suffix}，可从这里导出或继续", with_undo=True)
         self.restoreFinished.emit((run_dir, point_key, True))
         return res
+
+    def _write_shelf_from_restore(self, res):
+        """把 RestoreResult 里的 working_text / ledger / template_epub 写回 shelf。
+
+        先把 shelf 现有三件套备份到 ``<book_dir>/.bak_shelf_restore_<时间戳>/``，
+        备份目录路径返回给调用者（undo 栈里存的就是这个路径）。备份只在对应文件
+        真存在时才做；某个文件缺失则跳过备份 + 跳过写回（不删 shelf 原有文件）。
+        """
+        book_dir = Path(str((self._export_ctx or {}).get("book_dir") or ""))
+        if not book_dir.is_dir():
+            self._toast("找不到工作区目录，写回当前书被跳过")
+            return ""
+
+        bak_dir = book_dir / f".bak_shelf_restore_{time.strftime('%Y%m%d-%H%M%S')}"
+        bak_dir.mkdir(parents=True, exist_ok=False)
+
+        targets = [
+            ("book.txt", res.working_text),
+            ("book.bundle.json", res.ledger),
+            ("import.json", res.template_epub),
+        ]
+        any_written = False
+        for fname, src in targets:
+            dst = book_dir / fname
+            src_path = Path(src) if src else None
+            # 备份：shelf 现有文件存在才备份
+            if dst.is_file():
+                try:
+                    shutil.copy2(dst, bak_dir / fname)
+                except Exception:
+                    pass
+            # 写回：恢复结果里有这个文件才写
+            if src_path and src_path.is_file():
+                try:
+                    shutil.copy2(src_path, dst)
+                    any_written = True
+                except Exception:
+                    pass
+
+        if not any_written:
+            # 没写任何东西 → 清掉备份目录
+            try:
+                shutil.rmtree(bak_dir, ignore_errors=True)
+            except Exception:
+                pass
+            return ""
+        return str(bak_dir)
 
     # -------------------------------------------------------------- 导出链路
 
@@ -895,11 +1000,30 @@ class HistoryModule(QWidget):
                 after = snapshot.undo_restore(self._runs_root)
                 prev_point = str((after or {}).get("point_name") or "")
             self._last_restore = {}
+            # 如果那次恢复还写回了 shelf，也要把 shelf 还原
+            bak_dir_str = str(last.get("shelf_bak_dir") or "")
+            if bak_dir_str:
+                bak_dir = Path(bak_dir_str)
+                book_dir = bak_dir.parent
+                for fname in ("book.txt", "book.bundle.json", "import.json"):
+                    src = bak_dir / fname
+                    dst = book_dir / fname
+                    if src.is_file():
+                        try:
+                            shutil.copy2(src, dst)
+                        except Exception:
+                            pass
+                # 还原完删掉备份目录
+                try:
+                    shutil.rmtree(bak_dir, ignore_errors=True)
+                except Exception:
+                    pass
             self._sync_current()
             self._render_tasks()
             self._refresh_active()
+            suffix = "，工作副本也已还原" if bak_dir_str else ""
             tail = f"（回到「{prev_point}」）" if prev_point else ""
-            self._toast(f"已撤销恢复，回到恢复前状态{tail}")
+            self._toast(f"已撤销恢复{suffix}{tail}")
 
     # ------------------------------------------------------------------ 公共
 
