@@ -664,6 +664,17 @@ class VocabModule(QWidget):
         self._merge_btn.clicked.connect(self.open_merge)
         bl.addWidget(self._merge_btn)
 
+        # V1.1-D7：导出备份。语义是「把这一层词条留一份、换机时再导入」，
+        # 与「导入预览」是一对；写盘但只写导出目录，不动词库，所以不做二次确认。
+        self._export_btn = QPushButton("💾 导出备份")
+        self._export_btn.setObjectName("BtnOutline")
+        self._export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._export_btn.setToolTip(
+            "把「我的词库」这一层全部词条留成一份备份：换电脑接着用，或者平时手动备份。"
+            "导出只写备份文件，不会改动词库，也不碰出厂词库。")
+        self._export_btn.clicked.connect(self.open_export_backup)
+        bl.addWidget(self._export_btn)
+
         self._del_btn = QPushButton("🗑 删除选中")
         self._del_btn.setObjectName("BtnDanger")
         self._del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -1812,7 +1823,61 @@ class VocabModule(QWidget):
         self._render_all()
         self._toast("已保存修改", with_undo=True)
 
-    # ------------------------------------------------------------------ 查重
+    # ------------------------------------------------------------------ 导出备份
+
+    def open_export_backup(self):
+        """把「我的词库」这一层导出成一份备份文件（V1.1-D7）。
+
+        只写备份文件，一个字都不写词库：所以这里不做二次确认（底线④管的是
+        「改词库」的动作）。导出成功后再摆一份说明——用在哪、不能用来做什么，
+        这两句必须跟着文件一起被看到，不能只藏在帮助里。
+
+        :return: 成功时返回 :class:`fixtext_vocab_export.ExportOutcome`，否则 None
+        """
+        import fixtext_vocab_export as vexport
+
+        try:
+            outcome = vexport.export_custom_vocab(self.store)
+        except vexport.VocabExportError as exc:
+            # 装不下 / 没内容 / 写不进去：都是"说清是哪一条、为什么"的人话，
+            # 不静默少写几条，也不假装成功。
+            self._toast(exc.message)
+            self._export_note = exc.message
+            return None
+        except Exception as exc:                       # 兜底：不把内部异常抛到界面上
+            message = "备份没能导出，请稍后再试一次"
+            try:
+                import fixtext_error_center as error_center
+                error_center.report(exc, context="export")
+            except Exception:
+                pass
+            self._toast(message)
+            self._export_note = message
+            return None
+
+        self._export_outcome = outcome
+        self._export_note = vexport.summary_text(outcome)
+        self._toast(self._export_note)
+        self._show_export_note(outcome)
+        return outcome
+
+    def _show_export_note(self, outcome):
+        """导出后的说明弹窗：一条用途 + 几条边界，全部是给用户看的话。"""
+        import fixtext_vocab_export as vexport
+
+        m = Modal(icon="💾", title=vexport.EXPLANATION_TITLE, parent=self)
+        m.add_note(vexport.summary_text(outcome), "info")
+        for point in vexport.EXPLANATION_POINTS:
+            lab = _label(point, size="sm", color="neutral.700", wrap=True)
+            lab.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            m.add_widget(lab)
+        m.add_foot("知道了", "primary", m.accept)
+        #: 弹窗留引用，验收要读它的文案；也用 show() 不用 exec()（无头不阻塞）
+        self._export_modal = m
+        m.show()
+        return m
+
+    # ------------------------------------------------------------------ 导入预览与查重
 
     def open_import_preview(self, *, path: str | None = None,
                             text: str | None = None):
