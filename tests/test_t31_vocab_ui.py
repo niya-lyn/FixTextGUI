@@ -222,47 +222,82 @@ def test_delete_ignores_builtin_rows(mod):
 
 
 # ---------------------------------------------------------------------------
-# 合并：预览 → 二次确认 → 写入真实词库 → 撤销
+# 去重合并：查重清单组内动作 → 改动清单 → 二次确认 → 写入真实词库 → 撤销
 # ---------------------------------------------------------------------------
 
-def test_merge_preview_confirm_undo_full_click_path(mod):
-    """完整点击链路：预览清单 → 二次确认清单 → 写盘 → 撤销。"""
-    for w in ("甲", "乙", "丙"):
-        mod.store.add_entry(word=w, value=f"{w}替", typ="错词校正")
+def test_dup_dialog_keep_one_then_undo(mod):
+    """同词异值组：清单里选一条保留 → 改动清单 → 确认 → 写盘 → 撤销。"""
+    for v in ("替A", "替B", "替C"):
+        mod.store.add_entry(word="甲", value=v, typ="错词校正")
     mod._render_all()
     path = mod.store.custom.path
     sha_before = _sha(path)
-    ids = [e["id"] for e in mod.store.custom.entries()]
-    mod._selected = set(ids)
+    before = [dict(e) for e in mod.store.custom.entries()]
 
-    mod.open_merge()                                   # 第一个弹窗：选主词 + 预览清单
-    assert _sha(path) == sha_before, "合并预览不应写文件"
+    groups = mod.open_dup()
+    grp = next(g for g in groups if g["key"] == "甲")
+    assert grp["kind"] == "同词异值"
+    assert _sha(path) == sha_before, "打开查重清单不许动文件"
+    assert mod._dup_view["readonly"] is False, "查重清单已改为可处理"
 
-    parent = FakeModal()
-    preview = mod.do_merge(parent, "甲")               # 第二个弹窗：二次确认
-    assert preview and preview["pending"] is True
-    assert preview["removed"] == 2
-    assert parent.accepted is True, "预览弹窗应被收起"
-    assert _sha(path) == sha_before, "二次确认前不应写文件"
+    keep = [r for r in grp["items"] if r["value"] == "替A"][0]
+
+    class _Combo:
+        def currentData(self):
+            return keep["id"]
+
+    mod._dup_keep_one(grp, _Combo())
+    assert _sha(path) == sha_before, "第一层只是改动清单，不许写盘"
     assert len(mod.store.custom) == 3
 
-    res = mod._do_merge_commit(FakeModal(), ids, "甲")  # 真正写盘
-    assert res["removed"] == 2
-    assert len(mod.store.custom) == 1
-    assert mod.store.custom.entries()[0]["word"] == "甲"
-    assert _sha(path) != sha_before
+    # 二次确认弹窗里的那颗按钮：真实点击
+    from PySide6.QtWidgets import QDialog, QPushButton
+    dlg = [d for d in mod.findChildren(QDialog) if d.isVisible()][-1]
+    btn = [b for b in dlg.findChildren(QPushButton) if b.text().startswith("确认保留")][0]
+    btn.click()
+    assert len(mod.store.custom) == 1, f"合并后应保留 1 条，实际 {len(mod.store.custom)}"
+    assert mod.store.custom.entries()[0]["value"] == "替A"
+    assert _sha(path) != sha_before, "确认后应写盘"
 
     mod._undo()
     assert _sha(path) == sha_before, "撤销后应与合并前逐字节一致"
+    assert [dict(e) for e in mod.store.custom.entries()] == before
+
+
+def test_dup_dialog_dedup_same_value_then_undo(mod):
+    """同词同值组：一键去重 → 改动清单 → 确认 → 写盘 → 撤销。"""
+    for _ in range(3):
+        mod.store.add_entry(word="乙", value="同值", typ="错词校正")
+    mod._render_all()
+    path = mod.store.custom.path
+    sha_before = _sha(path)
+
+    groups = mod.open_dup()
+    grp = next(g for g in groups if g["key"] == "乙")
+    assert grp["kind"] == "同词同值"
+    mod._dup_dedup_same(grp)
+    assert _sha(path) == sha_before, "第一层只是改动清单，不许写盘"
+
+    from PySide6.QtWidgets import QDialog, QPushButton
+    dlg = [d for d in mod.findChildren(QDialog) if d.isVisible()][-1]
+    btn = [b for b in dlg.findChildren(QPushButton) if b.text().startswith("确认去重")][0]
+    btn.click()
+    assert len(mod.store.custom) == 1, f"去重后应剩 1 条，实际 {len(mod.store.custom)}"
+    assert _sha(path) != sha_before, "确认后应写盘"
+
+    mod._undo()
+    assert _sha(path) == sha_before, "撤销后应与去重前逐字节一致"
     assert len(mod.store.custom) == 3
 
 
-def test_merge_requires_two_selections(mod):
-    mod.store.add_entry(word="唯一", value="值", typ="错词校正")
-    mod._render_all()
-    mod._selected = {mod.store.custom.entries()[0]["id"]}
-    mod.open_merge()
-    assert mod._merge_sel is None, "不足 2 条时不应进入合并流程"
+def test_dup_groups_no_longer_reports_same_value_diff_word(qapp, tmp_path):
+    """同值异词不再算重复（用户拍板）：两条不同原词映射到同一替换值不分组。"""
+    store = VocabStore(custom_path=tmp_path / "custom_vocab.json")
+    store.add_entry(word="丁", value="戊", typ="错词校正")
+    store.add_entry(word="己", value="戊", typ="错词校正")
+    groups = store.dup_groups()
+    assert not [g for g in groups if g["kind"] == "同值异词"], groups
+    assert not [g for g in groups if g["key"] == "戊"], groups
 
 
 # ---------------------------------------------------------------------------

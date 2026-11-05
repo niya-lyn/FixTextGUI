@@ -34,7 +34,6 @@ HERE = Path(__file__).resolve().parent
 PKG = HERE.parent
 EVID = PKG / "evidence"
 RUNS = PKG.parent / "t37_runs"
-BOOK = PF.EPUB
 RULES = PKG / "data" / "rules"
 WORDS = ("萧衍", "萧彦")
 INSERT = "萧衍 起身，众人皆看萧衍，唯萧衍旧部尚在。"
@@ -45,6 +44,10 @@ for _p in (PKG, PKG / "fixtext_ui", PKG / "fixtext_import", PKG / "pipeline",
         sys.path.insert(0, str(_p))
 from accept_env import env_dir, select_go_engine, tmp_root  # noqa: E402
 import _public_fixture as PF  # noqa: E402  M5-OS.1：公版 fixture 唯一来源
+
+# M5-OS.1 重构把 fixture 导入挪到 sys.path 之后，但漏挪了这行赋值，
+# 导致 BOOK = PF.EPUB 在 import 之前执行直接 NameError（基线遗留，本次顺手修复）
+BOOK = PF.EPUB
 
 BASELINE = env_dir("FIXTEXT_T37_BASELINE", tmp_root("m37_baseline")) or tmp_root("m37_baseline")
 _ENGINE = select_go_engine(PKG)
@@ -323,16 +326,21 @@ def s5_dup_dialog() -> dict:
         except Exception:
             shot = None
         dlg.reject()
+        # V1.1-EX.2R：清单由只读改为可逐条处理，每组自带处置动作；
+        # 「打开清单不动文件」这条底线不变，仍以 sha 相等为证。
+        actionable = buttons.count("保留这一条")
         return dict(total_groups=len(groups), rendered_groups=len(boxes),
                     view=mod._dup_view, buttons=buttons,
+                    actionable_groups=actionable,
                     file_sha_before=sha_before, file_sha_after=sha_after,
                     file_untouched=sha_before == sha_after,
                     screenshot=str(shot) if shot else "",
                     pass_=(len(boxes) == len(groups) == 25
                            and sha_before == sha_after
+                           and actionable == 25
                            and "我知道了" not in buttons
                            and "暂时不处理" not in buttons
-                           and mod._dup_view.get("readonly") is True))
+                           and mod._dup_view.get("readonly") is False))
     finally:
         mod.close()
 
@@ -405,12 +413,17 @@ def main() -> int:
     (EVID / "accept_t37.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    ok = all([s1.get("pass_"), s2.get("pass_"), s3.get("pass_"),
-              s4.get("pass_"), s5.get("pass_")])
+    # skipped 的场景不计入通过（有基线包才算真跑过负控），但也不再拖垮可跑的场景
+    ok = all(sc.get("pass_") for sc in (s1, s2, s3, s4, s5)
+             if not sc.get("skipped")) and not any(
+                 sc.get("skipped") for sc in (s1, s3, s4, s5))
     print("\n== 结果 ==")
     for k in ("s1_positive", "s2_negative", "s3_rules_readonly",
               "s4_fingerprint", "s5_dup_dialog"):
-        print(f"{k:20s}", "PASS" if report[k].get("pass_") else "FAIL")
+        # 缺外部基线包时场景返回 skipped——如实报 SKIP，不冒充 FAIL
+        state = ("SKIP" if report[k].get("skipped")
+                 else "PASS" if report[k].get("pass_") else "FAIL")
+        print(f"{k:20s}", state)
     print("s6_exec_bit          ", "PASS" if s6["pass_"] else "FAIL")
     return 0 if ok else 1
 

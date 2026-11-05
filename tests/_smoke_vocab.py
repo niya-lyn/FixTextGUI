@@ -9,7 +9,11 @@
     QT_QPA_PLATFORM=offscreen PYTHONPATH=<包根>:<qt> python3 tests/_smoke_vocab.py
 
 覆盖：初始空状态 / 检索命中真实条数 / 新增（含查重两种冲突）/ 编辑 / 删除（预览+撤销）/
-合并（预览+确认+撤销）/ 本书专有词 / 恢复默认（内置自检）/ 撤销后文件逐字节一致。
+查重清单组内去重与选一保留（预览+确认+撤销）/ 本书专有词 / 恢复默认（内置自检）/
+撤销后文件逐字节一致。
+
+V1.1-EX.2R：工具栏的独立「合并」入口已下线，合并成为查重清单里的组内动作，
+所以第 8 段改成从 ``open_dup()`` 进清单、点组内按钮走完整写盘与撤销链路。
 """
 import hashlib
 import os
@@ -43,6 +47,21 @@ def ok(msg: str) -> None:
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _find_foot(host, label_prefix: str):
+    """在 host 下当前可见的弹窗里按按钮文案前缀找那颗真按钮。"""
+    from PySide6.QtWidgets import QDialog, QPushButton
+
+    dlg = None
+    for d in host.findChildren(QDialog):
+        if d.isVisible():
+            dlg = d
+    assert dlg is not None, "没找到正在显示的弹窗"
+    for b in dlg.findChildren(QPushButton):
+        if b.text().startswith(label_prefix):
+            return b
+    raise AssertionError(f"弹窗里找不到按钮「{label_prefix}」")
 
 
 class FakeModal:
@@ -83,10 +102,21 @@ def main() -> int:
     mod = make_module(tmp)
     counts = mod.store.counts()
     assert counts["custom"] == 0, f"自定义初始应为空，实际 {counts['custom']}"
-    assert mod.store.builtin_total == 304255, f"内置应 304255 条，实际 {mod.store.builtin_total}"
-    assert counts["b1"] + counts["b2"] + counts["b3"] == mod.store.builtin_total, "分级之和应等于内置总数"
+    # V1.1-F3 口径（本次 V1.1-EX.2R 顺手修正）：builtin_total 是**界面可达**袋之和
+    # （BAG_TO_TIER 的 12 个袋，当前 302,957 条）；磁盘 304,255 里另有 3 个不可达袋
+    # （postfix/temp/punctuation，共 1,298 条）。M5-EX.1 上袋后这里仍写死 304,255，
+    # 属漏改的过期断言——按可达分级动态求和，不再写死数字。
+    import json as _json
+    from fixtext_vocab import BAG_TO_TIER, RULES_DIR as _RULES_DIR
+    _reachable = sum(
+        len(_json.loads((_RULES_DIR / "bags" / b / "before.json").read_text("utf-8")))
+        for b in BAG_TO_TIER)
+    assert mod.store.builtin_total == _reachable, \
+        f"内置（界面可达）应为 {_reachable} 条，实际 {mod.store.builtin_total}"
+    _tiers_all = [k for k in counts if k not in ("custom", "imported")]
+    assert sum(counts[t] for t in _tiers_all) == mod.store.builtin_total, "分级之和应等于内置总数"
     assert len(mod.get_filtered()) == 0, "初始页不应有假词条（旧版此处是 5 条演示数据）"
-    ok(f"初始：自定义 0 条 / 内置 {mod.store.builtin_total} 条（{counts['b1']}+{counts['b2']}+{counts['b3']}）"
+    ok(f"初始：自定义 0 条 / 内置（界面可达）{mod.store.builtin_total} 条"
        f" / 页面 0 条")
 
     # 2) 空状态是人话，且不含虚构书名
@@ -106,7 +136,9 @@ def main() -> int:
         if expect_scope == "all":
             assert total_ui == total_direct + len(mod.store.custom), "全库命中数应等于内置+自定义"
     mod.search = "好象"
-    mod.dict_, mod.tier = "all", "b1"
+    # V1.1-F3 口径：dict_="all"+tier="b1" 是界面上不存在的状态组合
+    # （_scope() 先看 dict_，会落回全库 18 条）；按真实点击路径 select_dict("b1")
+    mod.select_dict("b1")
     mod._page = 0
     mod._render_entries()
     n_b1 = mod.store.builtin.search_count("好象", dict_code="b1")
@@ -166,25 +198,63 @@ def main() -> int:
     assert sha(custom_path) == pre_delete_sha, "撤销后文件 sha 应与删除前完全相同"
     ok(f"删除 {len(ids)} 条：预览不动文件、确认后 {n_all}→{n_all - 2}、撤销后 sha 全等")
 
-    # 8) 合并：预览 → 确认写入 → 撤销 sha 全等
+    # 8) 查重清单组内动作：同词异值组「选一保留」→ 撤销 sha 全等
+    for v in ("甲替", "乙替", "丙替"):
+        mod.store.add_entry(word="合并词", value=v, typ="错词校正")
+    mod._render_all()
     pre_merge_sha = sha(custom_path)
     pre_merge_n = len(mod.store.custom)
-    sel = [e["id"] for e in mod.store.custom.entries()]
-    assert len(sel) >= 2
-    mod._selected = set(sel)
-    mod.open_merge()                        # 预览弹窗（不动文件）
-    assert len(mod.store.custom) == pre_merge_n, "合并预览阶段不应改动词库"
-    fake_parent = FakeModal()
-    preview = mod.do_merge(fake_parent, mod.store.custom.entries()[0]["word"])
-    assert preview and preview.get("pending"), "do_merge 应产出二次确认清单"
-    assert len(mod.store.custom) == pre_merge_n, "二次确认前不应写文件"
-    mod._do_merge_commit(FakeModal(), sel, mod.store.custom.entries()[0]["word"])
-    assert len(mod.store.custom) == 1, f"合并后应保留 1 条，实际 {len(mod.store.custom)}"
-    assert sha(custom_path) != pre_merge_sha, "合并后文件应变化"
+    before_merge_entries = [dict(e) for e in mod.store.custom.entries()]
+    groups = mod.open_dup()
+    assert groups, "三条同词异值应当被查重清单检出"
+    assert mod._dup_view["readonly"] is False, "查重清单已改为可处理，不再是只读"
+    grp = next(g for g in groups if g["key"] == "合并词")
+    assert grp["kind"] == "同词异值", f"这一组应判同词异值，实际 {grp['kind']}"
+    assert len(mod.store.custom) == pre_merge_n, "打开清单不应改动文件"
+    assert sha(custom_path) == pre_merge_sha, "打开清单不应改动文件（sha 也不许变）"
+
+    keep = [r for r in grp["items"] if r["value"] == "乙替"][0]
+
+    class _Combo:
+        def currentData(self):
+            return keep["id"]
+
+    mod._dup_keep_one(grp, _Combo())        # 只出改动清单，不动文件
+    assert sha(custom_path) == pre_merge_sha, "组内动作的第一层只是预览"
+    confirm = _find_foot(mod, "确认保留")
+    confirm.click()                          # 真实点击「确认保留」
+    assert len(mod.store.custom) == pre_merge_n - 2, \
+        f"保留 1 条后应剩 {pre_merge_n - 2} 条，实际 {len(mod.store.custom)}"
+    kept = [e for e in mod.store.custom.entries() if e["word"] == "合并词"]
+    assert len(kept) == 1 and kept[0]["value"] == "乙替", kept
+    assert sha(custom_path) != pre_merge_sha, "确认后文件应变化"
     rec = mod.store.undo()
     assert rec and rec["identical"], f"合并撤销应逐字节一致，实际 {rec}"
     assert sha(custom_path) == pre_merge_sha, "合并撤销后 sha 应与合并前完全相同"
-    ok(f"合并 {len(sel)} 条→1 条：预览不动文件、确认后写盘、撤销后 sha 全等")
+    assert [dict(e) for e in mod.store.custom.entries()] == before_merge_entries, \
+        "撤销后词条应逐条回到原样"
+    ok(f"同词异值 {len(grp['items'])} 条→保留 1 条：预览不动文件、确认后写盘、撤销后 sha 全等")
+
+    # 8b) 同词同值组「一键去重」：保留第一条、其余移除、撤销 sha 全等
+    # （造 3 条：去重移除 2 条，下面断言才是 pre_dedup_n - 2）
+    for _ in range(3):
+        mod.store.add_entry(word="重复词", value="同值", typ="错词校正")
+    mod._render_all()
+    pre_dedup_sha = sha(custom_path)
+    pre_dedup_n = len(mod.store.custom)
+    groups = mod.open_dup()
+    grp2 = next(g for g in groups if g["key"] == "重复词")
+    assert grp2["kind"] == "同词同值", f"这一组应判同词同值，实际 {grp2['kind']}"
+    mod._dup_dedup_same(grp2)
+    assert sha(custom_path) == pre_dedup_sha, "去重的第一层只是预览"
+    _find_foot(mod, "确认去重").click()
+    assert len(mod.store.custom) == pre_dedup_n - 2, \
+        f"去重后应剩 {pre_dedup_n - 2} 条，实际 {len(mod.store.custom)}"
+    assert sha(custom_path) != pre_dedup_sha, "去重确认后文件应变化"
+    rec = mod.store.undo()
+    assert rec and rec["identical"], f"去重撤销应逐字节一致，实际 {rec}"
+    assert sha(custom_path) == pre_dedup_sha, "去重撤销后 sha 应与去重前完全相同"
+    ok(f"同词同值 {len(grp2['items'])} 条→1 条：预览不动文件、确认后写盘、撤销后 sha 全等")
 
     # 9) 重启持久化（新建 VocabStore 等价于重开程序）
     store2 = VocabStore(custom_path=custom_path)

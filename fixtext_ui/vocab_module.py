@@ -9,17 +9,28 @@ FixText V1 · 词库管理模块（Qt 移植 · M3-T3.1 接真实词库）
 - 本书专有词库横幅（2.4.2）：有真实专有词时才出现，否则整条隐藏
 - 左侧词库分级（底线③ 文件不暴露 · 友好名）：我的词库（可编辑）+ 3 内置（只读）
 - 右侧工作区：
-  · 工具条（§2.4.1 五操作）：新增 / 检索 / 查重 / 合并 / 删除选中 / 展开核对 / 选择计数
+  · 工具条：新增 / 检索 / 查重 / 导入预览 / 导出备份 / 删除选中 / 选择计数
+    （V1.1-EX.2R：删掉「合并」「展开核对」两个独立入口——合并不是独立动作，
+    它只是查重结果的一种处置，已收进查重清单弹窗的组内动作；「展开核对」
+    与下方词条表格是同一份数据，整块下线）
   · 词条表格（底线③ 结构化表格 · 不露内部文件格式）+ 翻页
   · 历史与快照面板（底线② 自动快照 · 可恢复）
 
 数据来源（M3-T3.1 起全部为真实词库）
 ------------------------------------
-界面**不再持有任何演示数据**：检索、分页、查重、删除、合并、新增、编辑
+界面**不再持有任何演示数据**：检索、分页、查重、删除、去重合并、新增、编辑
 全部通过 ``fixtext_vocab.VocabStore`` 读写真实文件——内置词库只读、
 「我的词库」独立成文件（分级存储，界面只显示友好名，不露路径）。
-新增 / 编辑 / 删除 / 合并都可撤销，撤销是把操作前的**原始字节**整份写回，
+新增 / 编辑 / 删除 / 去重合并都可撤销，撤销是把操作前的**原始字节**整份写回，
 因此撤销后的文件与操作前逐字节一致。
+
+复合结构恢复锚点
+----------------
+``data/rules/before.json`` / ``after.json`` 当前是**扁平字符串数组**（各 30 万条）。
+如果 V1.2 需要「一组重复词条合成一条复合词条」（一个原词按场景对应多个替换值），
+届时把 ``before[]`` 恢复成复合对象结构（``{word, variants:[...]}``）；本卡只把
+「合并」这个独立入口下线、把处置收进查重清单，**没有改动词库文件结构**，
+所以这个锚点现在是语义锚点，不是已实现的结构。
 """
 
 from __future__ import annotations
@@ -43,7 +54,8 @@ from fixtext_widgets import (
 )
 
 from fixtext_vocab import (
-    ENTRY_TYPES, TIER_IMPORTED, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
+    ENTRY_TYPES, KIND_SAME_BOTH, TIER_IMPORTED, TIER_NAMES, TIER_ORDER, VocabDataError,
+    VocabStore,
 )
 
 
@@ -410,7 +422,8 @@ class VocabModule(QWidget):
         self._page_rows: list = []
         self._selected: set = set()
         self._pending_add: dict | None = None
-        self._merge_sel: list | None = None
+        #: 查重清单当前分组（组号从 1 起）——组内动作按钮靠它取条目
+        self._dup_groups: list = []
         #: 上次查重清单的口径（total / shown / readonly）——验收与自检读它
         self._dup_view: dict = dict(total=0, shown=0, readonly=True)
         self._book_words: list = []       # 真实专有词（空则不显示横幅）
@@ -738,12 +751,6 @@ class VocabModule(QWidget):
         self._preview_btn.clicked.connect(self.open_import_preview)
         bl.addWidget(self._preview_btn)
 
-        self._merge_btn = QPushButton("合并")
-        self._merge_btn.setObjectName("BtnOutline")
-        self._merge_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self._merge_btn.clicked.connect(self.open_merge)
-        bl.addWidget(self._merge_btn)
-
         # V1.1-D7：导出备份。语义是「把这一层词条留一份、换机时再导入」，
         # 与「导入预览」是一对；写盘但只写导出目录，不动词库，所以不做二次确认。
         self._export_btn = QPushButton("💾 导出备份")
@@ -760,12 +767,6 @@ class VocabModule(QWidget):
         self._del_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._del_btn.clicked.connect(self._on_delete_selected)
         bl.addWidget(self._del_btn)
-
-        expand = QPushButton("📋 展开核对")
-        expand.setObjectName("BtnOutline")
-        expand.setCursor(Qt.CursorShape.PointingHandCursor)
-        expand.clicked.connect(self.open_expand)
-        bl.addWidget(expand)
 
         card.body_l.addWidget(bar)
 
@@ -1966,7 +1967,6 @@ class VocabModule(QWidget):
             f"已选 {_fmt_num(len(self._selected))} 条（可删 {_fmt_num(len(valid))}）"
             if self._selected else "未选择")
         self._del_btn.setEnabled(len(valid) > 0)
-        self._merge_btn.setEnabled(len(valid) >= 2)
 
     # ------------------------------------------------------------------ 选择
 
@@ -2002,7 +2002,7 @@ class VocabModule(QWidget):
         """设置里改了自定义词库存储位置后：按新位置重建数据入口并整页重渲染。"""
         self.store = VocabStore(custom_path=app_settings.vocab_custom_file())
         self._selected.clear()
-        self._merge_sel = None
+        self._dup_groups = []
         self._page = 0
         self._render_all()
 
@@ -2291,46 +2291,43 @@ class VocabModule(QWidget):
         self._toast(msg.import_toast(n), with_undo=True)
 
     def open_dup(self) -> list:
-        """查重清单（M3-T3.7 收口：只读清单，不再给"假按钮"）。
+        """查重清单（V1.1-EX.2R：由只读清单改为**可逐条处理**）。
 
-        这里的定位是**看清单**：把「我的词库」里的重复分组、以及与内置词库
-        撞车的条目**全量**列出来，一条不截断；处理动作由工具条上的「合并」
-        「删除选中」执行（各自先预览、二次确认、可撤销）。因此弹窗不再出现
-        「确认后处理」这类会让人以为点了就动手的措辞，底部只留一个「关闭」。
+        定位变化（用户拍板）：查重不只是"看"，重复本身就该在原地解决。
+        因此每一组自带处理动作，不再要求用户关掉窗口去工具条上找按钮：
 
-        大于 20 组时不再截断，而是把这部分装进可滚动的清单里——用户能看到
-        全部条目，不需要再去找"查看全部"的入口。
+        * 同一原词、同一替换值（真重复）→ 「一键去重」：保留 1 条、移除其余；
+        * 同一原词、不同替换值（两种写法打架）→ 下拉选一条 + 「保留这一条」；
+        * 与内置词库冲突 → 只提示不处理（内置是出厂内容，动不了）。
+
+        两个动作都**先给改动清单、二次确认后才写**，并且走主干既有的事务 /
+        撤销栈（``merge_entries`` → 还原点 → 一次原子替换），撤销后逐字节回到
+        处理前。清单本身仍然全量列出、不截断；组数多时装进可滚动区域。
+
+        注：V1.1-EX.2R 同时下线了「展开核对」入口（整块代码删除），词条明细
+        本来就在下方表格里逐页看得到，那个弹窗只是另一份同数据的表格。
         """
         groups = self.store.dup_groups()
+        self._dup_groups = groups
         if not groups:
             self._dup_view = dict(total=0, shown=0, readonly=True)
             self._toast("未发现重复词条")
             return groups
 
-        m = Modal(icon="🔁", title="查重清单（只读，不会改动词库）", parent=self)
+        m = Modal(icon="🔁", title="查重清单（可逐条处理）", parent=self)
         m.add_note(
-            f"一共 {len(groups)} 组重复或冲突，下面**全部列出**。本窗口只看不改："
-            "要处理请关掉它，用工具条上的「合并」或「删除选中」——那两处会先给"
-            "预览清单、二次确认后才写，做完还能撤销。", "info")
+            f"一共 {len(groups)} 组重复或冲突，下面**全部列出**。"
+            "同一原词同一替换值的点「一键去重」；同一原词有多个替换值的，"
+            "选一条留下。两者都会先给改动清单、确认后才写，做完还能撤销。"
+            "与内置词库同词的那几组只做提示——内置词库是出厂内容，这里改不了。",
+            "info")
 
         holder = plain_box(QWidget())
         hv = QVBoxLayout(holder)
         hv.setContentsMargins(0, 0, 0, 0)
         hv.setSpacing(8)
-        for gi, g in enumerate(groups, start=1):
-            box = QFrame()
-            box.setObjectName("DupGroup")
-            bl = QVBoxLayout(box)
-            bl.setContentsMargins(0, 0, 0, 0)
-            bl.setSpacing(8)
-            bl.addWidget(_label(f"{gi}. {g['kind']}：{g['key']}", size="sm",
-                                color="warning", weight="bold"))
-            bl.addWidget(_mini_table(
-                ["原词", "替换为", "来源"],
-                [(row["word"], row["value"], TIER_NAMES[row["dict"]]) for row in g["items"]],
-                mono_cols={0, 1}))
-            hv.addWidget(box)
-        hv.addStretch(1)
+        self._dup_holder = holder
+        self._dup_holder_lay = hv
 
         # 组数多时给滚动条（全量都在里面，不是截断）
         if len(groups) > 3:
@@ -2346,85 +2343,147 @@ class VocabModule(QWidget):
         m.add_foot("关闭", "ghost", m.reject)
         #: 弹窗本体（自检与验收要读它的控件；也避免被提前回收）
         self._dup_modal = m
-        self._dup_view = dict(total=len(groups), shown=len(groups), readonly=True)
+        self._render_dup_groups()
+        self._dup_view = dict(total=len(groups), shown=len(groups), readonly=False)
         m.show()
         return groups
 
-    def _compute_dups(self) -> list:
-        return self.store.dup_groups()
-
-    # ------------------------------------------------------------------ 合并
-
-    def open_merge(self):
-        sel = [i for i in self._selected if self._is_custom(i) and self._by_id(i)]
-        if len(sel) < 2:
-            self._toast("请至少选择 2 条自定义词条进行合并")
+    def _render_dup_groups(self) -> None:
+        """按 ``self._dup_groups`` 重建清单内容（处理完一组后原地刷新，弹窗不关）。"""
+        lay = getattr(self, "_dup_holder_lay", None)
+        if lay is None:
             return
-        self._merge_sel = sel
-        items = [self._by_id(i) for i in sel]
-        m = Modal(icon="➕", title="合并词条（先预览清单）", parent=self)
-        m.add_note("底线④：合并前给预览清单（改哪些、删哪些、留哪个）；合并可撤销。", "warn")
-        target = QComboBox()
-        target.addItems([f"{e['word']} → {e['value']}" for e in items])
-        m.add_widget(self._field("合并为「原词」（保留其一作为主词，其余并入其替换值）", target))
-        m.add_widget(_mini_table(["处理", "原词", "替换为"],
-                                 [("并入", e["word"], e["value"]) for e in items],
-                                 mono_cols={1, 2}))
-        m.add_widget(_label("合并后需「写入词库」二次确认（展示将写入条数）。",
-                            size="xs", color="neutral.500"))
-        m.add_foot("取消", "ghost", m.reject)
-        m.add_foot("预览写入", "primary",
-                   lambda: self.do_merge(m, target.currentText().split(" → ")[0]))
-        m.show()
+        self._clear_layout(lay)
+        for gi, g in enumerate(self._dup_groups, start=1):
+            box = QFrame()
+            box.setObjectName("DupGroup")
+            bl = QVBoxLayout(box)
+            bl.setContentsMargins(0, 0, 0, 0)
+            bl.setSpacing(8)
+            bl.addWidget(_label(f"{gi}. {g['kind']}：{g['key']}", size="sm",
+                                color="warning", weight="bold"))
+            bl.addWidget(_mini_table(
+                ["原词", "替换为", "来源"],
+                [(row["word"], row["value"], TIER_NAMES[row["dict"]]) for row in g["items"]],
+                mono_cols={0, 1}))
+            act = self._dup_group_action(g)
+            if act is not None:
+                bl.addWidget(act)
+            lay.addWidget(box)
+        lay.addStretch(1)
 
-    def do_merge(self, parent_modal, target_word: str) -> dict | None:
-        sel = [i for i in (self._merge_sel or []) if self._by_id(i)]
-        if len(sel) < 2:
+    def _dup_group_action(self, group: dict) -> QWidget | None:
+        """一组重复的处理动作行；内置冲突组只给说明（出厂内容不可改）。"""
+        items = [r for r in group["items"] if self._is_custom(r["id"])]
+        kind = str(group["kind"])
+        if kind.startswith("与内置冲突"):
+            return _label(
+                "内置词库是出厂内容，这一组只做提示；要改你的写法，请在上方词条"
+                "列表里编辑或删除这条自定义词条。", size="xs", color="neutral.500",
+                wrap=True)
+        if len(items) < 2:
             return None
-        items = [self._by_id(i) for i in sel]
-        removed = len([e for e in items if e["word"] != target_word])
-        # 先给二次确认清单，确认后才真的写文件（底线④）
-        m = Modal(icon="✍", title="写入词库（二次确认）", parent=self)
-        m.add_note(
-            f"将把合并结果写入「我的词库」，主词保留「{target_word}」，移除 {removed} 条重复词条。", "info")
-        m.add_widget(_label(f"本次将保留 1 条主词、移除 {removed} 条（合并动作可撤销）。",
-                            size="sm", color="neutral.700"))
-        m.add_foot("取消", "ghost", m.reject)
-        m.add_foot("确认写入", "primary",
-                   lambda: self._do_merge_commit(m, sel, target_word))
-        m.show()
-        parent_modal.accept()
-        return dict(pending=True, removed=removed, target=target_word)
 
-    def _do_merge_commit(self, modal: Modal, ids: list, target_word: str) -> dict | None:
+        row = plain_box(QWidget())
+        rl = QHBoxLayout(row)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.setSpacing(8)
+        if kind == KIND_SAME_BOTH:
+            rl.addWidget(_label(
+                f"{len(items)} 条完全相同（保留第 1 条、移除其余 {len(items) - 1} 条）。",
+                size="xs", color="neutral.600", wrap=True), 1)
+            btn = QPushButton("一键去重")
+            btn.setObjectName("BtnOutline")
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(lambda _=False, g=group: self._dup_dedup_same(g))
+            rl.addWidget(btn, 0)
+        else:
+            rl.addWidget(_label("保留哪条：", size="xs", color="neutral.600"), 0)
+            combo = QComboBox()
+            for r in items:
+                combo.addItem(f"{r['word']} → {r['value']}", r["id"])
+            rl.addWidget(combo, 1)
+            btn = QPushButton("保留这一条")
+            btn.setObjectName("BtnOutline")
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.clicked.connect(
+                lambda _=False, g=group, cb=combo: self._dup_keep_one(g, cb))
+            rl.addWidget(btn, 0)
+        return row
+
+    # ----- 查重清单里的两个组内动作（预览 → 二次确认 → 走事务写入）-----
+
+    def _dup_dedup_same(self, group: dict) -> None:
+        """同词同值组：保留第一条，其余移除（真重复，用户不用挑）。"""
+        items = [r for r in group["items"] if self._is_custom(r["id"])]
+        if len(items) < 2:
+            return
+        keep, drop = items[0], items[1:]
+        m = Modal(icon="🧹", title="去重确认（先看改动）", parent=self)
+        m.add_note(
+            f"原词「{keep['word']}」下有 {len(items)} 条完全相同的词条："
+            f"保留 1 条、移除 {len(drop)} 条。去重后可撤销。", "warn")
+        m.add_widget(_mini_table(
+            ["处理", "原词", "替换为"],
+            [("保留", keep["word"], keep["value"])]
+            + [("移除", r["word"], r["value"]) for r in drop],
+            mono_cols={1, 2}))
+        m.add_foot("取消", "ghost", m.reject)
+        m.add_foot(f"确认去重 {len(drop)} 条", "danger",
+                   lambda: self._dup_commit(m, [r["id"] for r in items],
+                                            keep["id"], f"已去重，移除 {len(drop)} 条"))
+        m.show()
+
+    def _dup_keep_one(self, group: dict, combo) -> None:
+        """同词异值组：按用户选择保留一条，其余移除。"""
+        items = [r for r in group["items"] if self._is_custom(r["id"])]
+        keep_id = combo.currentData() if combo is not None else None
+        keep = next((r for r in items if r["id"] == keep_id), None)
+        if keep is None or len(items) < 2:
+            return
+        drop = [r for r in items if r["id"] != keep["id"]]
+        m = Modal(icon="✂", title="合并确认（先看改动）", parent=self)
+        m.add_note(
+            f"原词「{keep['word']}」有 {len(items)} 种写法，将保留"
+            f"「{keep['value']}」，移除其余 {len(drop)} 条。合并后可撤销。", "warn")
+        m.add_widget(_mini_table(
+            ["处理", "原词", "替换为"],
+            [("保留", keep["word"], keep["value"])]
+            + [("移除", r["word"], r["value"]) for r in drop],
+            mono_cols={1, 2}))
+        m.add_foot("取消", "ghost", m.reject)
+        m.add_foot(f"确认保留「{keep['value']}」", "primary",
+                   lambda: self._dup_commit(m, [r["id"] for r in items],
+                                            keep["id"], f"已合并为「{keep['value']}」"))
+        m.show()
+
+    def _dup_commit(self, modal: Modal, ids: list, keep_id: int, msg_text: str) -> dict | None:
+        """真正写入：整组只占一个还原点（D5 事务语义，撤销整组一起回去）。"""
         try:
-            res = self.store.merge_entries(ids, target_word)
+            res = self.store.merge_entries(ids, keep_id=keep_id)
         except VocabDataError as exc:
             modal.reject()
-            self._toast(f"没有写入：{exc}")
+            self._toast(f"没有改动：{exc}")
             return None
-        self._merge_sel = None
-        self._selected = {i for i in self._selected if self._by_id(i)}
         modal.accept()
+        self._selected = {i for i in self._selected if self._by_id(i)}
         self._render_all()
-        self._toast(f"已合并为「{target_word}」，移除 {res['removed']} 条", with_undo=True)
+        self._refresh_dup_dialog()
+        self._toast(msg_text, with_undo=True)
         return res
 
-    # ------------------------------------------------------------------ 展开核对
-
-    def open_expand(self):
-        rows = self._page_rows
-        m = Modal(icon="📋", title="展开核对（只读）", parent=self, min_width=620)
-        m.add_note("结果以结构化表格呈现，不展示内部文件内容 / 行号（底线③）。", "info")
-        m.add_widget(_mini_table(
-            ["#", "原词", "替换为", "来源"],
-            [(self._page * PAGE_SIZE + i + 1, e["word"], e["value"], TIER_NAMES[e["dict"]])
-             for i, e in enumerate(rows)], mono_cols={1, 2}))
-        m.add_widget(_label(
-            f"当前页共 {len(rows)} 条；整体命中 {_fmt_num(self._hit_total)} 条，翻页可看全部。",
-            size="xs", color="neutral.500"))
-        m.add_foot("关闭", "primary", m.accept)
-        m.show()
+    def _refresh_dup_dialog(self) -> None:
+        """处理完一组后原地刷新清单：剩下几组就显示几组，清空了就收起弹窗。"""
+        groups = self.store.dup_groups()
+        self._dup_groups = groups
+        self._dup_view = dict(total=len(groups), shown=len(groups), readonly=False)
+        if not groups:
+            m = getattr(self, "_dup_modal", None)
+            if m is not None and m.isVisible():
+                m.accept()
+                self._toast("重复词条都处理完了", with_undo=True)
+            return
+        self._render_dup_groups()
 
     # ------------------------------------------------------------------ 删除（底线①④）
 

@@ -350,8 +350,8 @@ def test_fingerprint_changes_with_custom_vocab(corpus, vocab, tmp_path):
 # 查重清单：全量、只读
 # ---------------------------------------------------------------------------
 
-def test_dup_list_is_read_only_and_complete(qapp, tmp_path):
-    """25 组冲突全部列出、文件一个字节不动、按钮只有「关闭」。"""
+def test_dup_list_is_actionable_and_complete(qapp, tmp_path):
+    """25 组冲突全部列出、打开清单不动文件、每组带处置动作（V1.1-EX.2R）。"""
     import vocab_module as vm
     from fixtext_vocab import VocabStore
     from PySide6.QtWidgets import QDialog, QFrame, QPushButton
@@ -368,23 +368,26 @@ def test_dup_list_is_read_only_and_complete(qapp, tmp_path):
         sha_before = _sha(m.store.custom.path)
 
         groups = m.open_dup()
-        assert len(groups) == 25
-        assert m._dup_view == dict(total=25, shown=25, readonly=True)
-        assert _sha(m.store.custom.path) == sha_before, "查重清单不许改动词库"
+        assert len(groups) == 25, f"应检出 25 组，实际 {len(groups)}"
+        assert m._dup_view["total"] == 25 and m._dup_view["shown"] == 25
+        assert m._dup_view["readonly"] is False, "查重清单已由只读改为可处理"
+        assert _sha(m.store.custom.path) == sha_before, "打开查重清单不许改动词库"
 
-        from PySide6.QtWidgets import QApplication
-        # 按窗口标题定位本弹窗（整轮测试里可能还有别的窗口活着）
-        dlgs = [w for w in QApplication.instance().topLevelWidgets()
-                if isinstance(w, QDialog)
-                and w.windowTitle().startswith("查重清单")]
+        # 在**本模块**的子控件里找弹窗，且取最后一个可见的——合批跑时前面的
+        # 用例可能留下没关掉的旧查重弹窗，按全局 topLevelWidgets 找会捞到残件
+        dlgs = [d for d in m.findChildren(QDialog)
+                if d.isVisible() and d.windowTitle().startswith("查重清单")]
         assert dlgs, "查重清单窗口没出现"
-        dlg = dlgs[0]
+        dlg = dlgs[-1]
         boxes = dlg.findChildren(QFrame, "DupGroup")
         assert len(boxes) == 25, f"界面只画了 {len(boxes)} 组，不是全量"
         feet = [b.text() for b in dlg.findChildren(QPushButton)]
         assert "我知道了" not in feet and "暂时不处理" not in feet, \
             "这两个按钮不做任何动作，不能留着误导用户"
         assert "关闭" in feet
+        # 每一组都带处置动作（同词异值 → 「保留这一条」；同词同值 → 「一键去重」）
+        assert feet.count("保留这一条") == 25, f"25 组同词异值应各有保留动作，实际 {feet}"
+        assert "一键去重" not in feet, "本场景没有同词同值组，不该出现去重按钮"
         dlg.reject()
     finally:
         m.close()

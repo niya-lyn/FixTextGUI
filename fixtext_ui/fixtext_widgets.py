@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import (
     QAbstractAnimation, QEasingCurve, QPropertyAnimation, Qt, QSize, QPoint,
-    QRect, Signal, QTimer,
+    QRect, Signal, QTimer, QEvent,
 )
 from PySide6.QtGui import QPainter, QColor, QPen, QPainterPath
 from PySide6.QtWidgets import (
@@ -156,7 +156,14 @@ class Pill(QLabel):
 
 
 class Switch(QAbstractButton):
-    """胶囊开关：选中为主色轨道 + 白色滑块。"""
+    """胶囊开关：选中为主色轨道 + 白色滑块。
+
+    禁用态（``setEnabled(False)``）对齐原型 ``.switch.disabled``：轨道降级为
+    ``neutral.300`` 灰显、滑块仍是白色（原型整体 opacity:.5 后滑块趋于背景，
+    Qt 用更明确的一档灰才能一眼看出"关不了"），光标取消手型——原型此处是
+    ``cursor:not-allowed;pointer-events:none``，Qt 里没有指针事件屏蔽，改用
+    ``ArrowCursor`` 表示"这里点不动"。
+    """
 
     def __init__(self, checked: bool = True, parent=None):
         super().__init__(parent)
@@ -169,10 +176,26 @@ class Switch(QAbstractButton):
     def sizeHint(self) -> QSize:
         return QSize(40, 22)
 
+    #: 启用状态变化时要重绘：QAbstractButton 不会自己刷新自绘内容
+    def changeEvent(self, event):  # type: ignore[override]
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.EnabledChange:
+            self.setCursor(Qt.CursorShape.PointingHandCursor if self.isEnabled()
+                           else Qt.CursorShape.ArrowCursor)
+            self.update()
+
     def paintEvent(self, _event):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         p.setPen(Qt.PenStyle.NoPen)
+        if not self.isEnabled():
+            # 原型 .switch.disabled：轨道退成 neutral.300，选中态也用这一档
+            p.setBrush(QColor(c("neutral.300")))
+            p.drawRoundedRect(0, 0, 40, 22, 11, 11)
+            p.setBrush(QColor(c("neutral.0")))
+            p.drawEllipse(20 if self.isChecked() else 2, 2, 18, 18)
+            p.end()
+            return
         p.setBrush(QColor(c("primary.500") if self.isChecked() else c("neutral.200")))
         p.drawRoundedRect(0, 0, 40, 22, 11, 11)
         p.setBrush(QColor(c("neutral.0")))
@@ -1280,7 +1303,7 @@ class Modal(QDialog):
     """通用模态弹窗：头（图标 + 标题 + 关闭）× 体（可组合）× 脚（按钮）。
 
     用于设置、帮助、关于等富交互弹窗，以及各模块内的新增 / 编辑 / 查重 /
-    合并 / 删除预览 / 展开核对等。复用共享样式（ModalHead / ModalFoot /
+    去重合并 / 删除预览等。复用共享样式（ModalHead / ModalFoot /
     BtnPrimary / BtnDanger / BtnGhost），只消费令牌，不硬编码颜色。
     """
 

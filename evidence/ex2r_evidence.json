@@ -1,0 +1,36 @@
+{
+  "switch": {
+    "enabled_track": "#4F59C0",
+    "disabled_track": "#C2CAD6",
+    "expect_enabled": "#4F59C0",
+    "expect_disabled": "#C2CAD6",
+    "enabled_cursor": 13,
+    "disabled_cursor": 0,
+    "pass_": true
+  },
+  "settings_safe": {
+    "disabled_switch_count": 1,
+    "tooltips": [
+      "始终开启，不可关闭"
+    ],
+    "pass_": true
+  },
+  "dup": {
+    "groups": 3,
+    "rendered": 3,
+    "kinds": [
+      "同词异值"
+    ],
+    "buttons": [
+      "×",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "关闭"
+    ],
+    "readonly": false,
+    "file_untouched": true,
+    "has_same_value_group": false,
+    "pass_": true
+  }
+}
