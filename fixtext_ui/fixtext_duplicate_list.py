@@ -153,9 +153,13 @@ class ParagraphSlot:
         }
 
     def location_text(self) -> str:
-        """一行合并描述，例如「第 3 章 · 考城隍 · 第 210–212 行」。"""
+        """一行合并描述，例如「第 3 章 · 考城隍 · 第 210–212 行」。
+
+        没分章的书不能因此把行号也省掉——「未分章」照样带上行区间，
+        否则清单主列只剩「未分章」，等于没有位置可看。
+        """
         head = self.chapter_text()
-        return head if head == "未分章" else f"{head} · {self.line_text()}"
+        return f"{head} · {self.line_text()}"
 
     # -- 跳转载荷 -----------------------------------------------------------
 

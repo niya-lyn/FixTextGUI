@@ -110,6 +110,22 @@ def test_four_location_views(payload: dict):
         assert texts["chapter"] == "未分章"
 
 
+def test_location_keeps_line_when_unchaptered(payload: dict):
+    """没分章的书也要给出行号——`location_text` 不许只剩「未分章」。
+
+    这是实测抓到的真缺陷：早先 `location_text()` 遇到「未分章」直接返回
+    章节口径，清单主列就只剩三个字，等于没有位置可看。
+    """
+    view = dl.build_list(payload)
+    slot = view.items[0].slots[0]
+    if slot.chapter_no > 0:
+        pytest.skip("这份样本有章节信息，本条只针对未分章的书")
+    loc = slot.location_text()
+    assert "未分章" in loc
+    assert f"第 {slot.line_start}" in loc, f"定位文案丢了行号：{loc}"
+    assert view.items[0].position_text() == loc
+
+
 def test_order_and_filters(payload: dict):
     """三种排序可在清单上重排；类型筛选与「只看未处置」各只留该留的。"""
     by_count = dl.build_list(payload, order=ORDER_BY_COUNT)
