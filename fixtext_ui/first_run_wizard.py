@@ -44,7 +44,7 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import c, sp, r, fs
-from fixtext_widgets import enable_chrome, hline, PrimaryButton
+from fixtext_widgets import enable_chrome, hline, PrimaryButton, repolish
 
 
 # ---------------------------------------------------------------------------
@@ -100,13 +100,15 @@ class _StepBars(QWidget):
             bl.setSpacing(6)
             bar = QProgressBar()
             bar.setObjectName("OnbBar")
+            bar.setProperty("state", "todo")
             bar.setRange(0, 100)
             bar.setValue(0)
             bar.setTextVisible(False)
             bar.setFixedHeight(6)
             bl.addWidget(bar)
             lab = QLabel(f"{ico} {name}")
-            lab.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+            lab.setObjectName("OnbLabel")
+            lab.setProperty("state", "todo")
             bl.addWidget(lab)
             self._bars.append(bar)
             self._labels.append(lab)
@@ -121,24 +123,11 @@ class _StepBars(QWidget):
             else:
                 state, value = "todo", 0
             bar.setValue(value)
-            fill = {
-                "done": c("success"),
-                "active": c("primary.500"),
-                "todo": c("neutral.200"),
-            }[state]
-            bar.setStyleSheet(
-                f"QProgressBar#OnbBar{{background:{c('neutral.200')};"
-                f"border:none;border-radius:{r('full')}}}"
-                f"QProgressBar#OnbBar::chunk{{background:{fill};"
-                f"border-radius:{r('full')}}}"
-            )
-            if state == "done":
-                lab.setStyleSheet(f"font-size:{fs('xs')};color:{c('success')}")
-            elif state == "active":
-                lab.setStyleSheet(
-                    f"font-size:{fs('xs')};color:{c('primary.700')};font-weight:600")
-            else:
-                lab.setStyleSheet(f"font-size:{fs('xs')};color:{c('neutral.500')}")
+            # 进度条 / 文字三态配色与圆角统一由 QSS 属性选择器承接
+            bar.setProperty("state", state)
+            lab.setProperty("state", state)
+            repolish(bar)
+            repolish(lab)
 
     #: 测试用：读回每根条的百分比
     def values(self) -> list[int]:

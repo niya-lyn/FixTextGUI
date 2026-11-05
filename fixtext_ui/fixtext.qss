@@ -17,6 +17,10 @@ QMainWindow {
 
 QLabel { background-color: transparent; }
 
+QWidget#LayoutBox {
+    background: transparent;
+}
+
 #TopBar {
     background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
         stop:0 #15191F,
@@ -40,6 +44,14 @@ QLabel { background-color: transparent; }
     padding: 0 12px;
 }
 #Brand:hover { color: #FFFFFF; }
+#TopBar #BrandLogo {
+    background-color: #FFFFFF;
+    color: #3F48A2;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+}
 #TopAct {
     color: #FFFFFF;
     background: rgba(255,255,255,.14);
@@ -78,7 +90,7 @@ QLabel { background-color: transparent; }
 }
 #BookChip:hover #BcGo { color: #3F48A2; }
 #BcDot {
-    border-radius: 999px;
+    border-radius: 4px;
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #6F79D1, stop:1 #3F48A2);
 }
 
@@ -270,7 +282,7 @@ QLabel { background-color: transparent; }
     color: #B45309;
     background-color: #FBF1DF;
     border: 1px solid #F0D6A8;
-    border-radius: 999px;
+    border-radius: 7px;
     padding: 0 6px;
     font-size: 10px;
     font-weight: 700;
@@ -291,8 +303,8 @@ QLabel { background-color: transparent; }
     background-color: #EEF0FB;
 }
 #OvfIco {
-    background-color: #EEF0FB;
-    border-radius: 8px;
+    background-color: #DDE1F6;
+    border-radius: 12px;
     font-size: 16px;
 }
 
@@ -429,11 +441,16 @@ QPushButton#HeadIconBtn:pressed {
     background-color: #DDE1F6;
     color: #333B83;
 }
+QPushButton#HeadIconBtn[active="true"] {
+    background-color: #EEF0FB;
+    color: #333B83;
+    border: 1px solid #9AA3E2;
+}
 QLabel#SafeBadge {
     color: #15803D;
     background-color: #E7F4EC;
     border: 1px solid #B6E0C5;
-    border-radius: 999px;
+    border-radius: 18px;
     padding: 6px 12px;
     font-size: 12px;
     font-weight: 700;
@@ -465,11 +482,21 @@ QRadioButton::indicator {
 }
 QRadioButton::indicator:checked { background-color: #4F59C0; border-color: #4F59C0; }
 QToolTip {
-    background-color: #FFFFFF;
-    color: #222831;
-    border: 1px solid #DDE2EA;
+    background-color: #15191F;
+    color: #F7F8FA;
+    border: 1px solid #333B48;
     border-radius: 4px;
     padding: 8px 12px;
+    font-size: 13px;
+}
+#CellFullText {
+    background: transparent;
+    color: #F7F8FA;
+    border: none;
+}
+#CellFullText QLabel {
+    color: #F7F8FA;
+    background: transparent;
     font-size: 13px;
 }
 QTableWidget, QTreeWidget, QListWidget {
@@ -500,7 +527,7 @@ QFrame#PathRow {
 #Badge {
     color: #333B83;
     background-color: #EEF0FB;
-    border-radius: 999px;
+    border-radius: 8px;
     padding: 1px 8px;
     font-size: 12px;
 }
@@ -508,7 +535,7 @@ QFrame#PathRow {
     color: #15803D;
     background-color: #E7F4EC;
     border: 1px solid #B6E0C5;
-    border-radius: 999px;
+    border-radius: 8px;
     padding: 1px 8px;
     font-size: 12px;
 }
@@ -516,7 +543,7 @@ QFrame#PathRow {
     color: #B45309;
     background-color: #FBF1DF;
     border: 1px solid #F0D6A8;
-    border-radius: 999px;
+    border-radius: 8px;
     padding: 1px 8px;
     font-size: 12px;
 }
@@ -524,13 +551,13 @@ QFrame#PathRow {
     color: #C0392B;
     background-color: #FBEAE8;
     border: 1px solid #F1C4BD;
-    border-radius: 999px;
+    border-radius: 8px;
     padding: 1px 8px;
     font-size: 12px;
 }
 
 #Pill {
-    border-radius: 999px;
+    border-radius: 8px;
     padding: 2px 9px;
     font-size: 12px;
     font-weight: 700;
@@ -585,7 +612,7 @@ QFrame#BagChk[on="true"] QLabel#BagChkText {
 
 QFrame#EmptyState {
     background: #F7F8FA;
-    border: 1px dashed #C2CAD6;
+    border: 2px dashed #C2CAD6;
     border-radius: 12px;
 }
 #EsIcoRing {
@@ -602,11 +629,11 @@ QFrame#EmptyState {
 
 #TierTabs {
     background: #EEF1F5;
-    border-radius: 999px;
+    border-radius: 18px;
     padding: 3px;
 }
 #TierTab {
-    border-radius: 999px;
+    border-radius: 12px;
     padding: 6px 15px;
     font-weight: 600;
     font-size: 13px;
@@ -652,8 +679,20 @@ QFrame#EmptyState {
     border-width: 2px;
 }
 
-#SnapItem {
+#SnapRow {
+    background-color: #FFFFFF;
     border-bottom: 1px solid #EEF1F5;
+}
+#SnapRow[last="true"] {
+    border-bottom: none;
+}
+#SnapRow:hover {
+    background: #EEF0FB;
+}
+
+#TimelineRail {
+    background: #DDE2EA;
+    border: none;
 }
 
 #DictItem {
@@ -759,11 +798,11 @@ QComboBox#FmtCombo QAbstractItemView {
 #OnbProgress {
     background: #DDE2EA;
     border: none;
-    border-radius: 999px;
+    border-radius: 4px;
 }
 #OnbProgress::chunk {
     background: #4F59C0;
-    border-radius: 999px;
+    border-radius: 4px;
 }
 
 QLabel#ShelfBadge {
@@ -830,7 +869,7 @@ QScrollBar:vertical {
 }
 QScrollBar::handle:vertical {
     background: #DDE2EA;
-    border-radius: 999px;
+    border-radius: 3px;
     min-height: 36px;
 }
 QScrollBar::handle:vertical:hover { background: #C2CAD6; }
@@ -844,7 +883,7 @@ QScrollBar:horizontal {
 }
 QScrollBar::handle:horizontal {
     background: #DDE2EA;
-    border-radius: 999px;
+    border-radius: 3px;
     min-width: 36px;
 }
 QScrollBar::handle:horizontal:hover { background: #C2CAD6; }
@@ -854,13 +893,13 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
 
 QProgressBar {
     background-color: #EEF1F5;
-    border-radius: 999px;
+    border-radius: 4px;
     height: 8px;
     text-align: center;
     color: #4A5363;
     font-size: 12px;
 }
-QProgressBar::chunk { background-color: #4F59C0; border-radius: 999px; }
+QProgressBar::chunk { background-color: #4F59C0; border-radius: 4px; }
 
 QGroupBox {
     background-color: #FFFFFF;
@@ -876,13 +915,6 @@ QGroupBox::title {
     left: 12px;
 }
 
-QScrollArea#VocabTableScroll {
-    background: transparent;
-    border: none;
-}
-QScrollArea#VocabTableScroll > QWidget {
-    background: transparent;
-}
 QWidget#VocabScrollInner {
     background-color: #FFFFFF;
 }
@@ -896,16 +928,29 @@ QWidget#VocabRow QWidget {
 QWidget#VocabTableHeader {
     background-color: #EEF1F5;
     border-bottom: 1px solid #DDE2EA;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+QWidget#VocabTableHeader QWidget {
+    background: transparent;
 }
 
-QWidget#CellFullText {
-    background-color: #FFFFFF;
-    border: 1px solid #DDE2EA;
-    border-radius: 8px;
-    padding: 4px;
+/* 历史记录页任务列表 */
+QWidget#HistoryTable {
+    background: transparent;
 }
-QWidget#CellFullText QLabel {
-    color: #15191F;
+/* HistoryTable 内所有子控件透明（屏蔽全局 QWidget#F7F8FA 灰底，让 Card 白底透过来） */
+QWidget#HistoryTable QWidget {
+    background: transparent;
+}
+/* Header 灰带 — specificity 更高（2 ids），覆盖上面的 transparent */
+QWidget#HistoryTable QWidget#HistoryTableHeader {
+    background-color: #EEF1F5;
+    border-bottom: 1px solid #DDE2EA;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+QWidget#HistoryFoot {
     background: transparent;
 }
 
@@ -947,10 +992,6 @@ QWidget#CellFullText QLabel {
     color: #FFFFFF;
     font-size: 13px;
     background: transparent;
-}
-
-QWidget#CellFullText QLabel {
-    font-size: 13px;
 }
 
 QLabel[size="xs"] { font-size: 12px; }
@@ -1059,7 +1100,7 @@ QFrame#HLine[tone="on.fill.track"] { background: rgba(255,255,255,0.25); }
 #CardBasis {
     color: #333B83;
     background: #EEF0FB;
-    border-radius: 999px;
+    border-radius: 10px;
     padding: 4px 8px;
     font-size: 12px;
     font-weight: 700;
@@ -1138,7 +1179,7 @@ QFrame#BagChk[locked="true"] QLabel#BagChkText {
 }
 
 #StepDot {
-    border-radius: 999px;
+    border-radius: 11px;
     font-size: 12px;
     font-weight: 700;
 }
@@ -1155,24 +1196,46 @@ QFrame#BagChk[locked="true"] QLabel#BagChkText {
     color: #6B7585;
 }
 
+#StepName {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4A5363;
+}
+#StepName[state="done"] {
+    font-weight: 600;
+    color: #4A5363;
+}
+#StepName[state="current"] {
+    font-weight: 700;
+    color: #333B83;
+}
+#StepName[state="wait"] {
+    font-weight: 600;
+    color: #6B7585;
+}
+#StepDesc {
+    font-size: 12px;
+    color: #6B7585;
+}
+
 QProgressBar#TaskBar {
     background: #EEF1F5;
     border: none;
-    border-radius: 999px;
+    border-radius: 5px;
     height: 10px;
 }
 QProgressBar#TaskBar::chunk {
     background: #4F59C0;
-    border-radius: 999px;
+    border-radius: 5px;
 }
 
 QProgressBar#OnbBar {
     background: #DDE2EA;
     border: none;
-    border-radius: 999px;
+    border-radius: 3px;
 }
 QProgressBar#OnbBar::chunk {
-    border-radius: 999px;
+    border-radius: 3px;
     background: #DDE2EA;
 }
 QProgressBar#OnbBar[state="done"]::chunk {
@@ -1183,6 +1246,21 @@ QProgressBar#OnbBar[state="active"]::chunk {
 }
 QProgressBar#OnbBar[state="todo"]::chunk {
     background: #DDE2EA;
+}
+
+#OnbLabel {
+    font-size: 12px;
+    color: #6B7585;
+}
+#OnbLabel[state="done"] {
+    color: #15803D;
+}
+#OnbLabel[state="active"] {
+    color: #333B83;
+    font-weight: 600;
+}
+#OnbLabel[state="todo"] {
+    color: #6B7585;
 }
 
 QRadioButton#SnapPoint {
@@ -1244,22 +1322,117 @@ QScrollArea#BookWordScroll > QWidget {
     background: #FFFFFF;
 }
 
-#SnapDot {
-    background: #DDE2EA;
-    border-radius: 999px;
+#SnapDot, #OpDot {
+    background: transparent;
     border: none;
 }
-#SnapDot[current="true"] {
-    background: #15803D;
-    border: 3px solid #E7F4EC;
+#TimelineRail {
+    background: #DDE2EA;
+    border: none;
 }
 
-#MetaChip {
-    background: #EEF1F5;
+#OpRow {
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #EEF1F5;
+}
+#OpRow[last="true"] {
+    border-bottom: none;
+}
+#OpRow:hover {
+    background: #EEF0FB;
+}
+
+#OpKind {
     color: #333B48;
-    border-radius: 8px;
+    background: #EEF1F5;
+    border-radius: 4px;
     padding: 4px 8px;
     font-size: 12px;
+    font-weight: 600;
+}
+#OpKind[kind="add"] { color: #15803D; background: #E7F4EC; }
+#OpKind[kind="edit"] { color: #333B83; background: #EEF0FB; }
+#OpKind[kind="delete"] { color: #C0392B; background: #FBEAE8; }
+#OpKind[kind="merge"] { color: #333B83; background: #EEF0FB; }
+#OpKind[kind="book"] { color: #333B83; background: #EEF0FB; }
+#OpKind[kind="restore_default"] { color: #B45309; background: #FBF1DF; }
+#OpKind[kind="restore_point"] { color: #B45309; background: #FBF1DF; }
+#OpKind[kind="undo"] { color: #B45309; background: #FBF1DF; }
+#OpKind[kind="note"] { color: #333B48; background: #EEF1F5; }
+
+#TagCurrent {
+    color: #15803D;
+    background: #E7F4EC;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+#SnapDrawerLayer {
+    background: transparent;
+}
+#SnapDrawerBackdrop {
+    background: rgba(15, 23, 42, 0.32);
+}
+#SnapDrawerPanel {
+    background: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 12px;
+}
+#DrawerHead {
+    background: transparent;
+    border-bottom: 1px solid #EEF1F5;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+#DrawerCloseBtn {
+    background: transparent;
+    color: #6B7585;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    min-width: 24px; max-width: 24px;
+    min-height: 24px; max-height: 24px;
+    padding: 0;
+    font-size: 14px;
+}
+#DrawerCloseBtn:hover {
+    background: #EEF1F5;
+    color: #222831;
+}
+#DrawerCloseBtn:pressed {
+    background: #DDE2EA;
+}
+#DrawerScroll {
+    border: none;
+    background: transparent;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+#DrawerScroll > QWidget {
+    background: transparent;
+}
+#DrawerScrollInner {
+    background: transparent;
+}
+#DrawerScroll QScrollBar:vertical {
+    background: #FFFFFF;
+    width: 4px;
+    border: none;
+}
+#DrawerScroll QScrollBar::handle:vertical {
+    background: #DDE2EA;
+    border-radius: 4px;
+    min-height: 32px;
+}
+#DrawerScroll QScrollBar::add-line:vertical, #DrawerScroll QScrollBar::sub-line:vertical {
+    height: 0;
+    border: none;
+}
+#DrawerPager {
+    border-top: 1px solid #EEF1F5;
+    margin-top: 8px;
 }
 
 #DictIco {
@@ -1357,7 +1530,7 @@ QScrollArea#BookWordScroll > QWidget {
     color: #3F48A2;
 }
 #BookChip #BcDot {
-    border-radius: 999px;
+    border-radius: 4px;
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #6F79D1, stop:1 #3F48A2);
     border: 3px solid #DDE1F6;
 }

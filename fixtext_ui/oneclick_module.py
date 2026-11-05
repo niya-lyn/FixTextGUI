@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 from fixtext_tokens import c, r, fs, sp, FONT_MONO, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Switch, Pill, FieldRow, RadioCard, ProgressDialog, EmptyState, hline, PrimaryButton,
-    ConfirmDialog, page_head_shell, enable_chrome, BagChk, FlowLayout,
+    ConfirmDialog, page_head_shell, enable_chrome, repolish, plain_box, BagChk, FlowLayout,
 )
 from fixtext_worker import CorrectionJob, CorrectionWorker
 
@@ -266,6 +266,8 @@ class OneClickModule(QWidget):
             self._summary = None
             self._outcome = None
             self._clear_result()
+            self.book_pill.setProperty("kind", "neutral")
+            repolish(self.book_pill)
             self._apply_book_presence()
             return
         # 展示体积：EPUB 用原件副本；校正吃的是 plain_source（工作正文）
@@ -279,10 +281,9 @@ class OneClickModule(QWidget):
         self.book_meta_label.setText(
             f"{size_mb:.1f} MB · 基于工作区正文校正，原件只读可随时回退")
         self.book_pill.setText("已就绪")
-        self.book_pill.setStyleSheet(
-            f"color:{c('success')};background:{c('success.bg')};"
-            f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-            f"font-size:{fs('xs')};font-weight:700")
+        # 语义色 / 胶囊圆角交给 fixtext.qss 的 #Pill[kind="ok"]（原内联收归）
+        self.book_pill.setProperty("kind", "ok")
+        repolish(self.book_pill)
         self._apply_book_presence()
 
     # ------------------------------------------------------------ 主按钮 hero
@@ -378,7 +379,7 @@ class OneClickModule(QWidget):
             return box
 
         # switch_input
-        holder = QWidget()
+        holder = plain_box(QWidget())
         hl = QHBoxLayout(holder)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(8)
@@ -459,7 +460,7 @@ class OneClickModule(QWidget):
         card.body_l.addLayout(self._opt_label("运行模式"))
         self.rd_full = RadioCard(
             "完整流程（默认）",
-            "点击恢复默认：排版开、预处理开、严格关、注音关",
+            "点击恢复推荐的完整流程：开启排版和预处理，关闭严格模式和生僻字注音",
             "full",
         )
         self.rd_full.chosen.connect(lambda _=None: self._reset_run_mode_defaults())
@@ -469,7 +470,7 @@ class OneClickModule(QWidget):
         # 排版默认开；关闭 = 跳过排版流程
         self.sw_layout = Switch(True)
         self.sw_layout.toggled.connect(lambda _=False: self._sync_full_flow_selected())
-        card.body_l.addLayout(self._opt_label("排版"))
+        card.body_l.addLayout(self._opt_label("优化排版"))
         card.body_l.addLayout(self._switch_row(
             "关闭则跳过排版，直接用词库校正", self.sw_layout))
 
@@ -513,11 +514,10 @@ class OneClickModule(QWidget):
         card.body_l.addWidget(bags_wrap)
         card.body_l.addSpacing(10)
         card.body_l.addWidget(self._hint(
-            "「常规校正」「CJK 恢复」锁定（CJK 用于扩展区编码修复，强制跑）。"
-            "「繁简转换」「的地得」「旧式通假」「我的词库」默认开，可关。"
-            "「繁简转换激进」含和谐字等，易误改，默认关。"
-            "排版 / 预处理 / 严格 / 注音见上方「运行模式」。"
-            "txtFormat 较多误改，建议常规校正后再单独勾选比对。"))
+            "「常规校正」「CJK 恢复」锁定（CJK 用于扩展区编码修复，强制跑）。\n"
+            "「繁简转换」「的地得」「旧式通假」「我的词库」默认开启，推荐使用。\n"
+            "「繁简转换激进」含和谐字等，易误改，默认关闭。\n"
+            "「txtFormat」较多误改，建议常规校正后再单独勾选比对。"))
         card.body_l.addWidget(self._basis("§2.2 · 主按钮不询问词库组合"))
         card.body_l.addSpacing(16)
         card.body_l.addWidget(hline())
@@ -529,7 +529,7 @@ class OneClickModule(QWidget):
         self.sw_auto_fix_quote = Switch(_settings.auto_fix_quote())
         self.sw_auto_fix_quote.toggled.connect(self._on_auto_fix_quote_toggled)
         card.body_l.addLayout(self._switch_row(
-            "按检查页规则自动修可确定项；关则留待检查页处理",
+            "按检查页规则自动修可确定项；默认关闭，留待检查页手动处理",
             self.sw_auto_fix_quote))
         return card
 
@@ -592,12 +592,8 @@ class OneClickModule(QWidget):
         hl.setSpacing(8)
         hl.addWidget(_label(text, size="base", weight="bold"))
         if badge:
-            p = Pill(badge, "warn")
-            p.setStyleSheet(
-                f"color:{c('warning')};background:{c('warning.bg')};"
-                f"border-radius:{r('full')};padding:{sp('1')} {sp('2')};"
-                f"font-size:{fs('xs')};font-weight:700")
-            hl.addWidget(p)
+            # 语义色 / 胶囊圆角交给 fixtext.qss 的 #Pill[kind="warn"]
+            hl.addWidget(Pill(badge, "warn"))
         hl.addStretch(1)
         return hl
 

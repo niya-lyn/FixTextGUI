@@ -29,7 +29,7 @@ import time
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtGui import QKeySequence, QShortcut, QFontMetrics
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QDialog, QSizePolicy, QCheckBox, QRadioButton, QButtonGroup,
@@ -40,21 +40,69 @@ import fixtext_run_snapshot as snapshot
 from fixtext_tokens import c, fs, sp, FONT_WEIGHT
 from fixtext_widgets import (
     Card, Pill, hline, ConfirmDialog, Modal, EmptyState, page_head_shell, PrimaryButton,
+    plain_box,
 )
 
 
-# 列表列宽比例（头行与数据行共用，保证对齐）。操作列右对齐。
-COL_W = (3, 2, 1, 2, 5)
+# 前四列弹性比例（在剩余空间里按此分配）；
+# 标记列（"当前工作区"Pill 独立一列，避免挤压操作按钮）和操作列均固定宽度。
+COL_W = (3, 2, 1, 2)
+COL_MARK_W = 110    # 标记列：够放 Pill("当前工作区")，没 Pill 时留空
+COL_ACT_W = 280     # 操作列：三个按钮的宽度（恢复≈62 + 重新导出≈78 + 删除≈50 + 两个间距16）
+
+
+class _TitleElideLabel(QLabel):
+    """历史记录页专用：超长书名右侧省略号截断，不挤压邻列，悬浮看全文。
+
+    参照词库管理页的 ``_ElideLabel`` 设计，但简化掉复制 / 拼音堆叠等词库特有能力：
+    - setSizePolicy(Ignored, Preferred) → 被 HBoxLayout 按 COL_W 分配的列宽约束，
+      超长也不撑开列、不挤压其它列；
+    - resize 时用 ``fontMetrics.elidedText`` 算截断；
+    - 超长时把完整文本挂到 tooltip。
+    """
+
+    def __init__(self, text: str = "", *, size: str = "sm",
+                 color: str = "neutral.900", weight: str | None = None,
+                 center: bool = True) -> None:
+        super().__init__(text)
+        self._full = str(text or "")
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        self.setWordWrap(False)
+        style = f"color:{c(color)};font-size:{fs(size)};background:transparent;"
+        if weight:
+            style += f"font-weight:{FONT_WEIGHT[weight]};"
+        self.setStyleSheet(style)
+        if center:
+            self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._elide()
+
+    def setText(self, t: str) -> None:  # type: ignore[override]
+        self._full = str(t or "")
+        self._elide()
+
+    def _elide(self) -> None:
+        fm = self.fontMetrics()
+        elided = fm.elidedText(self._full, Qt.TextElideMode.ElideRight,
+                               max(1, self.width()))
+        super().setText(elided)
+        self.setToolTip(self._full if elided != self._full else "")
+
+    def resizeEvent(self, ev) -> None:  # noqa: N802
+        super().resizeEvent(ev)
+        self._elide()
 
 
 def _label(text: str, *, size: str = "sm", color: str = "neutral.800",
-           weight: str | None = None, wrap: bool = False) -> QLabel:
+           weight: str | None = None, wrap: bool = False,
+           center: bool = False) -> QLabel:
     lab = QLabel(text)
     lab.setWordWrap(wrap)
     style = f"color:{c(color)};font-size:{fs(size)};background:transparent;"
     if weight:
         style += f"font-weight:{FONT_WEIGHT[weight]};"
     lab.setStyleSheet(style)
+    if center:
+        lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
     return lab
 
 
@@ -299,6 +347,7 @@ class HistoryModule(QWidget):
         self.basis_labels.append(card.basis)
 
         self._table = QWidget()
+        self._table.setObjectName("HistoryTable")
         self._table_body = QVBoxLayout(self._table)
         self._table_body.setContentsMargins(0, 0, 0, 0)
         self._table_body.setSpacing(0)
@@ -306,8 +355,9 @@ class HistoryModule(QWidget):
 
         self._render_tasks()
 
-        # 脚注 + 清理全部历史
+        # 脚注 + 清理全部历史（独立区域，不继承全局灰底）
         foot = QWidget()
+        foot.setObjectName("HistoryFoot")
         fl = QHBoxLayout(foot)
         fl.setContentsMargins(0, 12, 0, 12)
         fl.setSpacing(12)
@@ -392,15 +442,23 @@ class HistoryModule(QWidget):
 
     def _header_row(self) -> QWidget:
         row = QWidget()
+        row.setObjectName("HistoryTableHeader")
+        row.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         hl = QHBoxLayout(row)
         hl.setContentsMargins(0, 10, 0, 10)
         hl.setSpacing(12)
         for text, stretch in zip(("书名", "时间", "替换数", "状态"),
-                                COL_W[:4]):
+                                COL_W):
             hl.addWidget(self._th(text), stretch)
+        # 标记列表头：空标签占位，与数据行标记列同宽同居中
+        mark = QLabel("")
+        mark.setFixedWidth(COL_MARK_W)
+        hl.addWidget(mark, 0)
+        # 操作列表头：与数据行操作列同宽同居中（完全对齐）
         op = self._th("操作")
-        op.setAlignment(Qt.AlignmentFlag.AlignRight)
-        hl.addWidget(op, COL_W[4])
+        op.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        op.setFixedWidth(COL_ACT_W)
+        hl.addWidget(op, 0)
         return row
 
     def _th(self, text: str) -> QLabel:
@@ -408,35 +466,70 @@ class HistoryModule(QWidget):
         lab.setStyleSheet(
             f"color:{c('neutral.600')};font-weight:{FONT_WEIGHT['semibold']};"
             f"font-size:{fs('xs')};background:transparent")
+        lab.setAlignment(Qt.AlignmentFlag.AlignCenter)   # 表头全部居中（原缺失，是"表头没居中"的根因）
         return lab
 
     def _task_row(self, t: dict, idx: int) -> QWidget:
         row = QWidget()
+        row.setObjectName("HistoryRow")
         hl = QHBoxLayout(row)
         hl.setContentsMargins(0, 12, 0, 12)
         hl.setSpacing(12)
 
-        book = _label(t.get("book") or t.get("title") or "（未命名）",
-                      size="sm", weight="bold", color="neutral.900")
+        # 书名：超长省略号截断 + 不挤压邻列（参照词库页 _ElideLabel）
+        book = _TitleElideLabel(
+            t.get("book") or t.get("title") or "（未命名）",
+            size="sm", weight="bold", color="neutral.900", center=True)
         hl.addWidget(book, COL_W[0])
 
+        # 时间：居中 + sizePolicy Ignored（不被超长值撑开）
+        time_box = QWidget()
+        tl = QHBoxLayout(time_box)
+        tl.setContentsMargins(0, 0, 0, 0)
+        tl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         time_txt = _label(t.get("time") or "—", size="sm", color="neutral.500")
-        hl.addWidget(time_txt, COL_W[1])
+        tl.addWidget(time_txt)
+        time_box.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        hl.addWidget(time_box, COL_W[1])
 
+        # 替换数：居中 + sizePolicy Ignored
         hits_v = t.get("hits")
+        hits_box = QWidget()
+        htl = QHBoxLayout(hits_box)
+        htl.setContentsMargins(0, 0, 0, 0)
+        htl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         hits = _label("—" if hits_v is None else f"{hits_v} 处",
                       size="sm", color="neutral.700")
-        hl.addWidget(hits, COL_W[2])
+        htl.addWidget(hits)
+        hits_box.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        hl.addWidget(hits_box, COL_W[2])
 
-        hl.addWidget(self._status_cell(t), COL_W[3])
+        # 状态：容器居中 + sizePolicy Ignored（参照词库页「来源」列做法）
+        status_box = QWidget()
+        sl = QHBoxLayout(status_box)
+        sl.setContentsMargins(0, 0, 0, 0)
+        sl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sl.addWidget(self._status_cell(t))
+        status_box.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        hl.addWidget(status_box, COL_W[3])
 
+        # 标记列：独立一列装 "当前工作区"Pill，没 Pill 时留空
+        mark = QWidget()
+        mark.setFixedWidth(COL_MARK_W)
+        ml = QHBoxLayout(mark)
+        ml.setContentsMargins(0, 0, 0, 0)
+        ml.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        if idx == self._active_idx:
+            ml.addWidget(Pill("当前工作区", "ok"))
+        hl.addWidget(mark, 0)
+
+        # 操作列：固定宽度 + 内容居中，只装三个按钮（不再跟 Pill 抢空间）
         acts = QWidget()
+        acts.setFixedWidth(COL_ACT_W)
         ahl = QHBoxLayout(acts)
         ahl.setContentsMargins(0, 0, 0, 0)
         ahl.setSpacing(8)
-        ahl.addStretch(1)
-        if idx == self._active_idx:
-            ahl.addWidget(Pill("当前工作区", "ok"))
+        ahl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         restore = QPushButton("↺ 恢复")
         restore.setObjectName("BtnOutline")
         restore.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -454,7 +547,7 @@ class HistoryModule(QWidget):
         ahl.addWidget(restore)
         ahl.addWidget(reexp)
         ahl.addWidget(delete)
-        hl.addWidget(acts, COL_W[4])
+        hl.addWidget(acts, 0)
         return row
 
     def _status_cell(self, t: dict) -> QWidget:
@@ -503,7 +596,7 @@ class HistoryModule(QWidget):
             f"background:transparent;margin-top:{sp('1')}")
         card.body_l.addWidget(self._active_hint)
 
-        acts = QWidget()
+        acts = plain_box(QWidget())
         al = QHBoxLayout(acts)
         al.setContentsMargins(0, 8, 0, 0)
         al.setSpacing(8)

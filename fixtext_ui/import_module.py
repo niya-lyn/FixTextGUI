@@ -312,6 +312,7 @@ class ImportModule(QWidget):
 
     bookReady = Signal(str)      # 导入完成 → book.txt 绝对路径
     currentBookChanged = Signal(str)
+    gotoPage = Signal(str)       # 书架卡「去一键校正 / 先检查问题」→ 主窗口切页
 
     #: 状态：idle / running / done（给首启与自检用）
     STATE_IDLE = 0
@@ -424,6 +425,15 @@ class ImportModule(QWidget):
         self.workspace_card.body_l.addWidget(self.shelf)
         self.workspace_card.body_l.addSpacing(px(sp("3")))
         wrow = QHBoxLayout()
+        wrow.setSpacing(8)
+        go_correction = QPushButton("去一键校正")
+        go_correction.setObjectName("BtnPrimary")
+        go_correction.clicked.connect(lambda: self.gotoPage.emit("oneclick"))
+        wrow.addWidget(go_correction)
+        go_check = QPushButton("先检查问题")
+        go_check.setObjectName("BtnOutline")
+        go_check.clicked.connect(lambda: self.gotoPage.emit("check"))
+        wrow.addWidget(go_check)
         wrow.addStretch(1)
         open_ws = QPushButton("打开工作区")
         open_ws.setObjectName("BtnOutline")
