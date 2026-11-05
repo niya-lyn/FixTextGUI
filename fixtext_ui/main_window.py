@@ -46,7 +46,8 @@ from PySide6.QtWidgets import (
 )
 
 from fixtext_tokens import (
-    APP_TITLE, APP_NAME, COMPARE_KEY, ENTRIES, ENTRY_BY_KEY, HOME_KEY, MANUAL_KEY,
+    APP_TITLE, APP_NAME, COMPARE_KEY, DUPLICATE_KEY, ENTRIES, ENTRY_BY_KEY,
+    HOME_KEY, MANUAL_KEY,
     RAIL_WIDTH,
     READY_KEYS, SETTINGS_KEY, STATUS_TEXT, WINDOW_H, WINDOW_MIN_H,
     WINDOW_MIN_W, WINDOW_W, CONTENT_MAX_W,
@@ -64,6 +65,7 @@ from first_run_wizard import FirstRunWizard, mark_seen, opens_on_first_run
 from check_module import CheckModule
 from fixtext_compare import CompareModule
 from manual_module import ManualModule
+from duplicate_module import DuplicateModule
 from export_module import ExportModule
 from history_module import HistoryModule
 from settings_module import SettingsModule
@@ -403,6 +405,8 @@ class MainWindow(QMainWindow):
         self.settings_module = None
         #: 逐批手动处理页（V1.1-E4）：与对比页同为内容区平级路由页
         self.manual_module = None
+        #: 重复段落清单页（V1.1-E7）：同样挂内容区平级路由
+        self.duplicate_module = None
         self._content_inners: list = []
         #: 当前书（导入记录）：M4-EX.3a 起由用户在书架上的选择驱动，
         #: 不再等于「最近导入的那本」；启动时按设置恢复，没有设置才用最近导入。
@@ -661,6 +665,12 @@ class MainWindow(QMainWindow):
         self.pages[MANUAL_KEY] = self._wrap(self.manual_module)
         self.stack.addWidget(self.pages[MANUAL_KEY])
 
+        # 重复段落清单页（V1.1-E7）：内容区平级路由页，由检查页「批量操作」卡进入
+        self.duplicate_module = DuplicateModule()
+        self.duplicate_module.gotoImport.connect(lambda: self.go("import"))
+        self.pages[DUPLICATE_KEY] = self._wrap(self.duplicate_module)
+        self.stack.addWidget(self.pages[DUPLICATE_KEY])
+
         # 设置页（M4-EX.2a）：不在左轨六入口里，由顶栏 ⚙ 进入的平级路由页
         self.settings_module = SettingsModule()
         self.settings_module.vocab_dir_changed.connect(self.reload_vocab_store)
@@ -676,6 +686,9 @@ class MainWindow(QMainWindow):
         # 检查页「逐批手动处理」→ 内容区平级路由页（V1.1-E4，左轨配额不变）
         if self.check_module is not None:
             self.check_module.manualRequested.connect(self._open_manual)
+        # 检查页「重复段落清单」→ 内容区平级路由页（V1.1-E7，左轨配额不变）
+        if self.check_module is not None:
+            self.check_module.duplicateRequested.connect(self._open_duplicates)
         return self.stack
 
     @staticmethod
@@ -1030,6 +1043,10 @@ class MainWindow(QMainWindow):
         if self.manual_module is not None and self.current_key == MANUAL_KEY:
             title = str((self._import_record or {}).get("title") or "")
             self.manual_module.set_book(self._current_text_path, title)
+        # 重复段落清单页（V1.1-E7）：同样只在用户正停在这一页时重挂
+        if self.duplicate_module is not None and self.current_key == DUPLICATE_KEY:
+            title = str((self._import_record or {}).get("title") or "")
+            self.duplicate_module.set_book(self._current_text_path, title)
         self._sync_export(latest)
         self._refresh_export_ctx(latest)
 
@@ -1200,6 +1217,8 @@ class MainWindow(QMainWindow):
             self.where.setText("🔍  前后对比")
         elif key == MANUAL_KEY:
             self.where.setText("🧾  逐批手动处理")
+        elif key == DUPLICATE_KEY:
+            self.where.setText("🧩  重复段落清单")
         else:
             self.where.setText(
                 f"{ENTRY_BY_KEY[key]['icon']}  {ENTRY_BY_KEY[key]['label']}"
@@ -1239,6 +1258,8 @@ class MainWindow(QMainWindow):
             return self.manual_module
         if key == SETTINGS_KEY and self.settings_module is not None:
             return self.settings_module
+        if key == DUPLICATE_KEY and self.duplicate_module is not None:
+            return self.duplicate_module
         return self._content_slot(key)
 
     # ------------------------------------------------------------------ 顶栏动作
@@ -1263,6 +1284,20 @@ class MainWindow(QMainWindow):
         title = str(rec.get("title") or (Path(path).parent.name if path else ""))
         self.manual_module.set_book(path, title)
         self.go(MANUAL_KEY)
+
+    def _open_duplicates(self):
+        """打开重复段落清单页：把当前书挂上去再切页（V1.1-E7）。
+
+        与逐批手动处理同一套动线——点一次入口，这一页必然是「当前这本书」，
+        不会残留上一本的清单与处置。
+        """
+        if self.duplicate_module is None:
+            return
+        path = str(getattr(self, "_current_text_path", "") or "")
+        rec = self._import_record or {}
+        title = str(rec.get("title") or (Path(path).parent.name if path else ""))
+        self.duplicate_module.set_book(path, title)
+        self.go(DUPLICATE_KEY)
 
     def _act_settings(self):
         """设置：跳到设置路由页（M4-EX.2a 起不再弹对话框）。"""
