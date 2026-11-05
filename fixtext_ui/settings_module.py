@@ -215,6 +215,9 @@ class SettingsModule(QWidget):
 
         safe = Switch(checked=True)
         safe.setEnabled(False)          # 始终开启，不给「关掉」的假选项
+        # 置灰靠 Switch.paintEvent 的 isEnabled() 分支（反馈 #17）；再加一句
+        # 悬停说明，免得用户以为是"这里坏了/点不动"
+        safe.setToolTip("始终开启，不可关闭")
         row1 = FieldRow(
             None, "安全保护（只读原文件）",
             "始终开启：任何导入都先复制一份副本，你的原文件从头到尾只读。",

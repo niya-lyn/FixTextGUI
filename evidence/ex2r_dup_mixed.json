@@ -1,0 +1,27 @@
+{
+  "groups": 3,
+  "kinds": [
+    "同词同值",
+    "同词异值"
+  ],
+  "rendered": 3,
+  "buttons_count": [
+    "×",
+    "保留这一条",
+    "保留这一条",
+    "一键去重",
+    "关闭"
+  ],
+  "pass_": {
+    "all_rendered": true,
+    "groups": 3,
+    "open_untouched": true,
+    "preview_untouched": true,
+    "dedup_wrote": true,
+    "removed": 2,
+    "undo_identical": true,
+    "undo_sha_equal": true,
+    "detected_buttons": 2,
+    "dedup_buttons": 1
+  }
+}
