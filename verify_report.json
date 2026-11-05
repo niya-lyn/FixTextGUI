@@ -161,7 +161,7 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 3718,
+    "scanned": 3835,
     "forbidden_patterns": 25,
     "hits": []
   },
@@ -186,7 +186,7 @@
   "4_construct_and_screenshots": {
     "passed": true,
     "window_title": "FixTextGUI",
-    "stack_pages": 11,
+    "stack_pages": 12,
     "screenshots": [
       {
         "key": "home",
