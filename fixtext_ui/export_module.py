@@ -96,6 +96,8 @@ class ExportModule(QWidget):
     #: 导出成功且导出状态已落盘（书的导出记录 + 运行摘要）后发出——
     #: 主窗口据此刷新书架「已导出」标识与历史条目状态（M4-EX.3b）。
     exportRecorded = Signal()
+    #: 「查看替换报告」→ 打开替换报告页（载荷：替换统计文件路径）
+    reportRequested = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -637,6 +639,17 @@ class ExportModule(QWidget):
         folder = str(Path(outcome.main_file).resolve().parent)
         open_btn.clicked.connect(lambda _=False, p=folder: self._open_folder(p))
         self.result_box.addWidget(open_btn)
+
+        # 「查看替换报告」→ 替换报告页（V1.1-E9）：直接带上这次导出附带的
+        # 替换统计文件，报告页原样呈现，缺字段写明缺，不补数。
+        stats_path = str(outcome.stats_csv or outcome.stats_text or "")
+        if stats_path and Path(stats_path).exists():
+            report_btn = QPushButton("📄 查看替换报告")
+            report_btn.setObjectName("BtnOutline")
+            report_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            report_btn.clicked.connect(
+                lambda _=False, q=stats_path: self.reportRequested.emit(q))
+            self.result_box.addWidget(report_btn)
 
         if outcome.fmt == "epub" and outcome.structure:
             st = outcome.structure

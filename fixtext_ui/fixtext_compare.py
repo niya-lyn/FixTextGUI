@@ -487,6 +487,8 @@ class CompareModule(QWidget):
     loadingChanged = Signal(bool)
     #: 打开完成时发（报告 + 耗时秒）
     opened = Signal(object, float)
+    #: 「看完整报告」→ 打开替换报告页（载荷：当前对比的运行目录）
+    reportRequested = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -498,6 +500,7 @@ class CompareModule(QWidget):
         self._metrics: dict = {}
         self._kind_filter = "全部"
         self._chapter_filter = -1
+        self._run_dir = ""
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -526,6 +529,20 @@ class CompareModule(QWidget):
         self._src_pills = QHBoxLayout()
         self._src_pills.setSpacing(px(sp("2")))
         src.body_l.addLayout(self._src_pills)
+        # 「看完整报告」→ 替换报告页（V1.1-E9）：差异清单看的是改了哪几处，
+        # 完整报告还带命中合计 / 词库 / 逐条次数，从这里一键过去。
+        src_row = QHBoxLayout()
+        src_row.setSpacing(px(sp("2")))
+        src_row.addStretch(1)
+        self._report_btn = QPushButton("📄 看完整报告")
+        self._report_btn.setObjectName("BtnOutline")
+        self._report_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._report_btn.setEnabled(False)
+        self._report_btn.setToolTip("打开这次校正的替换统计（命中、词库、逐条改动）")
+        self._report_btn.clicked.connect(
+            lambda: self.reportRequested.emit(self._run_dir))
+        src_row.addWidget(self._report_btn)
+        src.body_l.addLayout(src_row)
         root.addWidget(src)
 
         # -- 定位条 --------------------------------------------------------
@@ -645,6 +662,8 @@ class CompareModule(QWidget):
 
     def open_run(self, run_dir: str) -> None:
         """打开一次校正的运行目录（后台算，界面不卡）。"""
+        self._run_dir = str(run_dir or "")
+        self._report_btn.setEnabled(True)
         self._metrics = {}
         self._set_ready(False)
         self._empty.setVisible(False)

@@ -47,7 +47,7 @@ from PySide6.QtWidgets import (
 
 from fixtext_tokens import (
     APP_TITLE, APP_NAME, COMPARE_KEY, DUPLICATE_KEY, ENTRIES, ENTRY_BY_KEY,
-    HOME_KEY, MANUAL_KEY,
+    HOME_KEY, MANUAL_KEY, REPORT_KEY,
     RAIL_WIDTH,
     READY_KEYS, SETTINGS_KEY, STATUS_TEXT, WINDOW_H, WINDOW_MIN_H,
     WINDOW_MIN_W, WINDOW_W, CONTENT_MAX_W,
@@ -66,6 +66,7 @@ from check_module import CheckModule
 from fixtext_compare import CompareModule
 from manual_module import ManualModule
 from duplicate_module import DuplicateModule
+from report_module import ReportModule
 from export_module import ExportModule
 from history_module import HistoryModule
 from settings_module import SettingsModule
@@ -664,6 +665,8 @@ class MainWindow(QMainWindow):
                 page = self.history_module
             elif key == "export":
                 self.export_module = ExportModule()
+                self.export_module.reportRequested.connect(
+                    self._open_report_file)
                 page = self.export_module
             elif key in ("import", "oneclick"):
                 page = self._module_host()
@@ -678,6 +681,8 @@ class MainWindow(QMainWindow):
             self.stack.addWidget(wrapped)
         # 前后对比页（V1.1-E2）：内容区的平级路由页，左轨六入口配额不变
         self.compare_module = CompareModule()
+        self.compare_module.reportRequested.connect(
+            lambda rd: self._open_report(run_dir=rd))
         self.pages[COMPARE_KEY] = self._wrap(self.compare_module)
         self.stack.addWidget(self.pages[COMPARE_KEY])
 
@@ -692,6 +697,14 @@ class MainWindow(QMainWindow):
         self.duplicate_module.gotoImport.connect(lambda: self.go("import"))
         self.pages[DUPLICATE_KEY] = self._wrap(self.duplicate_module)
         self.stack.addWidget(self.pages[DUPLICATE_KEY])
+
+        # 替换报告页（V1.1-E9）：内容区平级路由页，左轨六入口配额不变。
+        # 入口在导出结果页的结果卡、一键校正页的「查看替换报告」、前后对比页。
+        self.report_module = ReportModule()
+        self.report_module.gotoExport.connect(lambda: self.go("export"))
+        self.report_module.gotoImport.connect(lambda: self.go("import"))
+        self.pages[REPORT_KEY] = self._wrap(self.report_module)
+        self.stack.addWidget(self.pages[REPORT_KEY])
 
         # 设置页（M4-EX.2a）：不在左轨六入口里，由顶栏 ⚙ 进入的平级路由页
         self.settings_module = SettingsModule()
@@ -789,6 +802,8 @@ class MainWindow(QMainWindow):
         module.gotoCheck.connect(self._go_check)
         # 「看看前后对比」→ 切到前后对比页并加载这次运行（V1.1-E2）
         module.gotoCompare.connect(self._open_compare)
+        # 「查看替换报告」→ 替换报告页并带上这次运行（V1.1-E9）
+        module.gotoReport.connect(lambda rd: self._open_report(run_dir=rd))
         # 本书专有词条（真实抽出）→ 词库管理页确认后加入
         module.bookWordsReady.connect(self._on_book_words_ready)
         self._wire_empty_state(module)
@@ -1070,6 +1085,10 @@ class MainWindow(QMainWindow):
         if self.duplicate_module is not None and self.current_key == DUPLICATE_KEY:
             title = str((self._import_record or {}).get("title") or "")
             self.duplicate_module.set_book(self._current_text_path, title)
+        # 替换报告页（V1.1-E9）：同样只在这一页被打开时重挂（避免每次换书白扫目录）
+        if self.report_module is not None and self.current_key == REPORT_KEY:
+            title = str((self._import_record or {}).get("title") or "")
+            self.report_module.load_for_book(title)
         self._sync_export(latest)
         self._refresh_export_ctx(latest)
 
@@ -1248,6 +1267,8 @@ class MainWindow(QMainWindow):
             self.where.setText("🧾  逐批手动处理")
         elif key == DUPLICATE_KEY:
             self.where.setText("🧩  重复段落清单")
+        elif key == REPORT_KEY:
+            self.where.setText("📄  替换报告")
         else:
             self.where.setText(
                 f"{ENTRY_BY_KEY[key]['icon']}  {ENTRY_BY_KEY[key]['label']}"
@@ -1289,9 +1310,34 @@ class MainWindow(QMainWindow):
             return self.settings_module
         if key == DUPLICATE_KEY and self.duplicate_module is not None:
             return self.duplicate_module
+        if key == REPORT_KEY and self.report_module is not None:
+            return self.report_module
         return self._content_slot(key)
 
     # ------------------------------------------------------------------ 顶栏动作
+
+    def _open_report(self, *, book_name: str = "", run_dir: str = ""):
+        """打开替换报告页并装上一份具体报告（只读）。
+
+        报告按书名在导出目录里找最近一份（``fixtext_report_present`` 负责发现，
+        找不到就落在空态并写明原因），绝不在此处编造数字。
+        """
+        if self.report_module is None:
+            return
+        title = book_name or str((self._import_record or {}).get("title") or "")
+        if run_dir:
+            self.report_module.set_context(book_name=title, run_dir=run_dir)
+        else:
+            self.report_module.set_context(book_name=title)
+        self.go(REPORT_KEY)
+        self.report_module.load_for_book(title, run_dir=run_dir)
+
+    def _open_report_file(self, path: str):
+        """打开替换报告页并装上指定的一份报告文件（导出结果页入口）。"""
+        if self.report_module is None or not path:
+            return
+        self.go(REPORT_KEY)
+        self.report_module.load_file(path)
 
     def _open_compare(self, run_dir: str):
         """打开前后对比页（只读），并加载指定的那次运行。"""

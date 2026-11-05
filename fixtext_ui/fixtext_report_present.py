@@ -172,7 +172,13 @@ class ReportView:
 
     @property
     def ok_to_show(self) -> bool:
-        return self.state in (STATE_READY, STATE_UNCORRECTED)
+        """是否展开正文。
+
+        只有「有内容的报告」（ready）才展开正文四卡；未校正（uncorrected）
+        虽然是一份诚实的报告，但表格 / 词库全是空的，正文只剩一排「报告没写」
+        占位——那种情况用空态卡片 + 一段解释更清楚，0 不是读错，是没跑校正。
+        """
+        return self.state == STATE_READY
 
     def search(self, keyword: str) -> list[RuleRow]:
         """在改前 / 改后两侧找包含某段文字的明细（界面筛选用）。"""
