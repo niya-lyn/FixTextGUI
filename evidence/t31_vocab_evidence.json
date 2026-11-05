@@ -1,0 +1,106 @@
+{
+  "builtin_total": 302957,
+  "tier_counts": {
+    "custom": 0,
+    "b1": 131692,
+    "cjk": 643,
+    "b3": 3141,
+    "b3r": 1107,
+    "extra": 19390,
+    "ddd": 14615,
+    "dei2de": 607,
+    "old_style": 1102,
+    "txt_format": 86917,
+    "preprocess": 7970,
+    "strict": 3794,
+    "zhuyin": 31979,
+    "imported": 5840
+  },
+  "builtin_self_check": [
+    true,
+    ""
+  ],
+  "custom_init": 0,
+  "search_json_cross_check": {
+    "query": "好象",
+    "json_computed": 18,
+    "data_layer": 18
+  },
+  "search": {
+    "好象@b1": 9,
+    "好象@builtin": 18,
+    "萧@builtin": 223,
+    "，@b2": 6838
+  },
+  "ui_hit_for_haoxiang_b1": 18,
+  "add": {
+    "sha_before": "e5e645ec440c28426c52a5709a154385ee5374b2900dd1feb85333eab9d6a62a",
+    "sha_after": "a36b209aa284b7998158670f024c4c55c893dbaaed6290c3c3d06651c0b10f15",
+    "file_changed": true,
+    "custom_count": 1,
+    "survives_restart": true,
+    "restarted_word": "萧衍",
+    "custom_path_parent": "/tmp/t31_acc_tvsdnazl",
+    "builtin_dir": "/home/gem/.aily/workdir/task_7704601762337967373/pkg/data/rules",
+    "physically_separate": true
+  },
+  "dup": {
+    "same_word_same_value": [
+      "同词同值"
+    ],
+    "same_word_diff_value": [
+      "同词异值"
+    ],
+    "both_triggered": true,
+    "diff_triggered": true,
+    "builtin_conflict_hits": 2,
+    "builtin_conflict_where": [
+      "常规校正词库",
+      "预处理词库"
+    ]
+  },
+  "delete": {
+    "count_before": 3,
+    "removed": 2,
+    "count_after": 1,
+    "count_after_undo": 3,
+    "preview_touched_file": false,
+    "delete_changed_file": true,
+    "undo_identical": true,
+    "undo_sha_equal": true,
+    "sha_before": "15ccddf77aeb01123a78710ec3873f393ec2e6e4c5c1c1f46a22f0ad2a70ae50",
+    "sha_after_undo": "15ccddf77aeb01123a78710ec3873f393ec2e6e4c5c1c1f46a22f0ad2a70ae50"
+  },
+  "merge": {
+    "count_before": 6,
+    "removed": 2,
+    "count_after": 4,
+    "count_after_undo": 6,
+    "group_kind": "同词异值",
+    "kept_value": "乙替",
+    "list_readonly": false,
+    "preview_pending": true,
+    "preview_touched_file": false,
+    "confirm_touched_file": false,
+    "commit_changed_file": true,
+    "undo_identical": true,
+    "undo_sha_equal": true,
+    "undo_entries_equal": true,
+    "sha_before": "53e78a2c08c4a490d7684fb8542ffa481f5f5c5e91962badc78e9c588b4bef2a",
+    "sha_after_undo": "53e78a2c08c4a490d7684fb8542ffa481f5f5c5e91962badc78e9c588b4bef2a",
+    "pass_": true
+  },
+  "demo_residual": {
+    "scanned_ui_texts": 190,
+    "ghost_patterns": [
+      "星河彼端",
+      "旧巷杂记",
+      "萧景琰",
+      "顾长明"
+    ],
+    "ui_hits": [],
+    "source_hardcoded_hits": [],
+    "count": 0
+  },
+  "empty_state": "我的词库还没有词条。\n点左上「＋ 新增词条」把常错的词加进来，下次校正会自动生效。"
+}

@@ -17,8 +17,8 @@
         "page_class": "ImportModule",
         "page_visible": true,
         "page_size": [
-          1018,
-          937
+          1028,
+          613
         ],
         "passed": true
       },
@@ -37,7 +37,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          336
+          385
         ],
         "passed": true
       },
@@ -56,7 +56,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          370
+          419
         ],
         "passed": true
       },
@@ -74,8 +74,8 @@
         "page_class": "VocabModule",
         "page_visible": true,
         "page_size": [
-          1028,
-          486
+          1018,
+          1104
         ],
         "passed": true
       },
@@ -94,7 +94,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          336
+          385
         ],
         "passed": true
       },
@@ -113,7 +113,7 @@
         "page_visible": true,
         "page_size": [
           1028,
-          370
+          419
         ],
         "passed": true
       }
@@ -161,22 +161,22 @@
   },
   "2_zero_internal_leak": {
     "passed": true,
-    "scanned": 3043,
+    "scanned": 3718,
     "forbidden_patterns": 25,
     "hits": []
   },
   "3_tokens_aligned": {
     "passed": true,
-    "py_token_count": 73,
-    "css_token_count": 73,
+    "py_token_count": 80,
+    "css_token_count": 80,
     "per_group": {
-      "COLORS": 34,
+      "COLORS": 39,
       "FONT_SIZE": 9,
       "SPACE": 10,
       "RADIUS": 5,
       "LINE_HEIGHT": 3,
       "FONT_WEIGHT": 4,
-      "SHADOW": 6
+      "SHADOW": 8
     },
     "diffs": [],
     "missing_in_css": [],
@@ -185,43 +185,43 @@
   },
   "4_construct_and_screenshots": {
     "passed": true,
-    "window_title": "FixText V1",
-    "stack_pages": 8,
+    "window_title": "FixTextGUI",
+    "stack_pages": 11,
     "screenshots": [
       {
         "key": "home",
         "file": "screenshots/01_home_overview.png",
-        "bytes": 116219
+        "bytes": 114309
       },
       {
         "key": "import",
         "file": "screenshots/02_entry1_import.png",
-        "bytes": 52148
+        "bytes": 99075
       },
       {
         "key": "oneclick",
         "file": "screenshots/03_entry2_oneclick.png",
-        "bytes": 73174
+        "bytes": 73377
       },
       {
         "key": "check",
         "file": "screenshots/04_entry3_check.png",
-        "bytes": 119062
+        "bytes": 225679
       },
       {
         "key": "vocab",
         "file": "screenshots/05_entry4_vocab.png",
-        "bytes": 69474
+        "bytes": 148226
       },
       {
         "key": "export",
         "file": "screenshots/06_entry5_export.png",
-        "bytes": 72408
+        "bytes": 72085
       },
       {
         "key": "history",
         "file": "screenshots/07_entry6_history.png",
-        "bytes": 91656
+        "bytes": 85452
       }
     ]
   },

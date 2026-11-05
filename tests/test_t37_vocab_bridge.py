@@ -373,13 +373,12 @@ def test_dup_list_is_actionable_and_complete(qapp, tmp_path):
         assert m._dup_view["readonly"] is False, "查重清单已由只读改为可处理"
         assert _sha(m.store.custom.path) == sha_before, "打开查重清单不许改动词库"
 
-        from PySide6.QtWidgets import QApplication
-        # 按窗口标题定位本弹窗（整轮测试里可能还有别的窗口活着）
-        dlgs = [w for w in QApplication.instance().topLevelWidgets()
-                if isinstance(w, QDialog)
-                and w.windowTitle().startswith("查重清单")]
+        # 在**本模块**的子控件里找弹窗，且取最后一个可见的——合批跑时前面的
+        # 用例可能留下没关掉的旧查重弹窗，按全局 topLevelWidgets 找会捞到残件
+        dlgs = [d for d in m.findChildren(QDialog)
+                if d.isVisible() and d.windowTitle().startswith("查重清单")]
         assert dlgs, "查重清单窗口没出现"
-        dlg = dlgs[0]
+        dlg = dlgs[-1]
         boxes = dlg.findChildren(QFrame, "DupGroup")
         assert len(boxes) == 25, f"界面只画了 {len(boxes)} 组，不是全量"
         feet = [b.text() for b in dlg.findChildren(QPushButton)]

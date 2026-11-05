@@ -1,0 +1,150 @@
+{
+  "card": "M3-T3.7",
+  "generated_at": "2026-11-05T17:42:23",
+  "total_elapsed_s": 34.15,
+  "s1_positive": {
+    "corpus": "/home/gem/.aily/workdir/task_7704601762337967373/t37_runs/positive/paohuo_with_word.epub",
+    "corpus_sha256": "5c3b6602f06ea58af8df8581119865a3679a323c8ae48240ca8d3f37152acbc9",
+    "inserted_sentences": 1,
+    "chapters": 301,
+    "elapsed_s": 7.37,
+    "hits": 2015,
+    "text_before_counts": {
+      "萧衍": 3,
+      "萧彦": 0
+    },
+    "text_after_counts": {
+      "萧衍": 0,
+      "萧彦": 3
+    },
+    "exported": {
+      "file": "/home/gem/.aily/workdir/task_7704601762337967373/t37_runs/positive/out/示例书稿.txt",
+      "sha256": "5fb630b9a6fbf04977ced031e751ec85aba139b1ed3ebee068c0cedfd03c60c2",
+      "bytes": 984283,
+      "chars": 407787,
+      "counts": {
+        "萧衍": 0,
+        "萧彦": 3
+      }
+    },
+    "exported_counts": {
+      "萧衍": 0,
+      "萧彦": 3
+    },
+    "derived_rules": {
+      "compose_key": null,
+      "base_rules": 151193,
+      "custom_input": 1,
+      "custom_applied": 1,
+      "total_rules": 151193,
+      "reused": null,
+      "applied_words": null,
+      "derived_before_sha256": null,
+      "derived_after_sha256": null
+    },
+    "pass_": true
+  },
+  "s2_negative": {
+    "baseline_pkg": "/tmp/m37_baseline",
+    "bridge_present": false,
+    "chapters": 301,
+    "elapsed_s": 6.22,
+    "hits": 2013,
+    "text_after_counts": {
+      "萧衍": 3,
+      "萧彦": 0
+    },
+    "exported": {
+      "file": "/home/gem/.aily/workdir/task_7704601762337967373/t37_runs/negative/out/示例书稿.txt",
+      "sha256": "1a31f0e722370f7d9aa96297b9544ae7fcbba9cb93fd28bec169e172ce34ca45",
+      "bytes": 984283,
+      "chars": 407787,
+      "counts": {
+        "萧衍": 3,
+        "萧彦": 0
+      }
+    },
+    "exported_counts": {
+      "萧衍": 3,
+      "萧彦": 0
+    },
+    "derived_rules_present": true,
+    "pass_": true,
+    "note": "同一语料、同一引擎；只是这份代码没有桥接，替换阶段直接读随包词库原件。"
+  },
+  "s3_rules_readonly": {
+    "before": {
+      "before.json": "e961f82e3cbb41499b41301e04e7a7df7b11e189060064b6edd5af8e881e2c26",
+      "after.json": "7dd53ae6fd7770c2362b0a7d893ecf03bc5bba7062f9a0cd2bb07797a76a6131"
+    },
+    "after": {
+      "before.json": "e961f82e3cbb41499b41301e04e7a7df7b11e189060064b6edd5af8e881e2c26",
+      "after.json": "7dd53ae6fd7770c2362b0a7d893ecf03bc5bba7062f9a0cd2bb07797a76a6131"
+    },
+    "pass_": true
+  },
+  "s4_fingerprint": {
+    "fp_before": "sha256:56a08c0cde1734e04f3d4bbe02243e7047e06099bcc17fab2339e48a89ad7017",
+    "fp_after_change": "sha256:e7c35973af4ddd1fd2a08caf8c2f51ce49a9c894f4f9f8e070bc3c7827aa7309",
+    "changed": true,
+    "pass_": true
+  },
+  "s5_dup_dialog": {
+    "total_groups": 25,
+    "rendered_groups": 25,
+    "view": {
+      "total": 25,
+      "shown": 25,
+      "readonly": false
+    },
+    "buttons": [
+      "×",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "保留这一条",
+      "关闭"
+    ],
+    "actionable_groups": 25,
+    "file_sha_before": "8e7ac46049c2a6bee5011d757b3159e68e40e18bc0ab0b516b1b942da44f95ab",
+    "file_sha_after": "8e7ac46049c2a6bee5011d757b3159e68e40e18bc0ab0b516b1b942da44f95ab",
+    "file_untouched": true,
+    "screenshot": "/home/gem/.aily/workdir/task_7704601762337967373/pkg/evidence/t37_dup_dialog.png",
+    "pass_": true
+  },
+  "s6_exec_bit": {
+    "dir": "/tmp/t37_clean",
+    "engine_exists": true,
+    "mode": "755",
+    "executable": true,
+    "dry_run": {
+      "returncode": 1,
+      "stdout_head": [
+        "用法: /tmp/t37_clean/pipeline/vendor/fixtext/engine/go_src/bin/replace_by_go-linux-amd64 <目标文件> <替换前.json> <替换后.json> <替换次数>",
+        ""
+      ]
+    },
+    "pass_": true
+  }
+}

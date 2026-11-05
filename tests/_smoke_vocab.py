@@ -102,10 +102,21 @@ def main() -> int:
     mod = make_module(tmp)
     counts = mod.store.counts()
     assert counts["custom"] == 0, f"自定义初始应为空，实际 {counts['custom']}"
-    assert mod.store.builtin_total == 304255, f"内置应 304255 条，实际 {mod.store.builtin_total}"
-    assert counts["b1"] + counts["b2"] + counts["b3"] == mod.store.builtin_total, "分级之和应等于内置总数"
+    # V1.1-F3 口径（本次 V1.1-EX.2R 顺手修正）：builtin_total 是**界面可达**袋之和
+    # （BAG_TO_TIER 的 12 个袋，当前 302,957 条）；磁盘 304,255 里另有 3 个不可达袋
+    # （postfix/temp/punctuation，共 1,298 条）。M5-EX.1 上袋后这里仍写死 304,255，
+    # 属漏改的过期断言——按可达分级动态求和，不再写死数字。
+    import json as _json
+    from fixtext_vocab import BAG_TO_TIER, RULES_DIR as _RULES_DIR
+    _reachable = sum(
+        len(_json.loads((_RULES_DIR / "bags" / b / "before.json").read_text("utf-8")))
+        for b in BAG_TO_TIER)
+    assert mod.store.builtin_total == _reachable, \
+        f"内置（界面可达）应为 {_reachable} 条，实际 {mod.store.builtin_total}"
+    _tiers_all = [k for k in counts if k not in ("custom", "imported")]
+    assert sum(counts[t] for t in _tiers_all) == mod.store.builtin_total, "分级之和应等于内置总数"
     assert len(mod.get_filtered()) == 0, "初始页不应有假词条（旧版此处是 5 条演示数据）"
-    ok(f"初始：自定义 0 条 / 内置 {mod.store.builtin_total} 条（{counts['b1']}+{counts['b2']}+{counts['b3']}）"
+    ok(f"初始：自定义 0 条 / 内置（界面可达）{mod.store.builtin_total} 条"
        f" / 页面 0 条")
 
     # 2) 空状态是人话，且不含虚构书名
@@ -125,7 +136,9 @@ def main() -> int:
         if expect_scope == "all":
             assert total_ui == total_direct + len(mod.store.custom), "全库命中数应等于内置+自定义"
     mod.search = "好象"
-    mod.dict_, mod.tier = "all", "b1"
+    # V1.1-F3 口径：dict_="all"+tier="b1" 是界面上不存在的状态组合
+    # （_scope() 先看 dict_，会落回全库 18 条）；按真实点击路径 select_dict("b1")
+    mod.select_dict("b1")
     mod._page = 0
     mod._render_entries()
     n_b1 = mod.store.builtin.search_count("好象", dict_code="b1")
@@ -223,7 +236,8 @@ def main() -> int:
     ok(f"同词异值 {len(grp['items'])} 条→保留 1 条：预览不动文件、确认后写盘、撤销后 sha 全等")
 
     # 8b) 同词同值组「一键去重」：保留第一条、其余移除、撤销 sha 全等
-    for _ in range(2):
+    # （造 3 条：去重移除 2 条，下面断言才是 pre_dedup_n - 2）
+    for _ in range(3):
         mod.store.add_entry(word="重复词", value="同值", typ="错词校正")
     mod._render_all()
     pre_dedup_sha = sha(custom_path)
