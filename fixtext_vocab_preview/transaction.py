@@ -133,13 +133,22 @@ def plan_batch(store, rows) -> dict:
         entries.append(new)
         by_id[nid] = new
         nid += 1
-        added.append(dict(new))
         if effect == EFFECT_DISABLED:
+            # 「设为禁用」且库里没有同词同值那条：这一条是**新加进来**的，
+            # 但它属于「禁用」这一列，不属于「新增」那一列（预览的
+            # ``write_plan`` 也是这么分的：add 与 disabled 各自计数）。
+            # 只往 disabled_pairs 记，绝不能同时进 added——否则同一条被
+            # 计两次，「预览说 N 条、写入报 N+1 条」。
             disabled_pairs.append((word, value))
+        else:
+            added.append(dict(new))
 
     return dict(entries=entries, added=added, updated=updated,
                 disabled_pairs=disabled_pairs, skipped=skipped,
                 before_count=before_count, new=len(entries) - before_count,
+                # 三条互斥去向相加：新增 / 更新 / 禁用。禁用里「库里已有」的那条
+                # 不新增条目但**确实做了一次禁用**，所以它算一次写入；
+                # 「库里没有」的那条既是新条目又是一次禁用，但只算**一次**写入。
                 write=len(added) + len(updated) + len(disabled_pairs))
 
 

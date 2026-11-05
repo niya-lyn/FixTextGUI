@@ -406,3 +406,38 @@ def test_no_internal_paths_in_messages():
     for t in texts:
         for bad in ("/home/", "workspace/", "custom_vocab", ".json", ".bin"):
             assert bad not in t
+
+
+def test_disabled_without_target_counts_once(store):
+    """回归（V1.1-D6 修复）：「设为禁用」且库里没有同词同值的那条只计一次。
+
+    旧缺陷：这种行既进 ``added`` 又进 ``disabled_pairs``，``write`` 把同一条
+    算两次——预览（write_plan）说 write=4，真写入报 write=5，「预览说 N、
+    写入就是 N」的防线被自己人拆了。修复后三条去向（新增 / 更新 / 禁用）
+    互斥，与 write_plan 同一口径。
+    """
+    rows = [
+        dict(line_no=1, word="甲甲", value="甲", typ="错词校正", pinyin="",
+             effect="add", action="add", disabled=False, update_target=0),
+        dict(line_no=2, word="乙乙", value="乙", typ="错词校正", pinyin="",
+             effect="add", action="add", disabled=False, update_target=0),
+        dict(line_no=3, word="丙丙", value="丙", typ="错词校正", pinyin="",
+             effect="add", action="add", disabled=False, update_target=0),
+        # 这一条：设为禁用，但库里没有同词同值（update_target=0）
+        dict(line_no=4, word="丁丁", value="丁", typ="错词校正", pinyin="",
+             effect="disabled", action="disable", disabled=True, update_target=0),
+    ]
+    plan = plan_batch(store, rows)
+    # 三条去向互斥：这一条只在 disabled_pairs 里，不在 added 里
+    assert len(plan["added"]) == 3
+    assert len(plan["disabled_pairs"]) == 1
+    assert plan["write"] == 4                          # 不是 5
+    assert plan["write"] == len(plan["added"]) + len(plan["updated"]) \
+        + len(plan["disabled_pairs"])
+    assert plan["disabled_pairs"] == [("丁丁", "丁")]
+    assert "丁丁" not in [r["word"] for r in plan["added"]]
+
+    res = store.import_batch(rows)
+    assert res["write"] == 4 and res["add"] == 3 and res["disabled"] == 1
+    assert res["after_count"] == 4                     # 库里就 4 条，没有第 5 条
+    assert store.states.is_disabled("丁丁", "丁") is True
