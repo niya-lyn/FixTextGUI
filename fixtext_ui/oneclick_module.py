@@ -120,6 +120,8 @@ class OneClickModule(QWidget):
     gotoCheck = Signal()
     #: 「看看前后对比」→ 主窗口切到前后对比页（V1.1-E2），参数是运行目录
     gotoCompare = Signal(str)
+    #: 「查看替换报告」→ 打开替换报告页（载荷：这次运行的目录，可为空）
+    gotoReport = Signal(str)
     #: 本书专有词条就绪（真实词条列表, 书名）→ 交给词库管理页，由用户确认后加入
     bookWordsReady = Signal(object, str)
 
@@ -1149,12 +1151,16 @@ class OneClickModule(QWidget):
         return str(path.parent) if path.name == "work" else workdir
 
     def _goto_export_report(self):
-        """替换统计在导出时自动附上（排期 V1.1：报告不做界面呈现）。"""
+        """「查看替换报告」→ 打开替换报告页（V1.1-E9）。
+
+        报告文件随导出自动生成，这里把这次运行的目录带过去；报告页自己
+        找文件、自己对账，找不到会说明原因，不在这里编数字。
+        """
+        run_dir = self._run_dir_of(self._summary)
         try:
-            self.gotoExport.emit()
+            self.gotoReport.emit(str(run_dir or ""))
         except Exception:
             pass
-        self._toast("导出时会自动附上替换统计（文本 / 表格）")
 
     def _open_book_words(self):
         """本书专有词条：只取本次运行真实抽出的词，交给词库页确认后写入。
