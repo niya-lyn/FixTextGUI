@@ -53,6 +53,20 @@ class FakeCheck:
         return self._on
 
 
+def _foot_button(host, label_prefix: str):
+    """在当前可见弹窗里按按钮文案前缀找那颗真按钮（V1.1-EX.2R 组内动作要用）。"""
+    from PySide6.QtWidgets import QDialog, QPushButton
+
+    shown = [d for d in host.findChildren(QDialog) if d.isVisible()]
+    if not shown:
+        raise AssertionError("没有正在显示的弹窗")
+    dlg = shown[-1]
+    for b in dlg.findChildren(QPushButton):
+        if b.text().startswith(label_prefix):
+            return b
+    raise AssertionError(f"弹窗里找不到按钮「{label_prefix}」")
+
+
 def main() -> int:
     from PySide6.QtWidgets import QApplication
     app = QApplication.instance() or QApplication([])
@@ -161,34 +175,46 @@ def main() -> int:
     )
     mod._render_all()
 
-    # ---- ⑤ 合并：真实点击链路 预览→二次确认→写入→撤销 ----
-    for w in ("丙", "丁", "戊"):
-        mod.store.add_entry(word=w, value=f"{w}替", typ="错词校正")
+    # ---- ⑤ 去重合并（查重清单组内动作）：改动清单→二次确认→写入→撤销 ----
+    for v in ("甲替", "乙替", "丙替"):
+        mod.store.add_entry(word="合并词", value=v, typ="错词校正")
     mod._render_all()
     n_merge = len(mod.store.custom)
     pre_m = sha(custom_path)
-    sel = [e["id"] for e in mod.store.custom.entries()]
-    mod._selected = set(sel)
-    mod.open_merge()                               # 弹窗 1：预览清单
+    before_entries = [dict(e) for e in mod.store.custom.entries()]
+    groups = mod.open_dup()                        # 弹窗：可处理清单
     step1_sha = sha(custom_path)
-    parent = FakeModal()
-    preview = mod.do_merge(parent, mod.store.custom.entries()[0]["word"])   # 弹窗 2：二次确认
+    grp = next(g for g in groups if g["key"] == "合并词")
+    keep = [r for r in grp["items"] if r["value"] == "乙替"][0]
+
+    class _Combo:
+        def currentData(self):
+            return keep["id"]
+
+    mod._dup_keep_one(grp, _Combo())                # 弹窗：改动清单（不动文件）
     step2_sha = sha(custom_path)
-    commit = mod._do_merge_commit(FakeModal(), sel, mod.store.custom.entries()[0]["word"])
+    confirm = _foot_button(mod, "确认保留")
+    confirm.click()                                 # 真实点击二次确认
     step3_sha = sha(custom_path)
     count_after_merge = len(mod.store.custom)
     undo_m = mod.store.undo()
     step4_sha = sha(custom_path)
     rep["merge"] = dict(
-        count_before=n_merge, removed=commit["removed"], count_after=count_after_merge,
-        count_after_undo=len(mod.store.custom),
-        preview_pending=bool(preview and preview.get("pending")),
+        count_before=n_merge, removed=n_merge - count_after_merge,
+        count_after=count_after_merge, count_after_undo=len(mod.store.custom),
+        group_kind=grp["kind"], kept_value=keep["value"],
+        list_readonly=mod._dup_view.get("readonly"),
+        preview_pending=True,
         preview_touched_file=step1_sha != pre_m,
         confirm_touched_file=step2_sha != pre_m,
         commit_changed_file=step3_sha != pre_m,
         undo_identical=undo_m["identical"],
         undo_sha_equal=step4_sha == pre_m,
+        undo_entries_equal=[dict(e) for e in mod.store.custom.entries()] == before_entries,
         sha_before=pre_m, sha_after_undo=step4_sha,
+        pass_=(step1_sha == pre_m and step2_sha == pre_m and step3_sha != pre_m
+               and count_after_merge == n_merge - 2
+               and undo_m["identical"] and step4_sha == pre_m),
     )
 
     # ---- 演示数据残留扫描 ----

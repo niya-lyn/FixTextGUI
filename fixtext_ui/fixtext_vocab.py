@@ -850,19 +850,37 @@ class CustomVocab:
         self._commit(kept)
         return dict(removed=removed, left=len(kept))
 
-    def merge(self, ids: Iterable[int], target_word: str) -> dict:
-        """把选中的同组词条并为一条：保留 ``target_word`` 那条，其余移除。"""
+    def merge(self, ids: Iterable[int], target_word: str | None = None,
+              *, keep_id: int | None = None) -> dict:
+        """把同组词条并为一条：保留指定那条，其余移除。
+
+        保留哪条有两种指定方式（V1.1-EX.2R 起查重清单组内「选一保留」用后一种）：
+
+        * ``keep_id``：按词条 id 指定（同词异值组里用户选的是「哪一条」，
+          这组词条原词相同、靠 id 才能区分）；
+        * ``target_word``：按原词指定（同词同值组里任一条等价，按原词即可）。
+
+        两条都不给时按组内第一条保留。
+        """
         target_ids = {int(i) for i in ids}
         group = [e for e in self._entries if e["id"] in target_ids]
         if len(group) < 2:
             raise VocabDataError("至少要选中 2 条自定义词条才能合并")
-        keeper = next((e for e in group if e["word"] == target_word), None)
-        if keeper is None:
-            raise VocabDataError("合并目标不在选中的词条里")
+        if keep_id is not None:
+            keeper = next((e for e in group if e["id"] == int(keep_id)), None)
+            if keeper is None:
+                raise VocabDataError("要保留的那条不在这一组里")
+        elif target_word is not None:
+            keeper = next((e for e in group if e["word"] == target_word), None)
+            if keeper is None:
+                raise VocabDataError("合并目标不在选中的词条里")
+        else:
+            keeper = group[0]
         drop = {e["id"] for e in group if e["id"] != keeper["id"]}
         kept = [e for e in self._entries if e["id"] not in drop]
         self._commit(kept)
-        return dict(removed=len(drop), left=len(kept), target=keeper["word"])
+        return dict(removed=len(drop), left=len(kept), target=keeper["word"],
+                    kept_value=keeper["value"], kept_id=keeper["id"])
 
     def _commit(self, entries: list[dict]) -> None:
         self.replace_all(entries)               # 单条写与整批写共用同一份落盘实现
@@ -1127,25 +1145,33 @@ class VocabStore:
         return out
 
     def dup_groups(self) -> list[dict]:
-        """「我的词库」内部的重复，以及与内置词库撞车的条目。"""
+        """「我的词库」内部的重复，以及与内置词库撞车的条目。
+
+        V1.1-EX.2R：**不再产出「同值异词」分组**（用户拍板）。两个不同的原词
+        映射到同一个替换值，在替换阶段是可用的规则（引擎按原词匹配，替换值
+        相同并不冲突），把它当重复会让用户去"合并"两条语义完全不同的词条。
+        保留三类：
+
+        * ``同词同值``（同一原词、同一替换值 → 真重复，可一键去重）
+        * ``同词异值``（同一原词、不同替换值 → 必须选一条保留）
+        * ``与内置冲突·<上述两类>``（自定义词条与内置词库同词）
+
+        ``KIND_SAME_VALUE`` 常量仍保留：单条新增 / 批量导入的冲突提示里，
+        「这条的原词和库里某条替换值撞了」依然需要告诉用户（那是提示，不是
+        查重清单里的重复分组）。
+        """
         groups: list[dict] = []
         entries = self.custom.entries()
 
         by_word: dict[str, list[dict]] = {}
-        by_value: dict[str, list[dict]] = {}
         for e in entries:
             by_word.setdefault(e["word"], []).append(e)
-            by_value.setdefault(e["value"], []).append(e)
 
         for w, arr in by_word.items():
             if len(arr) > 1:
                 kinds = {KIND_SAME_BOTH if e["value"] == arr[0]["value"] else KIND_SAME_WORD for e in arr}
                 kind = KIND_SAME_BOTH if kinds == {KIND_SAME_BOTH} else KIND_SAME_WORD
                 groups.append(dict(kind=kind, key=w,
-                                   items=[self.custom.row(e) for e in arr]))
-        for v, arr in by_value.items():
-            if len(arr) > 1 and len({e["word"] for e in arr}) > 1:
-                groups.append(dict(kind=KIND_SAME_VALUE, key=v,
                                    items=[self.custom.row(e) for e in arr]))
         for e in entries:
             for r in self.builtin.exact_word(e["word"]):
@@ -1246,13 +1272,21 @@ class VocabStore:
             write=lambda: self.custom.delete(ids), detail=dict(ids=ids))
         return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
 
-    def merge_entries(self, ids: Iterable[int], target_word: str) -> dict:
+    def merge_entries(self, ids: Iterable[int], target_word: str | None = None,
+                      *, keep_id: int | None = None) -> dict:
+        """合并同组词条（保留一条，其余移除）。
+
+        ``keep_id`` 按 id 指定保留哪条（查重清单同词异值组的「选一保留」走这个），
+        ``target_word`` 按原词指定（同词同值组里任一条等价）。整组只占一个还原点，
+        撤销即整组回到原样。
+        """
         ids = [int(i) for i in ids]
-        label = f"合并为「{target_word}」"
+        label = f"合并 {len(ids)} 条重复词条"
         result, meta = self._run(
             label=label, act=ACT_MERGE, summary=label,
-            write=lambda: self.custom.merge(ids, target_word),
-            detail=dict(ids=ids, target=target_word))
+            write=lambda: self.custom.merge(ids, target_word, keep_id=keep_id),
+            detail=dict(ids=ids, target=target_word,
+                        keep_id=int(keep_id) if keep_id is not None else None))
         return dict(result, point_id=meta["point_id"], sha_after=meta["sha_after"])
 
     def add_book_words(self, words: list[dict], book: str = "") -> dict:

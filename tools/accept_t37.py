@@ -323,16 +323,21 @@ def s5_dup_dialog() -> dict:
         except Exception:
             shot = None
         dlg.reject()
+        # V1.1-EX.2R：清单由只读改为可逐条处理，每组自带处置动作；
+        # 「打开清单不动文件」这条底线不变，仍以 sha 相等为证。
+        actionable = buttons.count("保留这一条")
         return dict(total_groups=len(groups), rendered_groups=len(boxes),
                     view=mod._dup_view, buttons=buttons,
+                    actionable_groups=actionable,
                     file_sha_before=sha_before, file_sha_after=sha_after,
                     file_untouched=sha_before == sha_after,
                     screenshot=str(shot) if shot else "",
                     pass_=(len(boxes) == len(groups) == 25
                            and sha_before == sha_after
+                           and actionable == 25
                            and "我知道了" not in buttons
                            and "暂时不处理" not in buttons
-                           and mod._dup_view.get("readonly") is True))
+                           and mod._dup_view.get("readonly") is False))
     finally:
         mod.close()
 
