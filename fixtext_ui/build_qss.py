@@ -135,7 +135,6 @@ def build() -> str:
     _step_dot_r = 11       # #StepDot：setFixedSize(22, 22)
     _task_bar_r = 5        # QProgressBar#TaskBar：QSS height 10px
     _onb_bar_r = 3         # QProgressBar#OnbBar：setFixedHeight(6)
-    _snap_dot_r = 4        # #SnapDot：setFixedSize(9, 9)
 
     # ---- 顶栏「当前书」胶囊（M4-EX.3a / M5-EX.4.2；原型 .book-chip）----
     # 选择器用 #TopBar #BookChip（双 ID），避免被顶栏子控件透明规则盖掉。
@@ -543,6 +542,11 @@ def build() -> str:
     q.append(f'    background-color: {c("primary.100")};')
     q.append(f'    color: {c("primary.700")};')
     q.append("}")
+    q.append('QPushButton#HeadIconBtn[active="true"] {')
+    q.append(f'    background-color: {c("primary.50")};')
+    q.append(f'    color: {c("primary.700")};')
+    q.append(f'    border: 1px solid {c("primary.300")};')
+    q.append("}")
     q.append("QLabel#SafeBadge {")
     q.append(f'    color: {c("success")};')
     q.append(f'    background-color: {c("success.bg")};')
@@ -582,13 +586,27 @@ def build() -> str:
     q.append(f'    background-color: {c("neutral.0")};')
     q.append("}")
     q.append(f"QRadioButton::indicator:checked {{ background-color: {c('primary.500')}; border-color: {c('primary.500')}; }}")
-    # ---- 原生提示框（全应用 setToolTip 通用，统一为白卡风格）----------
+    # ---- 原生提示框（全应用 setToolTip 通用，统一为深色墨卡）----------
     q.append("QToolTip {")
-    q.append(f'    background-color: {c("neutral.0")};')
-    q.append(f'    color: {c("neutral.800")};')
-    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    background-color: {c("neutral.900")};')
+    q.append(f'    color: {c("neutral.50")};')
+    q.append(f'    border: 1px solid {c("neutral.700")};')
     q.append(f'    border-radius: {RADIUS["sm"]};')
     q.append(f'    padding: {sp("2")} {sp("3")};')
+    q.append(f'    font-size: {FONT_SIZE["sm"]};')
+    q.append("}")
+    # ---- 超长字段悬浮「看全文」浮层：深色墨卡 + 浅色字 + 柔和投影 ----
+    # 浅底（白卡）上用深色背景拉开对比，避免「白框叠白底」看不清的旧问题。
+    # 圆角由 _FullTextPopover.paintEvent 用 QPainter 自绘（本环境 border-radius 不裁 QWidget 背景）；
+    # 故此处背景透明、边框交由代码绘制，仅保留文字色。
+    q.append("#CellFullText {")
+    q.append("    background: transparent;")
+    q.append(f'    color: {c("neutral.50")};')
+    q.append("    border: none;")
+    q.append("}")
+    q.append("#CellFullText QLabel {")
+    q.append(f'    color: {c("neutral.50")};')
+    q.append("    background: transparent;")
     q.append(f'    font-size: {FONT_SIZE["sm"]};')
     q.append("}")
 
@@ -809,9 +827,21 @@ def build() -> str:
     q.append("}")
     q.append("")
 
-    # 词库页快照项分隔（原 SnapItem 内联）
-    q.append("#SnapItem {")
+    # 词库页「历史与快照」时间线（原型 .tl-item + .timeline::before）
+    q.append("#SnapRow {")
+    q.append(f'    background-color: {c("neutral.0")};')
     q.append(f'    border-bottom: 1px solid {c("neutral.100")};')
+    q.append("}")
+    q.append("#SnapRow[last=\"true\"] {")
+    q.append("    border-bottom: none;")
+    q.append("}")
+    q.append("#SnapRow:hover {")
+    q.append(f'    background: {c("primary.50")};')
+    q.append("}")
+    q.append("")
+    q.append("#TimelineRail {")
+    q.append(f'    background: {c("neutral.200")};')
+    q.append("    border: none;")
     q.append("}")
     q.append("")
 
@@ -1115,18 +1145,10 @@ def build() -> str:
     q.append("}")
     q.append("")
 
-    # 超长字段悬浮/点击后显示的完整文本浮层（全局单例，同时间只一个）
-    q.append("QWidget#CellFullText {")
-    q.append(f'    background-color: {c("neutral.0")};')
-    q.append(f'    border: 1px solid {c("neutral.200")};')
-    q.append(f'    border-radius: {r("md")};')
-    q.append("    padding: 4px;")
-    q.append("}")
-    q.append("QWidget#CellFullText QLabel {")
-    q.append(f'    color: {c("neutral.900")};')
-    q.append("    background: transparent;")
-    q.append("}")
-    q.append("")
+    # 超长字段悬浮「看全文」浮层（#CellFullText）样式已统一收归到 QToolTip 附近的深色墨卡定义；
+    # 此处不再重复白底定义，避免白框叠白底。字号见下方 #CellFullText QLabel（sm）。
+
+
 
     # ---- 局部组件（原散落各模块的内联 setStyleSheet，收回为单一样式来源）----
     # #BagChk：勾选卡片容器（背景/圆角由 paintEvent 自绘，此处仅清空默认边框，避免方角）
@@ -1177,11 +1199,9 @@ def build() -> str:
     q.append("}")
     q.append("")
 
-    # 全文浮层字号（颜色已在 #CellFullText QLabel）
-    q.append("QWidget#CellFullText QLabel {")
-    q.append(f'    font-size: {FONT_SIZE["sm"]};')
-    q.append("}")
-    q.append("")
+    # 全文浮层字号已在 #CellFullText QLabel（sm）定义，此处不再重复。
+
+
 
     # =================================================================
     # 文字令牌：tone / size / weight / mono 各一条，调用方只 setProperty。
@@ -1471,23 +1491,136 @@ def build() -> str:
     q.append("")
 
     # 词库时间线圆点。current=true 为当前点（带成功色光晕）
-    q.append("#SnapDot {")
-    q.append(f'    background: {c("neutral.200")};')
-    q.append(f'    border-radius: {_snap_dot_r}px;')
+    # SnapDot / OpDot 现在由 Python 生成圆形 QPixmap（带可选外环），
+    # 不再依赖 QSS border-radius（部分渲染环境下不裁剪为圆，会显示成方块）。
+    # 这里只保证 QLabel 背景透明，避免方形背景透过透明像素露出。
+    q.append("#SnapDot, #OpDot {")
+    q.append("    background: transparent;")
     q.append("    border: none;")
     q.append("}")
-    q.append("#SnapDot[current=\"true\"] {")
-    q.append(f'    background: {c("success")};')
-    q.append(f'    border: 3px solid {c("success.bg")};')
+    # 时间线导轨：浅灰竖线（2px），仅快照卡使用（操作卡按用户要求不画竖线）
+    q.append("#TimelineRail {")
+    q.append(f'    background: {c("neutral.200")};')
+    q.append("    border: none;")
     q.append("}")
     q.append("")
 
-    q.append("#MetaChip {")
-    q.append(f'    background: {c("neutral.100")};')
+    # 操作历史行（原型 .op-item）；行内间距由控件布局 margins 提供，这里只留分隔线
+    q.append("#OpRow {")
+    q.append(f'    background-color: {c("neutral.0")};')
+    q.append(f'    border-bottom: 1px solid {c("neutral.100")};')
+    q.append("}")
+    q.append("#OpRow[last=\"true\"] {")
+    q.append("    border-bottom: none;")
+    q.append("}")
+    q.append("#OpRow:hover {")
+    q.append(f'    background: {c("primary.50")};')
+    q.append("}")
+    q.append("")
+    # 操作类型徽标：默认灰，按 act 着色（原型无此徽标，这里沿用旧版「类型」信息，
+    # 收归 QSS 属性选择器，避免逐行 setStyleSheet 造成的「捡漏」观感）
+    q.append("#OpKind {")
     q.append(f'    color: {c("neutral.700")};')
-    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append(f'    background: {c("neutral.100")};')
+    q.append(f'    border-radius: {RADIUS["sm"]};')
     q.append(f'    padding: {sp("1")} {sp("2")};')
     q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["semibold"]};')
+    q.append("}")
+    _op_kinds = (
+        ("add", c("success"), c("success.bg")),
+        ("edit", c("primary.700"), c("primary.50")),
+        ("delete", c("error"), c("error.bg")),
+        ("merge", c("primary.700"), c("primary.50")),
+        ("book", c("primary.700"), c("primary.50")),
+        ("restore_default", c("warning"), c("warning.bg")),
+        ("restore_point", c("warning"), c("warning.bg")),
+        ("undo", c("warning"), c("warning.bg")),
+        ("note", c("neutral.700"), c("neutral.100")),
+    )
+    for _kind, _fg, _bg in _op_kinds:
+        q.append(f'#OpKind[kind="{_kind}"] {{ color: {_fg}; background: {_bg}; }}')
+    q.append("")
+    q.append("#TagCurrent {")
+    q.append(f'    color: {c("success")};')
+    q.append(f'    background: {c("success.bg")};')
+    q.append(f'    border-radius: {RADIUS["md"]};')
+    q.append("    padding: 2px 8px;")
+    q.append(f'    font-size: {FONT_SIZE["xs"]};')
+    q.append(f'    font-weight: {FONT_WEIGHT["bold"]};')
+    q.append("}")
+    q.append("")
+    q.append("")
+
+    # 历史与快照：右侧滑出抽屉（方案 D）
+    q.append("#SnapDrawerLayer {")
+    q.append("    background: transparent;")
+    q.append("}")
+    q.append("#SnapDrawerBackdrop {")
+    q.append(f'    background: rgba(15, 23, 42, 0.32);')
+    q.append("}")
+    q.append("#SnapDrawerPanel {")
+    q.append(f'    background: {c("neutral.0")};')
+    q.append(f'    border: 1px solid {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["lg"]};')
+    q.append("}")
+    q.append("#DrawerHead {")
+    q.append("    background: transparent;")
+    q.append(f'    border-bottom: 1px solid {c("neutral.100")};')
+    # 上沿随面板圆角收口，避免方角戳出
+    q.append(f'    border-top-left-radius: {RADIUS["lg"]};')
+    q.append(f'    border-top-right-radius: {RADIUS["lg"]};')
+    q.append("}")
+    # 关闭按钮：小号、无重边框、hover/ pressed 反馈，避免与标题「历史与快照」体量失衡
+    q.append("#DrawerCloseBtn {")
+    q.append("    background: transparent;")
+    q.append(f'    color: {c("neutral.500")};')
+    q.append("    border: 1px solid transparent;")
+    q.append(f'    border-radius: {RADIUS["sm"]};')
+    q.append("    min-width: 24px; max-width: 24px;")
+    q.append("    min-height: 24px; max-height: 24px;")
+    q.append("    padding: 0;")
+    q.append(f'    font-size: {FONT_SIZE["base"]};')
+    q.append("}")
+    q.append("#DrawerCloseBtn:hover {")
+    q.append(f'    background: {c("neutral.100")};')
+    q.append(f'    color: {c("neutral.800")};')
+    q.append("}")
+    q.append("#DrawerCloseBtn:pressed {")
+    q.append(f'    background: {c("neutral.200")};')
+    q.append("}")
+    q.append("#DrawerScroll {")
+    q.append("    border: none;")
+    q.append("    background: transparent;")
+    # 下沿随面板圆角收口
+    q.append(f'    border-bottom-left-radius: {RADIUS["lg"]};')
+    q.append(f'    border-bottom-right-radius: {RADIUS["lg"]};')
+    q.append("}")
+    q.append("#DrawerScroll > QWidget {")
+    q.append("    background: transparent;")
+    q.append("}")
+    q.append("#DrawerScrollInner {")
+    q.append("    background: transparent;")
+    q.append("}")
+    q.append("#DrawerScroll QScrollBar:vertical {")
+    q.append(f'    background: {c("neutral.0")};')
+    q.append(f'    width: {sp("1")};')
+    q.append("    border: none;")
+    q.append("}")
+    q.append("#DrawerScroll QScrollBar::handle:vertical {")
+    q.append(f'    background: {c("neutral.200")};')
+    q.append(f'    border-radius: {RADIUS["sm"]};')
+    q.append(f'    min-height: {sp("8")};')
+    q.append("}")
+    q.append("#DrawerScroll QScrollBar::add-line:vertical, "
+             "#DrawerScroll QScrollBar::sub-line:vertical {")
+    q.append("    height: 0;")
+    q.append("    border: none;")
+    q.append("}")
+    # 抽屉内卡片分页器：与上方列表以细分隔线隔开
+    q.append("#DrawerPager {")
+    q.append(f'    border-top: 1px solid {c("neutral.100")};')
+    q.append(f'    margin-top: {sp("2")};')
     q.append("}")
     q.append("")
 

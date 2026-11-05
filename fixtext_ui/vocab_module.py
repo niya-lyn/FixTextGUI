@@ -24,10 +24,13 @@ FixText V1 · 词库管理模块（Qt 移植 · M3-T3.1 接真实词库）
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QTimer, QRect, QEvent, Signal
-from PySide6.QtGui import QKeySequence, QShortcut, QFontMetrics, QColor
+from PySide6.QtCore import (Qt, QTimer, QRect, QRectF, QEvent, Signal, QPoint,
+                            QPropertyAnimation, QEasingCurve)
+from PySide6.QtGui import (QKeySequence, QShortcut, QFontMetrics, QColor,
+                           QPainter, QPainterPath, QPen,
+                          QPixmap, QBrush)
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QDialog,
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton, QDialog,
     QLineEdit, QComboBox, QCheckBox, QFrame, QSizePolicy, QScrollArea,
     QApplication, QGraphicsDropShadowEffect,
 )
@@ -35,7 +38,7 @@ from PySide6.QtWidgets import (
 import fixtext_settings as app_settings
 from fixtext_tokens import c, fs, r, sp, FONT_WEIGHT, FONT_MONO, ICON_GLYPH_SIZE
 from fixtext_widgets import (Card, Pill, hline, ConfirmDialog, Modal, page_head_shell,
-                             PrimaryButton, ChkMark, enable_chrome, plain_box)
+                             PrimaryButton, ChkMark, enable_chrome, plain_box, repolish)
 
 from fixtext_vocab import (
     ENTRY_TYPES, TIER_NAMES, TIER_ORDER, VocabDataError, VocabStore,
@@ -51,6 +54,10 @@ from fixtext_vocab import (
 #: 使「卡片内固定表头」与「滚动区内数据行」的列宽不一致、肉眼可见地跳动。
 #: 每页行数固定 + 无内部滚动条 -> 表头与数据行永远同宽同列，不可能错位。
 PAGE_SIZE = 20
+
+#: 历史与快照抽屉分页：每张卡固定条数，避免超长内容把同行挤压、也让抽屉下方不留大片空白
+SNAP_PAGE_SIZE = 5
+OP_PAGE_SIZE = 5
 
 COL_CHECK_W = 34
 COL_ACT_W = 128
@@ -91,6 +98,32 @@ def _apply_label_style(lab: QLabel, *, size: str = "sm", color: str = "neutral.8
         lab.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
     elif align == "left":
         lab.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+
+
+def _dot_pixmap(diameter: int, fill: str, ring: str | None = None,
+                ring_w: int = 0) -> QPixmap:
+    """生成一张透明背景的圆形点图（可选外环）。
+
+    时间线/操作历史的小圆点改用预渲染的圆形 QPixmap，而不是依赖 QSS 的
+    ``border-radius``——后者在部分渲染环境下不会把 QWidget 背景裁剪为圆，会显示成
+    方块。用 QPainter 画椭圆则任何绘制引擎都得到正圆。
+    """
+    pm = QPixmap(diameter, diameter)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    p.setPen(Qt.PenStyle.NoPen)
+    if ring:
+        p.setBrush(QBrush(QColor(ring)))
+        p.drawEllipse(0, 0, diameter, diameter)
+        inner = diameter - 2 * ring_w
+        p.setBrush(QBrush(QColor(fill)))
+        p.drawEllipse(ring_w, ring_w, inner, inner)
+    else:
+        p.setBrush(QBrush(QColor(fill)))
+        p.drawEllipse(0, 0, diameter, diameter)
+    p.end()
+    return pm
 
 
 class _ElideLabel(QLabel):
@@ -173,21 +206,57 @@ class _FullTextPopover(QWidget):
     - 鼠标移开后自动隐藏（由 `_ElideLabel` 的 leaveEvent 处理）。
     """
 
+    _SHADOW_M = 6  # 卡片四周留白环带：给手绘阴影留空间，也让圆角外区域透明
+
     def __init__(self) -> None:
         super().__init__(None, Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint
                          | Qt.WindowType.WindowStaysOnTopHint)
         self.setObjectName("CellFullText")
         self._owner = None          # 当前显示所属 _ElideLabel
         self._pinned = False
+        # 真·圆角关键：透明背景 + paintEvent 自绘圆角矩形。
+        # - 不能用 WA_StyledBackground（enable_chrome）：style 会用矩形把背景再填一遍，
+        #   把圆角盖掉 → 看着还是方角；
+        # - 不能用 QGraphicsDropShadowEffect：frameless 顶层窗其阴影被矩形窗口裁掉。
+        # 改用 WA_TranslucentBackground：窗口矩形外区域天然透明 → 圆角可见；
+        # 阴影在 paintEvent 里于四周留白环带内手绘（半透明圆角矩形叠几层模拟柔光）。
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(8, 6, 8, 6)
+        # 外圈 _SHADOW_M 留给阴影，内圈 10/8 是文字内边距
+        lay.setContentsMargins(self._SHADOW_M + 10, self._SHADOW_M + 8,
+                               self._SHADOW_M + 10, self._SHADOW_M + 8)
         lay.setSpacing(6)
         self._text = QLabel()
         self._text.setWordWrap(True)
         self._text.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        self._text.setStyleSheet(
-            f"color:{c('neutral.900')};font-size:{fs('sm')};background:transparent;")
+        # 文字配色交给 fixtext.qss 的 #CellFullText QLabel（深色底 + 浅色字）
+        self._text.setStyleSheet("background:transparent;")
         lay.addWidget(self._text)
+
+    # 圆角背景由 QPainter 自绘：本环境 border-radius 不裁 QWidget 背景，
+    # 且 WA_StyledBackground 会让 style 用矩形填背景盖掉圆角。故在 paintEvent 画圆角矩形
+    # （深色填充 + 1px 浅边框），外圈留白环带内手绘柔光阴影，子控件（文字）叠在其上。
+    def paintEvent(self, ev) -> None:
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = 8  # 比 sm(4px) 更柔，避免生硬
+        rect = QRectF(self.rect())
+        m = self._SHADOW_M
+        card = rect.adjusted(m, m, -m, -m)   # 卡片内缩，外圈 m 留给阴影
+        # 柔和投影：在卡片外缘叠几层半透明圆角矩形（向下微偏移），环带内可见
+        for off, alpha in ((0, 0.10), (2, 0.13), (4, 0.12), (6, 0.07)):
+            sh = QPainterPath()
+            sh.addRoundedRect(rect.adjusted(m - 1, m - 1 + off, -(m - 1), -(m - 1)), r, r)
+            p.fillPath(sh, QColor(15, 23, 42, int(alpha * 255)))
+        # 卡片本体（圆角矩形）
+        path = QPainterPath()
+        path.addRoundedRect(card, r, r)
+        p.fillPath(path, QColor(c("neutral.900")))
+        pen = QPen(QColor(c("neutral.700")))
+        pen.setWidth(1)
+        p.setPen(pen)
+        p.drawPath(path)
+        super().paintEvent(ev)
 
     # ---- 显隐控制（由 _ElideLabel 调用）----
     def show_for(self, label: "_ElideLabel", text: str, *, pinned: bool) -> None:
@@ -287,12 +356,14 @@ def _mini_table(headers: list, rows: list, *, mono_cols: set | None = None) -> Q
     hl.setContentsMargins(0, 0, 0, 6)
     hl.setSpacing(10)
     for h in headers:
-        hl.addWidget(_label(h, size="xs", color="neutral.600", weight="semibold"), 1)
+        hl.addWidget(_label(h, size="xs", color="neutral.600",
+                            weight="semibold", align="center"), 1)
     vl.addWidget(head)
     vl.addWidget(hline())
 
     if not rows:
-        vl.addWidget(_label("（无）", size="xs", color="neutral.500"))
+        vl.addWidget(_label("（无）", size="xs", color="neutral.500",
+                            align="center"))
         return box
 
     for i, row in enumerate(rows):
@@ -302,7 +373,8 @@ def _mini_table(headers: list, rows: list, *, mono_cols: set | None = None) -> Q
         rl.setSpacing(10)
         for j, cell in enumerate(row):
             rl.addWidget(_label(str(cell), size="xs", color="neutral.800",
-                                mono=(j in mono_cols), wrap=True), 1)
+                                mono=(j in mono_cols), wrap=True,
+                                align="center"), 1)
         vl.addWidget(rw)
         if i != len(rows) - 1:
             vl.addWidget(hline())
@@ -328,6 +400,8 @@ class VocabModule(QWidget):
         self.search = ""
         self._page = 0
         self._hit_total = 0
+        self._snap_page = 0      # 快照卡分页
+        self._op_page = 0        # 操作历史卡分页
         self._page_rows: list = []
         self._selected: set = set()
         self._pending_add: dict | None = None
@@ -362,7 +436,11 @@ class VocabModule(QWidget):
 
         self._build_status()
 
-        self._snap_card.setVisible(False)
+        # 历史与快照：改为右侧滑出抽屉（方案 D），内含「快照」与「操作历史」两张独立卡
+        self._snap_card = self._snap_card()
+        self._op_card = self._op_card()
+        self._build_drawer()
+
         self._render_all()
 
     # ------------------------------------------------------------------ 头部
@@ -398,9 +476,7 @@ class VocabModule(QWidget):
         # QLabel 背景必须 WA_StyledBackground；样式统一由 fixtext.qss 的 #SafeBadge 提供
         right.addWidget(safe)
 
-        self.hist_btn = self._head_icon_btn("🕑", "历史与快照",
-                                            lambda: self._snap_card.setVisible(
-                                                not self._snap_card.isVisible()))
+        self.hist_btn = self._head_icon_btn("🕑", "历史与快照", self._toggle_drawer)
         right.addWidget(self.hist_btn)
         self.undo_btn = self._head_icon_btn("↩", "撤销上一步（Ctrl+Z）", self._undo)
         right.addWidget(self.undo_btn)
@@ -582,8 +658,6 @@ class VocabModule(QWidget):
         col.setSpacing(16)
         col.addWidget(self._toolbar(), 0)       # 不拉伸
         col.addWidget(self._table_card(), 1)    # 吃剩余高度
-        self._snap_card = self._snap_card()
-        col.addWidget(self._snap_card, 0)
         w = QWidget()
         w.setLayout(col)
         return w
@@ -835,24 +909,160 @@ class VocabModule(QWidget):
         hl.addWidget(self.next_btn)
         return row
 
-    # ----- 历史与快照（底线② 自动快照 · 可恢复）-----
+    # ----- 历史与快照（底线② 自动快照 · 可恢复 · 方案 D 右侧滑出抽屉）-----
+
+    def _build_drawer(self):
+        """构造右侧滑出抽屉（含「快照」与「操作历史」两张独立卡）。
+
+        层级：``SnapDrawerLayer``（满铺 VocabModule，默认隐藏）→ 半透明
+        ``SnapDrawerBackdrop``（点击关闭）+ ``SnapDrawerPanel``（右侧面板，
+        内嵌可滚动的两张卡）。面板用 QPropertyAnimation 在 x 方向滑入/滑出。
+        """
+        layer = QWidget(self)
+        layer.setObjectName("SnapDrawerLayer")
+        layer.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        layer.setVisible(False)
+
+        backdrop = QWidget(layer)
+        backdrop.setObjectName("SnapDrawerBackdrop")
+        backdrop.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        backdrop.mousePressEvent = lambda _e: self._close_drawer()
+
+        panel = QWidget(layer)
+        panel.setObjectName("SnapDrawerPanel")
+        panel.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        # 柔和投影，增强抽屉浮起感（不依赖 QSS box-shadow）
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(28)
+        shadow.setOffset(0, 0)
+        shadow.setColor(QColor(15, 23, 42, 70))
+        panel.setGraphicsEffect(shadow)
+        pl = QVBoxLayout(panel)
+        pl.setContentsMargins(0, 0, 0, 0)
+        pl.setSpacing(0)
+
+        # 抽屉头：标题 + 关闭按钮
+        ph = QWidget()
+        ph.setObjectName("DrawerHead")
+        ph.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        phl = QHBoxLayout(ph)
+        phl.setContentsMargins(20, 16, 16, 16)
+        phl.setSpacing(10)
+        phl.addWidget(_label("历史与快照", size="base", color="neutral.900", weight="bold"))
+        phl.addStretch(1)
+        close = QPushButton("✕")
+        close.setObjectName("DrawerCloseBtn")
+        close.setCursor(Qt.CursorShape.PointingHandCursor)
+        close.setToolTip("关闭")
+        close.clicked.connect(self._close_drawer)
+        phl.addWidget(close)
+
+        # 滚动区：承载两张卡
+        scroll = QScrollArea()
+        scroll.setObjectName("DrawerScroll")
+        scroll.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        content = QWidget()
+        content.setObjectName("DrawerScrollInner")   # 透明，避免全局灰底盖住面板圆角与下方留白
+        content.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        cl = QVBoxLayout(content)
+        cl.setContentsMargins(20, 16, 20, 20)
+        cl.setSpacing(16)
+        cl.addWidget(self._snap_card, 0)
+        cl.addWidget(self._op_card, 0)
+        scroll.setWidget(content)
+
+        pl.addWidget(ph, 0)
+        pl.addWidget(scroll, 1)
+
+        self._drawer = layer
+        self._drawer_backdrop = backdrop
+        self._drawer_panel = panel
+        self._drawer_anim: QPropertyAnimation | None = None
+        self._drawer_pw = 380
+
+    def _layout_drawer(self):
+        """把抽屉层 / 遮罩 / 面板钉到**顶层窗口**尺寸（覆盖整页，而非仅词库模块区域）。"""
+        host = self.window()
+        if host is None or host is self:
+            host = self
+        if self._drawer.parent() is not host:
+            self._drawer.setParent(host)
+        self._drawer.raise_()  # 盖在页面（含左轨）之上
+        w, h = host.width(), host.height()
+        self._drawer.setGeometry(0, 0, w, h)
+        self._drawer_backdrop.setGeometry(0, 0, w, h)
+        pw = int(min(400, max(320, w - 80)))
+        self._drawer_pw = pw
+        self._drawer_panel.setFixedWidth(pw)
+        self._drawer_panel.setGeometry(w - pw - 16, 16, pw, h - 32)
+
+    def _toggle_drawer(self):
+        if self._drawer.isVisible():
+            self._close_drawer()
+        else:
+            self._open_drawer()
+
+    def _open_drawer(self):
+        if self._drawer.isVisible():
+            return
+        self._layout_drawer()
+        host = self._drawer.parent()
+        hw = host.width()
+        self._drawer.setVisible(True)
+        # 从屏幕右侧外滑入
+        self._drawer_panel.move(hw, 16)
+        self._animate_panel(hw - self._drawer_pw - 16)
+        self.hist_btn.setProperty("active", "true")
+        repolish(self.hist_btn)
+
+    def _close_drawer(self):
+        if not self._drawer.isVisible():
+            return
+        host = self._drawer.parent()
+        self._animate_panel(host.width(), on_finish=lambda: self._drawer.setVisible(False))
+        self.hist_btn.setProperty("active", "false")
+        repolish(self.hist_btn)
+
+    def _animate_panel(self, to_x: int, on_finish=None):
+        if self._drawer_anim is not None:
+            self._drawer_anim.stop()
+        anim = QPropertyAnimation(self._drawer_panel, b"pos")
+        anim.setDuration(200)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic if on_finish is None else QEasingCurve.Type.InCubic)
+        anim.setEndValue(QPoint(to_x, 16))
+        if on_finish:
+            anim.finished.connect(on_finish)
+        anim.start()
+        self._drawer_anim = anim
+
+    def resizeEvent(self, ev):
+        super().resizeEvent(ev)
+        if getattr(self, "_drawer", None) and self._drawer.isVisible():
+            self._layout_drawer()
+            # 保持面板停靠在正确 x（不开动画）
+            host = self._drawer.parent()
+            self._drawer_panel.move(host.width() - self._drawer_pw - 16, 16)
 
     def _snap_card(self) -> Card:
-        """「历史与快照」面板（对齐原型 ``#historyPanel`` 的面板头）。
+        """「历史与快照」抽屉里**快照**那张独立卡（底线② 自动快照 · 可恢复）。
 
-        面板头左边是标题、右边是「恢复默认词库」按钮（原型同一位置、同一文案）；
-        面板体分两段：上面是时间线（``renderSnaps`` 的 1:1 移植），下面是
-        操作历史（每次变更的时间点 + 摘要）。两段都只显示人话，不出现路径。
+        面板头左边是「快照」标题、右边是「恢复默认词库」按钮（原型同一位置、
+        同一文案）；下方是时间线（``renderSnaps`` 的 1:1 移植）。只显示人话，
+        不出现路径。
         """
         card = Card(basis="底线② 自动快照 · 可恢复")
         self.basis_labels.append(card.basis)
-        card.body_l.setSpacing(10)
+        card.body_l.setSpacing(8)
+        card.body_l.setContentsMargins(16, 10, 16, 12)
 
-        head = QWidget()
+        head = plain_box(QWidget())
+        enable_chrome(head)
         hl = QHBoxLayout(head)
         hl.setContentsMargins(0, 0, 0, 0)
         hl.setSpacing(10)
-        hl.addWidget(_label("历史与快照", size="base", color="neutral.800", weight="semibold"))
+        hl.addWidget(_label("快照", size="base", color="neutral.800", weight="semibold"))
         hl.addStretch(1)
         self._restore_btn = QPushButton("↺ 恢复默认词库（保留自定义）")
         self._restore_btn.setObjectName("BtnGhost")
@@ -864,32 +1074,91 @@ class VocabModule(QWidget):
         # ---- 时间线 ----
         self._snap_list = QVBoxLayout()
         self._snap_list.setSpacing(0)
-        wrap = QWidget()
+        wrap = plain_box(QWidget())
+        enable_chrome(wrap)
         wrap.setLayout(self._snap_list)
         card.body_l.addWidget(wrap)
 
+        # ---- 分页器 ----
+        self._snap_pager, self._snap_prev, self._snap_pager_lab, self._snap_next = \
+            self._build_pager(self._snap_prev_page, self._snap_next_page)
+        card.body_l.addWidget(self._snap_pager)
+        return card
+
+    def _op_card(self) -> Card:
+        """「历史与快照」抽屉里**操作历史**那张独立卡（每次变更的时间点 + 摘要）。"""
+        card = Card(basis="每次改动可追溯")
+        self.basis_labels.append(card.basis)
+        card.body_l.setSpacing(8)
+        card.body_l.setContentsMargins(16, 10, 16, 12)
+
         # ---- 操作历史 ----
         op_head = QHBoxLayout()
-        op_head.setContentsMargins(0, 8, 0, 0)
+        op_head.setContentsMargins(0, 0, 0, 0)
         op_head.setSpacing(8)
-        op_head.addWidget(_label("操作历史", size="sm", color="neutral.800", weight="semibold"))
+        op_head.addWidget(_label("操作历史", size="base", color="neutral.800", weight="semibold"))
         self._op_summary = _label("", size="xs", color="neutral.500")
         op_head.addWidget(self._op_summary)
         op_head.addStretch(1)
-        self._op_toggle = _link_btn("展开全部")
-        self._op_toggle.clicked.connect(self._toggle_ops)
-        op_head.addWidget(self._op_toggle)
-        body_w = QWidget()
+        body_w = plain_box(QWidget())
+        enable_chrome(body_w)
         body_w.setLayout(op_head)
         card.body_l.addWidget(body_w)
 
-        self._ops_expanded = False
         self._op_list = QVBoxLayout()
         self._op_list.setSpacing(0)
-        ops_wrap = QWidget()
+        ops_wrap = plain_box(QWidget())
+        enable_chrome(ops_wrap)
         ops_wrap.setLayout(self._op_list)
         card.body_l.addWidget(ops_wrap)
+
+        # ---- 分页器 ----
+        self._op_pager, self._op_prev, self._op_pager_lab, self._op_next = \
+            self._build_pager(self._op_prev_page, self._op_next_page)
+        card.body_l.addWidget(self._op_pager)
         return card
+
+    def _build_pager(self, prev_slot, next_slot):
+        """抽屉内卡片底部的「上一页 / 第 x / y 页 / 下一页」分页器。"""
+        box = QWidget()
+        box.setObjectName("DrawerPager")
+        hl = QHBoxLayout(box)
+        hl.setContentsMargins(0, 8, 0, 0)
+        hl.setSpacing(8)
+        prev = QPushButton("‹ 上一页")
+        prev.setObjectName("BtnGhost")
+        prev.setCursor(Qt.CursorShape.PointingHandCursor)
+        prev.clicked.connect(prev_slot)
+        lab = _label("", size="xs", color="neutral.500")
+        lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        nxt = QPushButton("下一页 ›")
+        nxt.setObjectName("BtnGhost")
+        nxt.setCursor(Qt.CursorShape.PointingHandCursor)
+        nxt.clicked.connect(next_slot)
+        hl.addStretch(1)
+        hl.addWidget(prev)
+        hl.addWidget(lab)
+        hl.addWidget(nxt)
+        hl.addStretch(1)
+        return box, prev, lab, nxt
+
+    def _snap_prev_page(self):
+        if self._snap_page > 0:
+            self._snap_page -= 1
+            self._render_snaps()
+
+    def _snap_next_page(self):
+        self._snap_page += 1
+        self._render_snaps()
+
+    def _op_prev_page(self):
+        if self._op_page > 0:
+            self._op_page -= 1
+            self._render_ops()
+
+    def _op_next_page(self):
+        self._op_page += 1
+        self._render_ops()
 
     # ------------------------------------------------------------------ 渲染
 
@@ -1006,15 +1275,22 @@ class VocabModule(QWidget):
                 w.setParent(None)
 
     def _render_snaps(self):
-        """时间线：1:1 移植原型 ``renderSnaps()``。
+        """时间线：对齐原型 ``renderSnaps()``，按 ``SNAP_PAGE_SIZE`` 分页。
 
         原型语义逐条对齐：
-        * 最新一个在前，圆点高亮 + 时间后面带「· 当前」，且不显示「恢复到此」；
+        * 最新一个在前，圆点高亮 + 时间带「· 当前工作区」，且不显示「恢复到此」；
         * 其余每个时间点都带「恢复到此」链接；
+        * 左侧导轨 + 节点构成连续时间线（原型 ``.timeline::before`` 的竖向连接线）；
         * 一条记录都没有时，给空状态说明（不写任何内部概念）。
         """
         self._clear_layout(self._snap_list)
-        records = self.store.timeline(limit=12)
+        all_recs = self.store.timeline(limit=None)
+        total = len(all_recs)
+        pages = max(1, (total + SNAP_PAGE_SIZE - 1) // SNAP_PAGE_SIZE)
+        self._snap_page = min(self._snap_page, pages - 1)
+        start = self._snap_page * SNAP_PAGE_SIZE
+        records = all_recs[start:start + SNAP_PAGE_SIZE]
+
         if not records:
             box = QWidget()
             v = QVBoxLayout(box)
@@ -1028,84 +1304,155 @@ class VocabModule(QWidget):
             v.addWidget(t)
             v.addWidget(sub)
             self._snap_list.addWidget(box)
+            self._snap_pager.setVisible(False)
             return
 
+        n = len(records)
         for i, rec in enumerate(records):
             cur = bool(rec.get("is_current"))
             item = QWidget()
-            item.setObjectName("SnapItem")
-            # 分隔线交给 fixtext.qss 的 #SnapItem（原内联收归）
+            item.setObjectName("SnapRow")
+            if i == n - 1:
+                item.setProperty("last", "true")
             hl = QHBoxLayout(item)
-            hl.setContentsMargins(2, 10, 2, 10)
-            hl.setSpacing(10)
+            hl.setContentsMargins(0, 0, 0, 0)
+            hl.setSpacing(0)
+
+            # ---- 左侧导轨 + 节点（连续时间线：直线贯穿圆形）----
+            # 关键：导轨必须纵向撑满整行高度（否则塌成 9px 灰块，看着像「直角框」），
+            # 且横向居中，使竖线与圆点同心 → 直线从圆点正中穿过（对齐原型）。
+            gutter = plain_box(QWidget())
+            enable_chrome(gutter)
+            gutter.setFixedWidth(22)
+            gl = QGridLayout(gutter)
+            gl.setContentsMargins(0, 0, 0, 0)
+            gl.setSpacing(0)
+            gl.setRowStretch(0, 1)
+            rail = QFrame()
+            rail.setObjectName("TimelineRail")
+            rail.setFixedWidth(2)
+            rail.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+            gl.addWidget(rail, 0, 0, Qt.AlignmentFlag.AlignHCenter)
             dot = QLabel()
             dot.setObjectName("SnapDot")
-            enable_chrome(dot)
-            dot.setProperty("current", "true" if cur else "false")
-            dot.setFixedSize(9, 9)
-            hl.addWidget(dot)
-            hl.addWidget(_label(rec["label"], size="sm", weight="semibold",
-                                color="neutral.800"), 0)
-            hl.addStretch(1)
+            dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            # 用预渲染圆形 QPixmap（不依赖 QSS border-radius）：
+            # 当前点 16px、绿色实心 10px + 浅绿外环；常态 10px 灰色。
+            if cur:
+                dot.setPixmap(_dot_pixmap(20, c("success"), ring=c("success.bg"), ring_w=3))
+                dot.setFixedSize(20, 20)
+            else:
+                dot.setPixmap(_dot_pixmap(10, c("neutral.200")))
+                dot.setFixedSize(10, 10)
+            gl.addWidget(dot, 0, 0, Qt.AlignmentFlag.AlignCenter)
+            hl.addWidget(gutter)
+
+            # ---- 内容（超长标签省略，避免挤压右侧时间与「恢复到此」）----
+            cl = QHBoxLayout()
+            cl.setContentsMargins(10, 9, 4, 9)
+            cl.setSpacing(10)
+            cl.addWidget(_ElideLabel(rec["label"], size="sm", weight="semibold",
+                                     color="neutral.800", center=False), 1)
             txt = rec.get("time", "")
-            hl.addWidget(_label(f"{txt} · 当前" if cur else txt, size="xs",
+            cl.addWidget(_label(f"{txt} · 当前工作区" if cur else txt, size="xs",
                                 color="neutral.500"))
             if not cur:
                 b = _link_btn("恢复到此")
                 b.setToolTip(f"回到 {rec.get('time', '')} 这一刻的词库内容")
                 b.clicked.connect(lambda _c, pid=int(rec["id"]): self.restore_point(pid))
-                hl.addWidget(b)
+                cl.addWidget(b)
+            hl.addLayout(cl)
+            repolish(item)
             self._snap_list.addWidget(item)
 
-    def _toggle_ops(self):
-        self._ops_expanded = not self._ops_expanded
-        self._op_toggle.setText("收起" if self._ops_expanded else "展开全部")
-        self._render_ops()
+        self._snap_pager.setVisible(total > SNAP_PAGE_SIZE)
+        self._snap_pager_lab.setText(f"第 {self._snap_page + 1} / {pages} 页")
+        self._snap_prev.setEnabled(self._snap_page > 0)
+        self._snap_next.setEnabled(self._snap_page < pages - 1)
 
     def _render_ops(self):
-        """操作历史：每次变更的时间点 + 摘要，与时间点恢复联动。
+        """操作历史：每次变更的时间点 + 摘要（对齐原型 ``renderOpHistory()``），按
+        ``OP_PAGE_SIZE`` 分页。
 
-        「联动」体现在每行右侧的「回到这里」——点了就是「恢复到该行那次变更
-        完成后的状态」，与时间线上同名时间点是同一个动作、同一份数据。
+        每行固定为「圆点 + 类型徽标 + 摘要（超长省略）+ 时间/当前」，不再带
+        「回到这里」按钮（原型即无此按钮）；当前时间点只标「当前」徽标。
         """
         self._clear_layout(self._op_list)
-        total = self.store.op_count()
-        limit = 30 if self._ops_expanded else 6
-        rows = self.store.ops(limit=limit)
-        self._op_toggle.setVisible(total > 6)
-        self._op_toggle.setText("收起" if self._ops_expanded else "展开全部")
+        all_rows = self.store.ops(limit=None)
+        total = len(all_rows)
+        pages = max(1, (total + OP_PAGE_SIZE - 1) // OP_PAGE_SIZE)
+        self._op_page = min(self._op_page, pages - 1)
+        start = self._op_page * OP_PAGE_SIZE
+        rows = all_rows[start:start + OP_PAGE_SIZE]
         self._op_summary.setText(f"共 {_fmt_num(total)} 次变更" if total else "")
+
         if not rows:
             lab = _label("还没有操作记录。每次改动都会记下时间与内容，可随时回到某个时间点。",
                          size="xs", color="neutral.500", wrap=True)
             lab.setContentsMargins(0, 6, 0, 2)
             self._op_list.addWidget(lab)
+            self._op_pager.setVisible(False)
             return
 
         current_pid = self.store.current_point_id()
-
-        for op in rows:
+        n = len(rows)
+        for i, op in enumerate(rows):
             item = QWidget()
+            item.setObjectName("OpRow")
+            if i == n - 1:
+                item.setProperty("last", "true")
             hl = QHBoxLayout(item)
-            hl.setContentsMargins(0, 8, 0, 8)
-            hl.setSpacing(10)
-            hl.addWidget(_label(op.get("time", ""), size="xs", color="neutral.500"))
-            pill = QLabel(op.get("act_name", "变更"))
-            pill.setStyleSheet(
-                f"background:{c('neutral.100')};color:{c('neutral.700')};"
-                f"border-radius:{r('md')};padding:{sp('1')} {sp('2')};font-size:{fs('xs')}")
-            hl.addWidget(pill)
-            hl.addWidget(_label(op.get("summary", ""), size="sm", color="neutral.800"), 0)
-            hl.addStretch(1)
+            hl.setContentsMargins(0, 0, 0, 0)
+            hl.setSpacing(0)
+
+            # ---- 左侧圆点列：与上方快照时间轴同宽同列（蓝色原点落在同一 x），
+            #        仅保留圆点、不画竖线（用户要求：操作历史不要竖线）----
+            gutter = plain_box(QWidget())
+            enable_chrome(gutter)
+            gutter.setFixedWidth(22)
+            gl = QGridLayout(gutter)
+            gl.setContentsMargins(0, 0, 0, 0)
+            gl.setSpacing(0)
+            gl.setRowStretch(0, 1)
+            dot = QLabel()
+            dot.setObjectName("OpDot")
+            dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            dot.setPixmap(_dot_pixmap(8, c("primary.400")))
+            dot.setFixedSize(8, 8)
+            gl.addWidget(dot, 0, 0, Qt.AlignmentFlag.AlignCenter)
+            hl.addWidget(gutter)
+
+            # ---- 内容 ----
+            cl = QHBoxLayout()
+            cl.setContentsMargins(10, 7, 4, 7)
+            cl.setSpacing(10)
+            kind = str(op.get("act") or "note")
+            badge = QLabel(op.get("act_name", "变更"))
+            badge.setObjectName("OpKind")
+            badge.setProperty("kind", kind)
+            enable_chrome(badge)
+            cl.addWidget(badge)
+
+            # 摘要超长省略（否则会挤压右侧时间/「当前」徽标）
+            cl.addWidget(_ElideLabel(op.get("summary", ""), size="sm",
+                                     color="neutral.800", center=False), 1)
+
             pid = int(op.get("point_id") or 0)
-            if pid and pid != current_pid:
-                b = _link_btn("回到这里")
-                b.setToolTip(f"把词库恢复到 {op.get('time', '')} 这次变更之后")
-                b.clicked.connect(lambda _c, p=pid: self.restore_point(p))
-                hl.addWidget(b)
-            elif pid and pid == current_pid:
-                hl.addWidget(_label("当前", size="xs", color="success"))
+            if pid and pid == current_pid:
+                tag = QLabel("当前")
+                tag.setObjectName("TagCurrent")
+                enable_chrome(tag)
+                cl.addWidget(tag)
+            else:
+                cl.addWidget(_label(op.get("time", ""), size="xs", color="neutral.500"))
+            hl.addLayout(cl)
+            repolish(item)
             self._op_list.addWidget(item)
+
+        self._op_pager.setVisible(total > OP_PAGE_SIZE)
+        self._op_pager_lab.setText(f"第 {self._op_page + 1} / {pages} 页")
+        self._op_prev.setEnabled(self._op_page > 0)
+        self._op_next.setEnabled(self._op_page < pages - 1)
 
     def _update_sel_state(self):
         valid = [i for i in self._selected if self._is_custom(i)]
@@ -1571,8 +1918,13 @@ class VocabModule(QWidget):
         hl.setSpacing(10)
         for txt, stretch in (("加入", 0), ("词条", 3), ("类型", 1),
                              ("替换值", 3), ("出现次数", 1)):
-            hl.addWidget(_label(txt, size="xs", color="neutral.600",
-                                weight="semibold"), stretch)
+            lab = _label(txt, size="xs", color="neutral.600",
+                         weight="semibold", align="center")
+            if stretch == 0:
+                # 与数据行勾选列同宽：表头文字宽度与 QCheckBox 宽度本就不同，
+                # 不钉死会带着后面所有列整体偏移 2px。
+                lab.setFixedWidth(COL_CHECK_W)
+            hl.addWidget(lab, stretch)
         rows.addWidget(head)
         rows.addWidget(hline())
         for i, w in enumerate(self._book_words):
@@ -1585,19 +1937,28 @@ class VocabModule(QWidget):
             cb.setCursor(Qt.CursorShape.PointingHandCursor)
             cb.toggled.connect(self._book_sync_pick_label)
             checks.append(cb)
-            rl.addWidget(cb, 0)
+            cb_cell = plain_box(QWidget())
+            cb_l = QHBoxLayout(cb_cell)
+            cb_l.setContentsMargins(0, 0, 0, 0)
+            cb_l.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            cb_l.addWidget(cb)
+            cb_cell.setFixedWidth(COL_CHECK_W)
+            rl.addWidget(cb_cell, 0)
             rl.addWidget(_label(w.get("word") or "", size="xs",
-                                color="neutral.900", weight="bold", mono=True), 3)
+                                color="neutral.900", weight="bold", mono=True,
+                                align="center"), 3)
             rl.addWidget(_label(w.get("type") or "专有名词", size="xs",
-                                color="neutral.600"), 1)
+                                color="neutral.600", align="center"), 1)
             rl.addWidget(_label(w.get("value") or w.get("word") or "", size="xs",
-                                color="neutral.700", mono=True), 3)
+                                color="neutral.700", mono=True,
+                                align="center"), 3)
             rl.addWidget(_label(f"{int(w.get('count') or 1)} 次", size="xs",
-                                color="neutral.500", mono=True), 1)
+                                color="neutral.500", mono=True,
+                                align="center"), 1)
             rows.addWidget(rw)
             if i != len(self._book_words) - 1:
                 rows.addWidget(hline())
-        rows_box = QWidget()
+        rows_box = plain_box(QWidget())
         rows_box.setLayout(rows)
         area = QScrollArea()
         area.setWidgetResizable(True)

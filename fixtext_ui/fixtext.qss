@@ -441,6 +441,11 @@ QPushButton#HeadIconBtn:pressed {
     background-color: #DDE1F6;
     color: #333B83;
 }
+QPushButton#HeadIconBtn[active="true"] {
+    background-color: #EEF0FB;
+    color: #333B83;
+    border: 1px solid #9AA3E2;
+}
 QLabel#SafeBadge {
     color: #15803D;
     background-color: #E7F4EC;
@@ -477,11 +482,21 @@ QRadioButton::indicator {
 }
 QRadioButton::indicator:checked { background-color: #4F59C0; border-color: #4F59C0; }
 QToolTip {
-    background-color: #FFFFFF;
-    color: #222831;
-    border: 1px solid #DDE2EA;
+    background-color: #15191F;
+    color: #F7F8FA;
+    border: 1px solid #333B48;
     border-radius: 4px;
     padding: 8px 12px;
+    font-size: 13px;
+}
+#CellFullText {
+    background: transparent;
+    color: #F7F8FA;
+    border: none;
+}
+#CellFullText QLabel {
+    color: #F7F8FA;
+    background: transparent;
     font-size: 13px;
 }
 QTableWidget, QTreeWidget, QListWidget {
@@ -664,8 +679,20 @@ QFrame#EmptyState {
     border-width: 2px;
 }
 
-#SnapItem {
+#SnapRow {
+    background-color: #FFFFFF;
     border-bottom: 1px solid #EEF1F5;
+}
+#SnapRow[last="true"] {
+    border-bottom: none;
+}
+#SnapRow:hover {
+    background: #EEF0FB;
+}
+
+#TimelineRail {
+    background: #DDE2EA;
+    border: none;
 }
 
 #DictItem {
@@ -927,17 +954,6 @@ QWidget#HistoryFoot {
     background: transparent;
 }
 
-QWidget#CellFullText {
-    background-color: #FFFFFF;
-    border: 1px solid #DDE2EA;
-    border-radius: 8px;
-    padding: 4px;
-}
-QWidget#CellFullText QLabel {
-    color: #15191F;
-    background: transparent;
-}
-
 #BagChk {
     background: transparent;
     border: none;
@@ -976,10 +992,6 @@ QWidget#CellFullText QLabel {
     color: #FFFFFF;
     font-size: 13px;
     background: transparent;
-}
-
-QWidget#CellFullText QLabel {
-    font-size: 13px;
 }
 
 QLabel[size="xs"] { font-size: 12px; }
@@ -1310,22 +1322,117 @@ QScrollArea#BookWordScroll > QWidget {
     background: #FFFFFF;
 }
 
-#SnapDot {
-    background: #DDE2EA;
-    border-radius: 4px;
+#SnapDot, #OpDot {
+    background: transparent;
     border: none;
 }
-#SnapDot[current="true"] {
-    background: #15803D;
-    border: 3px solid #E7F4EC;
+#TimelineRail {
+    background: #DDE2EA;
+    border: none;
 }
 
-#MetaChip {
-    background: #EEF1F5;
+#OpRow {
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #EEF1F5;
+}
+#OpRow[last="true"] {
+    border-bottom: none;
+}
+#OpRow:hover {
+    background: #EEF0FB;
+}
+
+#OpKind {
     color: #333B48;
-    border-radius: 8px;
+    background: #EEF1F5;
+    border-radius: 4px;
     padding: 4px 8px;
     font-size: 12px;
+    font-weight: 600;
+}
+#OpKind[kind="add"] { color: #15803D; background: #E7F4EC; }
+#OpKind[kind="edit"] { color: #333B83; background: #EEF0FB; }
+#OpKind[kind="delete"] { color: #C0392B; background: #FBEAE8; }
+#OpKind[kind="merge"] { color: #333B83; background: #EEF0FB; }
+#OpKind[kind="book"] { color: #333B83; background: #EEF0FB; }
+#OpKind[kind="restore_default"] { color: #B45309; background: #FBF1DF; }
+#OpKind[kind="restore_point"] { color: #B45309; background: #FBF1DF; }
+#OpKind[kind="undo"] { color: #B45309; background: #FBF1DF; }
+#OpKind[kind="note"] { color: #333B48; background: #EEF1F5; }
+
+#TagCurrent {
+    color: #15803D;
+    background: #E7F4EC;
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+#SnapDrawerLayer {
+    background: transparent;
+}
+#SnapDrawerBackdrop {
+    background: rgba(15, 23, 42, 0.32);
+}
+#SnapDrawerPanel {
+    background: #FFFFFF;
+    border: 1px solid #DDE2EA;
+    border-radius: 12px;
+}
+#DrawerHead {
+    background: transparent;
+    border-bottom: 1px solid #EEF1F5;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+#DrawerCloseBtn {
+    background: transparent;
+    color: #6B7585;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    min-width: 24px; max-width: 24px;
+    min-height: 24px; max-height: 24px;
+    padding: 0;
+    font-size: 14px;
+}
+#DrawerCloseBtn:hover {
+    background: #EEF1F5;
+    color: #222831;
+}
+#DrawerCloseBtn:pressed {
+    background: #DDE2EA;
+}
+#DrawerScroll {
+    border: none;
+    background: transparent;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+#DrawerScroll > QWidget {
+    background: transparent;
+}
+#DrawerScrollInner {
+    background: transparent;
+}
+#DrawerScroll QScrollBar:vertical {
+    background: #FFFFFF;
+    width: 4px;
+    border: none;
+}
+#DrawerScroll QScrollBar::handle:vertical {
+    background: #DDE2EA;
+    border-radius: 4px;
+    min-height: 32px;
+}
+#DrawerScroll QScrollBar::add-line:vertical, #DrawerScroll QScrollBar::sub-line:vertical {
+    height: 0;
+    border: none;
+}
+#DrawerPager {
+    border-top: 1px solid #EEF1F5;
+    margin-top: 8px;
 }
 
 #DictIco {
