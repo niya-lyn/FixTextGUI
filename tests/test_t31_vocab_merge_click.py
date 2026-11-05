@@ -67,10 +67,11 @@ def _row_checkboxes(mod):
     会 AttributeError。改成「取不到就不排除」，界面上以后再增减顶层勾选框，
     这条用例不用跟着改。
     """
-    from PySide6.QtWidgets import QCheckBox
+    # MRG.12：行内勾选由 QCheckBox 换成 ChkMark 自绘件（UI 分支视觉，主干选择语义不变）
+    from fixtext_widgets import ChkMark
 
     excluded = {id(getattr(mod, name, None)) for name in ("_chk_all", "basis_cb")}
-    return [c for c in mod.findChildren(QCheckBox)
+    return [c for c in mod.findChildren(ChkMark)
             if id(c) not in excluded and not c.isHidden()]
 
 
