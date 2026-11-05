@@ -163,7 +163,13 @@ def collect_ui_texts(root: QWidget) -> list[tuple[str, str, str]]:
 
 
 def scan_module_strings() -> list[tuple[str, str, str]]:
-    """扫描 UI 包源码中的中文字符串字面量（含弹窗文案，控件树取不到）。"""
+    """扫描 UI 包源码中的中文字符串字面量（含弹窗文案，控件树取不到）。
+
+    MRG.12 修正：先剥掉三引号 docstring 与 ``#`` 注释再取字面量——旧正则会把
+    docstring 内段（如 ``与 RuleSet._apply 同口径``）误判成界面文案，MRG.11
+    存档报告的零命中即由此失真（基线包复扫实为 5 处、全在 docstring）。
+    docstring / 注释永不抵达用户界面，不属于「露出」。
+    """
     rows = []
     for fn in sorted(os.listdir(UI)):
         if not fn.endswith(".py"):
@@ -172,6 +178,10 @@ def scan_module_strings() -> list[tuple[str, str, str]]:
             continue
         path = os.path.join(UI, fn)
         src = open(path, encoding="utf-8").read()
+        # 剥 docstring（三引号块，含模块/类/函数文档）；不剥 # 注释——
+        # 界面文案里可能出现 #（色值等），注释本身也不会被旧正则命中
+        src = re.sub(r'""".*?"""', '""', src, flags=re.S)
+        src = re.sub(r"'''.*?'''", "''", src, flags=re.S)
         for m in re.finditer(r'"([^"\\\n]{2,})"|\'([^\'\\\n]{2,})\'', src):
             s = m.group(1) or m.group(2) or ""
             if re.search(r"[\u4e00-\u9fff]", s):     # 只关心含中文的界面文案
