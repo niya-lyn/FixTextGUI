@@ -472,6 +472,31 @@ class CorrectionJob:
         cfg.paths.report.mkdir(parents=True, exist_ok=True)
         for s in stages:
             cfg.stage_dir(s["key"]).mkdir(parents=True, exist_ok=True)
+
+        # --- 预备份：校正前工作区副本快照 ------------------------------------------------
+        # _sync_book_text_from_run 会把 replace 后的 after_text 写回 shelf book.txt
+        # 和账本；后续点「恢复到校正前」必须能还原到这个备份，否则连续两次校正的
+        # 第二次会以已经校正过的文本为起点，hits 为 0（BUG-回归保护）。
+        if self.working_text and self.working_text.is_file():
+            pre_dir = cfg.workdir / "00_pre_correction"
+            pre_dir.mkdir(exist_ok=True)
+            try:
+                shutil.copy2(self.working_text, pre_dir / "book.txt")
+            except Exception:
+                pass  # best-effort，备份失败不阻塞校正
+            if self.working_ledger and self.working_ledger.is_file():
+                try:
+                    shutil.copy2(self.working_ledger, pre_dir / "ledger.bundle.json")
+                except Exception:
+                    pass
+            import_json = self.working_text.parent / "import.json"
+            if import_json.is_file():
+                try:
+                    shutil.copy2(import_json, pre_dir / "import.json")
+                except Exception:
+                    pass
+        # --------------------------------------------------------------------------------
+
         # 跳过 merge 时仍要有 01_merge，供排版读入工作区 TXT
         if self.skip_merge:
             cfg.stage_dir("merge").mkdir(parents=True, exist_ok=True)

@@ -1133,8 +1133,8 @@ class MainWindow(QMainWindow):
         一键校正与检查页的修改也写回这里）。原件副本只读保留：EPUB 仅作
         导出还原模板（``template_epub``），校正过程不再碰 EPUB 格式。
 
-        TXT：``plain_book`` 包成单章电子书后走 merge。
-        EPUB：跳过 merge，用 ``book.txt``+账本直接进排版/替换；导出时再还原 EPUB。
+        有账本则 TXT/EPUB 都播种工作正文、跳过 merge；还原模板分别是
+        ``book.source.epub``（TXT 首次包装时落盘）与原件 EPUB。
         """
         try:
             book_dir = Path(text_path).resolve().parent
@@ -1191,12 +1191,18 @@ class MainWindow(QMainWindow):
         )
         if original.lower().endswith(".epub"):
             ctx["template_epub"] = str(Path(original))
-            ledger = str(meta.get("ledger_path") or "")
-            if not ledger or not Path(ledger).is_file():
-                cand = book_dir / "book.bundle.json"
-                ledger = str(cand) if cand.is_file() else ""
-            if ledger:
-                ctx["ledger_path"] = ledger
+        else:
+            # TXT：首次包装落盘的单章 EPUB，与 EPUB 原件一样当 restore 模板
+            tpl = book_dir / "book.source.epub"
+            if tpl.is_file():
+                ctx["template_epub"] = str(tpl)
+        # 首次校正后 sync 会写入账本；有账本则 TXT/EPUB 都跳过 merge、直接播种
+        ledger = str(meta.get("ledger_path") or "")
+        if not ledger or not Path(ledger).is_file():
+            cand = book_dir / "book.bundle.json"
+            ledger = str(cand) if cand.is_file() else ""
+        if ledger:
+            ctx["ledger_path"] = ledger
         return ctx
 
     # ------------------------------------------------------------------ 路由

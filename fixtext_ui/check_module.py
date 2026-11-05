@@ -13,12 +13,14 @@ FixText V1 · 检查问题模块（M4-EX.6-R2）
 from __future__ import annotations
 
 import math
+import re
 import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt, Signal, QTimer, QThread
 from PySide6.QtGui import (
     QFont, QColor, QBrush, QTextCursor, QTextCharFormat, QShortcut, QKeySequence,
+    QSyntaxHighlighter,
 )
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QTextEdit,
@@ -170,6 +172,36 @@ class _ScanWorker(QThread):
         except Exception as exc:  # noqa: BLE001
             if not self._cancel:
                 self.finished_err.emit(str(exc))
+
+
+# ---------------------------------------------------------------------------
+# HTML 标签视觉弱化（仅外观，不改正文）
+# ---------------------------------------------------------------------------
+
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+class _HtmlTagHighlighter(QSyntaxHighlighter):
+    """把 EPUB 合并进正文后残留的 HTML 标签（<…>）染成中性灰。
+
+    只影响检查页正文编辑器的**展示外观**，不改任何字符：原文里的 `<p>`、
+    `</span>`、属性/注释都照常保留、照常可编辑。高亮只做一件事——让用户
+    一眼分清哪些是结构标签、哪些是真实正文。
+
+    与编辑器里问题段的 ``ExtraSelection`` 高亮共存：ExtraSelection 优先生效
+    （Qt 先应用 highlighter 再应用 selection），所以问题段里的标签会被问题色
+    覆盖而不是灰色，是期望行为。
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._fmt_tag = QTextCharFormat()
+        # neutral.300：足够浅但仍可辨识，比正文 neutral.800 低一个层级
+        self._fmt_tag.setForeground(QColor(c("neutral.300")))
+
+    def highlightBlock(self, text: str) -> None:
+        for m in _HTML_TAG_RE.finditer(text or ""):
+            self.setFormat(m.start(), m.end() - m.start(), self._fmt_tag)
 
 
 # ---------------------------------------------------------------------------
@@ -411,6 +443,8 @@ class CheckModule(QWidget):
             f"padding:{sp('3')};font-family:{FONT_MONO};font-size:{fs('sm')};"
             f"color:{c('neutral.800')}}}")
         ed.body_l.addWidget(self.editor)
+        # HTML 标签视觉弱化（方案 B：语法高亮灰色），只影响展示不改正文
+        _HtmlTagHighlighter(self.editor.document())
         self.advice = QLabel("")
         self.advice.setWordWrap(True)
         self.advice.setStyleSheet(
