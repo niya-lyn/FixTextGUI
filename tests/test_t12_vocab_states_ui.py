@@ -102,7 +102,8 @@ def test_imported_rows_show_as_disabled_by_default(mod):
     mod.select_dict(TIER_IMPORTED)
     assert mod._hit_total == 5840
     rows = mod.get_filtered()
-    assert len(rows) == 40, "一屏 40 行"
+    # 每页条数 20：UI 分支重设计（无内部滚动条，表头与数据列恒对齐），MRG.12 沿用
+    assert len(rows) == 20, "一屏 20 行"
     for r in rows:
         assert r["enabled"] is False, f"迁入词条应默认不参与校正：{r['word']}"
         assert r["state"] == "禁用"
@@ -275,8 +276,9 @@ def test_state_ops_join_existing_undo_stack(mod):
     assert "禁用词条" in acts
     assert "清空禁用" in acts
     assert "恢复默认状态" in acts
-    # 页面上也看得到这几条
-    mod._toggle_ops()
+    # 页面上也看得到这几条（UI 分支重设计：操作历史改抽屉内分页卡，最新在前，
+    # 第 0 页即含最近操作；不再有「展开全部」开关，直接渲染断言）
+    mod._render_ops()
     texts = " ".join(
         lab.text() for lab in mod.findChildren(type(mod.page_label))
     )

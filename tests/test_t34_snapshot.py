@@ -184,6 +184,7 @@ def test_ui_restore_flow(runs_root, qapp):
         def __init__(self, **kw):
             self.kw = kw
             self.chosen = "replace"
+            self.write_to_shelf = False   # bugfix 分支新增勾选项；桩默认不写回
 
         def exec(self):
             return QDialog.DialogCode.Accepted

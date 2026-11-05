@@ -228,7 +228,7 @@ def test_vocab_page_exposes_no_paths_or_concepts(mod):
     mod.store.add_entry(word="甲", value="甲替", typ="错词校正")
     mod.store.add_entry(word="乙", value="乙替", typ="错词校正")
     mod._render_all()
-    mod._toggle_ops()
+    mod._render_ops()
     mod.open_restore_default()
 
     texts = _ui_texts(mod)
@@ -461,7 +461,7 @@ def _snap_rows(mod) -> list:
     from PySide6.QtWidgets import QLabel, QWidget
 
     rows = []
-    for w in mod.findChildren(QWidget, "SnapItem"):
+    for w in mod.findChildren(QWidget, "SnapRow"):
         labels = [c.text() for c in w.findChildren(QLabel)]
         btns = [c.text() for c in w.findChildren(QWidget)
                 if c.metaObject().className() == "QPushButton"]
@@ -508,5 +508,7 @@ def test_op_history_panel_rows(mod):
     mod.store.delete_entries([mod.store.custom.entries()[0]["id"]])
     mod._render_all()
     assert "共 2 次变更" in mod._op_summary.text()
-    mod._toggle_ops()
-    assert mod._op_toggle.text() == "收起"
+    mod._render_ops()
+    # UI 分支重设计：操作历史为抽屉内分页卡（每页 5 条、最新在前、无「展开全部」开关），
+    # 2 条记录都应直接渲染在第 0 页
+    assert mod._op_list.count() == 2, "两次操作都应渲染成行"
