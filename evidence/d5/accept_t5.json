@@ -1,0 +1,73 @@
+{
+  "A": {
+    "write": 2,
+    "add": 2,
+    "update": 0,
+    "disabled": 0,
+    "skipped": 0,
+    "checks": {
+      "whole_file": "ok",
+      "readable": "ok",
+      "content": "ok",
+      "disabled": "n/a"
+    },
+    "points_before": 1,
+    "points_after": 2,
+    "sha_before": "b5e95e0478e4f3ca2161fd200558c300eb28620a76e4fe98e87f9869a6e3191c",
+    "sha_after": "325286f744e52c996d98059c89b85e99df4620edcff1a76976cd8f387b831576",
+    "point_id": 2,
+    "ok": true
+  },
+  "B": {
+    "stage": "verify",
+    "reason": "写完核对时发现文件内容和这次要写的不一致（可能没写完），已退回导入前。 这一批一条都没留下，词库与导入前完全一样。",
+    "rolled_back": true,
+    "byte_identical": true,
+    "sha_disk": "d5537ae2b4ba96cdccb4389f3db1c9b29734ed1a4f192cc865f6b44985412589",
+    "sha_before": "d5537ae2b4ba96cdccb4389f3db1c9b29734ed1a4f192cc865f6b44985412589",
+    "points": 1,
+    "entries": 1,
+    "last_op": "导入 2 条词条未完成（写完核对时发现文件内容和这次要写的不一致（可能没写完），已退回导入前。），已退回导入前"
+  },
+  "C": {
+    "via": "undo",
+    "identical": true,
+    "sha": "d5537ae2b4ba96cdccb4389f3db1c9b29734ed1a4f192cc865f6b44985412589",
+    "sha_before": "d5537ae2b4ba96cdccb4389f3db1c9b29734ed1a4f192cc865f6b44985412589",
+    "entries": 1,
+    "via_undo_to": "undo_to",
+    "identical_undo_to": true
+  },
+  "D": {
+    "point_id": 2,
+    "label": "导入 2 条词条",
+    "act": "import_batch",
+    "before_payload_matches": true,
+    "after_payload_matches": true,
+    "restore_to_before_identical": true,
+    "restore_to_after_identical": true,
+    "sha_before": "f7cd901c106598e99714673e7d6e02da1e6df25e5513ec116085eae8839c73d9",
+    "sha_after": "612c7c8bea907b604a41c80f30a938a02a9ff73a15f92f83acea7353d5c2e0f5"
+  },
+  "E": {
+    "ui_write_ok": true,
+    "written": true,
+    "tip": "已写入 2 条：新增 2 条、更新 0 条、禁用 0 条、跳过 0 条。 写入前自动留了快照（「历史与快照」里能看到，随时可以回到导入前）；这次整批只算一步，「撤销」一下就能整批退回去。",
+    "confirm_disabled_after_write": true,
+    "entries": 3,
+    "entries_written": 2,
+    "page_toast": "已导入 2 条词条，词库已更新",
+    "page_toast_with_undo": true,
+    "sha_after": "06226d29b5c8e40ddec9086939a90faecbebb41131d9ec6048e786c375905efe",
+    "undo_identical": true,
+    "page_restored": true
+  },
+  "verdict": {
+    "A": true,
+    "B": true,
+    "C": true,
+    "D": true,
+    "E": true,
+    "all": true
+  }
+}
