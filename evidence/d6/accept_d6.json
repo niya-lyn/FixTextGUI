@@ -1,0 +1,404 @@
+{
+  "A": {
+    "channel": "粘贴（parse_text）",
+    "ui_texts": 54,
+    "exposure_hits": [],
+    "counts": {
+      "新增": 4,
+      "冲突": 0,
+      "格式不合格": 0
+    },
+    "total": 4,
+    "batch_count": 1,
+    "pending": 0,
+    "confirm_title": "确认执行这次导入",
+    "write": 4,
+    "add": 4,
+    "update": 0,
+    "disabled": 0,
+    "skipped": 0,
+    "checks": {
+      "whole_file": "ok",
+      "readable": "ok",
+      "content": "ok",
+      "disabled": "n/a"
+    },
+    "point_id": 1,
+    "tip": "已写入 4 条：新增 4 条、更新 0 条、禁用 0 条、跳过 0 条。 写入前自动留了快照（「历史与快照」里能看到，随时可以回到导入前）；这次整批只算一步，「撤销」一下就能整批退回去。",
+    "confirm_locked": true,
+    "entries_after": 4,
+    "page_toast": "已导入 4 条词条，词库已更新",
+    "page_toast_with_undo": true,
+    "sha_before": "3335b14ba08f47258520575cc2ff8c25ee7c12d6f41c95c5758bd2fdda2bbef1",
+    "sha_after": "b15061d443180b0444ee5fcec633c0bdaa38b3570ed21fb7ed337ca149c695ac",
+    "undo_via": "undo",
+    "undo_identical": true,
+    "restored_byte_identical": true,
+    "ok": true
+  },
+  "B": {
+    "counts": {
+      "新增": 2,
+      "冲突": 3,
+      "格式不合格": 1
+    },
+    "pending_before": 3,
+    "gate_blocked": true,
+    "gate_tip": "已写入 4 条：新增 3 条、更新 0 条、禁用 1 条、跳过 0 条。 写入前自动留了快照（「历史与快照」里能看到，随时可以回到导入前）；这次整批只算一步，「撤销」一下就能整批退回去。",
+    "disposals": {
+      "改值": {
+        "line_no": 2,
+        "action": "edit",
+        "effect": "add",
+        "effective_value": "乙乙乙",
+        "expect_effect": "update"
+      },
+      "跳过": {
+        "line_no": 3,
+        "action": "skip",
+        "effect": "skipped",
+        "in_write_list": false,
+        "expect_effect": "skipped"
+      },
+      "设为禁用": {
+        "line_no": 6,
+        "action": "disable",
+        "effect": "disabled",
+        "disabled_in_write_list": true,
+        "expect_effect": "disabled"
+      }
+    },
+    "disposals_all_ok": true,
+    "impact_text": "将写入 4 条：新增 3 条、更新 0 条、禁用 1 条、跳过 1 条。",
+    "plan": {
+      "write": 4,
+      "add": 3,
+      "update": 0,
+      "disabled": 1,
+      "skipped": 1,
+      "pending": 0,
+      "new": 4,
+      "total": 6
+    },
+    "write": 4,
+    "add": 3,
+    "update": 0,
+    "disabled": 1,
+    "skipped": 0,
+    "checks": {
+      "whole_file": "ok",
+      "readable": "ok",
+      "content": "ok",
+      "disabled": "ok"
+    },
+    "reconcile_ok": true,
+    "reconcile_mismatch": [],
+    "reconcile_pairs": [
+      [
+        "write",
+        4,
+        4
+      ],
+      [
+        "add",
+        3,
+        3
+      ],
+      [
+        "update",
+        0,
+        0
+      ],
+      [
+        "disabled",
+        1,
+        1
+      ]
+    ],
+    "skipped_note": {
+      "preview_skipped": 1,
+      "write_input_rows": 4,
+      "write_input_equals_write_plan": true,
+      "batch_reported_skipped": 0
+    },
+    "negative_control": {
+      "preview_write": 4,
+      "actual_write": 5,
+      "delta": 1,
+      "detected": true
+    },
+    "content_edit_ok": true,
+    "content_skip_ok": true,
+    "content_disabled_ok": true,
+    "entries_before": 2,
+    "entries_after": 6,
+    "undo_via": "undo",
+    "undo_identical": true,
+    "restored_byte_identical": true,
+    "ok": true
+  },
+  "C": {
+    "channel": "文件（导出备份 → 导入预览）",
+    "exported": {
+      "path": "我的词库备份_20261105_123407.csv",
+      "size": 425,
+      "count": 7,
+      "disabled_count": 2,
+      "sha256": "f91a78bba3068c4ab2b7b48138db179d22db226634182e4774d08801c404c6b3"
+    },
+    "export_readonly": true,
+    "export_texts": 11,
+    "export_exposure_hits": [],
+    "preview_texts": 66,
+    "preview_exposure_hits": [],
+    "counts": {
+      "新增": 7,
+      "冲突": 0,
+      "格式不合格": 0
+    },
+    "total": 7,
+    "batch_count": 1,
+    "write": 7,
+    "add": 7,
+    "checks": {
+      "whole_file": "ok",
+      "readable": "ok",
+      "content": "ok",
+      "disabled": "n/a"
+    },
+    "disabled_applied": 2,
+    "book_rows": 1,
+    "dim1_count": true,
+    "dim2_fields": true,
+    "dim3_tier": true,
+    "dim4_disabled": true,
+    "sig_before": [
+      [
+        "萧衍",
+        "萧彦",
+        "角色名",
+        "xiāo yǎn"
+      ],
+      [
+        "他说,你好",
+        "他说你好",
+        "错词校正",
+        ""
+      ],
+      [
+        "张'三",
+        "张三",
+        "错词校正",
+        ""
+      ],
+      [
+        "李\"四",
+        "李四",
+        "专有名词",
+        ""
+      ],
+      [
+        "第一行\n第二行",
+        "合一行",
+        "其他",
+        ""
+      ],
+      [
+        "空注音",
+        "有注音",
+        "错词校正",
+        "kōng"
+      ],
+      [
+        "含空格",
+        "含 空格 值",
+        "错词校正",
+        ""
+      ]
+    ],
+    "sig_after": [
+      [
+        "萧衍",
+        "萧彦",
+        "角色名",
+        "xiāo yǎn"
+      ],
+      [
+        "他说,你好",
+        "他说你好",
+        "错词校正",
+        ""
+      ],
+      [
+        "张'三",
+        "张三",
+        "错词校正",
+        ""
+      ],
+      [
+        "李\"四",
+        "李四",
+        "专有名词",
+        ""
+      ],
+      [
+        "第一行\n第二行",
+        "合一行",
+        "其他",
+        ""
+      ],
+      [
+        "空注音",
+        "有注音",
+        "错词校正",
+        "kōng"
+      ],
+      [
+        "含空格",
+        "含 空格 值",
+        "错词校正",
+        ""
+      ]
+    ],
+    "ok": true
+  },
+  "L1": {
+    "delete_modal_title": "删除确认（批量先预览）",
+    "delete_modal_has_impact": true,
+    "delete_modal_has_count": true,
+    "delete_modal_lists_rows": true,
+    "delete_modal_all_texts": [
+      "删除确认（批量先预览）",
+      "🗑",
+      "删除确认（批量先预览）",
+      "底线④：批量删除必须先给预览清单，确认后执行；底线①：误删可撤销。",
+      "即将删除 2 条自定义词条，删除后可通过「撤销」恢复。",
+      "影响范围（命中过哪些书）：",
+      "无（这些词条尚未在任何校正中命中）",
+      "原词",
+      "替换为",
+      "误删甲",
+      "改甲",
+      "误删乙"
+    ],
+    "delete_clicked": true,
+    "entries_after_delete": 2,
+    "undo_delete_label": "删除 2 条",
+    "undo_delete_identical": true,
+    "undo_update_label": "编辑「误删甲」",
+    "undo_update_value_ok": true,
+    "undo_merge_label": "合并为「要合并」",
+    "undo_merge_identical": true,
+    "ops_history": [
+      "撤销",
+      "合并",
+      "撤销",
+      "编辑",
+      "撤销",
+      "删除",
+      "新增",
+      "新增",
+      "新增",
+      "新增"
+    ],
+    "ok": true
+  },
+  "L2": {
+    "auto_snapshot_points": 3,
+    "auto_snapshot_timeline": 3,
+    "auto_snapshot_ok": true,
+    "restore_point_id": 2,
+    "restore_point_identical": true,
+    "restore_point_byte_equal": true,
+    "undo_to_label": "新增「甲甲」",
+    "undo_to_entries": 0,
+    "preview_already_default": false,
+    "preview_custom_entries": 0,
+    "broken_file_sha": "4f07ddb759b4ea20369ea71d3b35e35b1e4de05f3c7f4a859c89266806362374",
+    "factory_file_sha": "e961f82e3cbb41499b41301e04e7a7df7b11e189060064b6edd5af8e881e2c26",
+    "file_restored": true,
+    "identical_to_factory": true,
+    "custom_untouched": true,
+    "custom_entries": 0,
+    "undo_restore_label": "恢复默认词库",
+    "ok": true
+  },
+  "L4": {
+    "preview": {
+      "write": 4,
+      "add": 3,
+      "update": 0,
+      "disabled": 1,
+      "skipped": 1,
+      "pending": 0,
+      "new": 4,
+      "total": 6
+    },
+    "written": {
+      "write": 4,
+      "add": 3,
+      "update": 0,
+      "disabled": 1
+    },
+    "pairs": [
+      [
+        "write",
+        4,
+        4
+      ],
+      [
+        "add",
+        3,
+        3
+      ],
+      [
+        "update",
+        0,
+        0
+      ],
+      [
+        "disabled",
+        1,
+        1
+      ]
+    ],
+    "mismatch": [],
+    "negative_control": {
+      "preview_write": 4,
+      "actual_write": 5,
+      "delta": 1,
+      "detected": true
+    },
+    "ok": true
+  },
+  "L5": {
+    "import_counts": {
+      "A(A 粘贴)": 4,
+      "B(B 处置)": 4,
+      "C(C 换机)": 7
+    },
+    "tier_all_custom": true,
+    "factory_sha_before": "c59d5c69b09bf515cbab186f3c7e661c522105c9a896ed2ae79ce3d26635df94",
+    "factory_sha_after": "c59d5c69b09bf515cbab186f3c7e661c522105c9a896ed2ae79ce3d26635df94",
+    "factory_tree_identical": true,
+    "restore_default_custom_untouched": true,
+    "ok": true
+  },
+  "L3": {
+    "paste_preview_texts": 54,
+    "paste_preview_hits": [],
+    "file_preview_texts": 66,
+    "file_preview_hits": [],
+    "export_modal_texts": 11,
+    "export_modal_hits": [],
+    "static_text_hits": [],
+    "ok": true
+  },
+  "_meta": {
+    "pkg": "/home/gem/.aily/workdir/task_7704513865484143631/artifacts/base/x",
+    "factory_tree_sha_before": "c59d5c69b09bf515cbab186f3c7e661c522105c9a896ed2ae79ce3d26635df94",
+    "factory_tree_sha_after": "c59d5c69b09bf515cbab186f3c7e661c522105c9a896ed2ae79ce3d26635df94",
+    "factory_tree_identical": true,
+    "verdict": "PASS"
+  }
+}
