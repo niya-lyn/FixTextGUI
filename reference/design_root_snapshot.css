@@ -8,6 +8,10 @@
  * 变更说明：M4-EX.2a 前快照取自《薄地基》HTML；v3 更新记录 §1 质感打磨把阴影
  *   扩为六档（新增 xs / primary）并调整了 sm/md/lg/focus 取值，本快照随之更新，
  *   其余令牌（色彩/字号/字重/行高/间距/圆角/字体族）与薄地基完全一致。
+ * MRG.12 同步：补上 on-fill 前景五档与 primary-sm/xs 投影两档（Python 令牌侧
+ *   M5 期已落地、快照漏更）。取值以 fixtext_tokens.py 为准（同源于合并版原型
+ *   浅色主题 :root；-soft/-hint/-stats/-track 四档透明度分层为令牌侧派生值，
+ *   primary-xs 的 .30 为原值 .3 的等值规范化写法）。
  */
 
 :root {
@@ -23,6 +27,11 @@
     --c-error:#C0392B;   --c-error-bg:#FBEAE8;   --c-error-border:#F1C4BD;
     --c-info:#3F48A2;    --c-info-bg:#ECEEF9;    --c-info-border:#C8CDEC;
     --c-focus:#4F59C0;
+    --c-on-fill:#FFFFFF;
+    --c-on-fill-soft:rgba(255,255,255,0.90);
+    --c-on-fill-hint:rgba(255,255,255,0.85);
+    --c-on-fill-stats:rgba(255,255,255,0.92);
+    --c-on-fill-track:rgba(255,255,255,0.25);
     --font-sans:"Segoe UI","Microsoft YaHei UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
     --font-mono:"Cascadia Code","JetBrains Mono",Consolas,monospace;
     --fs-xs:12px; --fs-sm:13px; --fs-base:14px; --fs-md:16px; --fs-lg:18px;
@@ -37,5 +46,7 @@
     --sh-md:0 6px 16px rgba(21,25,31,.08),0 2px 4px rgba(21,25,31,.04);
     --sh-lg:0 24px 48px rgba(21,25,31,.16),0 8px 16px rgba(21,25,31,.08);
     --sh-primary:0 8px 20px rgba(79,89,192,.34);
+    --sh-primary-sm:0 2px 6px rgba(79,89,192,.22);
+    --sh-primary-xs:0 1px 3px rgba(79,89,192,.30);
     --sh-focus:0 0 0 3px rgba(79,89,192,.24);
   }
