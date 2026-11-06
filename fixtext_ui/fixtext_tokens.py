@@ -100,6 +100,9 @@ SPACE = {
 RADIUS = {
     "sm": "4px", "md": "8px", "lg": "12px", "xl": "16px", "full": "999px",
 }
+# 注意：full=999px 只供 HTML 原型 / CSS 侧使用。Qt QSS 对「半径 > 控件半高」
+# 会直接放弃圆角裁切，因此 build_qss.py 一律用「设计高度一半」的具体像素
+# （见该文件顶部的半高半径总表），Qt 代码里不要再调用 r("full")。
 
 SHADOW = {
     # v3 合并版原型 :root 六档（更新记录 §1 质感打磨后的最终值）；
